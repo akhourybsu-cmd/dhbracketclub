@@ -24,7 +24,7 @@ export default function BracketEntryPage() {
   const [bracket, setBracket] = useState<any>(null);
   const [tiebreaker, setTiebreaker] = useState<string>('');
   const [hasFirstFour, setHasFirstFour] = useState(false);
-  const [currentRound, setCurrentRound] = useState(1);
+  const [currentRound, setCurrentRound] = useState(0); // Will be set after data loads
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [pool, setPool] = useState<any>(null);
