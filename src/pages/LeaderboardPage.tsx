@@ -134,12 +134,20 @@ export default function LeaderboardPage() {
         <ArrowLeft className="w-4 h-4" /> Back to Pool
       </Link>
 
-      <div className="flex items-center gap-3 mb-6">
-        <Trophy className="w-6 h-6 text-gold" />
-        <div>
-          <h1 className="text-xl font-bold">Leaderboard</h1>
-          <p className="text-sm text-muted-foreground">{pool?.name}</p>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <Trophy className="w-6 h-6 text-gold" />
+          <div>
+            <h1 className="text-xl font-bold">Leaderboard</h1>
+            <p className="text-sm text-muted-foreground">{pool?.name}</p>
+          </div>
         </div>
+        {rtStatus === 'connected' && (
+          <span className="flex items-center gap-1 text-[10px] text-success">
+            <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+            Live
+          </span>
+        )}
       </div>
 
       {standings.length === 0 ? (
