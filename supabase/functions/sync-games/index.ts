@@ -1781,15 +1781,15 @@ async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string,
 
     switch (req.action) {
       case "syncTournamentMetadata": {
-        result = await syncTournamentMetadata(db, provider!, config, req.tournamentId, syncRunId);
+        result = await syncTournamentMetadata(db, provider, config, req.tournamentId, syncRunId);
         break;
       }
       case "syncGames": {
-        result = await syncGames(db, provider!, config, req.tournamentId, syncRunId);
+        result = await syncGames(db, provider, config, req.tournamentId, syncRunId);
         break;
       }
       case "syncGameResults": {
-        const resultsOnly = await syncGameResults(db, provider!, config, req.tournamentId, syncRunId);
+        const resultsOnly = await syncGameResults(db, provider, config, req.tournamentId, syncRunId);
         let autoStandings = { poolsProcessed: 0, bracketsScored: 0, standingsChanged: 0 };
         if (resultsOnly.newFinals > 0 || resultsOnly.affectedGameIds.length > 0) {
           autoStandings = await recalculateStandingsForTournament(
@@ -1805,11 +1805,11 @@ async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string,
         break;
       }
       case "runFullSync": {
-        const metaResult = provider!.fetchTournamentMeta
-          ? await syncTournamentMetadata(db, provider!, config, req.tournamentId, syncRunId)
+        const metaResult = provider.fetchTournamentMeta
+          ? await syncTournamentMetadata(db, provider, config, req.tournamentId, syncRunId)
           : { updated: false };
-        const gamesResult = await syncGames(db, provider!, config, req.tournamentId, syncRunId);
-        const resultsResult = await syncGameResults(db, provider!, config, req.tournamentId, syncRunId);
+        const gamesResult = await syncGames(db, provider, config, req.tournamentId, syncRunId);
+        const resultsResult = await syncGameResults(db, provider, config, req.tournamentId, syncRunId);
 
         let standingsResult = { poolsProcessed: 0, bracketsScored: 0, standingsChanged: 0 };
         if (resultsResult.updated > 0 || resultsResult.newFinals > 0) {
@@ -1820,6 +1820,7 @@ async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string,
         }
 
         result = {
+          providerUsed: providerName,
           metadata: metaResult,
           games: gamesResult,
           results: resultsResult,
