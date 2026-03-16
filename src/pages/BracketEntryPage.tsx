@@ -63,7 +63,12 @@ export default function BracketEntryPage() {
         .eq('tournament_id', tournamentId)
         .order('round_number')
         .order('game_slot');
-      if (gameData) setGames(gameData as Game[]);
+      if (gameData) {
+        setGames(gameData as Game[]);
+        const ff = gameData.some(g => g.round_number === 0);
+        setHasFirstFour(ff);
+        setCurrentRound(ff ? 0 : 1);
+      }
 
       const { data: bracketData } = await supabase
         .from('brackets')
