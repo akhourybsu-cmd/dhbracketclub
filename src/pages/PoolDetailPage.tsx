@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Trophy, Edit3, Eye, Settings, Copy, Users, Clock, GitCompare, ArrowRight } from 'lucide-react';
+import { Trophy, Edit3, Eye, Settings, Copy, Users, Clock, GitCompare, ArrowRight, Activity } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES } from '@/lib/bracketUtils';
