@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { Activity, Clock, CheckCircle2, Zap, Filter, ChevronRight, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameUpdates } from '@/hooks/useRealtimeSubscription';
-import { Game, Team, ROUND_NAMES, ROUND_SHORT } from '@/lib/bracketUtils';
+import { Game, Team, ROUND_NAMES, ROUND_SHORT, FIRST_FOUR_ROUND_SHORT } from '@/lib/bracketUtils';
 
 type TabFilter = 'live' | 'upcoming' | 'final' | 'all';
 
@@ -158,6 +158,17 @@ export default function GameCenterPage() {
         >
           All Rounds
         </button>
+        {games.some(g => g.round_number === 0) && (
+          <button
+            onClick={() => setRoundFilter(0)}
+            className={cn(
+              "px-2.5 py-1 rounded-md text-[11px] font-medium whitespace-nowrap transition-colors",
+              roundFilter === 0 ? "bg-card text-foreground border border-border" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {FIRST_FOUR_ROUND_SHORT}
+          </button>
+        )}
         {ROUND_SHORT.map((name, i) => (
           <button
             key={i}
@@ -242,7 +253,7 @@ function GameCard({
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-border/30">
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-muted-foreground font-medium">
-            {ROUND_SHORT[game.round_number - 1]} · {game.region}
+            {game.round_number === 0 ? FIRST_FOUR_ROUND_SHORT : ROUND_SHORT[game.round_number - 1]} · {game.region}
           </span>
           {isUpset && (
             <span className="text-[9px] font-bold text-warning bg-warning/15 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">

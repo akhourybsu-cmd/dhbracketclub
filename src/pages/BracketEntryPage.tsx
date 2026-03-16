@@ -9,7 +9,8 @@ import { Save, Send, ChevronLeft, ChevronRight, ArrowLeft, Check } from 'lucide-
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import {
-  Team, Game, Pick, ROUND_NAMES, ROUND_SHORT, TOTAL_GAMES,
+  Team, Game, Pick, ROUND_NAMES, ROUND_SHORT, TOTAL_GAMES, FIRST_FOUR_GAMES,
+  FIRST_FOUR_ROUND_NAME, FIRST_FOUR_ROUND_SHORT,
   getEffectiveTeam, handlePickWithCascade,
 } from '@/lib/bracketUtils';
 
@@ -22,7 +23,8 @@ export default function BracketEntryPage() {
   const [picks, setPicks] = useState<Map<string, Pick>>(new Map());
   const [bracket, setBracket] = useState<any>(null);
   const [tiebreaker, setTiebreaker] = useState<string>('');
-  const [currentRound, setCurrentRound] = useState(1);
+  const [hasFirstFour, setHasFirstFour] = useState(false);
+  const [currentRound, setCurrentRound] = useState(0); // Will be set after data loads
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [pool, setPool] = useState<any>(null);
@@ -61,7 +63,12 @@ export default function BracketEntryPage() {
         .eq('tournament_id', tournamentId)
         .order('round_number')
         .order('game_slot');
-      if (gameData) setGames(gameData as Game[]);
+      if (gameData) {
+        setGames(gameData as Game[]);
+        const ff = gameData.some(g => g.round_number === 0);
+        setHasFirstFour(ff);
+        setCurrentRound(ff ? 0 : 1);
+      }
 
       const { data: bracketData } = await supabase
         .from('brackets')
@@ -102,13 +109,14 @@ export default function BracketEntryPage() {
   // Per-round completion
   const roundCompletion = useMemo(() => {
     const result: Record<number, { total: number; filled: number }> = {};
-    for (let r = 1; r <= 6; r++) {
+    const startRound = hasFirstFour ? 0 : 1;
+    for (let r = startRound; r <= 6; r++) {
       const roundGames = games.filter(g => g.round_number === r);
       const filled = roundGames.filter(g => picks.has(g.id)).length;
       result[r] = { total: roundGames.length, filled };
     }
     return result;
-  }, [games, picks]);
+  }, [games, picks, hasFirstFour]);
 
   const saveDraft = async (): Promise<string | null> => {
     if (!user || !poolId) return null;
@@ -222,11 +230,13 @@ export default function BracketEntryPage() {
 
       {/* Round Navigation */}
       <div className="flex items-center justify-between mb-3">
-        <Button variant="ghost" size="icon" disabled={currentRound <= 1} onClick={() => setCurrentRound(r => r - 1)}>
+        <Button variant="ghost" size="icon" disabled={currentRound <= (hasFirstFour ? 0 : 1)} onClick={() => setCurrentRound(r => r - 1)}>
           <ChevronLeft className="w-5 h-5" />
         </Button>
         <div className="text-center">
-          <p className="text-sm font-semibold">{ROUND_NAMES[currentRound - 1]}</p>
+          <p className="text-sm font-semibold">
+            {currentRound === 0 ? FIRST_FOUR_ROUND_NAME : ROUND_NAMES[currentRound - 1]}
+          </p>
           <p className="text-[10px] text-muted-foreground tabular-nums">
             {roundCompletion[currentRound]?.filled}/{roundCompletion[currentRound]?.total} picks
           </p>
@@ -237,7 +247,25 @@ export default function BracketEntryPage() {
       </div>
 
       {/* Round Tabs */}
-      <div className="flex gap-1.5 mb-5 justify-center">
+      <div className="flex gap-1.5 mb-5 justify-center flex-wrap">
+        {hasFirstFour && (
+          <button
+            onClick={() => setCurrentRound(0)}
+            className={cn(
+              "px-2 py-1 rounded-md text-[10px] font-semibold transition-colors relative",
+              currentRound === 0
+                ? "bg-primary text-primary-foreground"
+                : roundCompletion[0]?.filled === roundCompletion[0]?.total && roundCompletion[0]?.total > 0
+                  ? "bg-success/15 text-success"
+                  : "bg-secondary text-secondary-foreground"
+            )}
+          >
+            {FIRST_FOUR_ROUND_SHORT}
+            {roundCompletion[0]?.filled === roundCompletion[0]?.total && roundCompletion[0]?.total > 0 && currentRound !== 0 && (
+              <Check className="w-2.5 h-2.5 absolute -top-1 -right-1" />
+            )}
+          </button>
+        )}
         {ROUND_SHORT.map((label, i) => {
           const rc = roundCompletion[i + 1];
           const isComplete = rc && rc.filled === rc.total && rc.total > 0;
@@ -275,6 +303,8 @@ export default function BracketEntryPage() {
                   const team1 = getEffectiveTeam(game, 'team1', games, teams, picks);
                   const team2 = getEffectiveTeam(game, 'team2', games, teams, picks);
                   const currentPick = picks.get(game.id);
+                  // Check if null team slots are due to First Four play-in
+                  const hasPlayIn = game.round_number === 1 && games.some(g => g.round_number === 0 && g.region === game.region);
 
                   return (
                     <div key={game.id} className="matchup-card">
@@ -283,6 +313,7 @@ export default function BracketEntryPage() {
                         isSelected={currentPick?.picked_team_id === team1?.id}
                         onSelect={() => team1 && handlePick(game.id, team1.id, game.round_number)}
                         disabled={!team1}
+                        isPlayInSlot={!team1 && hasPlayIn}
                       />
                       <div className="h-px bg-border mx-2" />
                       <MatchupTeamRow
@@ -290,6 +321,7 @@ export default function BracketEntryPage() {
                         isSelected={currentPick?.picked_team_id === team2?.id}
                         onSelect={() => team2 && handlePick(game.id, team2.id, game.round_number)}
                         disabled={!team2}
+                        isPlayInSlot={!team2 && hasPlayIn}
                       />
                     </div>
                   );
@@ -322,11 +354,12 @@ export default function BracketEntryPage() {
   );
 }
 
-function MatchupTeamRow({ team, isSelected, onSelect, disabled }: {
+function MatchupTeamRow({ team, isSelected, onSelect, disabled, isPlayInSlot }: {
   team: Team | null;
   isSelected: boolean;
   onSelect: () => void;
   disabled: boolean;
+  isPlayInSlot?: boolean;
 }) {
   return (
     <button
@@ -351,7 +384,9 @@ function MatchupTeamRow({ team, isSelected, onSelect, disabled }: {
       ) : (
         <>
           <span className="w-5" />
-          <span className="text-xs text-muted-foreground/50 italic">Waiting for earlier pick</span>
+          <span className="text-xs text-muted-foreground/50 italic">
+            {isPlayInSlot ? 'TBD — First Four' : 'Waiting for earlier pick'}
+          </span>
         </>
       )}
     </button>

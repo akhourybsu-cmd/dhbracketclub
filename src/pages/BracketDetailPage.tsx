@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, ArrowLeft, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Team, Game, Pick, ROUND_NAMES, ROUND_SHORT,
+  FIRST_FOUR_ROUND_NAME, FIRST_FOUR_ROUND_SHORT,
   getEffectiveTeam, getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES,
 } from '@/lib/bracketUtils';
 
@@ -20,6 +21,7 @@ export default function BracketDetailPage() {
   const [owner, setOwner] = useState<string>('');
   const [pool, setPool] = useState<any>(null);
   const [currentRound, setCurrentRound] = useState(1);
+  const [hasFirstFour, setHasFirstFour] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,7 +51,12 @@ export default function BracketDetailPage() {
       }
 
       const { data: gameData } = await supabase.from('games').select('*').eq('tournament_id', tid).order('round_number').order('game_slot');
-      if (gameData) setGames(gameData as Game[]);
+      if (gameData) {
+        setGames(gameData as Game[]);
+        const ff = gameData.some(g => g.round_number === 0);
+        setHasFirstFour(ff);
+        if (ff) setCurrentRound(0);
+      }
 
       const { data: pickData } = await supabase.from('bracket_picks').select('game_id, picked_team_id, picked_in_round').eq('bracket_id', bracketId);
       if (pickData) {
@@ -138,16 +145,24 @@ export default function BracketDetailPage() {
 
       {/* Round Nav */}
       <div className="flex items-center justify-between mb-3">
-        <Button variant="ghost" size="icon" disabled={currentRound <= 1} onClick={() => setCurrentRound(r => r - 1)}>
+        <Button variant="ghost" size="icon" disabled={currentRound <= (hasFirstFour ? 0 : 1)} onClick={() => setCurrentRound(r => r - 1)}>
           <ChevronLeft className="w-5 h-5" />
         </Button>
-        <p className="text-sm font-semibold">{ROUND_NAMES[currentRound - 1]}</p>
+        <p className="text-sm font-semibold">
+          {currentRound === 0 ? FIRST_FOUR_ROUND_NAME : ROUND_NAMES[currentRound - 1]}
+        </p>
         <Button variant="ghost" size="icon" disabled={currentRound >= 6} onClick={() => setCurrentRound(r => r + 1)}>
           <ChevronRight className="w-5 h-5" />
         </Button>
       </div>
 
-      <div className="flex gap-1.5 mb-5 justify-center">
+      <div className="flex gap-1.5 mb-5 justify-center flex-wrap">
+        {hasFirstFour && (
+          <button onClick={() => setCurrentRound(0)}
+            className={cn("px-2 py-1 rounded-md text-[10px] font-semibold transition-colors",
+              currentRound === 0 ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground")}
+          >{FIRST_FOUR_ROUND_SHORT}</button>
+        )}
         {ROUND_SHORT.map((label, i) => (
           <button key={i} onClick={() => setCurrentRound(i + 1)}
             className={cn("px-2 py-1 rounded-md text-[10px] font-semibold transition-colors",
