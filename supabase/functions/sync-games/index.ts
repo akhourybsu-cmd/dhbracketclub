@@ -643,18 +643,20 @@ async function buildTeamLookup(
     }
   }
 
-  // Pass 2: unique seed+region fallback for unresolved teams
+  // Pass 2: seed+region fallback for unresolved teams
   for (const ext of externalTeams) {
     if (lookup.has(ext.externalTeamId)) continue;
 
-    const candidates = internalIndex.filter(
-      (t) =>
-        !usedInternalIds.has(t.id) &&
-        t.seed === ext.seed &&
-        t.region.toLowerCase() === ext.region.toLowerCase()
-    );
+    const candidates = internalIndex
+      .filter(
+        (t) =>
+          !usedInternalIds.has(t.id) &&
+          t.seed === ext.seed &&
+          t.region.toLowerCase() === ext.region.toLowerCase()
+      )
+      .sort((a, b) => a.id.localeCompare(b.id));
 
-    if (candidates.length === 1) {
+    if (candidates.length > 0) {
       lookup.set(ext.externalTeamId, candidates[0].id);
       usedInternalIds.add(candidates[0].id);
     }
