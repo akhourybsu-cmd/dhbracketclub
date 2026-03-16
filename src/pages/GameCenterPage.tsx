@@ -253,7 +253,7 @@ function GameCard({
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-border/30">
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-muted-foreground font-medium">
-            {ROUND_SHORT[game.round_number - 1]} · {game.region}
+            {game.round_number === 0 ? FIRST_FOUR_ROUND_SHORT : ROUND_SHORT[game.round_number - 1]} · {game.region}
           </span>
           {isUpset && (
             <span className="text-[9px] font-bold text-warning bg-warning/15 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
