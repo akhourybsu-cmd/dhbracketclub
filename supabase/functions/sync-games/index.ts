@@ -1671,44 +1671,81 @@ async function recalculateStandingsForTournament(
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  ORCHESTRATOR
+//  ORCHESTRATOR (with NCAA-first provider fallback)
 // ═══════════════════════════════════════════════════════════════════
 
-async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string, seasonYear: number) {
-  const providerName = req.providerName || "stub";
+/**
+ * Resolve the best available provider. For runFullSync:
+ *   1. Try NCAA first (primary, structured data)
+ *   2. Fall back to ESPN (has schedule data earlier)
+ *   3. Use explicitly requested provider for non-full-sync actions
+ */
+async function resolveProvider(
+  db: SupabaseClient,
+  requestedProvider: string,
+  action: SyncAction,
+  seasonYear: number,
+  syncRunId: string
+): Promise<{ provider: SportDataProvider; config: ProviderConfig; providerName: string }> {
 
-  const { data: providerConfig } = await db
-    .from("provider_configs")
-    .select("*")
-    .eq("provider_name", providerName)
-    .maybeSingle();
+  // For explicit provider requests (not "auto"), use as-is
+  if (requestedProvider !== "auto" && requestedProvider !== "stub") {
+    const provider = PROVIDER_REGISTRY[requestedProvider];
+    if (!provider) throw new Error(`No adapter registered for provider '${requestedProvider}'`);
 
-  if (req.action !== "recalculateStandings") {
-    if (!providerConfig || !providerConfig.enabled) {
-      throw new Error(`Provider '${providerName}' is not configured or not enabled`);
+    const { data: pc } = await db.from("provider_configs").select("*").eq("provider_name", requestedProvider).maybeSingle();
+    const config: ProviderConfig = pc
+      ? { providerName: pc.provider_name, enabled: pc.enabled, baseUrl: pc.base_url, sport: pc.sport, tournamentScope: pc.tournament_scope, seasonYear }
+      : { providerName: requestedProvider, enabled: true, baseUrl: null, sport: "basketball", tournamentScope: "mens", seasonYear };
+
+    return { provider, config, providerName: requestedProvider };
+  }
+
+  // Auto mode: try NCAA first, fall back to ESPN
+  const ncaa = PROVIDER_REGISTRY["ncaa"];
+  if (ncaa) {
+    try {
+      const testGames = await fetchNcaaScoreboard(seasonYear);
+      if (testGames.length > 0) {
+        console.log(`[orchestrator] NCAA provider has ${testGames.length} games — using NCAA as primary`);
+        await logSyncEvent(db, syncRunId, "provider", null, "provider_selected", "success", {
+          provider: "ncaa", reason: "ncaa_has_data", gameCount: testGames.length,
+        });
+        const { data: pc } = await db.from("provider_configs").select("*").eq("provider_name", "ncaa").maybeSingle();
+        const config: ProviderConfig = pc
+          ? { providerName: pc.provider_name, enabled: pc.enabled, baseUrl: pc.base_url, sport: pc.sport, tournamentScope: pc.tournament_scope, seasonYear }
+          : { providerName: "ncaa", enabled: true, baseUrl: null, sport: "basketball", tournamentScope: "mens", seasonYear };
+        return { provider: ncaa, config, providerName: "ncaa" };
+      }
+      console.log(`[orchestrator] NCAA provider returned 0 games — falling back to ESPN`);
+    } catch (err) {
+      console.warn(`[orchestrator] NCAA provider failed — falling back to ESPN:`, err);
     }
   }
 
-  const provider = PROVIDER_REGISTRY[providerName];
-  if (!provider && req.action !== "recalculateStandings") {
-    throw new Error(`No adapter registered for provider '${providerName}'`);
-  }
+  // Fallback to ESPN
+  const espn = PROVIDER_REGISTRY["espn"];
+  if (!espn) throw new Error("No providers available");
 
-  const config: ProviderConfig = providerConfig
-    ? {
-        providerName: providerConfig.provider_name,
-        enabled: providerConfig.enabled,
-        baseUrl: providerConfig.base_url,
-        sport: providerConfig.sport,
-        tournamentScope: providerConfig.tournament_scope,
-        seasonYear,
-      }
-    : { providerName, enabled: true, baseUrl: null, sport: "basketball", tournamentScope: "mens", seasonYear };
+  await logSyncEvent(db, syncRunId, "provider", null, "provider_fallback", "success", {
+    provider: "espn", reason: "ncaa_unavailable",
+  });
 
+  const { data: pc } = await db.from("provider_configs").select("*").eq("provider_name", "espn").maybeSingle();
+  const config: ProviderConfig = pc
+    ? { providerName: pc.provider_name, enabled: pc.enabled, baseUrl: pc.base_url, sport: pc.sport, tournamentScope: pc.tournament_scope, seasonYear }
+    : { providerName: "espn", enabled: true, baseUrl: null, sport: "basketball", tournamentScope: "mens", seasonYear };
+  return { provider: espn, config, providerName: "espn" };
+}
+
+async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string, seasonYear: number) {
+  const requestedProvider = req.providerName || "auto";
+
+  // Create sync run first so we can log provider resolution
   const { data: syncRun, error: runErr } = await db
     .from("sync_runs")
     .insert({
-      provider_name: providerName,
+      provider_name: requestedProvider,
       sync_type: req.action,
       status: "running",
       initiated_by_user_id: userId,
@@ -1718,6 +1755,26 @@ async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string,
 
   if (runErr || !syncRun) throw new Error(`Failed to create sync run: ${runErr?.message}`);
   const syncRunId = syncRun.id;
+
+  // For recalculateStandings, no provider needed
+  if (req.action === "recalculateStandings") {
+    try {
+      const result = await recalculateStandingsForTournament(db, req.tournamentId, syncRunId, req.poolId, "manual");
+      await db.from("tournaments").update({ last_synced_at: new Date().toISOString() }).eq("id", req.tournamentId);
+      await db.from("sync_runs").update({ status: "completed", finished_at: new Date().toISOString(), raw_summary: result }).eq("id", syncRunId);
+      return { syncRunId, action: req.action, result };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      await db.from("sync_runs").update({ status: "failed", finished_at: new Date().toISOString(), error_message: msg }).eq("id", syncRunId);
+      throw err;
+    }
+  }
+
+  // Resolve provider (auto = NCAA first, ESPN fallback)
+  const { provider, config, providerName } = await resolveProvider(db, requestedProvider, req.action, seasonYear, syncRunId);
+
+  // Update sync run with actual provider used
+  await db.from("sync_runs").update({ provider_name: providerName }).eq("id", syncRunId);
 
   try {
     let result: Record<string, unknown> = {};
