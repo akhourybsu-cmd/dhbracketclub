@@ -466,9 +466,239 @@ const espnProvider: SportDataProvider = {
   },
 };
 
+// ═══════════════════════════════════════════════════════════════════
+//  NCAA PROVIDER (data.ncaa.com — primary source)
+// ═══════════════════════════════════════════════════════════════════
+
+const NCAA_BASE = "https://data.ncaa.com/casablanca/scoreboard/basketball-men/d1";
+
+const NCAA_ROUND_MAP: Record<string, { roundNumber: number; roundName: string }> = {
+  "First Four": { roundNumber: 0, roundName: "First Four" },
+  "First Round": { roundNumber: 1, roundName: "Round of 64" },
+  "Second Round": { roundNumber: 2, roundName: "Round of 32" },
+  "Sweet 16": { roundNumber: 3, roundName: "Sweet 16" },
+  "Elite 8": { roundNumber: 4, roundName: "Elite 8" },
+  "Elite Eight": { roundNumber: 4, roundName: "Elite 8" },
+  "Final Four": { roundNumber: 5, roundName: "Final Four" },
+  "Championship": { roundNumber: 6, roundName: "Championship" },
+  "National Championship": { roundNumber: 6, roundName: "Championship" },
+};
+
+const NCAA_REGION_MAP: Record<string, string> = {
+  "South": "South",
+  "East": "East",
+  "West": "West",
+  "Midwest": "Midwest",
+};
+
+function parseNcaaGameState(gameState: string): "scheduled" | "in_progress" | "final" {
+  if (!gameState) return "scheduled";
+  const s = gameState.toLowerCase();
+  if (s === "final") return "final";
+  if (s === "live" || s === "in_progress") return "in_progress";
+  return "scheduled";
+}
+
+function parseNcaaGame(game: any): NormalizedGame | null {
+  const g = game.game || game;
+  if (!g || !g.gameID) return null;
+
+  // Only include tournament games (must have bracketRound)
+  const bracketRound = (g.bracketRound || "").trim();
+  if (!bracketRound) return null;
+
+  const roundInfo = NCAA_ROUND_MAP[bracketRound];
+  if (!roundInfo) return null;
+
+  const rawRegion = (g.bracketRegion || "").trim();
+  let region = NCAA_REGION_MAP[rawRegion] || rawRegion || "Unknown";
+  // Final Four and Championship have empty bracketRegion
+  if (roundInfo.roundNumber === 5) region = "Final Four";
+  if (roundInfo.roundNumber === 6) region = "Championship";
+  // First Four also has empty bracketRegion — use team seeds + internal matching
+  if (roundInfo.roundNumber === 0 && !rawRegion) region = "Unknown";
+
+  const status = parseNcaaGameState(g.gameState);
+
+  const away = g.away || {};
+  const home = g.home || {};
+  const awayScore = away.score ? parseInt(away.score, 10) : null;
+  const homeScore = home.score ? parseInt(home.score, 10) : null;
+  const awaySeed = away.seed ? parseInt(away.seed, 10) : null;
+  const homeSeed = home.seed ? parseInt(home.seed, 10) : null;
+
+  let winnerExtId: string | null = null;
+  if (status === "final") {
+    // NCAA uses seo name as team identifier
+    if (away.winner === true) winnerExtId = `ncaa:${away.names?.seo || ""}`;
+    else if (home.winner === true) winnerExtId = `ncaa:${home.names?.seo || ""}`;
+  }
+
+  const bracketId = g.bracketId ? parseInt(g.bracketId, 10) : 0;
+  const gameSlot = bracketId > 0 ? (bracketId % 100) : 0;
+
+  return {
+    externalGameId: `ncaa:${g.gameID}`,
+    roundNumber: roundInfo.roundNumber,
+    roundName: roundInfo.roundName,
+    region,
+    gameSlot,
+    team1ExternalId: away.names?.seo ? `ncaa:${away.names.seo}` : null,
+    team2ExternalId: home.names?.seo ? `ncaa:${home.names.seo}` : null,
+    team1Score: isNaN(awayScore!) ? null : awayScore,
+    team2Score: isNaN(homeScore!) ? null : homeScore,
+    team1Seed: awaySeed,
+    team2Seed: homeSeed,
+    winnerExternalId: winnerExtId,
+    status,
+    isResultFinal: status === "final",
+    liveClock: g.contestClock || null,
+    livePeriod: g.currentPeriod || null,
+    scheduledAt: g.startTimeEpoch ? new Date(parseInt(g.startTimeEpoch, 10) * 1000).toISOString() : null,
+    sourceLastUpdatedAt: new Date().toISOString(),
+    sourcePayload: { ncaaGameId: g.gameID, bracketId: g.bracketId, bracketRound, bracketRegion: rawRegion },
+    parseConfidence: "high", // NCAA data has explicit bracket fields — always high confidence
+    sourceProvider: "ncaa",
+  };
+}
+
+function extractTeamsFromNcaaGames(games: any[]): NormalizedTeam[] {
+  const teamMap = new Map<string, NormalizedTeam>();
+
+  for (const gameWrapper of games) {
+    const g = gameWrapper.game || gameWrapper;
+    if (!g || !g.bracketRound) continue;
+
+    const roundInfo = NCAA_ROUND_MAP[(g.bracketRound || "").trim()];
+    if (!roundInfo) continue;
+
+    const rawRegion = (g.bracketRegion || "").trim();
+    const region = NCAA_REGION_MAP[rawRegion] || rawRegion || "Unknown";
+
+    for (const side of [g.away, g.home]) {
+      if (!side?.names?.seo) continue;
+      const id = `ncaa:${side.names.seo}`;
+      const seed = side.seed ? parseInt(side.seed, 10) : 0;
+
+      if (!teamMap.has(id) || (teamMap.get(id)!.seed === 0 && seed > 0)) {
+        teamMap.set(id, {
+          externalTeamId: id,
+          schoolName: side.names.full || side.names.short || side.names.seo,
+          shortName: side.names.short || side.names.char6 || side.names.seo,
+          seed,
+          region: region !== "Unknown" ? region : teamMap.get(id)?.region || "Unknown",
+        });
+      }
+    }
+  }
+
+  return Array.from(teamMap.values());
+}
+
+const ncaaCache = new Map<number, any[]>();
+
+async function fetchNcaaScoreboard(seasonYear: number): Promise<any[]> {
+  if (ncaaCache.has(seasonYear)) {
+    console.log(`[ncaa] Using cached scoreboard for ${seasonYear} (${ncaaCache.get(seasonYear)!.length} games)`);
+    return ncaaCache.get(seasonYear)!;
+  }
+
+  const allGames: any[] = [];
+  const dates = generateTournamentDates(seasonYear);
+
+  for (const dateStr of dates) {
+    const y = dateStr.slice(0, 4);
+    const m = dateStr.slice(4, 6);
+    const d = dateStr.slice(6, 8);
+    const url = `${NCAA_BASE}/${y}/${m}/${d}/scoreboard.json`;
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        // NCAA returns XML error for missing dates — silently skip
+        await res.text();
+        continue;
+      }
+      const data = await res.json();
+      const games = data.games || [];
+      // Only keep tournament games (have bracketRound)
+      const tournamentGames = games.filter((g: any) => {
+        const br = (g.game?.bracketRound || g.bracketRound || "").trim();
+        return br !== "";
+      });
+      allGames.push(...tournamentGames);
+    } catch {
+      // Silently skip — date may not exist yet
+      continue;
+    }
+  }
+
+  // Deduplicate by gameID
+  const seen = new Set<string>();
+  const deduped = allGames.filter(g => {
+    const id = g.game?.gameID || g.gameID;
+    if (!id || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+
+  console.log(`[ncaa] Fetched ${deduped.length} tournament games for ${seasonYear}`);
+  ncaaCache.set(seasonYear, deduped);
+  return deduped;
+}
+
+const ncaaProvider: SportDataProvider = {
+  name: "ncaa",
+
+  async fetchTeams(tournamentId: string, config: ProviderConfig): Promise<NormalizedTeam[]> {
+    console.log(`[ncaa] fetchTeams for season ${config.seasonYear}`);
+    const games = await fetchNcaaScoreboard(config.seasonYear);
+    return extractTeamsFromNcaaGames(games);
+  },
+
+  async fetchGames(tournamentId: string, config: ProviderConfig): Promise<NormalizedGame[]> {
+    console.log(`[ncaa] fetchGames for season ${config.seasonYear}`);
+    const rawGames = await fetchNcaaScoreboard(config.seasonYear);
+    const games: NormalizedGame[] = [];
+    for (const g of rawGames) {
+      const parsed = parseNcaaGame(g);
+      if (parsed) games.push(parsed);
+    }
+    return games;
+  },
+
+  async fetchResults(tournamentId: string, config: ProviderConfig): Promise<NormalizedGame[]> {
+    console.log(`[ncaa] fetchResults for season ${config.seasonYear}`);
+    const rawGames = await fetchNcaaScoreboard(config.seasonYear);
+    const games: NormalizedGame[] = [];
+    for (const g of rawGames) {
+      const parsed = parseNcaaGame(g);
+      if (parsed) games.push(parsed);
+    }
+    return games;
+  },
+
+  async fetchTournamentMeta(tournamentId: string, config: ProviderConfig) {
+    const rawGames = await fetchNcaaScoreboard(config.seasonYear);
+    const total = rawGames.length;
+    const finals = rawGames.filter(g => {
+      const gs = (g.game?.gameState || g.gameState || "").toLowerCase();
+      return gs === "final";
+    }).length;
+
+    let status = "upcoming";
+    if (total === 0) status = "upcoming";
+    else if (finals >= 63) status = "completed";
+    else if (finals > 0 || total > 0) status = "in_progress";
+
+    return { status, externalSeasonId: `${config.seasonYear}` };
+  },
+};
+
 const PROVIDER_REGISTRY: Record<string, SportDataProvider> = {
   stub: stubProvider,
   espn: espnProvider,
+  ncaa: ncaaProvider,
 };
 
 // ═══════════════════════════════════════════════════════════════════
