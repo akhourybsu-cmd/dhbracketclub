@@ -44,7 +44,7 @@ export default function AdminToolsPage() {
   const [syncRuns, setSyncRuns] = useState<SyncRun[]>([]);
   const [syncing, setSyncing] = useState<string | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
-  const [providerName, setProviderName] = useState<string>('espn');
+  const [providerName, setProviderName] = useState<string>('auto');
 
   const [simGameId, setSimGameId] = useState('');
   const [simStatus, setSimStatus] = useState<'scheduled' | 'in_progress' | 'final'>('in_progress');
@@ -561,6 +561,8 @@ export default function AdminToolsPage() {
                 onChange={e => setProviderName(e.target.value)}
                 className="bg-muted text-foreground text-[11px] font-medium rounded-lg px-2.5 py-1.5 border border-border"
               >
+                <option value="auto">Auto (NCAA → ESPN)</option>
+                <option value="ncaa">NCAA</option>
                 <option value="espn">ESPN</option>
                 <option value="stub">Stub (test)</option>
               </select>
