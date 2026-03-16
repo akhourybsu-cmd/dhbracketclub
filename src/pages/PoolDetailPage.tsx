@@ -281,6 +281,37 @@ export default function PoolDetailPage() {
           );
         })}
       </div>
+
+      {/* Delete Pool (Admin only) */}
+      {isAdmin && (
+        <div className="mt-8 pt-6 border-t border-border/20">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" className="w-full gap-2 text-destructive border-destructive/30 hover:bg-destructive/10 font-bold rounded-xl">
+                <Trash2 className="w-4 h-4" /> Delete Pool
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete "{pool.name}"?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete the pool, all brackets, picks, and standings. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeletePool}
+                  disabled={deleting}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deleting ? 'Deleting…' : 'Delete Pool'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
     </motion.div>
   );
 }
