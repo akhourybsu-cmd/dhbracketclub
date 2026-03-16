@@ -1,10 +1,21 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Trophy, Edit3, Eye, Settings, Copy, Users, Clock, ArrowRight, Activity } from 'lucide-react';
+import { Trophy, Edit3, Eye, Settings, Copy, Users, Clock, ArrowRight, Activity, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES } from '@/lib/bracketUtils';
@@ -19,6 +30,35 @@ export default function PoolDetailPage() {
   const [memberBrackets, setMemberBrackets] = useState<Map<string, any>>(new Map());
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeletePool = async () => {
+    if (!poolId) return;
+    setDeleting(true);
+    try {
+      // Delete related data first (brackets, picks, members, etc.)
+      const { data: brackets } = await supabase.from('brackets').select('id').eq('pool_id', poolId);
+      if (brackets?.length) {
+        const bracketIds = brackets.map(b => b.id);
+        await supabase.from('bracket_picks').delete().in('bracket_id', bracketIds);
+        await supabase.from('brackets').delete().eq('pool_id', poolId);
+      }
+      await supabase.from('standings').delete().eq('pool_id', poolId);
+      await supabase.from('standings_snapshots').delete().eq('pool_id', poolId);
+      await supabase.from('scoring_rules').delete().eq('pool_id', poolId);
+      await supabase.from('admin_logs').delete().eq('pool_id', poolId);
+      await supabase.from('pool_members').delete().eq('pool_id', poolId);
+      const { error } = await supabase.from('pools').delete().eq('id', poolId);
+      if (error) throw error;
+      toast.success('Pool deleted');
+      navigate('/dashboard');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete pool');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   useEffect(() => {
     if (!poolId || !user) return;
@@ -241,6 +281,37 @@ export default function PoolDetailPage() {
           );
         })}
       </div>
+
+      {/* Delete Pool (Admin only) */}
+      {isAdmin && (
+        <div className="mt-8 pt-6 border-t border-border/20">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" className="w-full gap-2 text-destructive border-destructive/30 hover:bg-destructive/10 font-bold rounded-xl">
+                <Trash2 className="w-4 h-4" /> Delete Pool
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete "{pool.name}"?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete the pool, all brackets, picks, and standings. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeletePool}
+                  disabled={deleting}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deleting ? 'Deleting…' : 'Delete Pool'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
     </motion.div>
   );
 }
