@@ -11,7 +11,7 @@ import {
   AlertTriangle, Database, Activity, FlaskConical, ChevronDown, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Game, Team, ROUND_NAMES, ROUND_SHORT, DEFAULT_SCORING, calculateBracketScore } from '@/lib/bracketUtils';
+import { Game, Team, ROUND_NAMES, ROUND_SHORT } from '@/lib/bracketUtils';
 import { useGameUpdates, useSyncRunUpdates } from '@/hooks/useRealtimeSubscription';
 
 type AdminTab = 'games' | 'sync' | 'simulate';
@@ -176,40 +176,22 @@ export default function AdminToolsPage() {
   };
 
   const recalculateStandings = async () => {
-    if (!poolId) return;
+    if (!poolId || !tournamentId) return;
     setRecalculating(true);
     try {
-      const { data: brackets } = await supabase.from('brackets').select('id, user_id').eq('pool_id', poolId);
-      if (!brackets) return;
-
-      const { data: rules } = await supabase.from('scoring_rules')
-        .select('round_number, points_per_correct_pick').eq('pool_id', poolId);
-      const scoringRules: Record<number, number> = {};
-      rules?.forEach(r => { scoringRules[r.round_number] = r.points_per_correct_pick; });
-      if (Object.keys(scoringRules).length === 0) Object.assign(scoringRules, DEFAULT_SCORING);
-
-      const { data: freshGames } = await supabase.from('games').select('*').eq('tournament_id', tournamentId);
-      const allGames = (freshGames || []) as Game[];
-
-      for (const bracket of brackets) {
-        const { data: picks } = await supabase.from('bracket_picks')
-          .select('game_id, picked_team_id, picked_in_round').eq('bracket_id', bracket.id);
-        if (!picks) continue;
-        const result = calculateBracketScore(picks, allGames, scoringRules);
-        await supabase.from('standings').upsert({
-          pool_id: poolId, user_id: bracket.user_id,
-          total_points: result.totalPoints, correct_picks: result.correctPicks,
-          possible_points_remaining: result.possiblePointsRemaining,
-        }, { onConflict: 'pool_id,user_id' });
+      // Use server-side recalculation via edge function (security: never trust client scoring)
+      const res = await supabase.functions.invoke('sync-games', {
+        body: { action: 'recalculateStandings', tournamentId, poolId },
+      });
+      if (res.error) throw new Error(res.error.message);
+      const result = res.data;
+      if (result.success) {
+        const stats = result.result?.standings || result.result || {};
+        toast.success(`Standings recalculated: ${stats.bracketsScored || 0} brackets, ${stats.standingsChanged || 0} changes`);
+        fetchData();
+      } else {
+        toast.error(result.error || 'Recalculation failed');
       }
-
-      if (user) {
-        await supabase.from('admin_logs').insert({
-          pool_id: poolId, actor_user_id: user.id,
-          action_type: 'recalculate_standings', action_payload: { bracket_count: brackets.length },
-        });
-      }
-      toast.success(`Standings recalculated for ${brackets.length} brackets!`);
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -346,7 +328,54 @@ export default function AdminToolsPage() {
       </Link>
 
       <h1 className="text-xl font-bold mb-1">Admin Control Center</h1>
-      <p className="text-sm text-muted-foreground mb-4">Manage games, sync data, and simulate results.</p>
+      <p className="text-sm text-muted-foreground mb-2">Manage games, sync data, and simulate results.</p>
+
+      {/* Sync Health Banner */}
+      {(() => {
+        const lastRun = syncRuns[0];
+        const isCurrentlySyncing = !!syncing || lastRun?.status === 'running';
+        const staleMinutes = lastSyncedAt ? (Date.now() - new Date(lastSyncedAt).getTime()) / 60000 : Infinity;
+        const hasRecentError = lastRun?.status === 'failed';
+        const hasWarnings = lastRun?.status === 'completed_with_errors' || lastRun?.status === 'completed_with_warnings';
+
+        let healthLabel: string;
+        let healthColor: string;
+        let healthBg: string;
+
+        if (isCurrentlySyncing) {
+          healthLabel = 'Syncing';
+          healthColor = 'text-primary';
+          healthBg = 'bg-primary/10 border-primary/20';
+        } else if (hasRecentError) {
+          healthLabel = 'Degraded';
+          healthColor = 'text-destructive';
+          healthBg = 'bg-destructive/10 border-destructive/20';
+        } else if (staleMinutes > 120) {
+          healthLabel = lastSyncedAt ? 'Stale' : 'Manual Mode';
+          healthColor = 'text-warning';
+          healthBg = 'bg-warning/10 border-warning/20';
+        } else if (hasWarnings) {
+          healthLabel = 'Healthy (warnings)';
+          healthColor = 'text-warning';
+          healthBg = 'bg-warning/10 border-warning/20';
+        } else {
+          healthLabel = 'Healthy';
+          healthColor = 'text-success';
+          healthBg = 'bg-success/10 border-success/20';
+        }
+
+        return (
+          <div className={cn("rounded-lg px-3 py-2 mb-4 flex items-center justify-between border", healthBg)}>
+            <div className="flex items-center gap-2">
+              <span className={cn("w-2 h-2 rounded-full", healthColor.replace('text-', 'bg-'), isCurrentlySyncing && "animate-pulse")} />
+              <span className={cn("text-xs font-semibold", healthColor)}>{healthLabel}</span>
+            </div>
+            <span className="text-[10px] text-muted-foreground tabular-nums">
+              {lastSyncedAt ? `Synced ${Math.round(staleMinutes)}m ago` : 'Never synced'}
+            </span>
+          </div>
+        );
+      })()}
 
       {/* Stats Strip */}
       <div className="grid grid-cols-4 gap-2 mb-4">
