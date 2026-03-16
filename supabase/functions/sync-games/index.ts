@@ -759,10 +759,12 @@ async function createExternalMapping(
  * Strategy (in order):
  *   1. Explicit mapping in game_external_mappings
  *   2. Participant-based match (both teams must resolve)
+ *   2.5. Seed-pair match for R1 (when seeds + region are known)
  *   3. Championship singleton (round 6, only 1 game)
  *   4. Final Four by slot (round 5, only 2 games)
- *   5. Deterministic round+region+slot (high confidence only)
- *   6. Fallback round+slot (low confidence)
+ *   5. First Four by region (round 0, match by region)
+ *   6. Deterministic round+region+slot (high confidence only)
+ *   7. Fallback round+slot (low confidence)
  */
 async function resolveGameId(
   db: SupabaseClient,
