@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, ArrowLeft, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Team, Game, Pick, ROUND_NAMES, ROUND_SHORT,
+  FIRST_FOUR_ROUND_NAME, FIRST_FOUR_ROUND_SHORT,
   getEffectiveTeam, getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES,
 } from '@/lib/bracketUtils';
 
