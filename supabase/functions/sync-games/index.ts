@@ -882,29 +882,10 @@ async function syncGames(
   const errors: string[] = [];
   const skipReasons: Record<string, number> = {};
 
-  // Update non-play-in team names (play-in teams are handled positionally below)
-  let teamsUpdated = 0;
-  for (const ext of externalTeams) {
-    const internalId = teamLookup.get(ext.externalTeamId);
-    if (internalId && ext.schoolName) {
-      // Verify this isn't a play-in team (play-in teams handled by positional matching)
-      const { data: team } = await db
-        .from("teams")
-        .select("play_in_group")
-        .eq("id", internalId)
-        .single();
-      if (team && !team.play_in_group) {
-        const { error } = await db.from("teams").update({
-          school_name: ext.schoolName,
-          short_name: ext.shortName || ext.schoolName,
-        }).eq("id", internalId);
-        if (!error) teamsUpdated++;
-      }
-    }
-  }
-  if (teamsUpdated > 0) {
-    await logSyncEvent(db, syncRunId, "team", null, "team_names_updated", "success", { teamsUpdated });
-  }
+  // NOTE: Bulk team name updates removed — they caused cross-region name corruption
+  // via loose name matching. Team names are set during initial seeding.
+  // Play-in team names are updated only via FF positional anchoring below.
+  const teamsUpdated = 0;
 
   for (const rawGame of sortedGames) {
     const ng = validateGame(rawGame);
@@ -936,7 +917,8 @@ async function syncGames(
 
     // ─── First Four positional team anchoring ─────────────────────
     // For matched FF games, anchor ESPN team IDs to internal team positions.
-    // This avoids name-collision issues and populates the lookup for later rounds.
+    // This ONLY populates the teamLookup for later round matching.
+    // Team names are updated here since play-in teams may have placeholder names.
     if (ng.roundNumber === 0) {
       const { data: ffGame } = await db
         .from("games")
@@ -948,7 +930,7 @@ async function syncGames(
         if (ng.team1ExternalId && ffGame.team1_id && !teamLookup.has(ng.team1ExternalId)) {
           teamLookup.set(ng.team1ExternalId, ffGame.team1_id);
           ffTeamsAnchored++;
-          // Update team name from ESPN
+          // Update play-in team name from ESPN (these may have placeholder names)
           const ext = extTeamMap.get(ng.team1ExternalId);
           if (ext?.schoolName) {
             await db.from("teams").update({
@@ -977,19 +959,15 @@ async function syncGames(
       });
     }
 
-    // Update schedule info (not scores/results)
+    // Update schedule info only (not team assignments or scores)
     const schedulePayload: Record<string, unknown> = {
       source_last_updated_at: ng.sourceLastUpdatedAt || new Date().toISOString(),
     };
     if (ng.scheduledAt) schedulePayload.scheduled_at = ng.scheduledAt;
 
-    // Populate teams if known and not already set (non-FF games)
-    if (ng.roundNumber > 0) {
-      const t1 = ng.team1ExternalId ? teamLookup.get(ng.team1ExternalId) : null;
-      const t2 = ng.team2ExternalId ? teamLookup.get(ng.team2ExternalId) : null;
-      if (t1) schedulePayload.team1_id = t1;
-      if (t2) schedulePayload.team2_id = t2;
-    }
+    // NEVER overwrite R1 team IDs — they are structural bracket assignments.
+    // R2+ team assignments are handled by winner advancement in syncGameResults.
+    // syncGames only updates schedule metadata.
 
     const { error } = await db.from("games").update(schedulePayload).eq("id", gameId);
     if (error) {
