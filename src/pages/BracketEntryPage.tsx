@@ -23,6 +23,7 @@ export default function BracketEntryPage() {
   const [picks, setPicks] = useState<Map<string, Pick>>(new Map());
   const [bracket, setBracket] = useState<any>(null);
   const [tiebreaker, setTiebreaker] = useState<string>('');
+  const [hasFirstFour, setHasFirstFour] = useState(false);
   const [currentRound, setCurrentRound] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
