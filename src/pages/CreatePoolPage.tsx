@@ -152,7 +152,7 @@ export default function CreatePoolPage() {
           />
         </div>
         <div>
-          <label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wider">Description <span className="normal-case font-normal">(optional)</span></label>
+          <label className="form-label">Description <span className="normal-case font-normal">(optional)</span></label>
           <Input
             value={description}
             onChange={(e) => setDescription(e.target.value)}

@@ -95,7 +95,7 @@ export default function JoinPoolPage() {
         className="glass-card p-5 sm:p-6 space-y-5"
       >
         <div>
-          <label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wider">Invite Code</label>
+          <label className="form-label">Invite Code</label>
           <Input
             required
             value={code}

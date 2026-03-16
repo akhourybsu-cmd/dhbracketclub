@@ -237,13 +237,12 @@ export default function LeaderboardPage() {
       )}
 
       {standings.length === 0 ? (
-        /* Empty state */
-        <div className="glass-card p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
-            <Trophy className="w-8 h-8 text-muted-foreground" />
+        <div className="empty-state">
+          <div className="empty-state-icon">
+            <Trophy />
           </div>
-          <p className="text-base font-semibold text-foreground mb-1">No members yet</p>
-          <p className="text-sm text-muted-foreground">Invite friends to join and compete!</p>
+          <p className="empty-state-title">No members yet</p>
+          <p className="empty-state-desc">Invite friends to join and compete!</p>
         </div>
       ) : (
         <>

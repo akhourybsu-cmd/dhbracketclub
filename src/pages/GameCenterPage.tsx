@@ -225,11 +225,10 @@ export default function GameCenterPage() {
             <div key={group.round}>
               {/* Round section header */}
               {roundFilter === null && (
-                <div className="flex items-center gap-2 mb-3">
+                <div className="section-divider">
                   <span className="section-header mb-0">
                     {group.round === 0 ? 'First Four' : ROUND_NAMES[group.round - 1]}
                   </span>
-                  <div className="flex-1 h-px bg-border/30" />
                   <span className="text-[10px] text-muted-foreground tabular-nums">{group.games.length} games</span>
                 </div>
               )}

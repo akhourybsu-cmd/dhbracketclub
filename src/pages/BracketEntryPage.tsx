@@ -305,9 +305,8 @@ export default function BracketEntryPage() {
             const regionGames = roundGames.filter(g => g.region === region);
             return (
               <div key={region}>
-                <div className="flex items-center gap-2 mb-3">
+                <div className="section-divider">
                   <h3 className="section-header mb-0">{region}</h3>
-                  <div className="flex-1 h-px bg-border/30" />
                 </div>
                 <div className="space-y-2.5">
                   {regionGames.map((game, idx) => {
