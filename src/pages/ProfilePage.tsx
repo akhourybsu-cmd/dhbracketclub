@@ -35,7 +35,7 @@ export default function ProfilePage() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       className="max-w-md mx-auto"
     >
@@ -50,30 +50,41 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="glass-card p-6 space-y-5 mb-4">
-        <div className="flex items-center gap-4 mb-2">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-extrabold text-primary" style={{ background: 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))' }}>
+      {/* Identity card */}
+      <div className="glass-card arena-edge p-6 mb-4">
+        <div className="flex items-center gap-4 mb-6 relative z-10">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-extrabold text-primary relative" style={{
+            background: 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.04))',
+            border: '1px solid hsl(var(--primary) / 0.1)',
+            boxShadow: '0 0 20px hsl(var(--primary) / 0.06)',
+          }}>
             {displayName ? displayName[0].toUpperCase() : '?'}
           </div>
           <div>
             <p className="font-bold text-lg leading-tight">{displayName}</p>
-            <p className="text-[11px] text-muted-foreground font-medium">{user?.email}</p>
+            <p className="text-[11px] text-muted-foreground/60 font-medium mt-0.5">{user?.email}</p>
           </div>
         </div>
 
-        <div>
-          <label className="form-label">Display Name</label>
-          <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="form-input" />
-        </div>
+        <div className="relative z-10 space-y-4">
+          <div>
+            <label className="form-label">Display Name</label>
+            <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="form-input" />
+          </div>
 
-        <Button onClick={handleSave} className="w-full h-11 font-bold rounded-xl btn-press" disabled={loading}>
-          {loading ? 'Saving...' : 'Save Changes'}
-        </Button>
+          <Button onClick={handleSave} className="w-full h-11 font-bold rounded-xl btn-press text-[13px]" disabled={loading}>
+            {loading ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
       </div>
 
-      <Button variant="outline" className="w-full gap-2 h-11 text-destructive hover:text-destructive font-bold rounded-xl btn-press" onClick={signOut}>
-        <LogOut className="w-4 h-4" /> Sign Out
-      </Button>
+      {/* Sign out — secondary treatment */}
+      <button
+        onClick={signOut}
+        className="w-full flex items-center justify-center gap-2 h-10 rounded-xl text-[13px] font-medium text-muted-foreground/60 hover:text-destructive transition-colors duration-200"
+      >
+        <LogOut className="w-3.5 h-3.5" /> Sign Out
+      </button>
     </motion.div>
   );
 }

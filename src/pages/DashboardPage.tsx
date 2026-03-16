@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Plus, Users, ArrowRight, Trophy, BarChart3, Shield, Download, X, Sparkles } from 'lucide-react';
+import { Plus, Users, ArrowRight, Trophy, BarChart3, Shield, Download, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES } from '@/lib/bracketUtils';
 import { cn } from '@/lib/utils';
@@ -79,37 +79,37 @@ export default function DashboardPage() {
   const lockedCount = pools.filter(p => isLocked(p.lock_time)).length;
 
   return (
-    <div className="pb-8">
+    <div className="pb-6">
       {/* ═══ Hero Section ═══ */}
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
+        initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="relative mb-10"
+        className="relative mb-8"
       >
-        {/* Multi-layer ambient glow */}
-        <div className="absolute -inset-x-6 -top-12 -bottom-6 pointer-events-none" style={{
-          background: 'radial-gradient(ellipse 80% 50% at 50% -10%, hsl(var(--primary) / 0.07), transparent)',
+        {/* Arena ambient */}
+        <div className="absolute -inset-x-8 -top-14 -bottom-8 pointer-events-none" style={{
+          background: 'radial-gradient(ellipse 90% 55% at 50% -15%, hsl(var(--primary) / 0.06), transparent)',
         }} />
-        <div className="absolute -inset-x-6 -top-8 -bottom-6 pointer-events-none" style={{
-          background: 'radial-gradient(ellipse 50% 40% at 80% 10%, hsl(var(--accent) / 0.03), transparent)',
+        <div className="absolute -inset-x-8 -top-10 -bottom-8 pointer-events-none" style={{
+          background: 'radial-gradient(ellipse 40% 35% at 85% 5%, hsl(var(--accent) / 0.025), transparent)',
         }} />
 
         <div className="relative z-10">
           <motion.p
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-[10px] font-bold uppercase tracking-[0.2em] mb-2.5"
-            style={{ color: 'hsl(var(--primary) / 0.6)' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.08 }}
+            className="text-[9px] font-bold uppercase tracking-[0.25em] mb-2"
+            style={{ color: 'hsl(var(--primary) / 0.5)' }}
           >
             {getGreeting()}
           </motion.p>
           <motion.h1
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-none"
+            transition={{ delay: 0.12 }}
+            className="text-[1.75rem] font-extrabold tracking-tight leading-none"
           >
             {displayName || 'there'}{' '}
             <motion.span
@@ -126,11 +126,11 @@ export default function DashboardPage() {
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.25 }}
-              className="text-sm text-muted-foreground mt-2 font-medium"
+              transition={{ delay: 0.2 }}
+              className="text-[13px] text-muted-foreground mt-1.5 font-medium"
             >
               {bracketsIn === pools.length && pools.length > 0
-                ? 'All brackets submitted — you\'re all set! 🏀'
+                ? 'All brackets submitted 🏀'
                 : `${pools.length} pool${pools.length !== 1 ? 's' : ''} active`}
             </motion.p>
           )}
@@ -139,28 +139,24 @@ export default function DashboardPage() {
 
       {/* ═══ Quick Actions ═══ */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15, duration: 0.4 }}
-        className="flex gap-3 mb-8"
+        transition={{ delay: 0.12, duration: 0.4 }}
+        className="flex gap-2.5 mb-7"
       >
         <Link to="/pools/create" className="flex-1">
-          <button className="w-full flex items-center justify-center gap-2.5 font-bold h-12 rounded-xl text-sm transition-all duration-200" style={{
-            background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)))',
-            color: 'hsl(var(--primary-foreground))',
-            boxShadow: '0 0 20px hsl(var(--primary) / 0.2), 0 4px 12px rgba(0,0,0,0.2)',
-          }}>
+          <button className="w-full flex items-center justify-center gap-2 font-bold h-[2.75rem] rounded-xl text-[13px] btn-premium btn-press">
             <Plus className="w-4 h-4" /> Create Pool
           </button>
         </Link>
         <Link to="/pools/join" className="flex-1">
-          <button className="w-full flex items-center justify-center gap-2.5 font-bold h-12 rounded-xl text-sm transition-all duration-200" style={{
+          <button className="w-full flex items-center justify-center gap-2 font-bold h-[2.75rem] rounded-xl text-[13px] btn-press transition-all duration-200" style={{
             background: 'hsl(var(--surface-elevated))',
             border: '1px solid hsl(var(--border) / 0.5)',
             color: 'hsl(var(--foreground))',
-            boxShadow: 'var(--shadow-card)',
+            boxShadow: 'var(--shadow-premium)',
           }}>
-            <Users className="w-4 h-4" /> Join Pool
+            <Users className="w-4 h-4 text-muted-foreground" /> Join Pool
           </button>
         </Link>
       </motion.div>
@@ -172,34 +168,23 @@ export default function DashboardPage() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="mb-8 overflow-hidden"
+            className="mb-7 overflow-hidden"
           >
-            <div className="rounded-2xl p-4 flex items-center gap-3.5 relative overflow-hidden" style={{
-              background: 'linear-gradient(135deg, hsl(var(--card)), hsl(var(--surface-elevated)))',
-              border: '1px solid hsl(var(--primary) / 0.15)',
-              boxShadow: '0 0 20px hsl(var(--primary) / 0.04), var(--shadow-card)',
-            }}>
-              <div className="absolute inset-0 pointer-events-none" style={{
-                background: 'radial-gradient(ellipse 60% 80% at 0% 50%, hsl(var(--primary) / 0.04), transparent)',
-              }} />
+            <div className="glass-card arena-edge p-4 flex items-center gap-3.5">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 relative z-10" style={{
                 background: 'linear-gradient(135deg, hsl(var(--primary) / 0.2), hsl(var(--primary) / 0.06))',
               }}>
                 <Download className="w-5 h-5 text-primary" />
               </div>
               <div className="flex-1 min-w-0 relative z-10">
-                <p className="text-sm font-bold">Install Bracket Battle</p>
-                <p className="text-[11px] text-muted-foreground">Add to home screen for the best experience</p>
+                <p className="text-[13px] font-bold">Install App</p>
+                <p className="text-[10px] text-muted-foreground">Best experience on home screen</p>
               </div>
-              <button onClick={install} className="rounded-xl font-bold text-xs h-9 px-4 flex-shrink-0 relative z-10 transition-all" style={{
-                background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)))',
-                color: 'white',
-                boxShadow: '0 0 12px hsl(var(--primary) / 0.2)',
-              }}>
+              <button onClick={install} className="rounded-xl font-bold text-xs h-8 px-3.5 flex-shrink-0 relative z-10 btn-premium">
                 Install
               </button>
-              <button onClick={() => setDismissedInstall(true)} className="text-muted-foreground/50 hover:text-foreground p-1 relative z-10 transition-colors">
-                <X className="w-4 h-4" />
+              <button onClick={() => setDismissedInstall(true)} className="text-muted-foreground/40 hover:text-foreground p-1 relative z-10 transition-colors">
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           </motion.div>
@@ -209,39 +194,26 @@ export default function DashboardPage() {
       {/* ═══ Summary Stats ═══ */}
       {!loading && pools.length > 0 && (
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.4 }}
-          className="grid grid-cols-3 gap-3 mb-8"
+          transition={{ delay: 0.18, duration: 0.4 }}
+          className="grid grid-cols-3 gap-2.5 mb-7"
         >
           {[
             { icon: Trophy, value: pools.length, label: 'Pools', colorVar: 'primary' },
-            { icon: BarChart3, value: bracketsIn, label: 'Brackets In', colorVar: 'accent' },
+            { icon: BarChart3, value: bracketsIn, label: 'Brackets', colorVar: 'accent' },
             { icon: Shield, value: lockedCount, label: 'Locked', colorVar: 'success' },
           ].map((stat, i) => (
             <motion.div
               key={i}
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25 + i * 0.07, type: 'spring', damping: 20 }}
-              className="rounded-2xl p-4 text-center flex flex-col items-center justify-center gap-1.5 relative overflow-hidden"
-              style={{
-                background: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--border) / 0.4)',
-                boxShadow: 'var(--shadow-card)',
-                minHeight: '6rem',
-              }}
+              transition={{ delay: 0.22 + i * 0.06, type: 'spring', damping: 22 }}
+              className="stat-card arena-edge"
             >
-              {/* Shine overlay */}
-              <div className="absolute inset-0 pointer-events-none" style={{ background: 'var(--gradient-card-shine)', opacity: 0.4 }} />
-              {/* Subtle colored glow */}
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-16 h-12 pointer-events-none" style={{
-                background: `radial-gradient(ellipse at center, hsl(var(--${stat.colorVar}) / 0.08), transparent 70%)`,
-              }} />
-
-              <stat.icon className="w-4 h-4 mb-0.5 relative z-10" style={{ color: `hsl(var(--${stat.colorVar}))` }} />
-              <span className="text-2xl font-extrabold tabular-nums leading-none tracking-tight relative z-10">{stat.value}</span>
-              <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground relative z-10">{stat.label}</span>
+              <stat.icon className="w-3.5 h-3.5 relative z-10" style={{ color: `hsl(var(--${stat.colorVar}))` }} />
+              <span className="stat-value relative z-10">{stat.value}</span>
+              <span className="stat-label relative z-10">{stat.label}</span>
             </motion.div>
           ))}
         </motion.div>
@@ -251,22 +223,18 @@ export default function DashboardPage() {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        className="flex items-center gap-3 mb-4"
+        transition={{ delay: 0.28 }}
+        className="section-divider mb-3"
       >
-        <h2 className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">My Pools</h2>
-        <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, hsl(var(--border) / 0.5), transparent)' }} />
-        {pools.length > 0 && (
-          <span className="text-[10px] text-muted-foreground/40 tabular-nums font-medium">{pools.length}</span>
-        )}
+        <h2 className="section-header mb-0">My Pools</h2>
       </motion.div>
 
       {loading ? (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {[1, 2].map(i => (
-            <div key={i} className="rounded-2xl p-5" style={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border) / 0.3)' }}>
-              <div className="h-4 rounded-lg w-1/3 mb-3 skeleton-shimmer" style={{ background: 'hsl(var(--muted))' }} />
-              <div className="h-3 rounded-lg w-1/2 skeleton-shimmer" style={{ background: 'hsl(var(--muted))' }} />
+            <div key={i} className="glass-card p-5">
+              <div className="h-4 rounded-lg w-1/3 mb-3 skeleton-shimmer" />
+              <div className="h-3 rounded-lg w-1/2 skeleton-shimmer" />
             </div>
           ))}
         </div>
@@ -274,43 +242,33 @@ export default function DashboardPage() {
         <motion.div
           initial={{ opacity: 0, scale: 0.97 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="rounded-2xl p-12 text-center relative overflow-hidden"
-          style={{
-            background: 'hsl(var(--card))',
-            border: '1px solid hsl(var(--border) / 0.4)',
-            boxShadow: 'var(--shadow-card)',
-          }}
+          className="glass-card arena-edge p-10 text-center"
         >
-          <div className="absolute inset-0 pointer-events-none" style={{ background: 'var(--gradient-card-shine)', opacity: 0.3 }} />
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 relative z-10" style={{
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 relative z-10" style={{
             background: 'linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--primary) / 0.04))',
           }}>
-            <Trophy className="w-7 h-7 text-primary/60" />
+            <Trophy className="w-6 h-6 text-primary/60" />
           </div>
-          <p className="text-sm font-bold relative z-10 mb-1.5">No pools yet</p>
-          <p className="text-xs text-muted-foreground leading-relaxed relative z-10 mb-6">Create a pool or join one with an invite code.</p>
-          <div className="flex gap-3 justify-center relative z-10">
+          <p className="text-sm font-bold relative z-10 mb-1">No pools yet</p>
+          <p className="text-xs text-muted-foreground leading-relaxed relative z-10 mb-5">Create a pool or join one with an invite code.</p>
+          <div className="flex gap-2.5 justify-center relative z-10">
             <Link to="/pools/create">
-              <button className="flex items-center gap-2 font-bold rounded-xl px-5 py-2.5 text-sm transition-all" style={{
-                background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)))',
-                color: 'white',
-                boxShadow: '0 0 16px hsl(var(--primary) / 0.2)',
-              }}>
-                <Plus className="w-4 h-4" /> Create Pool
+              <button className="flex items-center gap-2 font-bold rounded-xl px-4 py-2.5 text-[13px] btn-premium btn-press">
+                <Plus className="w-4 h-4" /> Create
               </button>
             </Link>
             <Link to="/pools/join">
-              <button className="flex items-center gap-2 font-bold rounded-xl px-5 py-2.5 text-sm transition-all" style={{
+              <button className="flex items-center gap-2 font-bold rounded-xl px-4 py-2.5 text-[13px] btn-press" style={{
                 background: 'hsl(var(--surface-elevated))',
                 border: '1px solid hsl(var(--border) / 0.5)',
               }}>
-                <Users className="w-4 h-4" /> Join Pool
+                <Users className="w-4 h-4" /> Join
               </button>
             </Link>
           </div>
         </motion.div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {pools.map((pool, i) => {
             const bs = bracketStatuses.get(pool.id) || 'none';
             const bsCfg = STATUS_CONFIG[bs];
@@ -320,59 +278,50 @@ export default function DashboardPage() {
             return (
               <motion.div
                 key={pool.id}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 + i * 0.06, type: 'spring', damping: 22, stiffness: 280 }}
+                transition={{ delay: 0.08 + i * 0.05, type: 'spring', damping: 24, stiffness: 300 }}
               >
                 <Link to={`/pools/${pool.id}`} className="block group">
-                  <div className="rounded-2xl p-4 relative overflow-hidden transition-all duration-250" style={{
-                    background: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border) / 0.4)',
-                    boxShadow: 'var(--shadow-card)',
+                  <div className="glass-card p-4 transition-all duration-200 group-hover:border-primary/15" style={{
+                    transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
                   }}>
-                    {/* Shine overlay */}
-                    <div className="absolute inset-0 pointer-events-none rounded-2xl" style={{
-                      background: 'var(--gradient-card-shine)',
-                      opacity: 0.4,
-                    }} />
-
-                    <div className="flex items-center gap-3.5 relative z-10">
+                    <div className="flex items-center gap-3 relative z-10">
                       {/* Pool icon */}
-                      <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{
                         background: locked
-                          ? 'hsl(var(--muted) / 0.6)'
+                          ? 'hsl(var(--muted) / 0.5)'
                           : 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.04))',
-                        boxShadow: locked ? 'none' : '0 0 12px hsl(var(--primary) / 0.06)',
                       }}>
-                        <Trophy className={cn("w-5 h-5", locked ? "text-muted-foreground" : "text-primary")} />
+                        <Trophy className={cn("w-4.5 h-4.5", locked ? "text-muted-foreground/60" : "text-primary")} />
                       </div>
 
                       {/* Pool info */}
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-bold text-[15px] truncate tracking-tight group-hover:text-primary transition-colors duration-200">{pool.name}</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[10px] text-muted-foreground/60 font-medium">
-                            {pool.tournaments?.name} {pool.tournaments?.season_year}
+                        <h3 className="font-bold text-[14px] truncate tracking-tight group-hover:text-primary transition-colors duration-150">{pool.name}</h3>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] text-muted-foreground/50 font-medium">
+                            {pool.tournaments?.name}
                           </span>
-                          <span className="w-0.5 h-0.5 rounded-full" style={{ background: 'hsl(var(--muted-foreground) / 0.2)' }} />
-                          <span className="text-[10px] text-muted-foreground/60 flex items-center gap-0.5 font-medium">
-                            <Users className="w-3 h-3" /> {members}
+                          <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/15" />
+                          <span className="text-[10px] text-muted-foreground/50 flex items-center gap-0.5 font-medium">
+                            <Users className="w-2.5 h-2.5" /> {members}
                           </span>
                         </div>
                       </div>
 
                       {/* Status badges + arrow */}
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
                         <span className={cn("status-pill", bsCfg.className)}>{bsCfg.label}</span>
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold" style={{
                           background: locked
-                            ? 'linear-gradient(135deg, hsl(var(--destructive) / 0.12), hsl(var(--destructive) / 0.04))'
-                            : 'linear-gradient(135deg, hsl(var(--success) / 0.12), hsl(var(--success) / 0.04))',
+                            ? 'linear-gradient(135deg, hsl(var(--destructive) / 0.1), hsl(var(--destructive) / 0.03))'
+                            : 'linear-gradient(135deg, hsl(var(--success) / 0.1), hsl(var(--success) / 0.03))',
                           color: locked ? 'hsl(var(--destructive))' : 'hsl(var(--success))',
                         }}>
                           {locked ? 'Locked' : 'Open'}
                         </span>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground/20 group-hover:text-muted-foreground/60 group-hover:translate-x-0.5 transition-all duration-200" />
+                        <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/15 group-hover:text-muted-foreground/50 group-hover:translate-x-0.5 transition-all duration-200" />
                       </div>
                     </div>
                   </div>
@@ -385,3 +334,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

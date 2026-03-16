@@ -59,11 +59,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Mobile Bottom Nav */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 safe-area-inset-bottom" style={{
-        background: 'linear-gradient(180deg, hsl(225 20% 8% / 0.97), hsl(225 28% 5% / 0.99))',
-        backdropFilter: 'blur(20px) saturate(180%)',
-        borderTop: '1px solid hsl(var(--border) / 0.2)',
+        background: 'linear-gradient(180deg, hsl(225 20% 7% / 0.95), hsl(225 28% 4% / 0.98))',
+        backdropFilter: 'blur(24px) saturate(180%)',
+        borderTop: '1px solid hsl(var(--border) / 0.12)',
       }}>
-        <div className="flex items-center justify-around h-[4.25rem] px-2">
+        <div className="flex items-center justify-around h-[4rem] px-3">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname.startsWith(item.path);
@@ -72,19 +72,22 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1 py-2 px-4 rounded-xl min-w-[4.5rem] min-h-[3rem] btn-press relative",
+                  "flex flex-col items-center justify-center gap-0.5 py-2 px-3.5 rounded-xl min-w-[4rem] min-h-[2.75rem] btn-press relative",
                   "transition-colors duration-150",
-                  isActive ? "text-primary" : "text-muted-foreground active:text-foreground"
+                  isActive ? "text-primary" : "text-muted-foreground/50 active:text-foreground"
                 )}
               >
-                <Icon className={cn("w-5 h-5 transition-transform duration-200", isActive && "scale-110")} />
-                <span className={cn("text-[10px] font-bold", isActive && "text-primary")}>{item.label}</span>
+                <Icon className={cn("w-[19px] h-[19px] transition-all duration-200", isActive && "scale-105")} />
+                <span className={cn(
+                  "text-[9px] font-bold tracking-wide transition-colors duration-150",
+                  isActive ? "text-primary" : "text-muted-foreground/40"
+                )}>{item.label}</span>
                 {isActive && (
                   <motion.div
                     layoutId="nav-indicator"
-                    className="absolute -top-px left-1/2 -translate-x-1/2 w-10 h-[2px] rounded-full"
-                    style={{ background: 'linear-gradient(90deg, hsl(var(--primary) / 0.8), hsl(var(--primary) / 0.3))' }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    className="absolute -top-px left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full"
+                    style={{ background: 'linear-gradient(90deg, hsl(var(--primary) / 0.7), hsl(var(--primary) / 0.2))' }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                   />
                 )}
               </Link>
