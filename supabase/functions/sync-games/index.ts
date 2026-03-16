@@ -40,7 +40,7 @@ interface NormalizedTeam {
   externalTeamId: string;
   schoolName: string;
   shortName: string;
-  seed: number; // from ESPN seed field, used for display only — NOT for reconciliation
+  seed: number; // from source seed field — NOT for reconciliation except seed-pair matching
   region: string;
 }
 
@@ -54,6 +54,8 @@ interface NormalizedGame {
   team2ExternalId?: string | null;
   team1Score?: number | null;
   team2Score?: number | null;
+  team1Seed?: number | null;
+  team2Seed?: number | null;
   winnerExternalId?: string | null;
   status: "scheduled" | "in_progress" | "final";
   isResultFinal?: boolean;
@@ -63,6 +65,7 @@ interface NormalizedGame {
   sourceLastUpdatedAt?: string | null;
   sourcePayload?: Record<string, unknown> | null;
   parseConfidence: "high" | "medium" | "low";
+  sourceProvider?: string;
 }
 
 interface ProviderConfig {
