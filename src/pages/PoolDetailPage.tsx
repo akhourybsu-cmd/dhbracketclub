@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Trophy, Edit3, Eye, Settings, Copy, Users, Clock, ArrowRight, Activity, Trash2 } from 'lucide-react';
+import { Trophy, Edit3, Eye, Settings, Copy, Users, Clock, Activity, Trash2 } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -121,9 +121,9 @@ export default function PoolDetailPage() {
     const diff = lt.getTime() - now.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    if (days > 0) return `${days}d ${hours}h left`;
+    if (days > 0) return `${days}d ${hours}h`;
     if (hours > 0) return `${hours}h left`;
-    return 'Closing soon';
+    return 'Soon';
   }, [pool, isLocked]);
 
   if (loading) {
@@ -142,50 +142,53 @@ export default function PoolDetailPage() {
   const statusCfg = STATUS_CONFIG[myStatus];
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35 }}>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
       {/* Pool Header */}
-      <div className="mb-8 hero-glow relative z-10">
-        <div className="flex items-start justify-between">
+      <div className="mb-7 relative">
+        <div className="absolute -inset-x-6 -top-10 -bottom-4 pointer-events-none" style={{
+          background: 'radial-gradient(ellipse 80% 50% at 50% -15%, hsl(var(--primary) / 0.05), transparent)',
+        }} />
+        <div className="flex items-start justify-between relative z-10">
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight leading-none">{pool.name}</h1>
-            <p className="text-xs text-muted-foreground font-medium mt-1.5">
+            <h1 className="text-[1.5rem] font-extrabold tracking-tight leading-none">{pool.name}</h1>
+            <p className="text-[11px] text-muted-foreground/60 font-medium mt-1">
               {pool.tournaments?.name} {pool.tournaments?.season_year}
             </p>
           </div>
           <span className={cn(
             "status-pill",
-            isLocked ? 'bg-destructive/12 text-destructive' : 'bg-success/12 text-success'
+            isLocked ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'
           )}>
             {isLocked ? 'Locked' : 'Open'}
           </span>
         </div>
-        {pool.description && <p className="text-xs text-muted-foreground/70 mt-2.5 leading-relaxed">{pool.description}</p>}
+        {pool.description && <p className="text-[11px] text-muted-foreground/50 mt-2 leading-relaxed relative z-10">{pool.description}</p>}
       </div>
 
       {/* Info Cards */}
-      <div className="grid grid-cols-3 gap-3 mb-8">
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="stat-card">
-          <Users className="w-4 h-4 text-primary mb-0.5" />
+      <div className="grid grid-cols-3 gap-2 mb-7">
+        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="stat-card">
+          <Users className="w-3.5 h-3.5 text-primary" />
           <p className="stat-value">{members.length}</p>
           <p className="stat-label">Members</p>
         </motion.div>
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="stat-card">
-          <Clock className="w-4 h-4 text-warning mb-0.5" />
-          <p className={cn("text-sm font-extrabold tabular-nums", isLocked ? "text-destructive" : "text-warning")}>{lockTimeDisplay}</p>
-          <p className="stat-label">Lock Time</p>
+        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="stat-card">
+          <Clock className="w-3.5 h-3.5" style={{ color: isLocked ? 'hsl(var(--destructive))' : 'hsl(var(--warning))' }} />
+          <p className={cn("text-xs font-extrabold tabular-nums font-mono", isLocked ? "text-destructive" : "text-warning")}>{lockTimeDisplay}</p>
+          <p className="stat-label">Deadline</p>
         </motion.div>
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <button onClick={copyInvite} className="stat-card hover-lift cursor-pointer w-full">
-            <Copy className="w-4 h-4 text-accent mb-0.5" />
-            <p className="text-xs font-mono font-extrabold tracking-[0.2em]">{pool.invite_code}</p>
+        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}>
+          <button onClick={copyInvite} className="stat-card cursor-pointer w-full group">
+            <Copy className="w-3.5 h-3.5 text-accent group-active:scale-90 transition-transform" />
+            <p className="text-[10px] font-mono font-extrabold tracking-[0.2em] relative z-10">{pool.invite_code}</p>
             <p className="stat-label">Copy Code</p>
           </button>
         </motion.div>
       </div>
 
-      {/* My Bracket Status */}
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-        className="glass-card p-5 mb-8"
+      {/* My Bracket Status — primary card */}
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+        className="glass-card arena-edge p-5 mb-7"
       >
         <div className="flex items-center justify-between mb-3 relative z-10">
           <span className="section-header mb-0">My Bracket</span>
@@ -194,59 +197,63 @@ export default function PoolDetailPage() {
         <div className="relative z-10">
           {myStatus === 'none' && !isLocked && (
             <Link to={`/pools/${poolId}/bracket/edit`}>
-              <Button className="w-full gap-2 h-12 font-bold rounded-xl btn-press text-sm"><Edit3 className="w-4 h-4" /> Start Your Bracket</Button>
+              <button className="w-full flex items-center justify-center gap-2 h-12 font-bold rounded-xl text-[13px] btn-premium btn-press">
+                <Edit3 className="w-4 h-4" /> Start Your Bracket
+              </button>
             </Link>
           )}
           {myStatus === 'draft' && (
             <>
-              <p className="text-xs text-muted-foreground mb-2.5 font-medium">{myPicksCount}/{TOTAL_GAMES} picks made</p>
-              <div className="h-2.5 bg-secondary rounded-full overflow-hidden mb-3">
+              <p className="text-[11px] text-muted-foreground mb-2 font-medium">{myPicksCount}/{TOTAL_GAMES} picks made</p>
+              <div className="h-2 bg-secondary rounded-full overflow-hidden mb-3">
                 <motion.div
                   className="h-full rounded-full"
-                  style={{ background: 'linear-gradient(90deg, hsl(var(--warning)), hsl(var(--warning) / 0.6))' }}
+                  style={{ background: 'linear-gradient(90deg, hsl(var(--warning)), hsl(var(--warning) / 0.5))' }}
                   initial={{ width: 0 }}
                   animate={{ width: `${(myPicksCount / TOTAL_GAMES) * 100}%` }}
                   transition={{ duration: 0.5, ease: 'easeOut' }}
                 />
               </div>
               <Link to={`/pools/${poolId}/bracket/edit`}>
-                <Button className="w-full gap-2 h-12 font-bold rounded-xl btn-press text-sm"><Edit3 className="w-4 h-4" /> Continue Editing</Button>
+                <button className="w-full flex items-center justify-center gap-2 h-12 font-bold rounded-xl text-[13px] btn-premium btn-press">
+                  <Edit3 className="w-4 h-4" /> Continue Editing
+                </button>
               </Link>
             </>
           )}
           {myStatus === 'submitted' && (
-            <div className="flex gap-2.5 mt-1">
+            <div className="flex gap-2 mt-1">
               <Link to={`/pools/${poolId}/bracket/edit`} className="flex-1">
-                <Button variant="outline" className="w-full gap-2 h-11 font-bold rounded-xl btn-press"><Edit3 className="w-4 h-4" /> Edit</Button>
+                <Button variant="outline" className="w-full gap-2 h-11 font-bold rounded-xl btn-press text-[13px]"><Edit3 className="w-4 h-4" /> Edit</Button>
               </Link>
               <Link to={`/pools/${poolId}/bracket/${myBracket?.id}`} className="flex-1">
-                <Button variant="outline" className="w-full gap-2 h-11 font-bold rounded-xl btn-press"><Eye className="w-4 h-4" /> View</Button>
+                <Button variant="outline" className="w-full gap-2 h-11 font-bold rounded-xl btn-press text-[13px]"><Eye className="w-4 h-4" /> View</Button>
               </Link>
             </div>
           )}
           {(myStatus === 'locked' || myStatus === 'incomplete') && myBracket && (
             <Link to={`/pools/${poolId}/bracket/${myBracket.id}`}>
-              <Button variant="outline" className="w-full gap-2 h-11 font-bold rounded-xl mt-1 btn-press"><Eye className="w-4 h-4" /> View My Bracket</Button>
+              <Button variant="outline" className="w-full gap-2 h-11 font-bold rounded-xl mt-1 btn-press text-[13px]"><Eye className="w-4 h-4" /> View My Bracket</Button>
             </Link>
           )}
           {myStatus === 'none' && isLocked && (
-            <p className="text-[11px] text-muted-foreground mt-1 font-medium">You didn't submit a bracket before the deadline.</p>
+            <p className="text-[11px] text-muted-foreground/60 mt-1">No bracket submitted before the deadline.</p>
           )}
         </div>
       </motion.div>
 
-      {/* Quick Links */}
-      <div className={cn("grid gap-3 mb-8", isAdmin ? "grid-cols-3" : "grid-cols-2")}>
+      {/* Quick Links — action tiles */}
+      <div className={cn("grid gap-2.5 mb-7", isAdmin ? "grid-cols-3" : "grid-cols-2")}>
         {[
-          { to: `/pools/${poolId}/leaderboard`, icon: Trophy, label: 'Leaderboard', color: 'text-gold', glowColor: 'hsl(45 93% 52% / 0.08)' },
-          { to: `/pools/${poolId}/games`, icon: Activity, label: 'Game Center', color: 'text-primary', glowColor: 'hsl(217 91% 60% / 0.08)' },
-          ...(isAdmin ? [{ to: `/pools/${poolId}/admin`, icon: Settings, label: 'Admin', color: 'text-muted-foreground', glowColor: 'transparent' }] : []),
+          { to: `/pools/${poolId}/leaderboard`, icon: Trophy, label: 'Leaderboard', color: 'gold' },
+          { to: `/pools/${poolId}/games`, icon: Activity, label: 'Game Center', color: 'primary' },
+          ...(isAdmin ? [{ to: `/pools/${poolId}/admin`, icon: Settings, label: 'Admin', color: 'muted-foreground' }] : []),
         ].map((link, i) => (
-          <motion.div key={link.to} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.05 }}>
+          <motion.div key={link.to} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 + i * 0.04 }}>
             <Link to={link.to}>
-              <div className="glass-card p-5 text-center hover-lift cursor-pointer relative z-10">
-                <link.icon className={cn("w-5 h-5 mx-auto mb-2.5", link.color)} />
-                <p className="text-xs font-bold">{link.label}</p>
+              <div className="action-tile">
+                <link.icon className="w-5 h-5 mx-auto mb-2 relative z-10" style={{ color: `hsl(var(--${link.color}))` }} />
+                <p className="text-[11px] font-bold relative z-10">{link.label}</p>
               </div>
             </Link>
           </motion.div>
@@ -254,10 +261,10 @@ export default function PoolDetailPage() {
       </div>
 
       {/* Members */}
-      <div className="section-divider">
+      <div className="section-divider mb-2.5">
         <h2 className="section-header mb-0">Members</h2>
       </div>
-      <div className="glass-card divide-y divide-border/15 overflow-hidden">
+      <div className="glass-card divide-y divide-border/10 overflow-hidden">
         {members.map((m: any, i: number) => {
           const mb = memberBrackets.get(m.user_id);
           const memberStatus = getBracketDisplayStatus(mb?.status || null, pool.lock_time, 0, TOTAL_GAMES);
@@ -269,23 +276,27 @@ export default function PoolDetailPage() {
               key={m.id}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.35 + i * 0.03 }}
-              className="flex items-center justify-between px-4 py-3.5 relative z-10"
+              transition={{ delay: 0.3 + i * 0.025 }}
+              className="flex items-center justify-between px-4 py-3 relative z-10"
             >
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="w-9 h-9 rounded-xl icon-container text-[11px] font-extrabold text-primary flex-shrink-0 flex items-center justify-center">
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold flex-shrink-0" style={{
+                  background: 'hsl(var(--surface-elevated))',
+                  color: 'hsl(var(--foreground) / 0.6)',
+                  border: '1px solid hsl(var(--border) / 0.2)',
+                }}>
                   {(m.profiles?.display_name || '?')[0].toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <span className="text-sm font-semibold block truncate">{m.profiles?.display_name || 'Unknown'}</span>
-                  {m.role === 'admin' && <span className="text-[9px] text-primary font-bold uppercase tracking-[0.15em]">Admin</span>}
+                  <span className="text-[13px] font-semibold block truncate">{m.profiles?.display_name || 'Unknown'}</span>
+                  {m.role === 'admin' && <span className="text-[8px] text-primary/60 font-bold uppercase tracking-[0.15em]">Admin</span>}
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <span className={cn("status-pill", msCfg.className)}>{msCfg.label}</span>
                 {canViewBracket && m.user_id !== user?.id && (
                   <Link to={`/pools/${poolId}/bracket/${mb.id}`}>
-                    <Eye className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors" />
+                    <Eye className="w-3.5 h-3.5 text-muted-foreground/30 hover:text-foreground transition-colors" />
                   </Link>
                 )}
               </div>
@@ -296,10 +307,10 @@ export default function PoolDetailPage() {
 
       {/* Delete Pool (Admin only) */}
       {isAdmin && (
-        <div className="mt-10 pt-6 border-t border-border/15">
+        <div className="mt-8 pt-5 border-t border-border/10">
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="outline" className="w-full gap-2 text-destructive border-destructive/20 hover:bg-destructive/10 font-bold rounded-xl">
+              <Button variant="outline" className="w-full gap-2 text-destructive/60 border-destructive/15 hover:bg-destructive/8 font-bold rounded-xl text-[13px]">
                 <Trash2 className="w-4 h-4" /> Delete Pool
               </Button>
             </AlertDialogTrigger>

@@ -432,20 +432,19 @@ export default function LeaderboardPage() {
               background: 'var(--gradient-card-shine)',
             }} />
 
-            {/* Table header */}
+             {/* Table header */}
             <div
-              className="grid grid-cols-[2.5rem_1fr_5rem_4rem_3rem_3rem] gap-2 px-5 py-3 relative z-10"
+              className="grid grid-cols-[2rem_1fr_4.5rem_3.5rem_2.5rem] gap-1.5 px-4 py-2.5 relative z-10"
               style={{
                 background: 'linear-gradient(180deg, hsl(var(--surface-elevated)), hsl(var(--surface)))',
-                borderBottom: '1px solid hsl(var(--border) / 0.4)',
+                borderBottom: '1px solid hsl(var(--border) / 0.3)',
               }}
             >
-              <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em] text-center">Rank</span>
-              <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em]">Player</span>
-              <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em] text-center">Champ</span>
-              <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em] text-right">Pts</span>
-              <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em] text-right">✓</span>
-              <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em] text-right">Max</span>
+              <span className="text-[8px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em] text-center">#</span>
+              <span className="text-[8px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em]">Player</span>
+              <span className="text-[8px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em] text-center">Champ</span>
+              <span className="text-[8px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em] text-right">Pts</span>
+              <span className="text-[8px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em] text-right">✓</span>
             </div>
 
             {/* Rows */}
@@ -459,67 +458,61 @@ export default function LeaderboardPage() {
                   <motion.div
                     key={s.user_id}
                     layout
-                    initial={{ opacity: 0, x: -8 }}
+                    initial={{ opacity: 0, x: -6 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: Math.min(i * 0.03, 0.5), type: 'spring', damping: 25, stiffness: 300 }}
+                    transition={{ delay: Math.min(i * 0.025, 0.4), type: 'spring', damping: 28, stiffness: 320 }}
                     className={cn(
-                      "grid grid-cols-[2.5rem_1fr_5rem_4rem_3rem_3rem] gap-2 px-5 items-center relative z-10 group transition-colors duration-200",
-                      isMe ? "py-4" : "py-3.5",
-                      i < standings.length - 1 && "border-b border-border/10",
+                      "grid grid-cols-[2rem_1fr_4.5rem_3.5rem_2.5rem] gap-1.5 px-4 items-center relative z-10 group transition-colors duration-200",
+                      isMe ? "py-3.5" : "py-3",
+                      i < standings.length - 1 && "border-b border-border/8",
                     )}
                     style={{
                       ...(isMe ? {
-                        background: 'linear-gradient(90deg, hsl(var(--primary) / 0.06), hsl(var(--primary) / 0.02))',
-                        borderLeft: '2px solid hsl(var(--primary) / 0.4)',
+                        background: 'linear-gradient(90deg, hsl(var(--primary) / 0.05), transparent)',
+                        borderLeft: '2px solid hsl(var(--primary) / 0.35)',
                       } : {}),
-                    }}
-                    whileHover={{
-                      backgroundColor: 'hsl(var(--surface-elevated) / 0.5)',
                     }}
                   >
                     {/* Rank */}
                     <div className="flex justify-center">
                       {isTop3 ? (
-                        <div className={cn(
-                          "w-8 h-8 rounded-lg flex items-center justify-center text-xs font-extrabold",
-                        )} style={{
-                          background: `linear-gradient(135deg, hsl(var(--${s.rank === 1 ? 'gold' : s.rank === 2 ? 'silver' : 'bronze'}) / 0.2), hsl(var(--${s.rank === 1 ? 'gold' : s.rank === 2 ? 'silver' : 'bronze'}) / 0.06))`,
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-extrabold" style={{
+                          background: `linear-gradient(135deg, hsl(var(--${s.rank === 1 ? 'gold' : s.rank === 2 ? 'silver' : 'bronze'}) / 0.18), hsl(var(--${s.rank === 1 ? 'gold' : s.rank === 2 ? 'silver' : 'bronze'}) / 0.05))`,
                           color: `hsl(var(--${s.rank === 1 ? 'gold' : s.rank === 2 ? 'silver' : 'bronze'}))`,
-                          boxShadow: s.rank === 1 ? '0 0 10px hsl(var(--gold) / 0.12)' : 'none',
-                          border: `1px solid hsl(var(--${s.rank === 1 ? 'gold' : s.rank === 2 ? 'silver' : 'bronze'}) / 0.15)`,
+                          boxShadow: s.rank === 1 ? '0 0 8px hsl(var(--gold) / 0.1)' : 'none',
+                          border: `1px solid hsl(var(--${s.rank === 1 ? 'gold' : s.rank === 2 ? 'silver' : 'bronze'}) / 0.12)`,
                         }}>
                           {s.rank}
                         </div>
                       ) : (
-                        <span className="text-sm font-mono font-bold tabular-nums text-muted-foreground/60">{s.rank}</span>
+                        <span className="text-[13px] font-mono font-bold tabular-nums text-muted-foreground/40">{s.rank}</span>
                       )}
                     </div>
 
                     {/* Player info */}
-                    <div className="min-w-0 flex items-center gap-2.5">
-                      {/* Avatar initial */}
+                    <div className="min-w-0 flex items-center gap-2">
                       <div className={cn(
-                        "w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0",
-                        isMe ? "text-primary" : "text-foreground/70"
+                        "w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold flex-shrink-0",
                       )} style={{
                         background: isMe
-                          ? 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))'
+                          ? 'linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--primary) / 0.04))'
                           : 'hsl(var(--surface-elevated))',
-                        border: isMe ? '1px solid hsl(var(--primary) / 0.15)' : '1px solid hsl(var(--border) / 0.3)',
+                        color: isMe ? 'hsl(var(--primary))' : 'hsl(var(--foreground) / 0.5)',
+                        border: isMe ? '1px solid hsl(var(--primary) / 0.12)' : '1px solid hsl(var(--border) / 0.2)',
                       }}>
                         {s.display_name[0].toUpperCase()}
                       </div>
 
                       <div className="min-w-0 flex flex-col">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1">
                           <span className={cn(
-                            "text-sm font-semibold truncate",
+                            "text-[13px] font-semibold truncate",
                             isMe && "text-primary"
                           )}>
                             {s.display_name}
                           </span>
                           {isMe && (
-                            <span className="text-[9px] font-bold uppercase tracking-wider text-primary/50">You</span>
+                            <span className="text-[8px] font-bold uppercase tracking-wider text-primary/40">You</span>
                           )}
                         </div>
                         <MovementPill movement={movement} />
@@ -528,9 +521,9 @@ export default function LeaderboardPage() {
                       {isLocked && s.bracket_id && (
                         <Link
                           to={`/pools/${poolId}/bracket/${s.bracket_id}`}
-                          className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-primary/10"
+                          className="flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200"
                         >
-                          <Eye className="w-3.5 h-3.5 text-muted-foreground" />
+                          <Eye className="w-3 h-3 text-muted-foreground/40" />
                         </Link>
                       )}
                     </div>
@@ -538,54 +531,51 @@ export default function LeaderboardPage() {
                     {/* Champion pick */}
                     <div className="flex justify-center">
                       {s.champion_team ? (
-                        <span className="text-[11px] font-semibold truncate px-2.5 py-1 rounded-lg max-w-full"
+                        <span className="text-[10px] font-semibold truncate px-2 py-0.5 rounded-md max-w-full"
                           style={{
-                            background: 'hsl(var(--surface))',
-                            color: 'hsl(var(--foreground) / 0.7)',
-                            border: '1px solid hsl(var(--border) / 0.3)',
+                            background: 'hsl(var(--surface) / 0.8)',
+                            color: 'hsl(var(--foreground) / 0.5)',
+                            border: '1px solid hsl(var(--border) / 0.2)',
                           }}
                         >
                           {s.champion_team.short_name}
                         </span>
                       ) : (
-                        <span className="text-muted-foreground/25 text-xs">—</span>
+                        <span className="text-muted-foreground/20 text-xs">—</span>
                       )}
                     </div>
 
-                    {/* Points */}
+                    {/* Points — bold and prominent */}
                     <div className="text-right">
                       <span className={cn(
-                        "text-base font-extrabold tabular-nums",
+                        "text-[15px] font-extrabold font-mono tabular-nums",
                         isTop3 && s.rank === 1 && "text-gold",
                         isTop3 && s.rank === 2 && "text-silver",
                         isTop3 && s.rank === 3 && "text-bronze",
                         !isTop3 && "text-foreground",
                       )} style={{
-                        ...(s.rank === 1 && s.total_points > 0 ? { textShadow: '0 0 12px hsl(var(--gold) / 0.2)' } : {}),
+                        ...(s.rank === 1 && s.total_points > 0 ? { textShadow: '0 0 10px hsl(var(--gold) / 0.15)' } : {}),
                       }}>
                         {s.total_points}
                       </span>
                     </div>
 
                     {/* Correct picks */}
-                    <span className="text-xs tabular-nums text-right text-muted-foreground font-medium">{s.correct_picks}</span>
-
-                    {/* Possible remaining */}
-                    <span className="text-xs tabular-nums text-right text-muted-foreground/50 font-medium">{s.possible_points_remaining}</span>
+                    <span className="text-[11px] tabular-nums text-right text-muted-foreground/40 font-mono font-medium">{s.correct_picks}</span>
                   </motion.div>
                 );
               })}
             </AnimatePresence>
           </motion.div>
 
-          {/* Member count + sync info */}
-          <div className="flex items-center justify-between mt-5 px-1">
-            <span className="text-[10px] text-muted-foreground/40 font-medium">
+          {/* Member count — minimal */}
+          <div className="flex items-center justify-between mt-4 px-1">
+            <span className="text-[9px] text-muted-foreground/30 font-medium">
               {standings.length} {standings.length === 1 ? 'member' : 'members'}
             </span>
             {lastSyncedAt && (
-              <span className="text-[10px] text-muted-foreground/40 tabular-nums">
-                Synced {new Date(lastSyncedAt).toLocaleString()}
+              <span className="text-[9px] text-muted-foreground/25 tabular-nums">
+                Synced {new Date(lastSyncedAt).toLocaleDateString()}
               </span>
             )}
           </div>

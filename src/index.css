@@ -70,14 +70,17 @@
     --gradient-hero: radial-gradient(ellipse 80% 50% at 50% -20%, hsl(217 91% 60% / 0.08), transparent);
     --gradient-hero-accent: radial-gradient(ellipse 60% 40% at 80% 10%, hsl(172 66% 50% / 0.04), transparent);
     --gradient-card-shine: linear-gradient(135deg, hsl(225 20% 12% / 0.6) 0%, transparent 50%);
+    --gradient-arena-edge: linear-gradient(180deg, hsl(217 91% 60% / 0.06) 0%, transparent 40%);
+    --gradient-arena-floor: linear-gradient(180deg, transparent 60%, hsl(225 28% 3% / 0.4) 100%);
 
     /* ═══ Shadows ═══ */
-    --shadow-card: 0 1px 3px rgba(0,0,0,0.35), 0 4px 16px rgba(0,0,0,0.2);
+    --shadow-card: 0 1px 2px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.18);
     --shadow-elevated: 0 8px 32px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.3);
     --shadow-glow: 0 0 20px hsl(217 91% 60% / 0.2), 0 0 40px hsl(217 91% 60% / 0.05);
     --shadow-glow-sm: 0 0 12px hsl(217 91% 60% / 0.15);
     --shadow-inner: inset 0 1px 2px rgba(0,0,0,0.2);
     --shadow-gold: 0 0 16px hsl(45 93% 52% / 0.15);
+    --shadow-premium: 0 2px 8px rgba(0,0,0,0.25), 0 0 1px rgba(255,255,255,0.03);
 
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   }
@@ -169,8 +172,8 @@
      CARDS — Layered depth system
      ═══════════════════════════════════════════════════ */
   .glass-card {
-    @apply bg-card rounded-xl relative overflow-hidden;
-    border: 1px solid hsl(var(--border) / 0.5);
+    @apply bg-card rounded-2xl relative overflow-hidden;
+    border: 1px solid hsl(var(--border) / 0.4);
     box-shadow: var(--shadow-card);
   }
   .glass-card::before {
@@ -178,6 +181,15 @@
     position: absolute;
     inset: 0;
     background: var(--gradient-card-shine);
+    pointer-events: none;
+    border-radius: inherit;
+  }
+  .glass-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 10%, hsl(var(--foreground) / 0.04) 50%, transparent 90%);
     pointer-events: none;
     border-radius: inherit;
   }
@@ -251,13 +263,13 @@
   /* ═══ Stat card ═══ */
   .stat-card {
     @apply glass-card p-4 text-center flex flex-col items-center justify-center gap-1;
-    min-height: 5.5rem;
+    min-height: 5rem;
   }
   .stat-card .stat-value {
-    @apply text-2xl font-extrabold tabular-nums leading-none tracking-tight;
+    @apply text-xl font-extrabold tabular-nums leading-none tracking-tight font-mono;
   }
   .stat-card .stat-label {
-    @apply text-[9px] font-bold text-muted-foreground uppercase tracking-[0.15em];
+    @apply text-[8px] font-bold text-muted-foreground uppercase tracking-[0.18em];
   }
 
   /* ═══ Back link ═══ */
@@ -476,6 +488,49 @@
     transform: translateY(-1px);
     box-shadow: var(--shadow-elevated);
     border-color: hsl(var(--primary) / 0.15);
+  }
+
+  /* ═══ Arena Edge Motif — signature top-edge highlight ═══ */
+  .arena-edge {
+    position: relative;
+  }
+  .arena-edge::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 8%; right: 8%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.12), hsl(var(--accent) / 0.08), transparent);
+    pointer-events: none;
+    z-index: 2;
+    border-radius: 99px;
+  }
+
+  /* ═══ Premium CTA button ═══ */
+  .btn-premium {
+    @apply font-bold rounded-xl text-sm transition-all duration-200;
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    color: hsl(var(--primary-foreground));
+    box-shadow: 0 0 16px hsl(var(--primary) / 0.18), 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .btn-premium:active {
+    transform: scale(0.97);
+  }
+  .btn-premium:hover {
+    box-shadow: 0 0 24px hsl(var(--primary) / 0.25), 0 4px 12px rgba(0,0,0,0.25);
+  }
+
+  /* ═══ Action tile ═══ */
+  .action-tile {
+    @apply glass-card p-5 text-center cursor-pointer relative z-10;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .action-tile:active {
+    transform: scale(0.96);
+  }
+  .action-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-elevated);
+    border-color: hsl(var(--primary) / 0.12);
   }
 }
 
