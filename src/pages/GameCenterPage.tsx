@@ -208,14 +208,14 @@ export default function GameCenterPage() {
 
       {/* Games */}
       {filteredGames.length === 0 ? (
-        <div className="glass-card p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
-            <Activity className="w-8 h-8 text-muted-foreground" />
+        <div className="empty-state">
+          <div className="empty-state-icon">
+            <Activity />
           </div>
-          <p className="text-base font-semibold text-foreground mb-1">
+          <p className="empty-state-title">
             {tab === 'live' ? 'No live games right now' : 'No games match your filters'}
           </p>
-          <p className="text-sm text-muted-foreground">
+          <p className="empty-state-desc">
             {tab === 'live' ? 'Check back when games tip off!' : 'Try adjusting your round or status filters.'}
           </p>
         </div>
