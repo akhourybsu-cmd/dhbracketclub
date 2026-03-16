@@ -1,39 +1,17 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState, useMemo } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Save, Send, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Save, Send, ChevronLeft, ChevronRight, ArrowLeft, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-interface Team {
-  id: string;
-  school_name: string;
-  short_name: string;
-  seed: number;
-  region: string;
-}
-
-interface Game {
-  id: string;
-  round_number: number;
-  round_name: string;
-  region: string;
-  game_slot: number;
-  team1_id: string | null;
-  team2_id: string | null;
-  status: string;
-}
-
-interface Pick {
-  game_id: string;
-  picked_team_id: string;
-  picked_in_round: number;
-}
-
-const ROUND_NAMES = ['Round of 64', 'Round of 32', 'Sweet 16', 'Elite 8', 'Final Four', 'Championship'];
+import { motion } from 'framer-motion';
+import {
+  Team, Game, Pick, ROUND_NAMES, ROUND_SHORT, TOTAL_GAMES,
+  getEffectiveTeam, handlePickWithCascade,
+} from '@/lib/bracketUtils';
 
 export default function BracketEntryPage() {
   const { poolId } = useParams<{ poolId: string }>();
@@ -51,9 +29,7 @@ export default function BracketEntryPage() {
 
   useEffect(() => {
     if (!poolId || !user) return;
-
     const fetchData = async () => {
-      // Get pool
       const { data: poolData } = await supabase
         .from('pools')
         .select('*, tournaments(id)')
@@ -66,36 +42,27 @@ export default function BracketEntryPage() {
       const tournamentId = poolData.tournaments?.id;
       if (!tournamentId) return;
 
-      // Check if locked
       if (new Date(poolData.lock_time) <= new Date()) {
-        toast.error('This pool is locked. You can no longer edit picks.');
+        toast.error('This pool is locked.');
         navigate(`/pools/${poolId}`);
         return;
       }
 
-      // Get teams
-      const { data: teamData } = await supabase
-        .from('teams')
-        .select('*')
-        .eq('tournament_id', tournamentId);
-
+      const { data: teamData } = await supabase.from('teams').select('*').eq('tournament_id', tournamentId);
       if (teamData) {
-        const teamMap = new Map<string, Team>();
-        teamData.forEach(t => teamMap.set(t.id, t));
-        setTeams(teamMap);
+        const m = new Map<string, Team>();
+        teamData.forEach(t => m.set(t.id, t as Team));
+        setTeams(m);
       }
 
-      // Get games
       const { data: gameData } = await supabase
         .from('games')
-        .select('id, round_number, round_name, region, game_slot, team1_id, team2_id, status')
+        .select('*')
         .eq('tournament_id', tournamentId)
         .order('round_number')
         .order('game_slot');
+      if (gameData) setGames(gameData as Game[]);
 
-      if (gameData) setGames(gameData);
-
-      // Get existing bracket & picks
       const { data: bracketData } = await supabase
         .from('brackets')
         .select('*')
@@ -106,133 +73,63 @@ export default function BracketEntryPage() {
       if (bracketData) {
         setBracket(bracketData);
         setTiebreaker(bracketData.tiebreaker_score?.toString() || '');
-
         const { data: pickData } = await supabase
           .from('bracket_picks')
           .select('game_id, picked_team_id, picked_in_round')
           .eq('bracket_id', bracketData.id);
-
         if (pickData) {
-          const pickMap = new Map<string, Pick>();
-          pickData.forEach(p => pickMap.set(p.game_id, p));
-          setPicks(pickMap);
+          const pm = new Map<string, Pick>();
+          pickData.forEach(p => pm.set(p.game_id, p));
+          setPicks(pm);
         }
       }
-
       setLoading(false);
     };
-
     fetchData();
   }, [poolId, user, navigate]);
 
-  const getTeamForSlot = useCallback((game: Game, slot: 'team1' | 'team2'): Team | null => {
-    const teamId = slot === 'team1' ? game.team1_id : game.team2_id;
-    if (!teamId) return null;
-    return teams.get(teamId) || null;
-  }, [teams]);
-
-  // Determine which team fills a game slot based on picks from previous round
-  const getEffectiveTeam = useCallback((game: Game, slot: 'team1' | 'team2'): Team | null => {
-    const directTeam = getTeamForSlot(game, slot);
-    if (directTeam) return directTeam;
-
-    // For later rounds, check if a pick from the feeder game provides the team
-    if (game.round_number <= 1) return null;
-
-    const prevRoundGames = games.filter(g => g.round_number === game.round_number - 1);
-    // game_slot logic: for game_slot N in round R, feeder games are slots (N*2-1) and (N*2) from round R-1
-    const feederSlot = slot === 'team1' ? game.game_slot * 2 - 1 : game.game_slot * 2;
-    const feederGame = prevRoundGames.find(g => g.game_slot === feederSlot);
-    
-    if (feederGame) {
-      const pick = picks.get(feederGame.id);
-      if (pick) return teams.get(pick.picked_team_id) || null;
-    }
-    return null;
-  }, [games, picks, teams, getTeamForSlot]);
-
   const handlePick = (gameId: string, teamId: string, round: number) => {
-    const newPicks = new Map(picks);
-    newPicks.set(gameId, { game_id: gameId, picked_team_id: teamId, picked_in_round: round });
-
-    // Clear downstream picks that depend on this game's winner
-    const clearDownstream = (fromRound: number, fromSlot: number) => {
-      const game = games.find(g => g.round_number === fromRound && g.game_slot === fromSlot);
-      if (!game) return;
-      
-      // Find next round game that this feeds into
-      const nextRound = fromRound + 1;
-      const nextSlot = Math.ceil(fromSlot / 2);
-      const nextGame = games.find(g => g.round_number === nextRound && g.game_slot === nextSlot);
-      
-      if (nextGame) {
-        const existingPick = newPicks.get(nextGame.id);
-        if (existingPick) {
-          // Check if the pick is still valid
-          const t1 = getEffectiveTeamFromPicks(nextGame, 'team1', newPicks);
-          const t2 = getEffectiveTeamFromPicks(nextGame, 'team2', newPicks);
-          if (existingPick.picked_team_id !== t1?.id && existingPick.picked_team_id !== t2?.id) {
-            newPicks.delete(nextGame.id);
-            clearDownstream(nextRound, nextSlot);
-          }
-        }
-      }
-    };
-
-    const currentGame = games.find(g => g.id === gameId);
-    if (currentGame) {
-      clearDownstream(currentGame.round_number, currentGame.game_slot);
-    }
-
-    setPicks(newPicks);
+    setPicks(prev => handlePickWithCascade(gameId, teamId, round, games, teams, prev));
   };
 
-  const getEffectiveTeamFromPicks = (game: Game, slot: 'team1' | 'team2', pickMap: Map<string, Pick>): Team | null => {
-    const directTeam = getTeamForSlot(game, slot);
-    if (directTeam) return directTeam;
+  // Progress calculation
+  const progress = useMemo(() => {
+    const total = games.length;
+    const filled = picks.size;
+    return { filled, total, pct: total > 0 ? Math.round((filled / total) * 100) : 0 };
+  }, [games, picks]);
 
-    if (game.round_number <= 1) return null;
-    const prevRoundGames = games.filter(g => g.round_number === game.round_number - 1);
-    const feederSlot = slot === 'team1' ? game.game_slot * 2 - 1 : game.game_slot * 2;
-    const feederGame = prevRoundGames.find(g => g.game_slot === feederSlot);
-    
-    if (feederGame) {
-      const pick = pickMap.get(feederGame.id);
-      if (pick) return teams.get(pick.picked_team_id) || null;
+  // Per-round completion
+  const roundCompletion = useMemo(() => {
+    const result: Record<number, { total: number; filled: number }> = {};
+    for (let r = 1; r <= 6; r++) {
+      const roundGames = games.filter(g => g.round_number === r);
+      const filled = roundGames.filter(g => picks.has(g.id)).length;
+      result[r] = { total: roundGames.length, filled };
     }
-    return null;
-  };
+    return result;
+  }, [games, picks]);
 
-  const saveDraft = async () => {
-    if (!user || !poolId) return;
+  const saveDraft = async (): Promise<string | null> => {
+    if (!user || !poolId) return null;
     setSaving(true);
-
     try {
       let bracketId = bracket?.id;
-
       if (!bracketId) {
         const { data: newBracket, error } = await supabase
           .from('brackets')
-          .insert({
-            pool_id: poolId,
-            user_id: user.id,
-            status: 'draft',
-            tiebreaker_score: tiebreaker ? parseInt(tiebreaker) : null,
-          })
+          .insert({ pool_id: poolId, user_id: user.id, status: 'draft', tiebreaker_score: tiebreaker ? parseInt(tiebreaker) : null })
           .select()
           .single();
-
         if (error) throw error;
         bracketId = newBracket.id;
         setBracket(newBracket);
       } else {
-        await supabase
-          .from('brackets')
+        await supabase.from('brackets')
           .update({ tiebreaker_score: tiebreaker ? parseInt(tiebreaker) : null })
           .eq('id', bracketId);
       }
 
-      // Upsert picks
       if (picks.size > 0) {
         const pickArray = Array.from(picks.values()).map(p => ({
           bracket_id: bracketId,
@@ -240,34 +137,33 @@ export default function BracketEntryPage() {
           picked_team_id: p.picked_team_id,
           picked_in_round: p.picked_in_round,
         }));
-
-        // Delete existing picks and re-insert
         await supabase.from('bracket_picks').delete().eq('bracket_id', bracketId);
         const { error: pickError } = await supabase.from('bracket_picks').insert(pickArray);
         if (pickError) throw pickError;
       }
 
       toast.success('Draft saved!');
+      return bracketId;
     } catch (err: any) {
       toast.error(err.message);
+      return null;
     } finally {
       setSaving(false);
     }
   };
 
   const submitBracket = async () => {
-    await saveDraft();
-    if (!bracket?.id && !picks.size) return;
-
-    const bracketId = bracket?.id;
+    if (progress.filled < progress.total) {
+      toast.error(`Complete all ${progress.total} picks before submitting. You have ${progress.filled}.`);
+      return;
+    }
+    const bracketId = await saveDraft();
     if (!bracketId) return;
-
     try {
       const { error } = await supabase
         .from('brackets')
         .update({ status: 'submitted', submitted_at: new Date().toISOString() })
         .eq('id', bracketId);
-
       if (error) throw error;
       toast.success('Bracket submitted! Good luck! 🏀');
       navigate(`/pools/${poolId}`);
@@ -285,8 +181,17 @@ export default function BracketEntryPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-bold">Fill Your Bracket</h1>
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-4">
+        <Link to={`/pools/${poolId}`} className="text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="w-5 h-5" />
+        </Link>
+        <div className="flex-1">
+          <h1 className="text-lg font-bold">Fill Your Bracket</h1>
+          {bracket?.status === 'submitted' && (
+            <p className="text-xs text-success font-medium">Submitted — editing will set back to draft</p>
+          )}
+        </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={saveDraft} disabled={saving}>
             <Save className="w-4 h-4 mr-1" /> Save
@@ -297,69 +202,90 @@ export default function BracketEntryPage() {
         </div>
       </div>
 
+      {/* Progress Bar */}
+      <div className="glass-card p-3 mb-4">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-xs font-medium">
+            {progress.filled} of {progress.total} picks
+          </span>
+          <span className="text-xs font-bold text-primary tabular-nums">{progress.pct}%</span>
+        </div>
+        <div className="h-2 bg-secondary rounded-full overflow-hidden">
+          <motion.div
+            className="h-full bg-primary rounded-full"
+            initial={{ width: 0 }}
+            animate={{ width: `${progress.pct}%` }}
+            transition={{ duration: 0.3 }}
+          />
+        </div>
+      </div>
+
       {/* Round Navigation */}
-      <div className="flex items-center justify-between mb-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          disabled={currentRound <= 1}
-          onClick={() => setCurrentRound(r => r - 1)}
-        >
+      <div className="flex items-center justify-between mb-3">
+        <Button variant="ghost" size="icon" disabled={currentRound <= 1} onClick={() => setCurrentRound(r => r - 1)}>
           <ChevronLeft className="w-5 h-5" />
         </Button>
         <div className="text-center">
           <p className="text-sm font-semibold">{ROUND_NAMES[currentRound - 1]}</p>
-          <p className="text-[10px] text-muted-foreground">Round {currentRound} of 6</p>
+          <p className="text-[10px] text-muted-foreground tabular-nums">
+            {roundCompletion[currentRound]?.filled}/{roundCompletion[currentRound]?.total} picks
+          </p>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          disabled={currentRound >= 6}
-          onClick={() => setCurrentRound(r => r + 1)}
-        >
+        <Button variant="ghost" size="icon" disabled={currentRound >= 6} onClick={() => setCurrentRound(r => r + 1)}>
           <ChevronRight className="w-5 h-5" />
         </Button>
       </div>
 
-      {/* Round Progress Pills */}
-      <div className="flex gap-1 mb-6 justify-center">
-        {ROUND_NAMES.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrentRound(i + 1)}
-            className={cn(
-              "w-8 h-1.5 rounded-full transition-colors",
-              currentRound === i + 1 ? "bg-primary" : "bg-secondary"
-            )}
-          />
-        ))}
+      {/* Round Tabs */}
+      <div className="flex gap-1.5 mb-5 justify-center">
+        {ROUND_SHORT.map((label, i) => {
+          const rc = roundCompletion[i + 1];
+          const isComplete = rc && rc.filled === rc.total && rc.total > 0;
+          return (
+            <button
+              key={i}
+              onClick={() => setCurrentRound(i + 1)}
+              className={cn(
+                "px-2 py-1 rounded-md text-[10px] font-semibold transition-colors relative",
+                currentRound === i + 1
+                  ? "bg-primary text-primary-foreground"
+                  : isComplete
+                    ? "bg-success/15 text-success"
+                    : "bg-secondary text-secondary-foreground"
+              )}
+            >
+              {label}
+              {isComplete && currentRound !== i + 1 && (
+                <Check className="w-2.5 h-2.5 absolute -top-1 -right-1" />
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Games */}
-      <div className="space-y-6">
+      <div className="space-y-5">
         {regions.map(region => {
           const regionGames = roundGames.filter(g => g.region === region);
           return (
             <div key={region}>
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                {region}
-              </h3>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{region}</h3>
               <div className="space-y-2">
                 {regionGames.map(game => {
-                  const team1 = getEffectiveTeam(game, 'team1');
-                  const team2 = getEffectiveTeam(game, 'team2');
+                  const team1 = getEffectiveTeam(game, 'team1', games, teams, picks);
+                  const team2 = getEffectiveTeam(game, 'team2', games, teams, picks);
                   const currentPick = picks.get(game.id);
 
                   return (
                     <div key={game.id} className="matchup-card">
-                      <TeamRow
+                      <MatchupTeamRow
                         team={team1}
                         isSelected={currentPick?.picked_team_id === team1?.id}
                         onSelect={() => team1 && handlePick(game.id, team1.id, game.round_number)}
                         disabled={!team1}
                       />
                       <div className="h-px bg-border mx-2" />
-                      <TeamRow
+                      <MatchupTeamRow
                         team={team2}
                         isSelected={currentPick?.picked_team_id === team2?.id}
                         onSelect={() => team2 && handlePick(game.id, team2.id, game.round_number)}
@@ -376,9 +302,9 @@ export default function BracketEntryPage() {
 
       {/* Tiebreaker */}
       {currentRound === 6 && (
-        <div className="mt-6 glass-card p-4">
+        <div className="mt-5 glass-card p-4">
           <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-            Tiebreaker: Total Points in Championship Game
+            Tiebreaker: Predicted total score of the Championship game
           </label>
           <Input
             type="number"
@@ -389,11 +315,14 @@ export default function BracketEntryPage() {
           />
         </div>
       )}
+
+      {/* Bottom spacer for mobile nav */}
+      <div className="h-4" />
     </div>
   );
 }
 
-function TeamRow({ team, isSelected, onSelect, disabled }: {
+function MatchupTeamRow({ team, isSelected, onSelect, disabled }: {
   team: Team | null;
   isSelected: boolean;
   onSelect: () => void;
@@ -404,25 +333,26 @@ function TeamRow({ team, isSelected, onSelect, disabled }: {
       onClick={onSelect}
       disabled={disabled}
       className={cn(
-        "w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors",
-        isSelected ? "bg-primary/15" : "hover:bg-secondary/50",
-        disabled && "opacity-40 cursor-not-allowed"
+        "w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all",
+        isSelected ? "bg-primary/12" : "hover:bg-secondary/50",
+        disabled && "opacity-30 cursor-not-allowed"
       )}
     >
       {team ? (
         <>
-          <span className="text-xs font-mono font-bold text-muted-foreground w-5 tabular-nums">
+          <span className="text-[11px] font-mono font-bold text-muted-foreground w-5 tabular-nums text-center">
             {team.seed}
           </span>
-          <span className={cn("text-sm font-medium flex-1", isSelected && "text-primary")}>
+          <span className={cn("text-sm font-medium flex-1 truncate", isSelected && "text-primary font-semibold")}>
             {team.short_name}
           </span>
-          {isSelected && (
-            <div className="w-2 h-2 rounded-full bg-primary" />
-          )}
+          {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-primary flex-shrink-0" />}
         </>
       ) : (
-        <span className="text-xs text-muted-foreground italic">TBD</span>
+        <>
+          <span className="w-5" />
+          <span className="text-xs text-muted-foreground/50 italic">Waiting for earlier pick</span>
+        </>
       )}
     </button>
   );
