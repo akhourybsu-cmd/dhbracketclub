@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { ArrowLeft, Trophy, Eye, Crown, Medal, TrendingUp, TrendingDown, Minus, AlertCircle, Zap } from 'lucide-react';
+import dhMonogram from '@/assets/dh-monogram.png';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Team, getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES } from '@/lib/bracketUtils';
 import { useStandingsUpdates } from '@/hooks/useRealtimeSubscription';
