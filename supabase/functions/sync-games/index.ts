@@ -1027,6 +1027,7 @@ async function buildTeamLookup(
   }
 
   // Pass 2: relaxed name containment for non-play-in teams only
+  // With disambiguation check to prevent false matches (e.g. Tennessee ≠ Tennessee State)
   for (const ext of externalTeams) {
     if (lookup.has(ext.externalTeamId)) continue;
 
@@ -1042,7 +1043,10 @@ async function buildTeamLookup(
         (
           (normSchool.length >= 4 && (t.normalizedSchool.includes(normSchool) || normSchool.includes(t.normalizedSchool))) ||
           (normShort.length >= 4 && (t.normalizedShort.includes(normShort) || normShort.includes(t.normalizedShort)))
-        )
+        ) &&
+        // Disambiguation check: reject if names are in the same collision group but different teams
+        !isDisambiguationConflict(normSchool, t.normalizedSchool) &&
+        !isDisambiguationConflict(normShort, t.normalizedShort)
     );
 
     if (relaxed) {
