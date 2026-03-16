@@ -465,10 +465,15 @@ const PROVIDER_REGISTRY: Record<string, SportDataProvider> = {
 // ═══════════════════════════════════════════════════════════════════
 
 function normalizeTeamName(name: string): string {
+  if (!name) return "";
   return name
     .toLowerCase()
-    .replace(/[^a-z0-9]/g, "")
-    .replace(/university|univ|st\b/g, "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // remove diacritics
+    .replace(/[_\s]+/g, " ")         // normalize whitespace
+    .replace(/[^a-z0-9 ]/g, "")     // keep spaces for word boundaries
+    .replace(/\b(university|univ)\b/g, "") // only strip university, NOT "st"
+    .replace(/\s+/g, "")             // collapse to single string for comparison
     .trim();
 }
 
