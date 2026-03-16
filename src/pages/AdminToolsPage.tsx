@@ -209,7 +209,7 @@ export default function AdminToolsPage() {
       if (!session) throw new Error('Not authenticated');
 
       const res = await supabase.functions.invoke('sync-games', {
-        body: { action, tournamentId, poolId },
+        body: { action, tournamentId, poolId, providerName },
       });
 
       if (res.error) throw new Error(res.error.message);
