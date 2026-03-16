@@ -46,7 +46,7 @@ export default function CreatePoolPage() {
           owner_user_id: user.id,
           tournament_id: tournamentId,
           invite_code: inviteCode,
-          lock_time: lockTime.toISOString(),
+          lock_time: lockTime,
         })
         .select()
         .single();
