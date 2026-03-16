@@ -272,7 +272,12 @@ function parseEspnEvent(event: any): NormalizedGame | null {
   const away = competitors.find((c: any) => c.homeAway === "away") || competitors[0];
   const home = competitors.find((c: any) => c.homeAway === "home") || competitors[1];
 
-  // DO NOT use curatedRank.current — it's AP ranking, not tournament seed
+  // Use ESPN's seed field (string), NOT curatedRank
+  const awaySeedStr = typeof away.seed === "string" ? away.seed : typeof away.seed === "number" ? String(away.seed) : "";
+  const homeSeedStr = typeof home.seed === "string" ? home.seed : typeof home.seed === "number" ? String(home.seed) : "";
+  const awaySeed = parseInt(awaySeedStr, 10) || null;
+  const homeSeed = parseInt(homeSeedStr, 10) || null;
+
   const awayScore = away.score ? parseInt(away.score, 10) : null;
   const homeScore = home.score ? parseInt(home.score, 10) : null;
 
@@ -295,6 +300,8 @@ function parseEspnEvent(event: any): NormalizedGame | null {
     team2ExternalId: home.team.id,
     team1Score: awayScore,
     team2Score: homeScore,
+    team1Seed: awaySeed,
+    team2Seed: homeSeed,
     winnerExternalId: winnerExtId,
     status,
     isResultFinal: status === "final",
@@ -304,6 +311,7 @@ function parseEspnEvent(event: any): NormalizedGame | null {
     sourceLastUpdatedAt: new Date().toISOString(),
     sourcePayload: { espnId: event.id, name: event.name },
     parseConfidence: confidence,
+    sourceProvider: "espn",
   };
 }
 
