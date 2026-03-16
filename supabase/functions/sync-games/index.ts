@@ -1035,7 +1035,7 @@ async function recalculateStandingsForTournament(
 //  ORCHESTRATOR
 // ═══════════════════════════════════════════════════════════════════
 
-async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string) {
+async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string, seasonYear: number) {
   const providerName = req.providerName || "stub";
 
   // Load provider config
