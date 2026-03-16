@@ -15,56 +15,56 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
       {/* Background glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] rounded-full blur-[140px] pointer-events-none" style={{ background: 'radial-gradient(circle, hsl(217, 91%, 60%, 0.08), transparent)' }} />
-      
-      {/* Header */}
-      <header className="relative z-10 flex items-center justify-between px-6 py-5">
-        <div className="flex items-center gap-2.5">
-          <img src={dhMonogram} alt="DH" className="w-11 h-11 object-contain" style={{ filter: 'drop-shadow(0 0 8px hsl(var(--primary) / 0.2))' }} />
-          <span className="text-sm font-extrabold tracking-tight">
-            <span className="gradient-text">DH</span> Bracket Club
-          </span>
-        </div>
+      <div className="absolute top-[30%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] rounded-full blur-[160px] pointer-events-none" style={{ background: 'radial-gradient(circle, hsl(217, 91%, 60%, 0.07), transparent)' }} />
+
+      {/* Header — clean, minimal */}
+      <header className="relative z-10 flex items-center justify-between px-5 py-4">
+        <span className="text-[13px] font-extrabold tracking-tight text-muted-foreground/70">
+          <span className="text-foreground">DH</span> Bracket Club
+        </span>
         <Link to="/auth">
-          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground font-semibold">
+          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground font-semibold text-[13px] h-9 px-3">
             Sign In
           </Button>
         </Link>
       </header>
 
       {/* Hero */}
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 text-center">
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 text-center -mt-4">
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          className="max-w-lg"
+          className="max-w-lg w-full"
         >
-          {/* Logo hero */}
+          {/* Single hero brand moment — monogram */}
           <motion.img
-            src={dhLogoFull}
+            src={dhMonogram}
             alt="DH Bracket Club"
-            className="h-40 sm:h-52 object-contain mx-auto mb-8"
-            initial={{ opacity: 0, scale: 0.9 }}
+            className="w-28 h-28 sm:w-36 sm:h-36 object-contain mx-auto mb-7"
+            initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            style={{ filter: 'drop-shadow(0 0 24px hsl(var(--primary) / 0.15))' }}
+            transition={{ duration: 0.5, delay: 0.1, type: 'spring', damping: 20 }}
+            style={{ filter: 'drop-shadow(0 0 32px hsl(var(--primary) / 0.2))' }}
           />
 
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold mb-8" style={{ background: 'hsl(var(--primary) / 0.1)', border: '1px solid hsl(var(--primary) / 0.15)', color: 'hsl(var(--primary))' }}>
-            <Zap className="w-3.5 h-3.5" />
-            March Madness Bracket Pools
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase mb-6" style={{ background: 'hsl(var(--primary) / 0.08)', border: '1px solid hsl(var(--primary) / 0.12)', color: 'hsl(var(--primary))' }}>
+            <Zap className="w-3 h-3" />
+            March Madness Pools
           </div>
-          <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-[1.08] mb-5">
+
+          <h2 className="text-[2rem] sm:text-5xl font-extrabold tracking-tight leading-[1.1] mb-4">
             Your friends.{' '}
             <span className="gradient-text">Your picks.</span>{' '}
             Your bragging rights.
           </h2>
-          <p className="text-muted-foreground text-base sm:text-lg leading-relaxed mb-10 max-w-md mx-auto">
-            Create a private pool, fill out your bracket, and see who knows college basketball best.
+
+          <p className="text-muted-foreground text-[15px] sm:text-base leading-relaxed mb-9 max-w-sm mx-auto">
+            Build a bracket, join a private pool, and settle it on the court.
           </p>
+
           <Link to="/auth">
-            <Button size="lg" className="gap-2.5 px-8 h-12 text-base font-bold rounded-xl btn-press">
+            <Button size="lg" className="gap-2.5 px-8 h-12 text-[15px] font-bold rounded-xl btn-press">
               Get Started <ArrowRight className="w-4 h-4" />
             </Button>
           </Link>
@@ -72,35 +72,35 @@ export default function LandingPage() {
 
         {/* Features */}
         <motion.div
-          initial={{ opacity: 0, y: 32 }}
+          initial={{ opacity: 0, y: 28 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
-          className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-20 max-w-xl w-full"
+          transition={{ duration: 0.6, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          className="grid grid-cols-3 gap-2 mt-16 sm:mt-20 max-w-md w-full"
         >
           {[
-            { icon: Users, title: 'Private Pools', desc: 'Invite friends with a simple code' },
-            { icon: Trophy, title: 'Live Standings', desc: 'Track your rank as results come in' },
-            { icon: Shield, title: 'Locked Picks', desc: 'Fair play with automatic lock times' },
+            { icon: Users, title: 'Private Pools', desc: 'Invite-only groups' },
+            { icon: Trophy, title: 'Live Ranks', desc: 'Real-time standings' },
+            { icon: Shield, title: 'Locked Picks', desc: 'Auto lock times' },
           ].map((f, i) => (
             <motion.div
               key={i}
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.4 + i * 0.08 }}
-              className="glass-card p-5 text-center hover-lift"
+              transition={{ duration: 0.4, delay: 0.4 + i * 0.06 }}
+              className="glass-card p-4 text-center"
             >
-              <div className="icon-container w-10 h-10 mx-auto mb-3">
-                <f.icon className="w-5 h-5 text-primary" />
+              <div className="icon-container w-9 h-9 mx-auto mb-2.5">
+                <f.icon className="w-4 h-4 text-primary" />
               </div>
-              <h3 className="text-sm font-bold mb-1">{f.title}</h3>
-              <p className="text-[11px] text-muted-foreground leading-relaxed">{f.desc}</p>
+              <h3 className="text-[11px] font-bold mb-0.5">{f.title}</h3>
+              <p className="text-[10px] text-muted-foreground/60 leading-snug">{f.desc}</p>
             </motion.div>
           ))}
         </motion.div>
       </main>
 
-      <footer className="relative z-10 text-center py-8 text-[10px] text-muted-foreground/40 font-semibold uppercase tracking-wider">
-        DH Bracket Club — For fun, not funds.
+      <footer className="relative z-10 text-center py-6 text-[9px] text-muted-foreground/30 font-semibold uppercase tracking-[0.15em]">
+        For fun, not funds.
       </footer>
     </div>
   );
