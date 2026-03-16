@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { ArrowLeft, Trophy, Eye, Crown, Medal } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Team, Pick as BPick, getChampionPick, getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES } from '@/lib/bracketUtils';
+import { useStandingsUpdates } from '@/hooks/useRealtimeSubscription';
 
 interface StandingRow {
   user_id: string;
