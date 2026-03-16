@@ -158,6 +158,17 @@ export default function GameCenterPage() {
         >
           All Rounds
         </button>
+        {games.some(g => g.round_number === 0) && (
+          <button
+            onClick={() => setRoundFilter(0)}
+            className={cn(
+              "px-2.5 py-1 rounded-md text-[11px] font-medium whitespace-nowrap transition-colors",
+              roundFilter === 0 ? "bg-card text-foreground border border-border" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {FIRST_FOUR_ROUND_SHORT}
+          </button>
+        )}
         {ROUND_SHORT.map((name, i) => (
           <button
             key={i}
