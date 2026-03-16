@@ -151,7 +151,7 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Refined scrollbar for dark mode */
+  /* Refined scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -166,42 +166,51 @@
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground));
   }
+
+  /* Hide scrollbar on filter rows */
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer components {
-  /* Premium card with layered surface depth */
+  /* ─── Cards ─── */
   .glass-card {
     @apply bg-card border border-border/60 rounded-xl;
     box-shadow: var(--shadow-card);
   }
 
-  /* Matchup card — the bracket building block */
   .matchup-card {
-    @apply bg-card rounded-xl overflow-hidden border border-border/50 transition-all duration-200;
+    @apply bg-card rounded-xl overflow-hidden border border-border/50;
     box-shadow: var(--shadow-card);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
   }
   .matchup-card:hover {
     box-shadow: var(--shadow-elevated);
     border-color: hsl(var(--border) / 0.8);
   }
 
-  /* Status pills */
+  /* ─── Status pills ─── */
   .status-pill {
     @apply inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold tracking-wide;
   }
 
-  /* Gradient text for branding */
+  /* ─── Gradient text ─── */
   .gradient-text {
     @apply bg-clip-text text-transparent;
     background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
   }
 
-  /* Section header — consistent across all pages */
+  /* ─── Section header ─── */
   .section-header {
     @apply text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3;
   }
 
-  /* Stat card — for numeric highlights */
+  /* ─── Stat card ─── */
   .stat-card {
     @apply glass-card p-4 text-center flex flex-col items-center gap-1;
   }
@@ -212,39 +221,84 @@
     @apply text-[11px] font-medium text-muted-foreground;
   }
 
-  /* Round pill navigation */
+  /* ─── Round pills ─── */
   .round-pill {
-    @apply px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 relative;
+    @apply px-3.5 py-2 rounded-xl text-xs font-semibold relative;
+    transition: all 0.15s ease;
   }
   .round-pill-active {
     @apply bg-primary text-primary-foreground shadow-md;
     box-shadow: var(--shadow-glow);
   }
   .round-pill-complete {
-    @apply bg-success/15 text-success;
+    background-color: hsl(var(--success) / 0.15);
+    color: hsl(var(--success));
   }
   .round-pill-default {
-    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+    @apply bg-secondary text-secondary-foreground;
+  }
+  .round-pill-default:hover {
+    background-color: hsl(var(--secondary) / 0.8);
   }
 
-  /* Interactive hover lift */
+  /* ─── Hover lift ─── */
   .hover-lift {
-    @apply transition-all duration-200;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
   .hover-lift:hover {
     transform: translateY(-1px);
     box-shadow: var(--shadow-elevated);
   }
 
-  /* Nav item styles */
+  /* ─── Nav items ─── */
   .nav-item {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150;
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium;
+    transition: all 0.15s ease;
   }
   .nav-item-active {
     @apply text-primary;
     background-color: hsl(var(--primary) / 0.12);
   }
   .nav-item-inactive {
-    @apply text-muted-foreground hover:text-foreground hover:bg-secondary/60;
+    @apply text-muted-foreground;
+  }
+  .nav-item-inactive:hover {
+    @apply text-foreground;
+    background-color: hsl(var(--secondary) / 0.6);
+  }
+
+  /* ─── Button press effect ─── */
+  .btn-press {
+    transition: transform 0.1s ease;
+  }
+  .btn-press:active {
+    transform: scale(0.97);
+  }
+
+  /* ─── Skeleton shimmer ─── */
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 25%,
+      hsl(var(--muted-foreground) / 0.08) 50%,
+      hsl(var(--muted)) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  /* ─── Safe area for mobile bottom nav ─── */
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+}
+
+/* ─── Reduced motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { Copy, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Copy, CheckCircle2, ArrowRight, Trophy } from 'lucide-react';
 
 export default function CreatePoolPage() {
   const { user } = useAuth();
@@ -85,17 +85,23 @@ export default function CreatePoolPage() {
 
   if (createdPool) {
     return (
-      <div className="max-w-md mx-auto">
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-8 text-center">
-          <CheckCircle2 className="w-12 h-12 text-success mx-auto mb-4" />
-          <h1 className="text-xl font-bold mb-1">Pool Created!</h1>
+      <div className="max-w-md mx-auto px-1">
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-8 sm:p-10 text-center">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 20, delay: 0.1 }}
+          >
+            <CheckCircle2 className="w-14 h-14 text-success mx-auto mb-5" />
+          </motion.div>
+          <h1 className="text-2xl font-extrabold mb-1">Pool Created!</h1>
           <p className="text-sm text-muted-foreground mb-6">Share this code with your friends to join.</p>
 
-          <div className="bg-surface rounded-lg p-4 mb-4">
-            <p className="text-xs text-muted-foreground mb-1">Invite Code</p>
+          <div className="bg-surface rounded-xl p-5 mb-5">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2 font-semibold">Invite Code</p>
             <div className="flex items-center justify-center gap-3">
-              <span className="text-3xl font-mono font-bold tracking-[0.3em] text-primary">{createdPool.invite_code}</span>
-              <button onClick={copyCode} className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors">
+              <span className="text-3xl sm:text-4xl font-mono font-extrabold tracking-[0.3em] text-primary">{createdPool.invite_code}</span>
+              <button onClick={copyCode} className="p-2.5 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors btn-press">
                 <Copy className="w-4 h-4" />
               </button>
             </div>
@@ -105,7 +111,7 @@ export default function CreatePoolPage() {
             Picks lock in 14 days. You can change this in pool settings.
           </p>
 
-          <Button className="w-full gap-2" onClick={() => navigate(`/pools/${createdPool.id}`)}>
+          <Button className="w-full gap-2 h-11 rounded-xl font-bold btn-press" onClick={() => navigate(`/pools/${createdPool.id}`)}>
             Go to Pool <ArrowRight className="w-4 h-4" />
           </Button>
         </motion.div>
@@ -114,38 +120,57 @@ export default function CreatePoolPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto">
-      <h1 className="text-xl font-bold mb-6">Create a Pool</h1>
-      <form onSubmit={handleCreate} className="glass-card p-6 space-y-4">
+    <div className="max-w-md mx-auto px-1">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
+            <Trophy className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">Create a Pool</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Set up a bracket competition</p>
+          </div>
+        </div>
+      </motion.div>
+
+      <motion.form
+        onSubmit={handleCreate}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="glass-card p-5 sm:p-6 space-y-5"
+      >
         <div>
-          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Pool Name</label>
+          <label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wider">Pool Name</label>
           <Input
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Office Bracket Bash"
             maxLength={50}
+            className="h-11 rounded-xl"
           />
         </div>
         <div>
-          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Description (optional)</label>
+          <label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wider">Description <span className="normal-case font-normal">(optional)</span></label>
           <Input
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="What's this pool about?"
             maxLength={200}
+            className="h-11 rounded-xl"
           />
         </div>
         {tournamentName && (
-          <div className="bg-surface rounded-lg p-3">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Tournament</p>
-            <p className="text-sm font-medium">{tournamentName}</p>
+          <div className="bg-surface rounded-xl p-4">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1 font-semibold">Tournament</p>
+            <p className="text-sm font-semibold">{tournamentName}</p>
           </div>
         )}
-        <Button type="submit" className="w-full" disabled={loading || !tournamentId}>
-          {loading ? 'Creating...' : 'Create Pool'}
+        <Button type="submit" className="w-full h-11 rounded-xl font-bold btn-press" disabled={loading || !tournamentId}>
+          {loading ? 'Creating…' : 'Create Pool'}
         </Button>
-      </form>
+      </motion.form>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { LayoutDashboard, Trophy, Users, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 
 const navItems = [
   { path: '/dashboard', label: 'Home', icon: LayoutDashboard },
@@ -16,8 +17,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Main Content */}
-      <main className="flex-1 pb-20 lg:pb-0 lg:pl-64">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 lg:py-8">
+      <main className="flex-1 pb-[4.5rem] lg:pb-0 lg:pl-64">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-6 lg:py-8">
           {children}
         </div>
       </main>
@@ -52,9 +53,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      {/* Mobile Bottom Nav */}
+      {/* Mobile Bottom Nav — taller touch targets */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-surface/95 backdrop-blur-xl border-t border-border/40 z-50 safe-area-inset-bottom">
-        <div className="flex items-center justify-around h-16 px-2">
+        <div className="flex items-center justify-around h-[4.25rem] px-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname.startsWith(item.path);
@@ -63,12 +64,20 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-all duration-150 min-w-[4rem]",
+                  "flex flex-col items-center justify-center gap-1 py-2 px-4 rounded-xl min-w-[4.5rem] min-h-[3rem] btn-press",
+                  "transition-colors duration-150",
                   isActive ? "text-primary" : "text-muted-foreground active:text-foreground"
                 )}
               >
-                <Icon className={cn("w-5 h-5 transition-transform duration-150", isActive && "scale-110")} />
+                <Icon className={cn("w-5 h-5", isActive && "scale-110")} style={{ transition: 'transform 0.15s ease' }} />
                 <span className={cn("text-[10px] font-semibold", isActive && "text-primary")}>{item.label}</span>
+                {isActive && (
+                  <motion.div
+                    layoutId="nav-indicator"
+                    className="absolute -top-px left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-primary"
+                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  />
+                )}
               </Link>
             );
           })}
