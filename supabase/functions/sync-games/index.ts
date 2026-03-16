@@ -648,6 +648,23 @@ async function syncGames(
 ) {
   const externalTeams = await provider.fetchTeams(tournamentId, config);
   const teamLookup = await buildTeamLookup(db, tournamentId, externalTeams);
+
+  // Update team names from provider data (fixes stale/placeholder names)
+  let teamsUpdated = 0;
+  for (const ext of externalTeams) {
+    const internalId = teamLookup.get(ext.externalTeamId);
+    if (internalId && ext.schoolName) {
+      const { error } = await db.from("teams").update({
+        school_name: ext.schoolName,
+        short_name: ext.shortName || ext.schoolName,
+      }).eq("id", internalId);
+      if (!error) teamsUpdated++;
+    }
+  }
+  if (teamsUpdated > 0) {
+    await logSyncEvent(db, syncRunId, "team", null, "team_names_updated", "success", { teamsUpdated });
+  }
+
   const externalGames = await provider.fetchGames(tournamentId, config);
 
   let matched = 0;
