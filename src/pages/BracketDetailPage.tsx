@@ -51,7 +51,12 @@ export default function BracketDetailPage() {
       }
 
       const { data: gameData } = await supabase.from('games').select('*').eq('tournament_id', tid).order('round_number').order('game_slot');
-      if (gameData) setGames(gameData as Game[]);
+      if (gameData) {
+        setGames(gameData as Game[]);
+        const ff = gameData.some(g => g.round_number === 0);
+        setHasFirstFour(ff);
+        if (ff) setCurrentRound(0);
+      }
 
       const { data: pickData } = await supabase.from('bracket_picks').select('game_id, picked_team_id, picked_in_round').eq('bracket_id', bracketId);
       if (pickData) {
