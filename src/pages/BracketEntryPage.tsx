@@ -109,13 +109,14 @@ export default function BracketEntryPage() {
   // Per-round completion
   const roundCompletion = useMemo(() => {
     const result: Record<number, { total: number; filled: number }> = {};
-    for (let r = 1; r <= 6; r++) {
+    const startRound = hasFirstFour ? 0 : 1;
+    for (let r = startRound; r <= 6; r++) {
       const roundGames = games.filter(g => g.round_number === r);
       const filled = roundGames.filter(g => picks.has(g.id)).length;
       result[r] = { total: roundGames.length, filled };
     }
     return result;
-  }, [games, picks]);
+  }, [games, picks, hasFirstFour]);
 
   const saveDraft = async (): Promise<string | null> => {
     if (!user || !poolId) return null;
