@@ -44,7 +44,7 @@ export default function AdminToolsPage() {
   const [syncRuns, setSyncRuns] = useState<SyncRun[]>([]);
   const [syncing, setSyncing] = useState<string | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
-  const [providerName, setProviderName] = useState<string>('espn');
+  const [providerName, setProviderName] = useState<string>('auto');
 
   const [simGameId, setSimGameId] = useState('');
   const [simStatus, setSimStatus] = useState<'scheduled' | 'in_progress' | 'final'>('in_progress');
