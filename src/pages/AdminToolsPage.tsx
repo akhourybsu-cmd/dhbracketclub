@@ -11,6 +11,7 @@ import {
   AlertTriangle, Database, Activity, FlaskConical, ChevronDown, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SyncRunCard } from '@/components/admin/SyncRunCard';
 import { Game, Team, ROUND_NAMES, ROUND_SHORT } from '@/lib/bracketUtils';
 import { useGameUpdates, useSyncRunUpdates } from '@/hooks/useRealtimeSubscription';
 
