@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,57 +6,130 @@
 
 @layer base {
   :root {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    /* Rich dark palette — sports-premium, not casino */
+    --background: 222 20% 6%;
+    --foreground: 210 20% 95%;
 
-    --card: 240 10% 8%;
-    --card-foreground: 0 0% 98%;
+    --card: 222 18% 10%;
+    --card-foreground: 210 20% 95%;
 
-    --popover: 240 10% 8%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 222 18% 10%;
+    --popover-foreground: 210 20% 95%;
 
+    /* Strong blue accent — competition, not gambling */
     --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
+    --primary-glow: 217 100% 70%;
 
-    --secondary: 240 5% 15%;
-    --secondary-foreground: 0 0% 90%;
+    --secondary: 222 14% 14%;
+    --secondary-foreground: 210 10% 75%;
 
-    --muted: 240 5% 15%;
-    --muted-foreground: 240 5% 55%;
+    --muted: 222 14% 16%;
+    --muted-foreground: 215 10% 50%;
 
-    --accent: 142 70% 45%;
+    /* Teal/cyan supporting accent — energetic, social */
+    --accent: 168 70% 48%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 5% 16%;
-    --input: 240 5% 16%;
+    --border: 222 12% 16%;
+    --input: 222 14% 14%;
     --ring: 217 91% 60%;
 
-    --radius: 0.75rem;
+    --radius: 0.625rem;
 
-    --sidebar-background: 240 10% 5%;
-    --sidebar-foreground: 240 5% 65%;
+    --sidebar-background: 222 20% 7%;
+    --sidebar-foreground: 215 10% 55%;
     --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 5% 12%;
-    --sidebar-accent-foreground: 0 0% 90%;
-    --sidebar-border: 240 5% 14%;
+    --sidebar-accent: 222 14% 12%;
+    --sidebar-accent-foreground: 210 10% 85%;
+    --sidebar-border: 222 12% 14%;
     --sidebar-ring: 217 91% 60%;
 
     /* Custom tokens */
-    --surface: 240 10% 6%;
-    --surface-elevated: 240 10% 10%;
-    --success: 142 70% 45%;
+    --surface: 222 20% 8%;
+    --surface-elevated: 222 16% 12%;
+    --success: 152 60% 48%;
     --warning: 38 92% 50%;
-    --correct: 142 70% 45%;
-    --incorrect: 0 84% 60%;
-    --gold: 45 93% 47%;
-    --silver: 0 0% 70%;
-    --bronze: 30 60% 45%;
+    --correct: 152 60% 48%;
+    --incorrect: 0 72% 55%;
+    --gold: 45 93% 52%;
+    --silver: 220 10% 68%;
+    --bronze: 30 55% 48%;
+    --live: 0 75% 58%;
 
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(217, 91%, 55%), hsl(217, 100%, 68%));
+    --gradient-accent: linear-gradient(135deg, hsl(168, 70%, 42%), hsl(168, 80%, 55%));
+    --gradient-surface: linear-gradient(180deg, hsl(222, 18%, 11%), hsl(222, 18%, 9%));
+
+    /* Shadows */
+    --shadow-card: 0 1px 3px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2);
+    --shadow-elevated: 0 4px 24px rgba(0,0,0,0.35), 0 1px 4px rgba(0,0,0,0.2);
+    --shadow-glow: 0 0 20px hsl(217, 91%, 60%, 0.15);
+
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Light mode */
+  .light {
+    --background: 210 25% 97%;
+    --foreground: 222 20% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 20% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 20% 12%;
+
+    --primary: 217 85% 52%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 217 90% 62%;
+
+    --secondary: 210 15% 92%;
+    --secondary-foreground: 222 14% 40%;
+
+    --muted: 210 15% 94%;
+    --muted-foreground: 215 10% 46%;
+
+    --accent: 168 65% 38%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 15% 88%;
+    --input: 210 15% 90%;
+    --ring: 217 85% 52%;
+
+    --radius: 0.625rem;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 215 10% 46%;
+    --sidebar-primary: 217 85% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 15% 95%;
+    --sidebar-accent-foreground: 222 14% 20%;
+    --sidebar-border: 210 15% 90%;
+    --sidebar-ring: 217 85% 52%;
+
+    --surface: 210 20% 95%;
+    --surface-elevated: 0 0% 100%;
+    --success: 152 55% 42%;
+    --warning: 38 88% 48%;
+    --correct: 152 55% 42%;
+    --incorrect: 0 72% 50%;
+    --gold: 45 90% 48%;
+    --silver: 220 8% 58%;
+    --bronze: 30 50% 42%;
+    --live: 0 70% 52%;
+
+    --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 2px 12px rgba(0,0,0,0.04);
+    --shadow-elevated: 0 4px 24px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+    --shadow-glow: 0 0 20px hsl(217, 85%, 52%, 0.1);
   }
 
   * {
@@ -66,6 +139,8 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   .font-mono {
@@ -75,24 +150,100 @@
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
+
+  /* Refined scrollbar for dark mode */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted));
+    border-radius: 99px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+  }
 }
 
 @layer components {
+  /* Premium card with layered surface depth */
   .glass-card {
-    @apply bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl;
-    box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.4);
+    @apply bg-card border border-border/60 rounded-xl;
+    box-shadow: var(--shadow-card);
   }
 
+  /* Matchup card — the bracket building block */
   .matchup-card {
-    @apply bg-card rounded-xl overflow-hidden;
-    box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 2px 8px rgba(0,0,0,0.3);
+    @apply bg-card rounded-xl overflow-hidden border border-border/50 transition-all duration-200;
+    box-shadow: var(--shadow-card);
+  }
+  .matchup-card:hover {
+    box-shadow: var(--shadow-elevated);
+    border-color: hsl(var(--border) / 0.8);
   }
 
+  /* Status pills */
   .status-pill {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold tracking-wide;
   }
 
+  /* Gradient text for branding */
   .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+  }
+
+  /* Section header — consistent across all pages */
+  .section-header {
+    @apply text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3;
+  }
+
+  /* Stat card — for numeric highlights */
+  .stat-card {
+    @apply glass-card p-4 text-center flex flex-col items-center gap-1;
+  }
+  .stat-card .stat-value {
+    @apply text-xl font-extrabold tabular-nums;
+  }
+  .stat-card .stat-label {
+    @apply text-[11px] font-medium text-muted-foreground;
+  }
+
+  /* Round pill navigation */
+  .round-pill {
+    @apply px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 relative;
+  }
+  .round-pill-active {
+    @apply bg-primary text-primary-foreground shadow-md;
+    box-shadow: var(--shadow-glow);
+  }
+  .round-pill-complete {
+    @apply bg-success/15 text-success;
+  }
+  .round-pill-default {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+  }
+
+  /* Interactive hover lift */
+  .hover-lift {
+    @apply transition-all duration-200;
+  }
+  .hover-lift:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-elevated);
+  }
+
+  /* Nav item styles */
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150;
+  }
+  .nav-item-active {
+    @apply bg-primary/12 text-primary;
+  }
+  .nav-item-inactive {
+    @apply text-muted-foreground hover:text-foreground hover:bg-secondary/60;
   }
 }
