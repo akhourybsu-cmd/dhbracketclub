@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, Trophy, Eye, Crown, Medal, TrendingUp, TrendingDown, Minus, AlertCircle, Award } from 'lucide-react';
+import { ArrowLeft, Trophy, Eye, Crown, Medal, TrendingUp, TrendingDown, Minus, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Team, getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES } from '@/lib/bracketUtils';
 import { useStandingsUpdates } from '@/hooks/useRealtimeSubscription';
@@ -91,9 +91,7 @@ export default function LeaderboardPage() {
           userSnapshots.get(s.user_id)!.push(s);
         });
         userSnapshots.forEach((snaps, userId) => {
-          if (snaps.length >= 2) {
-            prevRanks.set(userId, snaps[1].rank);
-          }
+          if (snaps.length >= 2) prevRanks.set(userId, snaps[1].rank);
         });
       }
     }
@@ -115,17 +113,10 @@ export default function LeaderboardPage() {
       const currentRank = s?.rank || 0;
       const prevRank = effectivePrevRanks.get(m.user_id) ?? null;
       return {
-        user_id: m.user_id,
-        total_points: s?.total_points || 0,
-        correct_picks: s?.correct_picks || 0,
-        possible_points_remaining: s?.possible_points_remaining || 0,
-        rank: currentRank,
-        previousRank: prevRank,
-        display_name: m.profiles?.display_name || 'Unknown',
-        bracket_id: b?.id || null,
-        bracket_status: b?.status || null,
-        champion_team: champPicks.get(m.user_id) || null,
-        displayStatus: ds,
+        user_id: m.user_id, total_points: s?.total_points || 0, correct_picks: s?.correct_picks || 0,
+        possible_points_remaining: s?.possible_points_remaining || 0, rank: currentRank, previousRank: prevRank,
+        display_name: m.profiles?.display_name || 'Unknown', bracket_id: b?.id || null,
+        bracket_status: b?.status || null, champion_team: champPicks.get(m.user_id) || null, displayStatus: ds,
       };
     });
 
@@ -189,20 +180,19 @@ export default function LeaderboardPage() {
   const podiumOrder = standings.length >= 3 && standings[0].total_points > 0
     ? [standings[1], standings[0], standings[2]] : null;
   const podiumMeta = [
-    { place: 2, color: 'text-silver', bg: 'bg-silver/10', height: 'h-16', icon: Medal },
-    { place: 1, color: 'text-gold', bg: 'bg-gold/10', height: 'h-24', icon: Crown },
-    { place: 3, color: 'text-bronze', bg: 'bg-bronze/10', height: 'h-12', icon: Medal },
+    { place: 2, color: 'text-silver', height: 'h-16', icon: Medal, badgeClass: 'rank-badge-silver' },
+    { place: 1, color: 'text-gold', height: 'h-24', icon: Crown, badgeClass: 'rank-badge-gold' },
+    { place: 3, color: 'text-bronze', height: 'h-12', icon: Medal, badgeClass: 'rank-badge-bronze' },
   ];
 
   return (
     <div className="max-w-2xl mx-auto">
-      {/* Back link */}
       <Link to={`/pools/${poolId}`} className="back-link">
         <ArrowLeft /> Back to Pool
       </Link>
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-8 hero-glow relative z-10">
         <div className="page-header mb-0">
           <div className="page-header-icon">
             <Trophy />
@@ -212,9 +202,9 @@ export default function LeaderboardPage() {
             <p className="page-header-subtitle">{pool?.name}</p>
           </div>
         </div>
-        <div className="flex flex-col items-end gap-1">
+        <div className="flex flex-col items-end gap-1.5">
           {rtStatus === 'connected' && (
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 text-success text-[10px] font-semibold">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/10 text-success text-[10px] font-bold">
               <span className="live-dot" /> Live
             </span>
           )}
@@ -226,34 +216,28 @@ export default function LeaderboardPage() {
         </div>
       </div>
 
-      {/* Stale data warning */}
+      {/* Stale warning */}
       {!lastSyncedAt && isLocked && (
-        <div className="glass-card p-3 mb-5 flex items-center gap-2.5 border-warning/30">
-          <div className="w-8 h-8 rounded-lg bg-warning/15 flex items-center justify-center flex-shrink-0">
+        <div className="glass-card p-3.5 mb-6 flex items-center gap-3" style={{ borderColor: 'hsl(var(--warning) / 0.2)' }}>
+          <div className="w-9 h-9 rounded-xl bg-warning/12 flex items-center justify-center flex-shrink-0">
             <AlertCircle className="w-4 h-4 text-warning" />
           </div>
-          <span className="text-xs text-muted-foreground">Standings haven't been synced yet. Scores may not be current.</span>
+          <span className="text-xs text-muted-foreground relative z-10">Standings haven't been synced yet. Scores may not be current.</span>
         </div>
       )}
 
       {standings.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-icon">
-            <Trophy />
-          </div>
+          <div className="empty-state-icon"><Trophy /></div>
           <p className="empty-state-title">No members yet</p>
           <p className="empty-state-desc">Invite friends to join and compete!</p>
         </div>
       ) : (
         <>
-          {/* Podium – top 3 */}
+          {/* Podium */}
           {isLocked && podiumOrder && (
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="glass-card p-5 mb-5"
-            >
-              <div className="grid grid-cols-3 gap-3 items-end">
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-6 mb-6">
+              <div className="grid grid-cols-3 gap-3 items-end relative z-10">
                 {podiumOrder.map((s, i) => {
                   const meta = podiumMeta[i];
                   const movement = getMovement(s);
@@ -266,30 +250,22 @@ export default function LeaderboardPage() {
                       transition={{ delay: 0.1 + i * 0.1 }}
                       className="flex flex-col items-center text-center"
                     >
-                      {/* Avatar */}
                       <div className={cn(
-                        "w-12 h-12 rounded-full flex items-center justify-center text-base font-extrabold mb-2 border-2",
-                        meta.place === 1 ? "border-gold bg-gold/15 text-gold" :
-                        meta.place === 2 ? "border-silver bg-silver/10 text-silver" :
-                        "border-bronze bg-bronze/10 text-bronze"
+                        "w-14 h-14 rounded-full flex items-center justify-center text-lg font-extrabold mb-2.5 border-2",
+                        meta.place === 1 ? "border-gold bg-gold/12 text-gold" :
+                        meta.place === 2 ? "border-silver bg-silver/8 text-silver" :
+                        "border-bronze bg-bronze/8 text-bronze"
                       )}>
                         {s.display_name[0].toUpperCase()}
                       </div>
-
-                      {/* Name */}
-                      <p className="text-xs font-semibold truncate w-full mb-0.5">{s.display_name}</p>
-
-                      {/* Points + movement */}
+                      <p className="text-xs font-semibold truncate w-full mb-1">{s.display_name}</p>
                       <div className="flex items-center gap-1 mb-2">
-                        <span className={cn("text-xl font-extrabold tabular-nums", meta.color)}>{s.total_points}</span>
+                        <span className={cn("text-2xl font-extrabold tabular-nums", meta.color)}>{s.total_points}</span>
                       </div>
                       <MovementPill movement={movement} />
-
-                      {/* Podium bar */}
-                      <div className={cn(
-                        "w-full rounded-t-lg flex items-end justify-center mt-2",
-                        meta.bg, meta.height
-                      )}>
+                      <div className={cn("w-full rounded-t-xl flex items-end justify-center mt-3", "bg-gradient-to-t from-transparent", meta.height)}
+                        style={{ background: `linear-gradient(to top, hsl(var(--${meta.place === 1 ? 'gold' : meta.place === 2 ? 'silver' : 'bronze'}) / 0.08), transparent)` }}
+                      >
                         <Icon className={cn("w-5 h-5 mb-2", meta.color)} />
                       </div>
                     </motion.div>
@@ -301,8 +277,7 @@ export default function LeaderboardPage() {
 
           {/* Standings table */}
           <div className="glass-card overflow-hidden">
-            {/* Header row */}
-            <div className="grid grid-cols-[2.5rem_1fr_auto_3.5rem_3rem_3.5rem] gap-2 px-4 py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b border-border/50 bg-muted/30">
+            <div className="grid grid-cols-[2.5rem_1fr_auto_3.5rem_3rem_3.5rem] gap-2 px-4 py-3 text-[9px] font-bold text-muted-foreground uppercase tracking-[0.15em] border-b border-border/30 relative z-10" style={{ background: 'hsl(var(--surface))' }}>
               <span className="text-center">#</span>
               <span>Player</span>
               <span className="text-center">Champ</span>
@@ -319,24 +294,18 @@ export default function LeaderboardPage() {
                 <motion.div
                   key={s.user_id}
                   layout
-                  initial={{ opacity: 0, x: -8 }}
+                  initial={{ opacity: 0, x: -6 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: Math.min(i * 0.02, 0.4) }}
+                  transition={{ delay: Math.min(i * 0.025, 0.4) }}
                   className={cn(
-                    "grid grid-cols-[2.5rem_1fr_auto_3.5rem_3rem_3.5rem] gap-2 px-4 py-3 items-center transition-colors",
+                    "grid grid-cols-[2.5rem_1fr_auto_3.5rem_3rem_3.5rem] gap-2 px-4 py-3.5 items-center transition-colors relative z-10",
                     isMe && "bg-primary/5",
-                    i < standings.length - 1 && "border-b border-border/20"
+                    i < standings.length - 1 && "border-b border-border/15"
                   )}
                 >
-                  {/* Rank */}
-                  <div className="flex flex-col items-center gap-0.5">
+                  <div className="flex flex-col items-center">
                     {s.rank <= 3 ? (
-                      <div className={cn(
-                        "w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold",
-                        s.rank === 1 && "bg-gold/15 text-gold",
-                        s.rank === 2 && "bg-silver/10 text-silver",
-                        s.rank === 3 && "bg-bronze/10 text-bronze",
-                      )}>
+                      <div className={cn("rank-badge", s.rank === 1 && "rank-badge-gold", s.rank === 2 && "rank-badge-silver", s.rank === 3 && "rank-badge-bronze")}>
                         {s.rank}
                       </div>
                     ) : (
@@ -344,34 +313,28 @@ export default function LeaderboardPage() {
                     )}
                   </div>
 
-                  {/* Player name + movement + bracket link */}
                   <div className="min-w-0 flex items-center gap-2">
                     <div className="min-w-0 flex flex-col">
-                      <span className={cn(
-                        "text-sm font-semibold truncate",
-                        isMe && "text-primary"
-                      )}>
+                      <span className={cn("text-sm font-semibold truncate", isMe && "text-primary")}>
                         {s.display_name}
-                        {isMe && <span className="text-[10px] font-normal text-primary/60 ml-1">(you)</span>}
+                        {isMe && <span className="text-[10px] font-normal text-primary/50 ml-1">(you)</span>}
                       </span>
                     </div>
                     <MovementPill movement={movement} />
                     {isLocked && s.bracket_id && (
-                      <Link to={`/pools/${poolId}/bracket/${s.bracket_id}`} className="flex-shrink-0 opacity-40 hover:opacity-100 transition-opacity">
+                      <Link to={`/pools/${poolId}/bracket/${s.bracket_id}`} className="flex-shrink-0 opacity-30 hover:opacity-100 transition-opacity">
                         <Eye className="w-3.5 h-3.5 text-muted-foreground" />
                       </Link>
                     )}
                   </div>
 
-                  {/* Champion pick */}
                   <span className={cn(
-                    "text-[11px] font-medium truncate max-w-[5rem] text-center px-1.5 py-0.5 rounded-md",
-                    s.champion_team ? "bg-muted/50 text-muted-foreground" : "text-muted-foreground/40"
+                    "text-[11px] font-medium truncate max-w-[5rem] text-center px-2 py-0.5 rounded-lg",
+                    s.champion_team ? "bg-muted/40 text-muted-foreground" : "text-muted-foreground/30"
                   )}>
                     {s.champion_team?.short_name || '—'}
                   </span>
 
-                  {/* Points */}
                   <span className={cn(
                     "text-sm font-extrabold tabular-nums text-right",
                     s.rank === 1 && s.total_points > 0 && "text-gold",
@@ -381,19 +344,15 @@ export default function LeaderboardPage() {
                     {s.total_points}
                   </span>
 
-                  {/* Correct picks */}
                   <span className="text-sm tabular-nums text-right text-muted-foreground">{s.correct_picks}</span>
-
-                  {/* Possible remaining */}
                   <span className="text-sm tabular-nums text-right text-muted-foreground">{s.possible_points_remaining}</span>
                 </motion.div>
               );
             })}
           </div>
 
-          {/* Last synced */}
           {lastSyncedAt && (
-            <p className="text-[10px] text-muted-foreground text-center mt-4 tabular-nums">
+            <p className="text-[10px] text-muted-foreground/60 text-center mt-5 tabular-nums">
               Last synced: {new Date(lastSyncedAt).toLocaleString()}
             </p>
           )}

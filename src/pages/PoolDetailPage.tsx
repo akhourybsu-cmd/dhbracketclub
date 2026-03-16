@@ -6,15 +6,8 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Trophy, Edit3, Eye, Settings, Copy, Users, Clock, ArrowRight, Activity, Trash2 } from 'lucide-react';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -37,7 +30,6 @@ export default function PoolDetailPage() {
     if (!poolId) return;
     setDeleting(true);
     try {
-      // Delete related data first (brackets, picks, members, etc.)
       const { data: brackets } = await supabase.from('brackets').select('id').eq('pool_id', poolId);
       if (brackets?.length) {
         const bracketIds = brackets.map(b => b.id);
@@ -150,13 +142,13 @@ export default function PoolDetailPage() {
   const statusCfg = STATUS_CONFIG[myStatus];
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35 }}>
       {/* Pool Header */}
-      <div className="mb-6">
+      <div className="mb-8 hero-glow relative z-10">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-xl font-extrabold tracking-tight">{pool.name}</h1>
-            <p className="text-xs text-muted-foreground font-medium mt-0.5">
+            <h1 className="text-2xl font-extrabold tracking-tight leading-none">{pool.name}</h1>
+            <p className="text-xs text-muted-foreground font-medium mt-1.5">
               {pool.tournaments?.name} {pool.tournaments?.season_year}
             </p>
           </div>
@@ -167,83 +159,97 @@ export default function PoolDetailPage() {
             {isLocked ? 'Locked' : 'Open'}
           </span>
         </div>
-        {pool.description && <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{pool.description}</p>}
+        {pool.description && <p className="text-xs text-muted-foreground/70 mt-2.5 leading-relaxed">{pool.description}</p>}
       </div>
 
       {/* Info Cards */}
-      <div className="grid grid-cols-3 gap-2 mb-6">
-        <div className="stat-card">
-          <Users className="w-4 h-4 text-primary mb-1" />
+      <div className="grid grid-cols-3 gap-3 mb-8">
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="stat-card">
+          <Users className="w-4 h-4 text-primary mb-0.5" />
           <p className="stat-value">{members.length}</p>
           <p className="stat-label">Members</p>
-        </div>
-        <div className="stat-card">
-          <Clock className="w-4 h-4 text-warning mb-1" />
-          <p className={cn("text-xs font-bold", isLocked ? "text-destructive" : "text-warning")}>{lockTimeDisplay}</p>
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="stat-card">
+          <Clock className="w-4 h-4 text-warning mb-0.5" />
+          <p className={cn("text-sm font-extrabold tabular-nums", isLocked ? "text-destructive" : "text-warning")}>{lockTimeDisplay}</p>
           <p className="stat-label">Lock Time</p>
-        </div>
-        <button onClick={copyInvite} className="stat-card hover-lift cursor-pointer">
-          <Copy className="w-4 h-4 text-accent mb-1" />
-          <p className="text-xs font-mono font-extrabold tracking-[0.2em]">{pool.invite_code}</p>
-          <p className="stat-label">Copy Code</p>
-        </button>
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <button onClick={copyInvite} className="stat-card hover-lift cursor-pointer w-full">
+            <Copy className="w-4 h-4 text-accent mb-0.5" />
+            <p className="text-xs font-mono font-extrabold tracking-[0.2em]">{pool.invite_code}</p>
+            <p className="stat-label">Copy Code</p>
+          </button>
+        </motion.div>
       </div>
 
       {/* My Bracket Status */}
-      <div className="glass-card p-5 mb-6">
-        <div className="flex items-center justify-between mb-3">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+        className="glass-card p-5 mb-8"
+      >
+        <div className="flex items-center justify-between mb-3 relative z-10">
           <span className="section-header mb-0">My Bracket</span>
           <span className={cn("status-pill", statusCfg.className)}>{statusCfg.label}</span>
         </div>
-        {myStatus === 'none' && !isLocked && (
-          <Link to={`/pools/${poolId}/bracket/edit`}>
-            <Button className="w-full gap-2 h-11 font-bold rounded-xl btn-press"><Edit3 className="w-4 h-4" /> Start Your Bracket</Button>
-          </Link>
-        )}
-        {myStatus === 'draft' && (
-          <>
-            <p className="text-xs text-muted-foreground mb-2 font-medium">{myPicksCount}/{TOTAL_GAMES} picks made</p>
-            <div className="h-2 bg-secondary rounded-full overflow-hidden mb-3">
-              <div className="h-full rounded-full transition-all" style={{ width: `${(myPicksCount / TOTAL_GAMES) * 100}%`, background: 'linear-gradient(90deg, hsl(var(--warning)), hsl(var(--warning) / 0.7))' }} />
-            </div>
+        <div className="relative z-10">
+          {myStatus === 'none' && !isLocked && (
             <Link to={`/pools/${poolId}/bracket/edit`}>
-              <Button className="w-full gap-2 h-11 font-bold rounded-xl btn-press"><Edit3 className="w-4 h-4" /> Continue Editing</Button>
+              <Button className="w-full gap-2 h-12 font-bold rounded-xl btn-press text-sm"><Edit3 className="w-4 h-4" /> Start Your Bracket</Button>
             </Link>
-          </>
-        )}
-        {myStatus === 'submitted' && (
-          <div className="flex gap-2 mt-1">
-            <Link to={`/pools/${poolId}/bracket/edit`} className="flex-1">
-              <Button variant="outline" className="w-full gap-2 h-10 font-bold rounded-xl btn-press"><Edit3 className="w-4 h-4" /> Edit</Button>
+          )}
+          {myStatus === 'draft' && (
+            <>
+              <p className="text-xs text-muted-foreground mb-2.5 font-medium">{myPicksCount}/{TOTAL_GAMES} picks made</p>
+              <div className="h-2.5 bg-secondary rounded-full overflow-hidden mb-3">
+                <motion.div
+                  className="h-full rounded-full"
+                  style={{ background: 'linear-gradient(90deg, hsl(var(--warning)), hsl(var(--warning) / 0.6))' }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(myPicksCount / TOTAL_GAMES) * 100}%` }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                />
+              </div>
+              <Link to={`/pools/${poolId}/bracket/edit`}>
+                <Button className="w-full gap-2 h-12 font-bold rounded-xl btn-press text-sm"><Edit3 className="w-4 h-4" /> Continue Editing</Button>
+              </Link>
+            </>
+          )}
+          {myStatus === 'submitted' && (
+            <div className="flex gap-2.5 mt-1">
+              <Link to={`/pools/${poolId}/bracket/edit`} className="flex-1">
+                <Button variant="outline" className="w-full gap-2 h-11 font-bold rounded-xl btn-press"><Edit3 className="w-4 h-4" /> Edit</Button>
+              </Link>
+              <Link to={`/pools/${poolId}/bracket/${myBracket?.id}`} className="flex-1">
+                <Button variant="outline" className="w-full gap-2 h-11 font-bold rounded-xl btn-press"><Eye className="w-4 h-4" /> View</Button>
+              </Link>
+            </div>
+          )}
+          {(myStatus === 'locked' || myStatus === 'incomplete') && myBracket && (
+            <Link to={`/pools/${poolId}/bracket/${myBracket.id}`}>
+              <Button variant="outline" className="w-full gap-2 h-11 font-bold rounded-xl mt-1 btn-press"><Eye className="w-4 h-4" /> View My Bracket</Button>
             </Link>
-            <Link to={`/pools/${poolId}/bracket/${myBracket?.id}`} className="flex-1">
-              <Button variant="outline" className="w-full gap-2 h-10 font-bold rounded-xl btn-press"><Eye className="w-4 h-4" /> View</Button>
-            </Link>
-          </div>
-        )}
-        {(myStatus === 'locked' || myStatus === 'incomplete') && myBracket && (
-          <Link to={`/pools/${poolId}/bracket/${myBracket.id}`}>
-            <Button variant="outline" className="w-full gap-2 h-10 font-bold rounded-xl mt-1 btn-press"><Eye className="w-4 h-4" /> View My Bracket</Button>
-          </Link>
-        )}
-        {myStatus === 'none' && isLocked && (
-          <p className="text-[11px] text-muted-foreground mt-1 font-medium">You didn't submit a bracket before the deadline.</p>
-        )}
-      </div>
+          )}
+          {myStatus === 'none' && isLocked && (
+            <p className="text-[11px] text-muted-foreground mt-1 font-medium">You didn't submit a bracket before the deadline.</p>
+          )}
+        </div>
+      </motion.div>
 
       {/* Quick Links */}
-      <div className={cn("grid gap-2 mb-6", isAdmin ? "grid-cols-3" : "grid-cols-2")}>
+      <div className={cn("grid gap-3 mb-8", isAdmin ? "grid-cols-3" : "grid-cols-2")}>
         {[
-          { to: `/pools/${poolId}/leaderboard`, icon: Trophy, label: 'Leaderboard', color: 'text-gold' },
-          { to: `/pools/${poolId}/games`, icon: Activity, label: 'Game Center', color: 'text-primary' },
-          ...(isAdmin ? [{ to: `/pools/${poolId}/admin`, icon: Settings, label: 'Admin', color: 'text-muted-foreground' }] : []),
-        ].map((link) => (
-          <Link key={link.to} to={link.to}>
-            <div className="glass-card p-4 text-center hover-lift cursor-pointer">
-              <link.icon className={cn("w-5 h-5 mx-auto mb-2", link.color)} />
-              <p className="text-xs font-bold">{link.label}</p>
-            </div>
-          </Link>
+          { to: `/pools/${poolId}/leaderboard`, icon: Trophy, label: 'Leaderboard', color: 'text-gold', glowColor: 'hsl(45 93% 52% / 0.08)' },
+          { to: `/pools/${poolId}/games`, icon: Activity, label: 'Game Center', color: 'text-primary', glowColor: 'hsl(217 91% 60% / 0.08)' },
+          ...(isAdmin ? [{ to: `/pools/${poolId}/admin`, icon: Settings, label: 'Admin', color: 'text-muted-foreground', glowColor: 'transparent' }] : []),
+        ].map((link, i) => (
+          <motion.div key={link.to} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.05 }}>
+            <Link to={link.to}>
+              <div className="glass-card p-5 text-center hover-lift cursor-pointer relative z-10">
+                <link.icon className={cn("w-5 h-5 mx-auto mb-2.5", link.color)} />
+                <p className="text-xs font-bold">{link.label}</p>
+              </div>
+            </Link>
+          </motion.div>
         ))}
       </div>
 
@@ -251,22 +257,28 @@ export default function PoolDetailPage() {
       <div className="section-divider">
         <h2 className="section-header mb-0">Members</h2>
       </div>
-      <div className="glass-card divide-y divide-border/20 overflow-hidden">
-        {members.map((m: any) => {
+      <div className="glass-card divide-y divide-border/15 overflow-hidden">
+        {members.map((m: any, i: number) => {
           const mb = memberBrackets.get(m.user_id);
           const memberStatus = getBracketDisplayStatus(mb?.status || null, pool.lock_time, 0, TOTAL_GAMES);
           const msCfg = STATUS_CONFIG[memberStatus];
           const canViewBracket = isLocked && mb && (mb.status === 'submitted' || memberStatus === 'locked');
 
           return (
-            <div key={m.id} className="flex items-center justify-between px-4 py-3">
+            <motion.div
+              key={m.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.35 + i * 0.03 }}
+              className="flex items-center justify-between px-4 py-3.5 relative z-10"
+            >
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="w-8 h-8 rounded-lg icon-container text-[11px] font-extrabold text-primary flex-shrink-0 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl icon-container text-[11px] font-extrabold text-primary flex-shrink-0 flex items-center justify-center">
                   {(m.profiles?.display_name || '?')[0].toUpperCase()}
                 </div>
                 <div className="min-w-0">
                   <span className="text-sm font-semibold block truncate">{m.profiles?.display_name || 'Unknown'}</span>
-                  {m.role === 'admin' && <span className="text-[9px] text-primary font-bold uppercase tracking-wider">Admin</span>}
+                  {m.role === 'admin' && <span className="text-[9px] text-primary font-bold uppercase tracking-[0.15em]">Admin</span>}
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -277,17 +289,17 @@ export default function PoolDetailPage() {
                   </Link>
                 )}
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>
 
       {/* Delete Pool (Admin only) */}
       {isAdmin && (
-        <div className="mt-8 pt-6 border-t border-border/20">
+        <div className="mt-10 pt-6 border-t border-border/15">
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="outline" className="w-full gap-2 text-destructive border-destructive/30 hover:bg-destructive/10 font-bold rounded-xl">
+              <Button variant="outline" className="w-full gap-2 text-destructive border-destructive/20 hover:bg-destructive/10 font-bold rounded-xl">
                 <Trash2 className="w-4 h-4" /> Delete Pool
               </Button>
             </AlertDialogTrigger>

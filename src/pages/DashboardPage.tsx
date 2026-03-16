@@ -77,31 +77,33 @@ export default function DashboardPage() {
 
   return (
     <div>
-      {/* Hero header */}
+      {/* Hero header with ambient glow */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35 }}
-        className="mb-8"
+        transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+        className="mb-10 hero-glow relative z-10"
       >
-        <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1.5">{getGreeting()}</p>
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">{displayName || 'there'} 👋</h1>
+        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em] mb-2">{getGreeting()}</p>
+        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-none">
+          {displayName || 'there'} <span className="inline-block animate-fade-in">👋</span>
+        </h1>
       </motion.div>
 
       {/* Quick actions */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.08, duration: 0.3 }}
-        className="flex gap-2.5 mb-8"
+        transition={{ delay: 0.1, duration: 0.35 }}
+        className="flex gap-3 mb-8"
       >
         <Link to="/pools/create" className="flex-1">
-          <Button className="w-full gap-2 font-bold h-11 rounded-xl text-sm btn-press">
+          <Button className="w-full gap-2 font-bold h-12 rounded-xl text-sm btn-press" style={{ boxShadow: 'var(--shadow-glow-sm)' }}>
             <Plus className="w-4 h-4" /> Create Pool
           </Button>
         </Link>
         <Link to="/pools/join" className="flex-1">
-          <Button variant="outline" className="w-full gap-2 font-bold h-11 rounded-xl text-sm btn-press">
+          <Button variant="outline" className="w-full gap-2 font-bold h-12 rounded-xl text-sm btn-press border-border/50">
             <Users className="w-4 h-4" /> Join Pool
           </Button>
         </Link>
@@ -116,13 +118,13 @@ export default function DashboardPage() {
             exit={{ opacity: 0, height: 0 }}
             className="mb-8 overflow-hidden"
           >
-            <div className="glass-card p-4 flex items-center gap-3 border-primary/20">
+            <div className="glass-card p-4 flex items-center gap-3" style={{ borderColor: 'hsl(var(--primary) / 0.2)' }}>
               <div className="icon-container w-10 h-10 flex-shrink-0">
                 <Download className="w-5 h-5 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold">Install Bracket Battle</p>
-                <p className="text-[11px] text-muted-foreground">Add to your home screen for the best experience</p>
+                <p className="text-[11px] text-muted-foreground">Add to home screen for the best experience</p>
               </div>
               <Button size="sm" onClick={install} className="rounded-xl font-bold text-xs h-9 px-4 btn-press flex-shrink-0">
                 Install
@@ -140,21 +142,25 @@ export default function DashboardPage() {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.12, duration: 0.3 }}
-          className="grid grid-cols-3 gap-2.5 mb-8"
+          transition={{ delay: 0.15, duration: 0.35 }}
+          className="grid grid-cols-3 gap-3 mb-8"
         >
           {[
-            { icon: Trophy, value: pools.length, label: 'Pools', iconColor: 'text-primary', iconBg: 'bg-primary/10' },
-            { icon: BarChart3, value: Array.from(bracketStatuses.values()).filter(s => s === 'submitted' || s === 'scored').length, label: 'Brackets In', iconColor: 'text-accent', iconBg: 'bg-accent/10' },
-            { icon: Shield, value: pools.filter(p => isLocked(p.lock_time)).length, label: 'Locked', iconColor: 'text-success', iconBg: 'bg-success/10' },
+            { icon: Trophy, value: pools.length, label: 'Pools', iconColor: 'text-primary' },
+            { icon: BarChart3, value: Array.from(bracketStatuses.values()).filter(s => s === 'submitted' || s === 'scored').length, label: 'Brackets In', iconColor: 'text-accent' },
+            { icon: Shield, value: pools.filter(p => isLocked(p.lock_time)).length, label: 'Locked', iconColor: 'text-success' },
           ].map((stat, i) => (
-            <div key={i} className="stat-card">
-              <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center mb-1", stat.iconBg)}>
-                <stat.icon className={cn("w-3.5 h-3.5", stat.iconColor)} />
-              </div>
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 + i * 0.06 }}
+              className="stat-card"
+            >
+              <stat.icon className={cn("w-4 h-4 mb-0.5", stat.iconColor)} />
               <span className="stat-value">{stat.value}</span>
               <span className="stat-label">{stat.label}</span>
-            </div>
+            </motion.div>
           ))}
         </motion.div>
       )}
@@ -165,10 +171,10 @@ export default function DashboardPage() {
       </div>
 
       {loading ? (
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           {[1, 2].map(i => (
             <div key={i} className="glass-card p-5">
-              <div className="h-4 bg-muted rounded-lg w-1/3 mb-2.5 skeleton-shimmer" />
+              <div className="h-4 bg-muted rounded-lg w-1/3 mb-3 skeleton-shimmer" />
               <div className="h-3 bg-muted rounded-lg w-1/2 skeleton-shimmer" />
             </div>
           ))}
@@ -184,7 +190,7 @@ export default function DashboardPage() {
           </div>
           <p className="empty-state-title">No pools yet</p>
           <p className="empty-state-desc mb-6">Create a pool or join one with an invite code.</p>
-          <div className="flex gap-2.5 justify-center">
+          <div className="flex gap-3 justify-center">
             <Link to="/pools/create">
               <Button className="font-bold rounded-xl gap-2 btn-press">
                 <Plus className="w-4 h-4" /> Create Pool
@@ -198,7 +204,7 @@ export default function DashboardPage() {
           </div>
         </motion.div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {pools.map((pool, i) => {
             const bs = bracketStatuses.get(pool.id) || 'none';
             const bsCfg = STATUS_CONFIG[bs];
@@ -207,23 +213,23 @@ export default function DashboardPage() {
             return (
               <motion.div
                 key={pool.id}
-                initial={{ opacity: 0, y: 6 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.04 + i * 0.04, duration: 0.25 }}
+                transition={{ delay: 0.05 + i * 0.05, duration: 0.3 }}
               >
                 <Link to={`/pools/${pool.id}`} className="block">
-                  <div className="glass-card p-4 hover-lift group cursor-pointer">
-                    <div className="flex items-center gap-3">
+                  <div className="pool-row p-4">
+                    <div className="flex items-center gap-3.5 relative z-10">
                       <div className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-                        locked ? "bg-muted/50" : "icon-container"
+                        "w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0",
+                        locked ? "bg-muted/60" : "icon-container"
                       )}>
                         <Trophy className={cn("w-5 h-5", locked ? "text-muted-foreground" : "text-primary")} />
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-bold text-sm truncate">{pool.name}</h3>
-                        <div className="flex items-center gap-2 mt-0.5">
+                        <h3 className="font-bold text-[15px] truncate tracking-tight">{pool.name}</h3>
+                        <div className="flex items-center gap-2 mt-1">
                           <span className="text-[10px] text-muted-foreground font-medium">
                             {pool.tournaments?.name} {pool.tournaments?.season_year}
                           </span>
@@ -234,7 +240,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         <span className={cn("status-pill", bsCfg.className)}>{bsCfg.label}</span>
                         <span className={cn(
                           "status-pill",
@@ -242,7 +248,7 @@ export default function DashboardPage() {
                         )}>
                           {locked ? 'Locked' : 'Open'}
                         </span>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all" />
+                        <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all" />
                       </div>
                     </div>
                   </div>

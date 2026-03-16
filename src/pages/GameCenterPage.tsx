@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
-import { Activity, Clock, CheckCircle2, Zap, AlertTriangle, Calendar, Radio } from 'lucide-react';
+import { Activity, Clock, CheckCircle2, AlertTriangle, Calendar, Radio } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameUpdates } from '@/hooks/useRealtimeSubscription';
 import { Game, Team, ROUND_NAMES, ROUND_SHORT, FIRST_FOUR_ROUND_SHORT } from '@/lib/bracketUtils';
@@ -97,7 +97,6 @@ export default function GameCenterPage() {
     { key: 'final', label: 'Final', count: stats.final, icon: <CheckCircle2 className="w-3 h-3" /> },
   ];
 
-  // Group filtered games by round for section headers
   const groupedGames = useMemo(() => {
     if (roundFilter !== null) return [{ round: roundFilter, games: filteredGames }];
     const groups: { round: number; games: Game[] }[] = [];
@@ -123,7 +122,7 @@ export default function GameCenterPage() {
   return (
     <div className="max-w-2xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-8 hero-glow relative z-10">
         <div className="page-header mb-0">
           <div className="page-header-icon">
             <Activity />
@@ -133,9 +132,9 @@ export default function GameCenterPage() {
             <p className="page-header-subtitle">Live scores & results</p>
           </div>
         </div>
-        <div className="flex flex-col items-end gap-1">
+        <div className="flex flex-col items-end gap-1.5">
           {rtStatus === 'connected' && (
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 text-success text-[10px] font-semibold">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/10 text-success text-[10px] font-bold">
               <span className="live-dot" /> Live
             </span>
           )}
@@ -148,7 +147,7 @@ export default function GameCenterPage() {
       </div>
 
       {/* Status tabs */}
-      <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex gap-2 mb-5 overflow-x-auto pb-1 scrollbar-none">
         {tabs.map(t => (
           <button
             key={t.key}
@@ -161,7 +160,7 @@ export default function GameCenterPage() {
             {t.icon}
             {t.label}
             <span className={cn(
-              "text-[10px] tabular-nums px-1.5 py-0.5 rounded-full",
+              "text-[10px] tabular-nums px-1.5 py-0.5 rounded-full font-bold",
               tab === t.key ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
             )}>
               {t.count}
@@ -171,11 +170,11 @@ export default function GameCenterPage() {
       </div>
 
       {/* Round filter pills */}
-      <div className="flex gap-1 mb-5 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex gap-1.5 mb-6 overflow-x-auto pb-1 scrollbar-none">
         <button
           onClick={() => setRoundFilter(null)}
           className={cn(
-            "px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors",
+            "px-3 py-2 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all",
             roundFilter === null ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
           )}
         >
@@ -185,7 +184,7 @@ export default function GameCenterPage() {
           <button
             onClick={() => setRoundFilter(0)}
             className={cn(
-              "px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors",
+              "px-3 py-2 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all",
               roundFilter === 0 ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -197,7 +196,7 @@ export default function GameCenterPage() {
             key={i}
             onClick={() => setRoundFilter(i + 1)}
             className={cn(
-              "px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors",
+              "px-3 py-2 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all",
               roundFilter === i + 1 ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -209,9 +208,7 @@ export default function GameCenterPage() {
       {/* Games */}
       {filteredGames.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-icon">
-            <Activity />
-          </div>
+          <div className="empty-state-icon"><Activity /></div>
           <p className="empty-state-title">
             {tab === 'live' ? 'No live games right now' : 'No games match your filters'}
           </p>
@@ -220,30 +217,22 @@ export default function GameCenterPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-7">
           {groupedGames.map(group => (
             <div key={group.round}>
-              {/* Round section header */}
               {roundFilter === null && (
                 <div className="section-divider">
                   <span className="section-header mb-0">
                     {group.round === 0 ? 'First Four' : ROUND_NAMES[group.round - 1]}
                   </span>
-                  <span className="text-[10px] text-muted-foreground tabular-nums">{group.games.length} games</span>
+                  <span className="text-[10px] text-muted-foreground tabular-nums font-medium">{group.games.length} games</span>
                 </div>
               )}
 
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <AnimatePresence mode="popLayout">
                   {group.games.map((game, idx) => (
-                    <GameCard
-                      key={game.id}
-                      game={game}
-                      teams={teams}
-                      myPick={myPicks.get(game.id)}
-                      pickCounts={pickCounts.get(game.id)}
-                      index={idx}
-                    />
+                    <GameCard key={game.id} game={game} teams={teams} myPick={myPicks.get(game.id)} pickCounts={pickCounts.get(game.id)} index={idx} />
                   ))}
                 </AnimatePresence>
               </div>
@@ -256,19 +245,8 @@ export default function GameCenterPage() {
 }
 
 /* ─── Game Card ─── */
-
-function GameCard({
-  game,
-  teams,
-  myPick,
-  pickCounts,
-  index,
-}: {
-  game: Game;
-  teams: Map<string, Team>;
-  myPick?: string;
-  pickCounts?: Map<string, number>;
-  index: number;
+function GameCard({ game, teams, myPick, pickCounts, index }: {
+  game: Game; teams: Map<string, Team>; myPick?: string; pickCounts?: Map<string, number>; index: number;
 }) {
   const team1 = game.team1_id ? teams.get(game.team1_id) : null;
   const team2 = game.team2_id ? teams.get(game.team2_id) : null;
@@ -291,33 +269,31 @@ function GameCard({
       transition={{ delay: Math.min(index * 0.02, 0.3) }}
       className={cn(
         "glass-card overflow-hidden transition-all",
-        isLive && "ring-1 ring-live/40 shadow-[0_0_16px_hsl(var(--live)/0.1)]"
+        isLive && "ring-1 ring-live/30"
       )}
+      style={isLive ? { boxShadow: '0 0 20px hsl(var(--live) / 0.08)' } : undefined}
     >
-      {/* Status header */}
-      <div className="flex items-center justify-between px-3.5 py-2 bg-muted/20 border-b border-border/30">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/20 relative z-10" style={{ background: 'hsl(var(--surface) / 0.5)' }}>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-muted-foreground font-medium tracking-wide">
+          <span className="text-[10px] text-muted-foreground font-bold tracking-wide">
             {game.round_number === 0 ? FIRST_FOUR_ROUND_SHORT : ROUND_SHORT[game.round_number - 1]}
           </span>
           <span className="w-1 h-1 rounded-full bg-border" />
           <span className="text-[10px] text-muted-foreground">{game.region}</span>
           {isUpset && (
-            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-warning bg-warning/15 px-1.5 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-warning bg-warning/12 px-1.5 py-0.5 rounded-full">
               <AlertTriangle className="w-2.5 h-2.5" /> UPSET
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {isLive && (
             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-live">
               <span className="w-1.5 h-1.5 rounded-full bg-live animate-pulse" />
               {(game as any).live_period ? `${(game as any).live_period} · ${(game as any).live_clock}` : 'LIVE'}
             </span>
           )}
-          {isFinal && (
-            <span className="text-[10px] font-bold text-muted-foreground tracking-wider">FINAL</span>
-          )}
+          {isFinal && <span className="text-[10px] font-bold text-muted-foreground tracking-wider">FINAL</span>}
           {!isLive && !isFinal && (
             <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
               <Calendar className="w-3 h-3" />
@@ -326,9 +302,9 @@ function GameCard({
           )}
           {myPick && (
             <span className={cn(
-              "text-[9px] font-bold px-1.5 py-0.5 rounded-full",
-              myPickCorrect && "bg-success/15 text-success",
-              myPickWrong && "bg-destructive/15 text-destructive",
+              "text-[9px] font-bold px-2 py-0.5 rounded-full",
+              myPickCorrect && "bg-success/12 text-success",
+              myPickWrong && "bg-destructive/12 text-destructive",
               !isFinal && "bg-primary/10 text-primary"
             )}>
               {myPickCorrect ? '✓ Correct' : myPickWrong ? '✗ Wrong' : '★ Picked'}
@@ -337,72 +313,37 @@ function GameCard({
         </div>
       </div>
 
-      {/* Team rows */}
-      <div>
-        <ScoreRow
-          team={team1}
-          score={game.team1_score}
-          isWinner={game.winner_team_id === team1?.id}
-          isMyPick={myPick === team1?.id}
-          isFinal={isFinal}
-          isLive={isLive}
-          pickCount={team1 ? pickCounts?.get(team1.id) : undefined}
-        />
-        <div className="h-px bg-border/20 mx-3" />
-        <ScoreRow
-          team={team2}
-          score={game.team2_score}
-          isWinner={game.winner_team_id === team2?.id}
-          isMyPick={myPick === team2?.id}
-          isFinal={isFinal}
-          isLive={isLive}
-          pickCount={team2 ? pickCounts?.get(team2.id) : undefined}
-        />
+      <div className="relative z-10">
+        <ScoreRow team={team1} score={game.team1_score} isWinner={game.winner_team_id === team1?.id} isMyPick={myPick === team1?.id} isFinal={isFinal} isLive={isLive} pickCount={team1 ? pickCounts?.get(team1.id) : undefined} />
+        <div className="h-px bg-border/15 mx-4" />
+        <ScoreRow team={team2} score={game.team2_score} isWinner={game.winner_team_id === team2?.id} isMyPick={myPick === team2?.id} isFinal={isFinal} isLive={isLive} pickCount={team2 ? pickCounts?.get(team2.id) : undefined} />
       </div>
     </motion.div>
   );
 }
 
 /* ─── Score Row ─── */
-
-function ScoreRow({
-  team,
-  score,
-  isWinner,
-  isMyPick,
-  isFinal,
-  isLive,
-  pickCount,
-}: {
-  team: Team | null;
-  score: number | null;
-  isWinner: boolean;
-  isMyPick: boolean;
-  isFinal: boolean;
-  isLive: boolean;
-  pickCount?: number;
+function ScoreRow({ team, score, isWinner, isMyPick, isFinal, isLive, pickCount }: {
+  team: Team | null; score: number | null; isWinner: boolean; isMyPick: boolean; isFinal: boolean; isLive: boolean; pickCount?: number;
 }) {
   if (!team) {
     return (
-      <div className="flex items-center gap-2 px-3.5 py-3">
+      <div className="flex items-center gap-2 px-4 py-3.5">
         <span className="w-6" />
-        <span className="text-xs text-muted-foreground/50 italic">TBD</span>
+        <span className="text-xs text-muted-foreground/40 italic">TBD</span>
       </div>
     );
   }
 
   return (
     <div className={cn(
-      "flex items-center gap-2.5 px-3.5 py-3 transition-all",
+      "flex items-center gap-3 px-4 py-3.5 transition-all",
       isWinner && "bg-success/5",
-      !isWinner && isFinal && "opacity-45"
+      !isWinner && isFinal && "opacity-40"
     )}>
-      {/* Seed */}
       <span className="text-[11px] font-mono font-bold text-muted-foreground w-6 tabular-nums text-center flex-shrink-0">
         {team.seed}
       </span>
-
-      {/* Team name */}
       <span className={cn(
         "text-sm flex-1 truncate",
         isWinner ? "font-bold text-foreground" : "font-medium",
@@ -410,20 +351,12 @@ function ScoreRow({
       )}>
         {team.short_name}
       </span>
-
-      {/* My pick star */}
-      {isMyPick && (
-        <span className="text-[10px] text-primary">★</span>
-      )}
-
-      {/* Pick counts */}
+      {isMyPick && <span className="text-[10px] text-primary">★</span>}
       {pickCount !== undefined && pickCount > 0 && (
-        <span className="text-[10px] text-muted-foreground tabular-nums bg-muted/50 px-1.5 py-0.5 rounded">
+        <span className="text-[10px] text-muted-foreground tabular-nums bg-muted/40 px-1.5 py-0.5 rounded-lg font-medium">
           {pickCount}
         </span>
       )}
-
-      {/* Score */}
       {score !== null && (
         <span className={cn(
           "text-base font-mono tabular-nums font-extrabold min-w-[2rem] text-right",
@@ -433,8 +366,6 @@ function ScoreRow({
           {score}
         </span>
       )}
-
-      {/* Winner check */}
       {isWinner && <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />}
     </div>
   );
