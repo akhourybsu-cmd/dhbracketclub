@@ -1200,17 +1200,17 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Server misconfigured", 500);
     }
 
-    // Verify caller
+    // Verify caller using getUser (standard, widely supported)
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claims, error: claimsErr } = await userClient.auth.getClaims(token);
-    if (claimsErr || !claims?.claims) {
+    const { data: { user: callerUser }, error: userErr } = await userClient.auth.getUser();
+    if (userErr || !callerUser) {
+      console.error("[sync-games] Auth failed:", userErr?.message);
       return errorResponse("Invalid token", 401);
     }
-    const userId = claims.claims.sub as string;
+    const userId = callerUser.id;
 
     // ─── Input Validation ────────────────────────────────────────────
     let body: SyncRequest;
