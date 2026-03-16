@@ -110,26 +110,29 @@ const ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports/basketball/mens
 
 // March Madness region mapping from ESPN notes/format
 const ESPN_REGION_MAP: Record<string, string> = {
-  "south": "South", "east": "East", "west": "West", "midwest": "Midwest",
-  "south region": "South", "east region": "East", "west region": "West", "midwest region": "Midwest",
+  "midwest region": "Midwest",
+  "west region": "West",
+  "south region": "South",
+  "east region": "East",
+  "midwest regional": "Midwest",
+  "west regional": "West",
+  "south regional": "South",
+  "east regional": "East",
+  "midwest": "Midwest",
+  "west": "West",
+  "south": "South",
+  "east": "East",
 };
 
-const ESPN_ROUND_MAP: Record<string, { roundNumber: number; roundName: string }> = {
-  "round of 64": { roundNumber: 1, roundName: "Round of 64" },
-  "first round": { roundNumber: 1, roundName: "Round of 64" },
-  "1st round": { roundNumber: 1, roundName: "Round of 64" },
-  "round of 32": { roundNumber: 2, roundName: "Round of 32" },
-  "second round": { roundNumber: 2, roundName: "Round of 32" },
-  "2nd round": { roundNumber: 2, roundName: "Round of 32" },
-  "sweet 16": { roundNumber: 3, roundName: "Sweet 16" },
-  "sweet sixteen": { roundNumber: 3, roundName: "Sweet 16" },
-  "elite 8": { roundNumber: 4, roundName: "Elite 8" },
-  "elite eight": { roundNumber: 4, roundName: "Elite 8" },
-  "final four": { roundNumber: 5, roundName: "Final Four" },
-  "national semifinal": { roundNumber: 5, roundName: "Final Four" },
-  "national championship": { roundNumber: 6, roundName: "Championship" },
-  "championship": { roundNumber: 6, roundName: "Championship" },
-};
+const ESPN_ROUND_PATTERNS: Array<{ pattern: RegExp; roundNumber: number; roundName: string }> = [
+  { pattern: /first\s*four|play[-\s]*in/i, roundNumber: 0, roundName: "First Four" },
+  { pattern: /round\s*of\s*64|first\s*round|1st\s*round/i, roundNumber: 1, roundName: "Round of 64" },
+  { pattern: /round\s*of\s*32|second\s*round|2nd\s*round/i, roundNumber: 2, roundName: "Round of 32" },
+  { pattern: /sweet\s*16|sweet\s*sixteen|regional\s*semi\s*final/i, roundNumber: 3, roundName: "Sweet 16" },
+  { pattern: /elite\s*8|elite\s*eight|regional\s*final/i, roundNumber: 4, roundName: "Elite 8" },
+  { pattern: /final\s*four|national\s*semi\s*final/i, roundNumber: 5, roundName: "Final Four" },
+  { pattern: /national\s*championship|title\s*game/i, roundNumber: 6, roundName: "Championship" },
+];
 
 function parseEspnStatus(statusName: string): "scheduled" | "in_progress" | "final" {
   if (!statusName) return "scheduled";
@@ -140,48 +143,41 @@ function parseEspnStatus(statusName: string): "scheduled" | "in_progress" | "fin
 }
 
 function extractRoundAndRegion(event: any): { roundNumber: number; roundName: string; region: string } {
-  // ESPN puts round/region info in event.competitions[0].notes or event.season.slug
-  const notes: any[] = event.competitions?.[0]?.notes || [];
-  let roundText = "";
+  const comp = event.competitions?.[0];
+  const notes: any[] = comp?.notes || [];
+
+  const textBlobs: string[] = [
+    event.name || "",
+    event.shortName || "",
+    comp?.name || "",
+    comp?.type?.text || "",
+    ...notes.map((n: any) => n?.headline || ""),
+    ...notes.map((n: any) => n?.detail || ""),
+  ].filter(Boolean);
+
+  const combinedText = textBlobs.join(" | ").toLowerCase();
+
+  const round = ESPN_ROUND_PATTERNS.find((entry) => entry.pattern.test(combinedText));
+  if (!round) {
+    return { roundNumber: -1, roundName: "Unknown Round", region: "Unknown" };
+  }
+
   let regionText = "";
-
-  for (const note of notes) {
-    const headline = (note.headline || "").toLowerCase();
-    const type = (note.type || "").toLowerCase();
-
-    // Notes often have "South Region - Sweet 16" or "Final Four"
-    if (headline) {
-      // Check for region
-      for (const [key, val] of Object.entries(ESPN_REGION_MAP)) {
-        if (headline.includes(key)) { regionText = val; break; }
-      }
-      // Check for round
-      for (const [key, val] of Object.entries(ESPN_ROUND_MAP)) {
-        if (headline.includes(key)) { roundText = key; break; }
+  for (const blob of textBlobs) {
+    const lc = blob.toLowerCase();
+    for (const [key, value] of Object.entries(ESPN_REGION_MAP)) {
+      if (lc.includes(key)) {
+        regionText = value;
+        break;
       }
     }
+    if (regionText) break;
   }
 
-  // Fallback: check event name
-  if (!roundText || !regionText) {
-    const eventName = (event.name || event.shortName || "").toLowerCase();
-    if (!roundText) {
-      for (const [key] of Object.entries(ESPN_ROUND_MAP)) {
-        if (eventName.includes(key)) { roundText = key; break; }
-      }
-    }
-    if (!regionText) {
-      for (const [key, val] of Object.entries(ESPN_REGION_MAP)) {
-        if (eventName.includes(key)) { regionText = val; break; }
-      }
-    }
-  }
+  if (round.roundNumber === 5) regionText = "Final Four";
+  if (round.roundNumber === 6) regionText = "Championship";
 
-  const round = ESPN_ROUND_MAP[roundText] || { roundNumber: 1, roundName: "Round of 64" };
-  // Final Four and Championship don't have regions
-  if (round.roundNumber >= 5) regionText = "Final Four";
-
-  return { ...round, region: regionText || "Unknown" };
+  return { roundNumber: round.roundNumber, roundName: round.roundName, region: regionText || "Unknown" };
 }
 
 // Simple per-request cache to avoid fetching ESPN 3x during a full sync
