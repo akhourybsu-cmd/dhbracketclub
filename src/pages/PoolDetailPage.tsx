@@ -187,11 +187,17 @@ export default function PoolDetailPage() {
       </div>
 
       {/* Quick Links */}
-      <div className="grid grid-cols-2 gap-2 mb-5">
+      <div className={cn("grid gap-2 mb-5", isAdmin ? "grid-cols-3" : "grid-cols-2")}>
         <Link to={`/pools/${poolId}/leaderboard`}>
           <div className="glass-card p-3 text-center hover:bg-card/90 transition-colors">
             <Trophy className="w-5 h-5 text-gold mx-auto mb-1" />
             <p className="text-xs font-semibold">Leaderboard</p>
+          </div>
+        </Link>
+        <Link to={`/pools/${poolId}/games`}>
+          <div className="glass-card p-3 text-center hover:bg-card/90 transition-colors">
+            <Activity className="w-5 h-5 text-primary mx-auto mb-1" />
+            <p className="text-xs font-semibold">Game Center</p>
           </div>
         </Link>
         {isAdmin && (
