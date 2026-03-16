@@ -4,7 +4,6 @@ import { Trophy, Users, Shield, ArrowRight, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
-import dhLogoFull from '@/assets/dh-logo-full.png';
 import dhMonogram from '@/assets/dh-monogram.png';
 
 export default function LandingPage() {
