@@ -251,6 +251,7 @@ function parseEspnEvent(event: any): { team: NormalizedTeam; game: NormalizedGam
   if (!comp || !comp.competitors || comp.competitors.length < 2) return null;
 
   const { roundNumber, roundName, region } = extractRoundAndRegion(event);
+  if (roundNumber < 0) return null;
 
   const statusType = comp.status?.type?.name || "";
   const status = parseEspnStatus(statusType);
