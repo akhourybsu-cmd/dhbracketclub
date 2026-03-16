@@ -3,9 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
-import { ChevronLeft, ChevronRight, ArrowLeft, Check, X, Eye, Trophy } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { motion } from 'framer-motion';
+import { ChevronLeft, ChevronRight, ArrowLeft, Check, X, Eye, Trophy, Crown } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Team, Game, Pick, ROUND_NAMES, ROUND_SHORT,
   FIRST_FOUR_ROUND_NAME, FIRST_FOUR_ROUND_SHORT,
@@ -118,134 +117,214 @@ export default function BracketDetailPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto pb-8">
       <Link to={`/pools/${poolId}`} className="back-link">
         <ArrowLeft /> Back to Pool
       </Link>
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="page-header mb-0">
-          <div className="page-header-icon">
-            <Eye />
-          </div>
-          <div>
-            <h1 className="page-header-title">{owner}'s Bracket</h1>
-            <span className={cn("status-pill mt-0.5", statusCfg.className)}>{statusCfg.label}</span>
+      {/* ═══ Header ═══ */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative mb-6"
+      >
+        <div className="absolute -inset-x-4 -top-8 -bottom-4 pointer-events-none" style={{
+          background: 'radial-gradient(ellipse 70% 60% at 50% 0%, hsl(var(--primary) / 0.05), transparent)',
+        }} />
+
+        <div className="flex items-center justify-between relative z-10">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{
+              background: 'linear-gradient(135deg, hsl(var(--primary) / 0.2), hsl(var(--primary) / 0.06))',
+              boxShadow: '0 0 24px hsl(var(--primary) / 0.1)',
+            }}>
+              <Eye className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">{owner}'s Bracket</h1>
+              <span className={cn("status-pill mt-1", statusCfg.className)}>{statusCfg.label}</span>
+            </div>
           </div>
         </div>
+      </motion.div>
+
+      {/* ═══ Champion + Stats ═══ */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="grid gap-3 mb-6"
+        style={{ gridTemplateColumns: champPick ? '1fr 1fr' : '1fr' }}
+      >
+        {/* Champion card */}
         {champPick && (
-          <div className="glass-card px-3.5 py-2.5 text-center">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Champion</p>
-            <p className="text-sm font-bold">{champPick.short_name}</p>
-            <p className="text-[10px] font-mono text-muted-foreground tabular-nums">({champPick.seed})</p>
+          <div className="rounded-2xl p-5 relative overflow-hidden" style={{
+            background: 'linear-gradient(135deg, hsl(var(--card)), hsl(var(--surface-elevated)))',
+            border: '1px solid hsl(var(--gold) / 0.15)',
+            boxShadow: '0 0 24px hsl(var(--gold) / 0.04), var(--shadow-card)',
+          }}>
+            <div className="absolute inset-0 pointer-events-none" style={{
+              background: 'radial-gradient(ellipse 80% 60% at 50% 0%, hsl(var(--gold) / 0.05), transparent)',
+            }} />
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-2">
+                <Crown className="w-4 h-4 text-gold" style={{ filter: 'drop-shadow(0 0 4px hsl(var(--gold) / 0.3))' }} />
+                <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-gold/70">Champion</span>
+              </div>
+              <p className="text-lg font-extrabold text-gold">{champPick.short_name}</p>
+              <p className="text-xs font-mono text-muted-foreground tabular-nums mt-0.5">Seed #{champPick.seed}</p>
+            </div>
           </div>
         )}
-      </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-2.5 mb-6">
-        <div className="stat-card">
-          <span className="stat-value text-success">{stats.correct}</span>
-          <span className="stat-label">Correct</span>
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-2.5">
+          <div className="rounded-xl p-3 text-center relative overflow-hidden" style={{
+            background: 'hsl(var(--card))',
+            border: '1px solid hsl(var(--border) / 0.4)',
+            boxShadow: 'var(--shadow-card)',
+          }}>
+            <div className="absolute inset-0 pointer-events-none" style={{ background: 'var(--gradient-card-shine)', opacity: 0.4 }} />
+            <span className="block text-xl font-extrabold tabular-nums relative z-10" style={{ color: 'hsl(var(--success))' }}>{stats.correct}</span>
+            <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground relative z-10">Correct</span>
+          </div>
+          <div className="rounded-xl p-3 text-center relative overflow-hidden" style={{
+            background: 'hsl(var(--card))',
+            border: '1px solid hsl(var(--border) / 0.4)',
+            boxShadow: 'var(--shadow-card)',
+          }}>
+            <div className="absolute inset-0 pointer-events-none" style={{ background: 'var(--gradient-card-shine)', opacity: 0.4 }} />
+            <span className="block text-xl font-extrabold tabular-nums relative z-10" style={{ color: 'hsl(var(--destructive))' }}>{stats.incorrect}</span>
+            <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground relative z-10">Wrong</span>
+          </div>
+          <div className="rounded-xl p-3 text-center relative overflow-hidden" style={{
+            background: 'hsl(var(--card))',
+            border: '1px solid hsl(var(--border) / 0.4)',
+            boxShadow: 'var(--shadow-card)',
+          }}>
+            <div className="absolute inset-0 pointer-events-none" style={{ background: 'var(--gradient-card-shine)', opacity: 0.4 }} />
+            <span className="block text-xl font-extrabold tabular-nums relative z-10">{stats.total}</span>
+            <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground relative z-10">Picks</span>
+          </div>
         </div>
-        <div className="stat-card">
-          <span className="stat-value text-destructive">{stats.incorrect}</span>
-          <span className="stat-label">Wrong</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-value">{stats.total}</span>
-          <span className="stat-label">Picks</span>
-        </div>
-      </div>
+      </motion.div>
 
-      {/* Round Nav */}
+      {/* ═══ Round Nav ═══ */}
       <div className="flex items-center justify-between mb-3">
-        <Button
-          variant="ghost"
-          size="icon"
+        <button
           disabled={currentRound <= (hasFirstFour ? 0 : 1)}
           onClick={() => setCurrentRound(r => r - 1)}
-          className="rounded-xl h-10 w-10 btn-press"
+          className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 disabled:opacity-20"
+          style={{
+            background: 'hsl(var(--surface-elevated))',
+            border: '1px solid hsl(var(--border) / 0.3)',
+          }}
         >
           <ChevronLeft className="w-5 h-5" />
-        </Button>
-        <div className="text-center">
-          <h2 className="text-lg font-extrabold tracking-tight">{currentRoundName}</h2>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
+        </button>
+        <h2 className="text-xl font-extrabold tracking-tight">{currentRoundName}</h2>
+        <button
           disabled={currentRound >= 6}
           onClick={() => setCurrentRound(r => r + 1)}
-          className="rounded-xl h-10 w-10 btn-press"
+          className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 disabled:opacity-20"
+          style={{
+            background: 'hsl(var(--surface-elevated))',
+            border: '1px solid hsl(var(--border) / 0.3)',
+          }}
         >
           <ChevronRight className="w-5 h-5" />
-        </Button>
+        </button>
       </div>
 
-      {/* Round pills */}
-      <div className="flex gap-1.5 mb-5 justify-center flex-wrap">
+      {/* ═══ Round Tabs ═══ */}
+      <div className="flex gap-1.5 mb-6 justify-center flex-wrap">
         {hasFirstFour && (
-          <RoundPill
-            label={FIRST_FOUR_ROUND_SHORT}
-            isActive={currentRound === 0}
-            onClick={() => setCurrentRound(0)}
-          />
+          <RoundPill label={FIRST_FOUR_ROUND_SHORT} isActive={currentRound === 0} onClick={() => setCurrentRound(0)} />
         )}
         {ROUND_SHORT.map((label, i) => (
-          <RoundPill
-            key={i}
-            label={label}
-            isActive={currentRound === i + 1}
-            onClick={() => setCurrentRound(i + 1)}
-          />
+          <RoundPill key={i} label={label} isActive={currentRound === i + 1} onClick={() => setCurrentRound(i + 1)} isChampionship={i + 1 === 6} />
         ))}
       </div>
 
-      {/* Games */}
-      <div className="space-y-6">
-        {regions.map(region => {
-          const regionGames = roundGames.filter(g => g.region === region);
-          return (
-            <div key={region}>
-              <div className="section-divider">
-                <span className="section-header mb-0">{region}</span>
-              </div>
-              <div className="space-y-2.5">
-                {regionGames.map(game => {
-                  const pick = picks.get(game.id);
-                  const t1 = getEffectiveTeam(game, 'team1', games, teams, picks);
-                  const t2 = getEffectiveTeam(game, 'team2', games, teams, picks);
-                  const winner = game.winner_team_id;
+      {/* ═══ Games ═══ */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentRound}
+          initial={{ opacity: 0, x: 16 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -16 }}
+          transition={{ duration: 0.25, type: 'spring', damping: 25, stiffness: 300 }}
+          className="space-y-7"
+        >
+          {regions.map(region => {
+            const regionGames = roundGames.filter(g => g.region === region);
+            return (
+              <div key={region}>
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{region}</span>
+                  <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, hsl(var(--border) / 0.4), transparent)' }} />
+                </div>
+                <div className="space-y-3">
+                  {regionGames.map((game, idx) => {
+                    const pick = picks.get(game.id);
+                    const t1 = getEffectiveTeam(game, 'team1', games, teams, picks);
+                    const t2 = getEffectiveTeam(game, 'team2', games, teams, picks);
+                    const winner = game.winner_team_id;
+                    const isChampGame = game.round_number === 6;
 
-                  return (
-                    <motion.div
-                      key={game.id}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="matchup-card"
-                    >
-                      <DetailRow team={t1} isPicked={pick?.picked_team_id === t1?.id} winner={winner} />
-                      <div className="h-px bg-border/20 mx-3" />
-                      <DetailRow team={t2} isPicked={pick?.picked_team_id === t2?.id} winner={winner} />
-                    </motion.div>
-                  );
-                })}
+                    return (
+                      <motion.div
+                        key={game.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.035, type: 'spring', damping: 25 }}
+                        className="rounded-2xl overflow-hidden relative"
+                        style={{
+                          background: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border) / 0.4)',
+                          boxShadow: 'var(--shadow-card)',
+                        }}
+                      >
+                        <div className="absolute inset-0 pointer-events-none rounded-2xl" style={{
+                          background: 'var(--gradient-card-shine)',
+                          opacity: 0.4,
+                        }} />
+                        <div className="relative z-10">
+                          <DetailRow team={t1} isPicked={pick?.picked_team_id === t1?.id} winner={winner} isChampGame={isChampGame} />
+                          <div className="h-px mx-4" style={{ background: 'linear-gradient(90deg, transparent, hsl(var(--border) / 0.2), transparent)' }} />
+                          <DetailRow team={t2} isPicked={pick?.picked_team_id === t2?.id} winner={winner} isChampGame={isChampGame} />
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </motion.div>
+      </AnimatePresence>
 
+      {/* ═══ Tiebreaker ═══ */}
       {bracket?.tiebreaker_score != null && (
-        <div className="mt-6 glass-card p-5">
-          <div className="flex items-center gap-2 mb-2">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-8 rounded-2xl p-5 relative overflow-hidden"
+          style={{
+            background: 'linear-gradient(135deg, hsl(var(--card)), hsl(var(--surface-elevated)))',
+            border: '1px solid hsl(var(--gold) / 0.15)',
+            boxShadow: '0 0 24px hsl(var(--gold) / 0.04), var(--shadow-card)',
+          }}
+        >
+          <div className="absolute inset-0 pointer-events-none" style={{
+            background: 'radial-gradient(ellipse 80% 50% at 50% 0%, hsl(var(--gold) / 0.04), transparent)',
+          }} />
+          <div className="flex items-center gap-2.5 mb-2 relative z-10">
             <Trophy className="w-4 h-4 text-gold" />
             <span className="text-sm font-bold">Tiebreaker</span>
           </div>
-          <p className="text-lg font-mono font-bold tabular-nums">{bracket.tiebreaker_score}</p>
-        </div>
+          <p className="text-2xl font-mono font-extrabold tabular-nums relative z-10">{bracket.tiebreaker_score}</p>
+        </motion.div>
       )}
 
       <div className="h-8" />
@@ -253,45 +332,149 @@ export default function BracketDetailPage() {
   );
 }
 
-function RoundPill({ label, isActive, onClick }: {
+/* ═══ Round Pill ═══ */
+function RoundPill({ label, isActive, onClick, isChampionship }: {
   label: string;
   isActive: boolean;
   onClick: () => void;
+  isChampionship?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className={cn(
-        "round-pill btn-press",
-        isActive ? "round-pill-active" : "round-pill-default"
-      )}
+      className="px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all duration-200"
+      style={isActive ? {
+        background: isChampionship
+          ? 'linear-gradient(135deg, hsl(var(--gold) / 0.2), hsl(var(--gold) / 0.08))'
+          : 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)))',
+        color: isChampionship ? 'hsl(var(--gold))' : 'hsl(var(--primary-foreground))',
+        boxShadow: isChampionship
+          ? '0 0 16px hsl(var(--gold) / 0.15)'
+          : '0 0 16px hsl(var(--primary) / 0.25), 0 2px 8px rgba(0,0,0,0.2)',
+      } : {
+        background: 'hsl(var(--surface-elevated))',
+        color: 'hsl(var(--muted-foreground))',
+        border: '1px solid hsl(var(--border) / 0.3)',
+      }}
     >
       {label}
     </button>
   );
 }
 
-function DetailRow({ team, isPicked, winner }: { team: Team | null; isPicked: boolean; winner: string | null }) {
+/* ═══ Detail Row ═══ */
+function DetailRow({ team, isPicked, winner, isChampGame }: {
+  team: Team | null;
+  isPicked: boolean;
+  winner: string | null;
+  isChampGame?: boolean;
+}) {
   const isCorrect = winner && isPicked ? winner === team?.id : null;
   const isWrong = winner && isPicked ? winner !== team?.id : false;
 
   return (
     <div className={cn(
-      "flex items-center gap-3 px-3.5 py-3",
-      isCorrect === true && "bg-correct/10",
-      isWrong && "bg-incorrect/8",
-      isPicked && isCorrect === null && "bg-primary/8"
-    )}>
+      "flex items-center gap-3 px-4 py-3.5 transition-all duration-200 relative",
+      !isPicked && winner && "opacity-35",
+    )} style={{
+      ...(isCorrect === true ? {
+        background: 'linear-gradient(90deg, hsl(var(--success) / 0.08), hsl(var(--success) / 0.02))',
+      } : isWrong ? {
+        background: 'linear-gradient(90deg, hsl(var(--destructive) / 0.06), transparent)',
+      } : isPicked && isCorrect === null ? {
+        background: isChampGame
+          ? 'linear-gradient(90deg, hsl(var(--gold) / 0.06), transparent)'
+          : 'linear-gradient(90deg, hsl(var(--primary) / 0.06), transparent)',
+      } : {}),
+    }}>
+      {/* Selection indicator */}
+      {isPicked && (
+        <div className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full" style={{
+          background: isCorrect === true
+            ? 'hsl(var(--success))'
+            : isWrong
+              ? 'hsl(var(--destructive))'
+              : isChampGame ? 'hsl(var(--gold))' : 'hsl(var(--primary))',
+          boxShadow: isCorrect === true
+            ? '0 0 6px hsl(var(--success) / 0.3)'
+            : isWrong
+              ? '0 0 6px hsl(var(--destructive) / 0.3)'
+              : `0 0 6px hsl(var(--${isChampGame ? 'gold' : 'primary'}) / 0.3)`,
+        }} />
+      )}
+
       {team ? (
         <>
-          <span className="text-[11px] font-mono font-bold text-muted-foreground w-6 tabular-nums text-center flex-shrink-0">{team.seed}</span>
-          <span className={cn("text-sm font-medium flex-1 truncate", isPicked && "font-bold")}>{team.short_name}</span>
-          {isPicked && isCorrect === true && <Check className="w-4 h-4 text-correct flex-shrink-0" />}
-          {isPicked && isWrong && <X className="w-4 h-4 text-destructive flex-shrink-0" />}
-          {isPicked && isCorrect === null && <div className="w-2.5 h-2.5 rounded-full bg-primary flex-shrink-0" />}
+          {/* Seed */}
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{
+            background: isPicked
+              ? isCorrect === true
+                ? 'hsl(var(--success) / 0.12)'
+                : isWrong
+                  ? 'hsl(var(--destructive) / 0.1)'
+                  : isChampGame ? 'hsl(var(--gold) / 0.12)' : 'hsl(var(--primary) / 0.12)'
+              : 'hsl(var(--surface))',
+            border: '1px solid hsl(var(--border) / 0.15)',
+          }}>
+            <span className="text-[11px] font-mono font-bold tabular-nums" style={{
+              color: isPicked
+                ? isCorrect === true
+                  ? 'hsl(var(--success))'
+                  : isWrong
+                    ? 'hsl(var(--destructive))'
+                    : isChampGame ? 'hsl(var(--gold))' : 'hsl(var(--primary))'
+                : 'hsl(var(--muted-foreground))',
+            }}>{team.seed}</span>
+          </div>
+
+          {/* Name */}
+          <span className={cn(
+            "text-sm flex-1 truncate transition-colors",
+            isPicked ? "font-bold" : "font-medium text-foreground/70",
+          )} style={{
+            ...(isPicked && isChampGame && isCorrect === null ? { color: 'hsl(var(--gold))' } : {}),
+          }}>
+            {team.short_name}
+          </span>
+
+          {/* Crown for champ pick */}
+          {isPicked && isChampGame && isCorrect === null && (
+            <Crown className="w-4 h-4 text-gold flex-shrink-0" style={{ filter: 'drop-shadow(0 0 4px hsl(var(--gold) / 0.3))' }} />
+          )}
+
+          {/* Result icons */}
+          {isPicked && isCorrect === true && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ background: 'hsl(var(--success))', boxShadow: '0 0 8px hsl(var(--success) / 0.3)' }}
+            >
+              <Check className="w-3 h-3 text-white" />
+            </motion.div>
+          )}
+          {isPicked && isWrong && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ background: 'hsl(var(--destructive) / 0.15)', border: '1px solid hsl(var(--destructive) / 0.3)' }}
+            >
+              <X className="w-3 h-3" style={{ color: 'hsl(var(--destructive))' }} />
+            </motion.div>
+          )}
+          {isPicked && isCorrect === null && !isChampGame && (
+            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{
+              background: 'hsl(var(--primary))',
+              boxShadow: '0 0 6px hsl(var(--primary) / 0.3)',
+            }} />
+          )}
         </>
       ) : (
-        <span className="text-xs text-muted-foreground/50 italic ml-6">TBD</span>
+        <>
+          <div className="w-7 h-7 rounded-lg" style={{ background: 'hsl(var(--surface))', border: '1px solid hsl(var(--border) / 0.15)' }} />
+          <span className="text-xs text-muted-foreground/40 italic font-medium">TBD</span>
+        </>
       )}
     </div>
   );
