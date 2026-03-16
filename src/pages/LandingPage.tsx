@@ -44,7 +44,7 @@ export default function LandingPage() {
           <motion.img
             src={dhLogoFull}
             alt="DH Bracket Club"
-            className="h-28 sm:h-36 object-contain mx-auto mb-8"
+            className="h-40 sm:h-52 object-contain mx-auto mb-8"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, delay: 0.1 }}
