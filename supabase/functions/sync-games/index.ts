@@ -855,13 +855,19 @@ async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string)
     // Update tournament last_synced_at
     await db.from("tournaments").update({ last_synced_at: new Date().toISOString() }).eq("id", req.tournamentId);
 
-    // Finalize sync run
-    const hasErrors = JSON.stringify(result).includes('"errors":["');
+    // Finalize sync run with robust error detection
+    const resultStr = JSON.stringify(result);
+    const hasErrors = resultStr.includes('"errors":["') || resultStr.includes('"error"');
+    const hasUnmatched = resultStr.includes('"unmatched"') && /"unmatched":\s*[1-9]/.test(resultStr);
+    const finalStatus = hasErrors ? "completed_with_errors" : hasUnmatched ? "completed_with_warnings" : "completed";
+    
     await db.from("sync_runs").update({
-      status: hasErrors ? "completed_with_errors" : "completed",
+      status: finalStatus,
       finished_at: new Date().toISOString(),
       raw_summary: result,
     }).eq("id", syncRunId);
+    
+    console.log(`[sync-games] COMPLETED syncRun=${syncRunId} status=${finalStatus}`);
 
     return { syncRunId, action: req.action, result };
   } catch (err) {
