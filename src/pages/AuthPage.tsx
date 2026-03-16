@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import dhMonogram from '@/assets/dh-monogram.png';
 
 export default function AuthPage() {
   const { user } = useAuth();
