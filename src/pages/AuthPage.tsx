@@ -70,28 +70,28 @@ export default function AuthPage() {
         <form onSubmit={handleSubmit} className="glass-card p-6 space-y-4">
           {isSignUp && (
             <div>
-              <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Display Name</label>
+              <label className="form-label">Display Name</label>
               <Input
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Your name"
-                className="h-11"
+                className="form-input"
               />
             </div>
           )}
           <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Email</label>
+            <label className="form-label">Email</label>
             <Input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="h-11"
+              className="form-input"
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Password</label>
+            <label className="form-label">Password</label>
             <Input
               type="password"
               required
@@ -99,10 +99,10 @@ export default function AuthPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="h-11"
+              className="form-input"
             />
           </div>
-          <Button type="submit" className="w-full h-11 font-bold text-sm" disabled={loading}>
+          <Button type="submit" className="w-full h-11 font-bold text-sm rounded-xl btn-press" disabled={loading}>
             {loading ? 'Loading...' : isSignUp ? 'Create Account' : 'Sign In'}
           </Button>
         </form>
