@@ -221,11 +221,16 @@ async function fetchEspnScoreboard(seasonYear: number, dates?: string): Promise<
 
   // Deduplicate by event ID
   const seen = new Set<string>();
-  return allEvents.filter(e => {
+  const deduped = allEvents.filter(e => {
     if (seen.has(e.id)) return false;
     seen.add(e.id);
     return true;
   });
+
+  // Cache for subsequent calls in this request
+  if (!dates) espnCache.set(seasonYear, deduped);
+
+  return deduped;
 }
 
 /** Generate date strings covering the typical March Madness window */
