@@ -63,7 +63,7 @@ export default function AuthPage() {
           <motion.img
             src={dhMonogram}
             alt="DH Bracket Club"
-            className="w-16 h-16 object-contain mx-auto mb-4"
+            className="w-24 h-24 object-contain mx-auto mb-5"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4, type: 'spring', damping: 18 }}

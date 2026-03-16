@@ -31,7 +31,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       }}>
         <div className="px-6 pt-7 pb-10">
           <div className="flex items-center gap-3 mb-1.5">
-            <img src={dhMonogram} alt="DH" className="w-9 h-9 object-contain drop-shadow-lg" style={{ filter: 'drop-shadow(0 0 8px hsl(var(--primary) / 0.2))' }} />
+            <img src={dhMonogram} alt="DH" className="w-12 h-12 object-contain drop-shadow-lg" style={{ filter: 'drop-shadow(0 0 10px hsl(var(--primary) / 0.25))' }} />
             <div>
               <h1 className="text-base font-extrabold tracking-tight leading-none">
                 <span className="gradient-text">DH</span>
