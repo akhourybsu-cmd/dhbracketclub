@@ -1257,9 +1257,9 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Forbidden: you must be a pool admin for this tournament", 403);
     }
 
-    console.log(`[sync-games] action=${body.action} tournament=${body.tournamentId} user=${userId} provider=${body.providerName || "stub"}`);
+    console.log(`[sync-games] action=${body.action} tournament=${body.tournamentId} season=${tournament.season_year} user=${userId} provider=${body.providerName || "stub"}`);
 
-    const result = await orchestrate(db, body, userId);
+    const result = await orchestrate(db, body, userId, tournament.season_year);
 
     return jsonResponse({ success: true, ...result });
   } catch (err) {
