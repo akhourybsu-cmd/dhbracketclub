@@ -179,9 +179,9 @@ export default function LeaderboardPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm text-muted-foreground">Loading standings…</p>
+      <div className="loading-spinner">
+        <div className="loading-spinner-ring" />
+        <p className="loading-spinner-text">Loading standings…</p>
       </div>
     );
   }
