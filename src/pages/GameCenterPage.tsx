@@ -154,10 +154,8 @@ export default function GameCenterPage() {
             key={t.key}
             onClick={() => setTab(t.key)}
             className={cn(
-              "px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5",
-              tab === t.key
-                ? "bg-primary text-primary-foreground shadow-md"
-                : "bg-card text-muted-foreground hover:text-foreground border border-border/50"
+              "filter-pill",
+              tab === t.key ? "filter-pill-active" : "filter-pill-inactive"
             )}
           >
             {t.icon}
