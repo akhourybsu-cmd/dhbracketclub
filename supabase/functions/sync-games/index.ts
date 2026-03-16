@@ -803,6 +803,70 @@ async function resolveGameId(
     }
   }
 
+  // 2.5. Seed-pair match for R1 (NCAA provides exact seeds — match by round+region+seed pair)
+  if (ng.roundNumber === 1 && ng.team1Seed && ng.team2Seed && ng.region && ng.region !== "Unknown") {
+    const seedPair = [ng.team1Seed, ng.team2Seed].sort((a, b) => a - b);
+    const { data: regionGames } = await db
+      .from("games")
+      .select("id, team1_id, team2_id")
+      .eq("tournament_id", tournamentId)
+      .eq("round_number", 1)
+      .eq("region", ng.region);
+
+    if (regionGames && regionGames.length > 0) {
+      const teamIds = regionGames.flatMap(g => [g.team1_id, g.team2_id].filter(Boolean));
+      const { data: teamSeeds } = await db
+        .from("teams")
+        .select("id, seed")
+        .in("id", teamIds);
+
+      const seedMap = new Map((teamSeeds || []).map((t: any) => [t.id, t.seed as number]));
+
+      for (const g of regionGames) {
+        const s1 = g.team1_id ? seedMap.get(g.team1_id) : null;
+        const s2 = g.team2_id ? seedMap.get(g.team2_id) : null;
+        if (s1 != null && s2 != null) {
+          const internalPair = [s1, s2].sort((a, b) => a - b);
+          if (internalPair[0] === seedPair[0] && internalPair[1] === seedPair[1]) {
+            await createExternalMapping(db, tournamentId, g.id, providerName, ng);
+            return { gameId: g.id, matchMethod: "seed_pair_match", matchConfidence: "high" };
+          }
+        }
+      }
+    }
+  }
+
+  // 2.6. Seed-pair match for First Four (round 0) — match by region + seed value
+  if (ng.roundNumber === 0 && ng.team1Seed && ng.team2Seed && ng.team1Seed === ng.team2Seed) {
+    const sharedSeed = ng.team1Seed;
+    const { data: ffGames } = await db
+      .from("games")
+      .select("id, team1_id, team2_id, region")
+      .eq("tournament_id", tournamentId)
+      .eq("round_number", 0);
+
+    if (ffGames) {
+      const allTeamIds = ffGames.flatMap(g => [g.team1_id, g.team2_id].filter(Boolean));
+      const { data: teamSeeds } = await db
+        .from("teams")
+        .select("id, seed")
+        .in("id", allTeamIds);
+
+      const seedMap = new Map((teamSeeds || []).map((t: any) => [t.id, t.seed as number]));
+
+      for (const g of ffGames) {
+        const s1 = g.team1_id ? seedMap.get(g.team1_id) : null;
+        const s2 = g.team2_id ? seedMap.get(g.team2_id) : null;
+        if (s1 === sharedSeed && s2 === sharedSeed) {
+          // If multiple FF games have same seed (e.g. two 16-seed play-ins), use region if available
+          if (ng.region && ng.region !== "Unknown" && g.region !== ng.region) continue;
+          await createExternalMapping(db, tournamentId, g.id, providerName, ng);
+          return { gameId: g.id, matchMethod: "ff_seed_pair_match", matchConfidence: "high" };
+        }
+      }
+    }
+  }
+
   // 3. Championship singleton: round 6 has exactly 1 game
   if (ng.roundNumber === 6) {
     const { data: champGame } = await db
