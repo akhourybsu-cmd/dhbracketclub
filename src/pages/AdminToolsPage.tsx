@@ -561,6 +561,8 @@ export default function AdminToolsPage() {
                 onChange={e => setProviderName(e.target.value)}
                 className="bg-muted text-foreground text-[11px] font-medium rounded-lg px-2.5 py-1.5 border border-border"
               >
+                <option value="auto">Auto (NCAA → ESPN)</option>
+                <option value="ncaa">NCAA</option>
                 <option value="espn">ESPN</option>
                 <option value="stub">Stub (test)</option>
               </select>
