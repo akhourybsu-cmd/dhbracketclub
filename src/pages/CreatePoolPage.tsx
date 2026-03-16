@@ -16,13 +16,15 @@ export default function CreatePoolPage() {
   const [loading, setLoading] = useState(false);
   const [tournamentId, setTournamentId] = useState('');
   const [tournamentName, setTournamentName] = useState('');
+  const [tournamentLockTime, setTournamentLockTime] = useState('');
   const [createdPool, setCreatedPool] = useState<{ id: string; invite_code: string; name: string } | null>(null);
 
   useEffect(() => {
-    supabase.from('tournaments').select('id, name, season_year').limit(1).single().then(({ data }) => {
+    supabase.from('tournaments').select('id, name, season_year, lock_time').limit(1).single().then(({ data }) => {
       if (data) {
         setTournamentId(data.id);
         setTournamentName(`${data.name} ${data.season_year}`);
+        setTournamentLockTime(data.lock_time);
       }
     });
   }, []);
@@ -33,8 +35,7 @@ export default function CreatePoolPage() {
     setLoading(true);
 
     const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const lockTime = new Date();
-    lockTime.setDate(lockTime.getDate() + 14);
+    const lockTime = tournamentLockTime || new Date('2026-03-17T22:00:00Z').toISOString();
 
     try {
       const { data: pool, error } = await supabase
@@ -45,7 +46,7 @@ export default function CreatePoolPage() {
           owner_user_id: user.id,
           tournament_id: tournamentId,
           invite_code: inviteCode,
-          lock_time: lockTime.toISOString(),
+          lock_time: lockTime,
         })
         .select()
         .single();
