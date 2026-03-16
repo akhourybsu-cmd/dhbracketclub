@@ -11,7 +11,7 @@ import {
   AlertTriangle, Database, Activity, FlaskConical, ChevronDown, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Game, Team, ROUND_NAMES, ROUND_SHORT, DEFAULT_SCORING, calculateBracketScore } from '@/lib/bracketUtils';
+import { Game, Team, ROUND_NAMES, ROUND_SHORT } from '@/lib/bracketUtils';
 import { useGameUpdates, useSyncRunUpdates } from '@/hooks/useRealtimeSubscription';
 
 type AdminTab = 'games' | 'sync' | 'simulate';
