@@ -30,6 +30,35 @@ export default function PoolDetailPage() {
   const [memberBrackets, setMemberBrackets] = useState<Map<string, any>>(new Map());
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeletePool = async () => {
+    if (!poolId) return;
+    setDeleting(true);
+    try {
+      // Delete related data first (brackets, picks, members, etc.)
+      const { data: brackets } = await supabase.from('brackets').select('id').eq('pool_id', poolId);
+      if (brackets?.length) {
+        const bracketIds = brackets.map(b => b.id);
+        await supabase.from('bracket_picks').delete().in('bracket_id', bracketIds);
+        await supabase.from('brackets').delete().eq('pool_id', poolId);
+      }
+      await supabase.from('standings').delete().eq('pool_id', poolId);
+      await supabase.from('standings_snapshots').delete().eq('pool_id', poolId);
+      await supabase.from('scoring_rules').delete().eq('pool_id', poolId);
+      await supabase.from('admin_logs').delete().eq('pool_id', poolId);
+      await supabase.from('pool_members').delete().eq('pool_id', poolId);
+      const { error } = await supabase.from('pools').delete().eq('id', poolId);
+      if (error) throw error;
+      toast.success('Pool deleted');
+      navigate('/dashboard');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete pool');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   useEffect(() => {
     if (!poolId || !user) return;
