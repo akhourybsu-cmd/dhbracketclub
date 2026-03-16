@@ -40,7 +40,7 @@ interface NormalizedTeam {
   externalTeamId: string;
   schoolName: string;
   shortName: string;
-  seed: number; // from ESPN seed field, used for display only — NOT for reconciliation
+  seed: number; // from source seed field — NOT for reconciliation except seed-pair matching
   region: string;
 }
 
@@ -54,6 +54,8 @@ interface NormalizedGame {
   team2ExternalId?: string | null;
   team1Score?: number | null;
   team2Score?: number | null;
+  team1Seed?: number | null;
+  team2Seed?: number | null;
   winnerExternalId?: string | null;
   status: "scheduled" | "in_progress" | "final";
   isResultFinal?: boolean;
@@ -63,6 +65,7 @@ interface NormalizedGame {
   sourceLastUpdatedAt?: string | null;
   sourcePayload?: Record<string, unknown> | null;
   parseConfidence: "high" | "medium" | "low";
+  sourceProvider?: string;
 }
 
 interface ProviderConfig {
@@ -269,7 +272,12 @@ function parseEspnEvent(event: any): NormalizedGame | null {
   const away = competitors.find((c: any) => c.homeAway === "away") || competitors[0];
   const home = competitors.find((c: any) => c.homeAway === "home") || competitors[1];
 
-  // DO NOT use curatedRank.current — it's AP ranking, not tournament seed
+  // Use ESPN's seed field (string), NOT curatedRank
+  const awaySeedStr = typeof away.seed === "string" ? away.seed : typeof away.seed === "number" ? String(away.seed) : "";
+  const homeSeedStr = typeof home.seed === "string" ? home.seed : typeof home.seed === "number" ? String(home.seed) : "";
+  const awaySeed = parseInt(awaySeedStr, 10) || null;
+  const homeSeed = parseInt(homeSeedStr, 10) || null;
+
   const awayScore = away.score ? parseInt(away.score, 10) : null;
   const homeScore = home.score ? parseInt(home.score, 10) : null;
 
@@ -292,6 +300,8 @@ function parseEspnEvent(event: any): NormalizedGame | null {
     team2ExternalId: home.team.id,
     team1Score: awayScore,
     team2Score: homeScore,
+    team1Seed: awaySeed,
+    team2Seed: homeSeed,
     winnerExternalId: winnerExtId,
     status,
     isResultFinal: status === "final",
@@ -301,6 +311,7 @@ function parseEspnEvent(event: any): NormalizedGame | null {
     sourceLastUpdatedAt: new Date().toISOString(),
     sourcePayload: { espnId: event.id, name: event.name },
     parseConfidence: confidence,
+    sourceProvider: "espn",
   };
 }
 
@@ -455,9 +466,239 @@ const espnProvider: SportDataProvider = {
   },
 };
 
+// ═══════════════════════════════════════════════════════════════════
+//  NCAA PROVIDER (data.ncaa.com — primary source)
+// ═══════════════════════════════════════════════════════════════════
+
+const NCAA_BASE = "https://data.ncaa.com/casablanca/scoreboard/basketball-men/d1";
+
+const NCAA_ROUND_MAP: Record<string, { roundNumber: number; roundName: string }> = {
+  "First Four": { roundNumber: 0, roundName: "First Four" },
+  "First Round": { roundNumber: 1, roundName: "Round of 64" },
+  "Second Round": { roundNumber: 2, roundName: "Round of 32" },
+  "Sweet 16": { roundNumber: 3, roundName: "Sweet 16" },
+  "Elite 8": { roundNumber: 4, roundName: "Elite 8" },
+  "Elite Eight": { roundNumber: 4, roundName: "Elite 8" },
+  "Final Four": { roundNumber: 5, roundName: "Final Four" },
+  "Championship": { roundNumber: 6, roundName: "Championship" },
+  "National Championship": { roundNumber: 6, roundName: "Championship" },
+};
+
+const NCAA_REGION_MAP: Record<string, string> = {
+  "South": "South",
+  "East": "East",
+  "West": "West",
+  "Midwest": "Midwest",
+};
+
+function parseNcaaGameState(gameState: string): "scheduled" | "in_progress" | "final" {
+  if (!gameState) return "scheduled";
+  const s = gameState.toLowerCase();
+  if (s === "final") return "final";
+  if (s === "live" || s === "in_progress") return "in_progress";
+  return "scheduled";
+}
+
+function parseNcaaGame(game: any): NormalizedGame | null {
+  const g = game.game || game;
+  if (!g || !g.gameID) return null;
+
+  // Only include tournament games (must have bracketRound)
+  const bracketRound = (g.bracketRound || "").trim();
+  if (!bracketRound) return null;
+
+  const roundInfo = NCAA_ROUND_MAP[bracketRound];
+  if (!roundInfo) return null;
+
+  const rawRegion = (g.bracketRegion || "").trim();
+  let region = NCAA_REGION_MAP[rawRegion] || rawRegion || "Unknown";
+  // Final Four and Championship have empty bracketRegion
+  if (roundInfo.roundNumber === 5) region = "Final Four";
+  if (roundInfo.roundNumber === 6) region = "Championship";
+  // First Four also has empty bracketRegion — use team seeds + internal matching
+  if (roundInfo.roundNumber === 0 && !rawRegion) region = "Unknown";
+
+  const status = parseNcaaGameState(g.gameState);
+
+  const away = g.away || {};
+  const home = g.home || {};
+  const awayScore = away.score ? parseInt(away.score, 10) : null;
+  const homeScore = home.score ? parseInt(home.score, 10) : null;
+  const awaySeed = away.seed ? parseInt(away.seed, 10) : null;
+  const homeSeed = home.seed ? parseInt(home.seed, 10) : null;
+
+  let winnerExtId: string | null = null;
+  if (status === "final") {
+    // NCAA uses seo name as team identifier
+    if (away.winner === true) winnerExtId = `ncaa:${away.names?.seo || ""}`;
+    else if (home.winner === true) winnerExtId = `ncaa:${home.names?.seo || ""}`;
+  }
+
+  const bracketId = g.bracketId ? parseInt(g.bracketId, 10) : 0;
+  const gameSlot = bracketId > 0 ? (bracketId % 100) : 0;
+
+  return {
+    externalGameId: `ncaa:${g.gameID}`,
+    roundNumber: roundInfo.roundNumber,
+    roundName: roundInfo.roundName,
+    region,
+    gameSlot,
+    team1ExternalId: away.names?.seo ? `ncaa:${away.names.seo}` : null,
+    team2ExternalId: home.names?.seo ? `ncaa:${home.names.seo}` : null,
+    team1Score: isNaN(awayScore!) ? null : awayScore,
+    team2Score: isNaN(homeScore!) ? null : homeScore,
+    team1Seed: awaySeed,
+    team2Seed: homeSeed,
+    winnerExternalId: winnerExtId,
+    status,
+    isResultFinal: status === "final",
+    liveClock: g.contestClock || null,
+    livePeriod: g.currentPeriod || null,
+    scheduledAt: g.startTimeEpoch ? new Date(parseInt(g.startTimeEpoch, 10) * 1000).toISOString() : null,
+    sourceLastUpdatedAt: new Date().toISOString(),
+    sourcePayload: { ncaaGameId: g.gameID, bracketId: g.bracketId, bracketRound, bracketRegion: rawRegion },
+    parseConfidence: "high", // NCAA data has explicit bracket fields — always high confidence
+    sourceProvider: "ncaa",
+  };
+}
+
+function extractTeamsFromNcaaGames(games: any[]): NormalizedTeam[] {
+  const teamMap = new Map<string, NormalizedTeam>();
+
+  for (const gameWrapper of games) {
+    const g = gameWrapper.game || gameWrapper;
+    if (!g || !g.bracketRound) continue;
+
+    const roundInfo = NCAA_ROUND_MAP[(g.bracketRound || "").trim()];
+    if (!roundInfo) continue;
+
+    const rawRegion = (g.bracketRegion || "").trim();
+    const region = NCAA_REGION_MAP[rawRegion] || rawRegion || "Unknown";
+
+    for (const side of [g.away, g.home]) {
+      if (!side?.names?.seo) continue;
+      const id = `ncaa:${side.names.seo}`;
+      const seed = side.seed ? parseInt(side.seed, 10) : 0;
+
+      if (!teamMap.has(id) || (teamMap.get(id)!.seed === 0 && seed > 0)) {
+        teamMap.set(id, {
+          externalTeamId: id,
+          schoolName: side.names.full || side.names.short || side.names.seo,
+          shortName: side.names.short || side.names.char6 || side.names.seo,
+          seed,
+          region: region !== "Unknown" ? region : teamMap.get(id)?.region || "Unknown",
+        });
+      }
+    }
+  }
+
+  return Array.from(teamMap.values());
+}
+
+const ncaaCache = new Map<number, any[]>();
+
+async function fetchNcaaScoreboard(seasonYear: number): Promise<any[]> {
+  if (ncaaCache.has(seasonYear)) {
+    console.log(`[ncaa] Using cached scoreboard for ${seasonYear} (${ncaaCache.get(seasonYear)!.length} games)`);
+    return ncaaCache.get(seasonYear)!;
+  }
+
+  const allGames: any[] = [];
+  const dates = generateTournamentDates(seasonYear);
+
+  for (const dateStr of dates) {
+    const y = dateStr.slice(0, 4);
+    const m = dateStr.slice(4, 6);
+    const d = dateStr.slice(6, 8);
+    const url = `${NCAA_BASE}/${y}/${m}/${d}/scoreboard.json`;
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        // NCAA returns XML error for missing dates — silently skip
+        await res.text();
+        continue;
+      }
+      const data = await res.json();
+      const games = data.games || [];
+      // Only keep tournament games (have bracketRound)
+      const tournamentGames = games.filter((g: any) => {
+        const br = (g.game?.bracketRound || g.bracketRound || "").trim();
+        return br !== "";
+      });
+      allGames.push(...tournamentGames);
+    } catch {
+      // Silently skip — date may not exist yet
+      continue;
+    }
+  }
+
+  // Deduplicate by gameID
+  const seen = new Set<string>();
+  const deduped = allGames.filter(g => {
+    const id = g.game?.gameID || g.gameID;
+    if (!id || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+
+  console.log(`[ncaa] Fetched ${deduped.length} tournament games for ${seasonYear}`);
+  ncaaCache.set(seasonYear, deduped);
+  return deduped;
+}
+
+const ncaaProvider: SportDataProvider = {
+  name: "ncaa",
+
+  async fetchTeams(tournamentId: string, config: ProviderConfig): Promise<NormalizedTeam[]> {
+    console.log(`[ncaa] fetchTeams for season ${config.seasonYear}`);
+    const games = await fetchNcaaScoreboard(config.seasonYear);
+    return extractTeamsFromNcaaGames(games);
+  },
+
+  async fetchGames(tournamentId: string, config: ProviderConfig): Promise<NormalizedGame[]> {
+    console.log(`[ncaa] fetchGames for season ${config.seasonYear}`);
+    const rawGames = await fetchNcaaScoreboard(config.seasonYear);
+    const games: NormalizedGame[] = [];
+    for (const g of rawGames) {
+      const parsed = parseNcaaGame(g);
+      if (parsed) games.push(parsed);
+    }
+    return games;
+  },
+
+  async fetchResults(tournamentId: string, config: ProviderConfig): Promise<NormalizedGame[]> {
+    console.log(`[ncaa] fetchResults for season ${config.seasonYear}`);
+    const rawGames = await fetchNcaaScoreboard(config.seasonYear);
+    const games: NormalizedGame[] = [];
+    for (const g of rawGames) {
+      const parsed = parseNcaaGame(g);
+      if (parsed) games.push(parsed);
+    }
+    return games;
+  },
+
+  async fetchTournamentMeta(tournamentId: string, config: ProviderConfig) {
+    const rawGames = await fetchNcaaScoreboard(config.seasonYear);
+    const total = rawGames.length;
+    const finals = rawGames.filter(g => {
+      const gs = (g.game?.gameState || g.gameState || "").toLowerCase();
+      return gs === "final";
+    }).length;
+
+    let status = "upcoming";
+    if (total === 0) status = "upcoming";
+    else if (finals >= 63) status = "completed";
+    else if (finals > 0 || total > 0) status = "in_progress";
+
+    return { status, externalSeasonId: `${config.seasonYear}` };
+  },
+};
+
 const PROVIDER_REGISTRY: Record<string, SportDataProvider> = {
   stub: stubProvider,
   espn: espnProvider,
+  ncaa: ncaaProvider,
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -518,10 +759,12 @@ async function createExternalMapping(
  * Strategy (in order):
  *   1. Explicit mapping in game_external_mappings
  *   2. Participant-based match (both teams must resolve)
+ *   2.5. Seed-pair match for R1 (when seeds + region are known)
  *   3. Championship singleton (round 6, only 1 game)
  *   4. Final Four by slot (round 5, only 2 games)
- *   5. Deterministic round+region+slot (high confidence only)
- *   6. Fallback round+slot (low confidence)
+ *   5. First Four by region (round 0, match by region)
+ *   6. Deterministic round+region+slot (high confidence only)
+ *   7. Fallback round+slot (low confidence)
  */
 async function resolveGameId(
   db: SupabaseClient,
@@ -557,6 +800,70 @@ async function resolveGameId(
     if (teamMatch) {
       await createExternalMapping(db, tournamentId, teamMatch.id, providerName, ng);
       return { gameId: teamMatch.id, matchMethod: "participant_match", matchConfidence: "high" };
+    }
+  }
+
+  // 2.5. Seed-pair match for R1 (NCAA provides exact seeds — match by round+region+seed pair)
+  if (ng.roundNumber === 1 && ng.team1Seed && ng.team2Seed && ng.region && ng.region !== "Unknown") {
+    const seedPair = [ng.team1Seed, ng.team2Seed].sort((a, b) => a - b);
+    const { data: regionGames } = await db
+      .from("games")
+      .select("id, team1_id, team2_id")
+      .eq("tournament_id", tournamentId)
+      .eq("round_number", 1)
+      .eq("region", ng.region);
+
+    if (regionGames && regionGames.length > 0) {
+      const teamIds = regionGames.flatMap(g => [g.team1_id, g.team2_id].filter(Boolean));
+      const { data: teamSeeds } = await db
+        .from("teams")
+        .select("id, seed")
+        .in("id", teamIds);
+
+      const seedMap = new Map((teamSeeds || []).map((t: any) => [t.id, t.seed as number]));
+
+      for (const g of regionGames) {
+        const s1 = g.team1_id ? seedMap.get(g.team1_id) : null;
+        const s2 = g.team2_id ? seedMap.get(g.team2_id) : null;
+        if (s1 != null && s2 != null) {
+          const internalPair = [s1, s2].sort((a, b) => a - b);
+          if (internalPair[0] === seedPair[0] && internalPair[1] === seedPair[1]) {
+            await createExternalMapping(db, tournamentId, g.id, providerName, ng);
+            return { gameId: g.id, matchMethod: "seed_pair_match", matchConfidence: "high" };
+          }
+        }
+      }
+    }
+  }
+
+  // 2.6. Seed-pair match for First Four (round 0) — match by region + seed value
+  if (ng.roundNumber === 0 && ng.team1Seed && ng.team2Seed && ng.team1Seed === ng.team2Seed) {
+    const sharedSeed = ng.team1Seed;
+    const { data: ffGames } = await db
+      .from("games")
+      .select("id, team1_id, team2_id, region")
+      .eq("tournament_id", tournamentId)
+      .eq("round_number", 0);
+
+    if (ffGames) {
+      const allTeamIds = ffGames.flatMap(g => [g.team1_id, g.team2_id].filter(Boolean));
+      const { data: teamSeeds } = await db
+        .from("teams")
+        .select("id, seed")
+        .in("id", allTeamIds);
+
+      const seedMap = new Map((teamSeeds || []).map((t: any) => [t.id, t.seed as number]));
+
+      for (const g of ffGames) {
+        const s1 = g.team1_id ? seedMap.get(g.team1_id) : null;
+        const s2 = g.team2_id ? seedMap.get(g.team2_id) : null;
+        if (s1 === sharedSeed && s2 === sharedSeed) {
+          // If multiple FF games have same seed (e.g. two 16-seed play-ins), use region if available
+          if (ng.region && ng.region !== "Unknown" && g.region !== ng.region) continue;
+          await createExternalMapping(db, tournamentId, g.id, providerName, ng);
+          return { gameId: g.id, matchMethod: "ff_seed_pair_match", matchConfidence: "high" };
+        }
+      }
     }
   }
 
@@ -1364,44 +1671,81 @@ async function recalculateStandingsForTournament(
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  ORCHESTRATOR
+//  ORCHESTRATOR (with NCAA-first provider fallback)
 // ═══════════════════════════════════════════════════════════════════
 
-async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string, seasonYear: number) {
-  const providerName = req.providerName || "stub";
+/**
+ * Resolve the best available provider. For runFullSync:
+ *   1. Try NCAA first (primary, structured data)
+ *   2. Fall back to ESPN (has schedule data earlier)
+ *   3. Use explicitly requested provider for non-full-sync actions
+ */
+async function resolveProvider(
+  db: SupabaseClient,
+  requestedProvider: string,
+  action: SyncAction,
+  seasonYear: number,
+  syncRunId: string
+): Promise<{ provider: SportDataProvider; config: ProviderConfig; providerName: string }> {
 
-  const { data: providerConfig } = await db
-    .from("provider_configs")
-    .select("*")
-    .eq("provider_name", providerName)
-    .maybeSingle();
+  // For explicit provider requests (not "auto"), use as-is
+  if (requestedProvider !== "auto" && requestedProvider !== "stub") {
+    const provider = PROVIDER_REGISTRY[requestedProvider];
+    if (!provider) throw new Error(`No adapter registered for provider '${requestedProvider}'`);
 
-  if (req.action !== "recalculateStandings") {
-    if (!providerConfig || !providerConfig.enabled) {
-      throw new Error(`Provider '${providerName}' is not configured or not enabled`);
+    const { data: pc } = await db.from("provider_configs").select("*").eq("provider_name", requestedProvider).maybeSingle();
+    const config: ProviderConfig = pc
+      ? { providerName: pc.provider_name, enabled: pc.enabled, baseUrl: pc.base_url, sport: pc.sport, tournamentScope: pc.tournament_scope, seasonYear }
+      : { providerName: requestedProvider, enabled: true, baseUrl: null, sport: "basketball", tournamentScope: "mens", seasonYear };
+
+    return { provider, config, providerName: requestedProvider };
+  }
+
+  // Auto mode: try NCAA first, fall back to ESPN
+  const ncaa = PROVIDER_REGISTRY["ncaa"];
+  if (ncaa) {
+    try {
+      const testGames = await fetchNcaaScoreboard(seasonYear);
+      if (testGames.length > 0) {
+        console.log(`[orchestrator] NCAA provider has ${testGames.length} games — using NCAA as primary`);
+        await logSyncEvent(db, syncRunId, "provider", null, "provider_selected", "success", {
+          provider: "ncaa", reason: "ncaa_has_data", gameCount: testGames.length,
+        });
+        const { data: pc } = await db.from("provider_configs").select("*").eq("provider_name", "ncaa").maybeSingle();
+        const config: ProviderConfig = pc
+          ? { providerName: pc.provider_name, enabled: pc.enabled, baseUrl: pc.base_url, sport: pc.sport, tournamentScope: pc.tournament_scope, seasonYear }
+          : { providerName: "ncaa", enabled: true, baseUrl: null, sport: "basketball", tournamentScope: "mens", seasonYear };
+        return { provider: ncaa, config, providerName: "ncaa" };
+      }
+      console.log(`[orchestrator] NCAA provider returned 0 games — falling back to ESPN`);
+    } catch (err) {
+      console.warn(`[orchestrator] NCAA provider failed — falling back to ESPN:`, err);
     }
   }
 
-  const provider = PROVIDER_REGISTRY[providerName];
-  if (!provider && req.action !== "recalculateStandings") {
-    throw new Error(`No adapter registered for provider '${providerName}'`);
-  }
+  // Fallback to ESPN
+  const espn = PROVIDER_REGISTRY["espn"];
+  if (!espn) throw new Error("No providers available");
 
-  const config: ProviderConfig = providerConfig
-    ? {
-        providerName: providerConfig.provider_name,
-        enabled: providerConfig.enabled,
-        baseUrl: providerConfig.base_url,
-        sport: providerConfig.sport,
-        tournamentScope: providerConfig.tournament_scope,
-        seasonYear,
-      }
-    : { providerName, enabled: true, baseUrl: null, sport: "basketball", tournamentScope: "mens", seasonYear };
+  await logSyncEvent(db, syncRunId, "provider", null, "provider_fallback", "success", {
+    provider: "espn", reason: "ncaa_unavailable",
+  });
 
+  const { data: pc } = await db.from("provider_configs").select("*").eq("provider_name", "espn").maybeSingle();
+  const config: ProviderConfig = pc
+    ? { providerName: pc.provider_name, enabled: pc.enabled, baseUrl: pc.base_url, sport: pc.sport, tournamentScope: pc.tournament_scope, seasonYear }
+    : { providerName: "espn", enabled: true, baseUrl: null, sport: "basketball", tournamentScope: "mens", seasonYear };
+  return { provider: espn, config, providerName: "espn" };
+}
+
+async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string, seasonYear: number) {
+  const requestedProvider = req.providerName || "auto";
+
+  // Create sync run first so we can log provider resolution
   const { data: syncRun, error: runErr } = await db
     .from("sync_runs")
     .insert({
-      provider_name: providerName,
+      provider_name: requestedProvider,
       sync_type: req.action,
       status: "running",
       initiated_by_user_id: userId,
@@ -1412,20 +1756,40 @@ async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string,
   if (runErr || !syncRun) throw new Error(`Failed to create sync run: ${runErr?.message}`);
   const syncRunId = syncRun.id;
 
+  // For recalculateStandings, no provider needed
+  if (req.action === "recalculateStandings") {
+    try {
+      const result = await recalculateStandingsForTournament(db, req.tournamentId, syncRunId, req.poolId, "manual");
+      await db.from("tournaments").update({ last_synced_at: new Date().toISOString() }).eq("id", req.tournamentId);
+      await db.from("sync_runs").update({ status: "completed", finished_at: new Date().toISOString(), raw_summary: result }).eq("id", syncRunId);
+      return { syncRunId, action: req.action, result };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      await db.from("sync_runs").update({ status: "failed", finished_at: new Date().toISOString(), error_message: msg }).eq("id", syncRunId);
+      throw err;
+    }
+  }
+
+  // Resolve provider (auto = NCAA first, ESPN fallback)
+  const { provider, config, providerName } = await resolveProvider(db, requestedProvider, req.action, seasonYear, syncRunId);
+
+  // Update sync run with actual provider used
+  await db.from("sync_runs").update({ provider_name: providerName }).eq("id", syncRunId);
+
   try {
     let result: Record<string, unknown> = {};
 
     switch (req.action) {
       case "syncTournamentMetadata": {
-        result = await syncTournamentMetadata(db, provider!, config, req.tournamentId, syncRunId);
+        result = await syncTournamentMetadata(db, provider, config, req.tournamentId, syncRunId);
         break;
       }
       case "syncGames": {
-        result = await syncGames(db, provider!, config, req.tournamentId, syncRunId);
+        result = await syncGames(db, provider, config, req.tournamentId, syncRunId);
         break;
       }
       case "syncGameResults": {
-        const resultsOnly = await syncGameResults(db, provider!, config, req.tournamentId, syncRunId);
+        const resultsOnly = await syncGameResults(db, provider, config, req.tournamentId, syncRunId);
         let autoStandings = { poolsProcessed: 0, bracketsScored: 0, standingsChanged: 0 };
         if (resultsOnly.newFinals > 0 || resultsOnly.affectedGameIds.length > 0) {
           autoStandings = await recalculateStandingsForTournament(
@@ -1441,11 +1805,11 @@ async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string,
         break;
       }
       case "runFullSync": {
-        const metaResult = provider!.fetchTournamentMeta
-          ? await syncTournamentMetadata(db, provider!, config, req.tournamentId, syncRunId)
+        const metaResult = provider.fetchTournamentMeta
+          ? await syncTournamentMetadata(db, provider, config, req.tournamentId, syncRunId)
           : { updated: false };
-        const gamesResult = await syncGames(db, provider!, config, req.tournamentId, syncRunId);
-        const resultsResult = await syncGameResults(db, provider!, config, req.tournamentId, syncRunId);
+        const gamesResult = await syncGames(db, provider, config, req.tournamentId, syncRunId);
+        const resultsResult = await syncGameResults(db, provider, config, req.tournamentId, syncRunId);
 
         let standingsResult = { poolsProcessed: 0, bracketsScored: 0, standingsChanged: 0 };
         if (resultsResult.updated > 0 || resultsResult.newFinals > 0) {
@@ -1456,6 +1820,7 @@ async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string,
         }
 
         result = {
+          providerUsed: providerName,
           metadata: metaResult,
           games: gamesResult,
           results: resultsResult,
