@@ -156,11 +156,18 @@ export default function BracketDetailPage() {
         </Button>
       </div>
 
-      <div className="flex gap-1.5 mb-5 justify-center">
+      <div className="flex gap-1.5 mb-5 justify-center flex-wrap">
+        {hasFirstFour && (
+          <button onClick={() => setCurrentRound(0)}
+            className={cn("px-2 py-1 rounded-md text-[10px] font-semibold transition-colors",
+              currentRound === 0 ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground")}
+          >{FIRST_FOUR_ROUND_SHORT}</button>
+        )}
         {ROUND_SHORT.map((label, i) => (
           <button key={i} onClick={() => setCurrentRound(i + 1)}
             className={cn("px-2 py-1 rounded-md text-[10px] font-semibold transition-colors",
               currentRound === i + 1 ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground")} />
+        ))}
         ))}
       </div>
 
