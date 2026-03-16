@@ -45,7 +45,18 @@ export const ROUND_NAMES = [
 
 export const ROUND_SHORT = ['R64', 'R32', 'S16', 'E8', 'F4', 'Champ'];
 
-export const TOTAL_GAMES = 63;
+/** First Four play-in round (round_number = 0) */
+export const FIRST_FOUR_ROUND_NAME = 'First Four';
+export const FIRST_FOUR_ROUND_SHORT = 'FF';
+
+export const TOTAL_GAMES = 63; // Main bracket games (excludes First Four)
+export const FIRST_FOUR_GAMES = 4;
+
+/**
+ * Get all round names including First Four.
+ */
+export const ALL_ROUND_NAMES = [FIRST_FOUR_ROUND_NAME, ...ROUND_NAMES];
+export const ALL_ROUND_SHORT = [FIRST_FOUR_ROUND_SHORT, ...ROUND_SHORT];
 
 export const DEFAULT_SCORING: Record<number, number> = {
   1: 1,
