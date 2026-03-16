@@ -142,9 +142,8 @@ export default function DashboardPage() {
       )}
 
       {/* My Pools section */}
-      <div className="flex items-center gap-2 mb-4">
+      <div className="section-divider">
         <h2 className="section-header mb-0">My Pools</h2>
-        <div className="flex-1 h-px bg-border/30" />
       </div>
 
       {loading ? (
@@ -160,21 +159,21 @@ export default function DashboardPage() {
         <motion.div
           initial={{ opacity: 0, scale: 0.97 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="glass-card p-12 text-center"
+          className="empty-state"
         >
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <Trophy className="w-8 h-8 text-primary" />
+          <div className="empty-state-icon">
+            <Trophy />
           </div>
-          <p className="text-base font-semibold text-foreground mb-1">No pools yet</p>
-          <p className="text-sm text-muted-foreground mb-6">Create a pool or join one with an invite code.</p>
+          <p className="empty-state-title">No pools yet</p>
+          <p className="empty-state-desc mb-6">Create a pool or join one with an invite code.</p>
           <div className="flex gap-3 justify-center">
             <Link to="/pools/create">
-              <Button className="font-bold rounded-xl gap-2">
+              <Button className="font-bold rounded-xl gap-2 btn-press">
                 <Plus className="w-4 h-4" /> Create Pool
               </Button>
             </Link>
             <Link to="/pools/join">
-              <Button variant="outline" className="font-bold rounded-xl gap-2">
+              <Button variant="outline" className="font-bold rounded-xl gap-2 btn-press">
                 <Users className="w-4 h-4" /> Join Pool
               </Button>
             </Link>

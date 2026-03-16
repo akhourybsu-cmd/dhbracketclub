@@ -141,7 +141,7 @@ export default function CreatePoolPage() {
         className="glass-card p-5 sm:p-6 space-y-5"
       >
         <div>
-          <label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wider">Pool Name</label>
+          <label className="form-label">Pool Name</label>
           <Input
             required
             value={name}
@@ -152,7 +152,7 @@ export default function CreatePoolPage() {
           />
         </div>
         <div>
-          <label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wider">Description <span className="normal-case font-normal">(optional)</span></label>
+          <label className="form-label">Description <span className="normal-case font-normal">(optional)</span></label>
           <Input
             value={description}
             onChange={(e) => setDescription(e.target.value)}

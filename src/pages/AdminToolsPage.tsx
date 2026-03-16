@@ -312,9 +312,9 @@ export default function AdminToolsPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm text-muted-foreground">Loading admin tools…</p>
+      <div className="loading-spinner">
+        <div className="loading-spinner-ring" />
+        <p className="loading-spinner-text">Loading admin tools…</p>
       </div>
     );
   }
@@ -336,20 +336,18 @@ export default function AdminToolsPage() {
   return (
     <div className="max-w-2xl mx-auto">
       {/* Back */}
-      <Link to={`/pools/${poolId}`} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-5">
-        <ArrowLeft className="w-4 h-4" /> Back to Pool
+      <Link to={`/pools/${poolId}`} className="back-link">
+        <ArrowLeft /> Back to Pool
       </Link>
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
-            <Settings2 className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">Admin Tools</h1>
-            <p className="text-sm text-muted-foreground">Manage games, sync, and simulate</p>
-          </div>
+      <div className="page-header">
+        <div className="page-header-icon">
+          <Settings2 />
+        </div>
+        <div>
+          <h1 className="page-header-title">Admin Tools</h1>
+          <p className="page-header-subtitle">Manage games, sync, and simulate</p>
         </div>
       </div>
 

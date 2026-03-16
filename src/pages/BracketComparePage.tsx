@@ -3,8 +3,9 @@ import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, GitCompare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { motion } from 'framer-motion';
 import { Team, Game, Pick, ROUND_NAMES, ROUND_SHORT, getEffectiveTeam } from '@/lib/bracketUtils';
 
 export default function BracketComparePage() {
@@ -41,13 +42,11 @@ export default function BracketComparePage() {
         .eq('tournament_id', pool.tournament_id).order('round_number').order('game_slot');
       if (gameData) setGames(gameData as Game[]);
 
-      // Bracket A
       const { data: bA } = await supabase.from('brackets').select('*, profiles(display_name)').eq('id', bracketAId).single();
       if (bA) setNameA((bA as any).profiles?.display_name || 'Player A');
       const { data: pA } = await supabase.from('bracket_picks').select('game_id, picked_team_id, picked_in_round').eq('bracket_id', bracketAId);
       if (pA) { const m = new Map<string, Pick>(); pA.forEach(p => m.set(p.game_id, p)); setPicksA(m); }
 
-      // Bracket B
       const { data: bB } = await supabase.from('brackets').select('*, profiles(display_name)').eq('id', bracketBId).single();
       if (bB) setNameB((bB as any).profiles?.display_name || 'Player B');
       const { data: pB } = await supabase.from('bracket_picks').select('game_id, picked_team_id, picked_in_round').eq('bracket_id', bracketBId);
@@ -61,9 +60,8 @@ export default function BracketComparePage() {
   const roundGames = games.filter(g => g.round_number === currentRound);
   const regions = [...new Set(roundGames.map(g => g.region))];
 
-  // Diff stats
   const diffStats = useMemo(() => {
-    let same = 0, diff = 0, onlyA = 0, onlyB = 0;
+    let same = 0, diff = 0;
     const allGameIds = new Set([...picksA.keys(), ...picksB.keys()]);
     allGameIds.forEach(gid => {
       const a = picksA.get(gid);
@@ -71,90 +69,115 @@ export default function BracketComparePage() {
       if (a && b) {
         if (a.picked_team_id === b.picked_team_id) same++;
         else diff++;
-      } else if (a) onlyA++;
-      else onlyB++;
+      }
     });
-    return { same, diff, onlyA, onlyB };
+    return { same, diff };
   }, [picksA, picksB]);
 
   if (loading) {
-    return <div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
+    return (
+      <div className="loading-spinner">
+        <div className="loading-spinner-ring" />
+        <p className="loading-spinner-text">Loading brackets…</p>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <Link to={`/pools/${poolId}/leaderboard`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
-        <ArrowLeft className="w-4 h-4" /> Back to Leaderboard
+    <div className="max-w-2xl mx-auto">
+      <Link to={`/pools/${poolId}/leaderboard`} className="back-link">
+        <ArrowLeft /> Back to Leaderboard
       </Link>
 
-      <h1 className="text-lg font-bold mb-1">Compare Brackets</h1>
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-sm font-medium text-primary">{nameA}</span>
-        <span className="text-xs text-muted-foreground">vs</span>
-        <span className="text-sm font-medium text-accent">{nameB}</span>
+      {/* Header */}
+      <div className="page-header">
+        <div className="page-header-icon">
+          <GitCompare />
+        </div>
+        <div>
+          <h1 className="page-header-title">Compare Brackets</h1>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-xs font-semibold text-primary">{nameA}</span>
+            <span className="text-[10px] text-muted-foreground">vs</span>
+            <span className="text-xs font-semibold text-accent">{nameB}</span>
+          </div>
+        </div>
       </div>
 
       {/* Diff Summary */}
-      <div className="grid grid-cols-2 gap-2 mb-4">
-        <div className="glass-card p-2.5 text-center">
-          <p className="text-lg font-bold tabular-nums text-success">{diffStats.same}</p>
-          <p className="text-[10px] text-muted-foreground">Same Picks</p>
+      <div className="grid grid-cols-2 gap-2.5 mb-6">
+        <div className="stat-card">
+          <span className="stat-value text-success">{diffStats.same}</span>
+          <span className="stat-label">Same Picks</span>
         </div>
-        <div className="glass-card p-2.5 text-center">
-          <p className="text-lg font-bold tabular-nums text-warning">{diffStats.diff}</p>
-          <p className="text-[10px] text-muted-foreground">Different</p>
+        <div className="stat-card">
+          <span className="stat-value text-warning">{diffStats.diff}</span>
+          <span className="stat-label">Different</span>
         </div>
       </div>
 
       {/* Round Nav */}
       <div className="flex items-center justify-between mb-3">
-        <Button variant="ghost" size="icon" disabled={currentRound <= 1} onClick={() => setCurrentRound(r => r - 1)}>
+        <Button variant="ghost" size="icon" disabled={currentRound <= 1} onClick={() => setCurrentRound(r => r - 1)} className="rounded-xl h-10 w-10 btn-press">
           <ChevronLeft className="w-5 h-5" />
         </Button>
-        <p className="text-sm font-semibold">{ROUND_NAMES[currentRound - 1]}</p>
-        <Button variant="ghost" size="icon" disabled={currentRound >= 6} onClick={() => setCurrentRound(r => r + 1)}>
+        <h2 className="text-lg font-extrabold tracking-tight">{ROUND_NAMES[currentRound - 1]}</h2>
+        <Button variant="ghost" size="icon" disabled={currentRound >= 6} onClick={() => setCurrentRound(r => r + 1)} className="rounded-xl h-10 w-10 btn-press">
           <ChevronRight className="w-5 h-5" />
         </Button>
       </div>
 
-      <div className="flex gap-1.5 mb-5 justify-center">
+      <div className="flex gap-1.5 mb-5 justify-center flex-wrap">
         {ROUND_SHORT.map((label, i) => (
-          <button key={i} onClick={() => setCurrentRound(i + 1)}
-            className={cn("px-2 py-1 rounded-md text-[10px] font-semibold transition-colors",
-              currentRound === i + 1 ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground")} />
+          <button
+            key={i}
+            onClick={() => setCurrentRound(i + 1)}
+            className={cn(
+              "round-pill btn-press",
+              currentRound === i + 1 ? "round-pill-active" : "round-pill-default"
+            )}
+          >
+            {label}
+          </button>
         ))}
       </div>
 
       {/* Comparison */}
-      <div className="space-y-5">
+      <div className="space-y-6">
         {regions.map(region => {
           const regionGames = roundGames.filter(g => g.region === region);
           return (
             <div key={region}>
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{region}</h3>
-              <div className="space-y-2">
-                {regionGames.map(game => {
-                  const t1 = getEffectiveTeam(game, 'team1', games, teams, picksA);
-                  const t2 = getEffectiveTeam(game, 'team2', games, teams, picksA);
+              <div className="section-divider">
+                <span className="section-header mb-0">{region}</span>
+              </div>
+              <div className="space-y-2.5">
+                {regionGames.map((game, idx) => {
                   const pickA = picksA.get(game.id);
                   const pickB = picksB.get(game.id);
                   const same = pickA && pickB && pickA.picked_team_id === pickB.picked_team_id;
                   const winner = game.winner_team_id;
 
                   return (
-                    <div key={game.id} className={cn("matchup-card", !same && pickA && pickB && "ring-1 ring-warning/30")}>
+                    <motion.div
+                      key={game.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.03 }}
+                      className={cn("matchup-card", !same && pickA && pickB && "ring-1 ring-warning/30")}
+                    >
                       <div className="grid grid-cols-[1fr_auto_1fr] gap-0">
                         {/* Header */}
-                        <div className="px-3 py-1 text-[10px] font-medium text-primary border-b border-border/30">{nameA}</div>
-                        <div className="px-2 py-1 text-[10px] text-muted-foreground border-b border-border/30 text-center">vs</div>
-                        <div className="px-3 py-1 text-[10px] font-medium text-accent border-b border-border/30 text-right">{nameB}</div>
+                        <div className="px-3.5 py-1.5 text-[10px] font-semibold text-primary border-b border-border/30">{nameA}</div>
+                        <div className="px-2 py-1.5 text-[10px] text-muted-foreground border-b border-border/30 text-center">vs</div>
+                        <div className="px-3.5 py-1.5 text-[10px] font-semibold text-accent border-b border-border/30 text-right">{nameB}</div>
 
                         {/* Picks */}
-                        <div className={cn("px-3 py-2", pickA && winner === pickA.picked_team_id ? "bg-correct/8" : pickA && winner && winner !== pickA.picked_team_id ? "bg-incorrect/8" : "")}>
+                        <div className={cn("px-3.5 py-3", pickA && winner === pickA.picked_team_id ? "bg-correct/8" : pickA && winner && winner !== pickA.picked_team_id ? "bg-incorrect/8" : "")}>
                           {pickA ? (
                             <span className="text-sm font-medium">{teams.get(pickA.picked_team_id)?.short_name || '?'}</span>
                           ) : (
-                            <span className="text-xs text-muted-foreground italic">—</span>
+                            <span className="text-xs text-muted-foreground/50 italic">—</span>
                           )}
                         </div>
                         <div className="flex items-center justify-center">
@@ -164,15 +187,15 @@ export default function BracketComparePage() {
                             <div className="w-2 h-2 rounded-full bg-warning" />
                           )}
                         </div>
-                        <div className={cn("px-3 py-2 text-right", pickB && winner === pickB.picked_team_id ? "bg-correct/8" : pickB && winner && winner !== pickB.picked_team_id ? "bg-incorrect/8" : "")}>
+                        <div className={cn("px-3.5 py-3 text-right", pickB && winner === pickB.picked_team_id ? "bg-correct/8" : pickB && winner && winner !== pickB.picked_team_id ? "bg-incorrect/8" : "")}>
                           {pickB ? (
                             <span className="text-sm font-medium">{teams.get(pickB.picked_team_id)?.short_name || '?'}</span>
                           ) : (
-                            <span className="text-xs text-muted-foreground italic">—</span>
+                            <span className="text-xs text-muted-foreground/50 italic">—</span>
                           )}
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
@@ -180,6 +203,8 @@ export default function BracketComparePage() {
           );
         })}
       </div>
+
+      <div className="h-8" />
     </div>
   );
 }

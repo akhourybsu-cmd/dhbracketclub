@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { LogOut } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function ProfilePage() {
@@ -39,7 +39,16 @@ export default function ProfilePage() {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-md mx-auto"
     >
-      <h1 className="text-xl font-extrabold tracking-tight mb-6">Profile</h1>
+      {/* Page header */}
+      <div className="page-header">
+        <div className="page-header-icon">
+          <User />
+        </div>
+        <div>
+          <h1 className="page-header-title">Profile</h1>
+          <p className="page-header-subtitle">Manage your account</p>
+        </div>
+      </div>
 
       <div className="glass-card p-6 space-y-5 mb-6">
         <div className="flex items-center gap-4 mb-2">
@@ -53,16 +62,16 @@ export default function ProfilePage() {
         </div>
 
         <div>
-          <label className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wider">Display Name</label>
-          <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="h-11" />
+          <label className="form-label">Display Name</label>
+          <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="form-input" />
         </div>
 
-        <Button onClick={handleSave} className="w-full h-11 font-bold rounded-xl" disabled={loading}>
+        <Button onClick={handleSave} className="w-full h-11 font-bold rounded-xl btn-press" disabled={loading}>
           {loading ? 'Saving...' : 'Save Changes'}
         </Button>
       </div>
 
-      <Button variant="outline" className="w-full gap-2 h-11 text-destructive hover:text-destructive font-bold rounded-xl" onClick={signOut}>
+      <Button variant="outline" className="w-full gap-2 h-11 text-destructive hover:text-destructive font-bold rounded-xl btn-press" onClick={signOut}>
         <LogOut className="w-4 h-4" /> Sign Out
       </Button>
     </motion.div>

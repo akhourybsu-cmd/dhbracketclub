@@ -179,9 +179,9 @@ export default function LeaderboardPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm text-muted-foreground">Loading standings…</p>
+      <div className="loading-spinner">
+        <div className="loading-spinner-ring" />
+        <p className="loading-spinner-text">Loading standings…</p>
       </div>
     );
   }
@@ -197,25 +197,25 @@ export default function LeaderboardPage() {
   return (
     <div className="max-w-2xl mx-auto">
       {/* Back link */}
-      <Link to={`/pools/${poolId}`} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-5">
-        <ArrowLeft className="w-4 h-4" /> Back to Pool
+      <Link to={`/pools/${poolId}`} className="back-link">
+        <ArrowLeft /> Back to Pool
       </Link>
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
-            <Trophy className="w-5 h-5 text-primary" />
+        <div className="page-header mb-0">
+          <div className="page-header-icon">
+            <Trophy />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">Leaderboard</h1>
-            <p className="text-sm text-muted-foreground">{pool?.name}</p>
+            <h1 className="page-header-title">Leaderboard</h1>
+            <p className="page-header-subtitle">{pool?.name}</p>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
           {rtStatus === 'connected' && (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 text-success text-[10px] font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" /> Live
+              <span className="live-dot" /> Live
             </span>
           )}
           {lastUpdated && (
@@ -237,13 +237,12 @@ export default function LeaderboardPage() {
       )}
 
       {standings.length === 0 ? (
-        /* Empty state */
-        <div className="glass-card p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
-            <Trophy className="w-8 h-8 text-muted-foreground" />
+        <div className="empty-state">
+          <div className="empty-state-icon">
+            <Trophy />
           </div>
-          <p className="text-base font-semibold text-foreground mb-1">No members yet</p>
-          <p className="text-sm text-muted-foreground">Invite friends to join and compete!</p>
+          <p className="empty-state-title">No members yet</p>
+          <p className="empty-state-desc">Invite friends to join and compete!</p>
         </div>
       ) : (
         <>

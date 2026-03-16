@@ -113,9 +113,9 @@ export default function GameCenterPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm text-muted-foreground">Loading games…</p>
+      <div className="loading-spinner">
+        <div className="loading-spinner-ring" />
+        <p className="loading-spinner-text">Loading games…</p>
       </div>
     );
   }
@@ -124,19 +124,19 @@ export default function GameCenterPage() {
     <div className="max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
-            <Activity className="w-5 h-5 text-primary" />
+        <div className="page-header mb-0">
+          <div className="page-header-icon">
+            <Activity />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">Game Center</h1>
-            <p className="text-sm text-muted-foreground">Live scores & results</p>
+            <h1 className="page-header-title">Game Center</h1>
+            <p className="page-header-subtitle">Live scores & results</p>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
           {rtStatus === 'connected' && (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 text-success text-[10px] font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" /> Live
+              <span className="live-dot" /> Live
             </span>
           )}
           {lastUpdated && (
@@ -154,10 +154,8 @@ export default function GameCenterPage() {
             key={t.key}
             onClick={() => setTab(t.key)}
             className={cn(
-              "px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5",
-              tab === t.key
-                ? "bg-primary text-primary-foreground shadow-md"
-                : "bg-card text-muted-foreground hover:text-foreground border border-border/50"
+              "filter-pill",
+              tab === t.key ? "filter-pill-active" : "filter-pill-inactive"
             )}
           >
             {t.icon}
@@ -210,14 +208,14 @@ export default function GameCenterPage() {
 
       {/* Games */}
       {filteredGames.length === 0 ? (
-        <div className="glass-card p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
-            <Activity className="w-8 h-8 text-muted-foreground" />
+        <div className="empty-state">
+          <div className="empty-state-icon">
+            <Activity />
           </div>
-          <p className="text-base font-semibold text-foreground mb-1">
+          <p className="empty-state-title">
             {tab === 'live' ? 'No live games right now' : 'No games match your filters'}
           </p>
-          <p className="text-sm text-muted-foreground">
+          <p className="empty-state-desc">
             {tab === 'live' ? 'Check back when games tip off!' : 'Try adjusting your round or status filters.'}
           </p>
         </div>
@@ -227,11 +225,10 @@ export default function GameCenterPage() {
             <div key={group.round}>
               {/* Round section header */}
               {roundFilter === null && (
-                <div className="flex items-center gap-2 mb-3">
+                <div className="section-divider">
                   <span className="section-header mb-0">
                     {group.round === 0 ? 'First Four' : ROUND_NAMES[group.round - 1]}
                   </span>
-                  <div className="flex-1 h-px bg-border/30" />
                   <span className="text-[10px] text-muted-foreground tabular-nums">{group.games.length} games</span>
                 </div>
               )}

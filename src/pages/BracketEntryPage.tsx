@@ -183,9 +183,9 @@ export default function BracketEntryPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm text-muted-foreground">Loading bracket…</p>
+      <div className="loading-spinner">
+        <div className="loading-spinner-ring" />
+        <p className="loading-spinner-text">Loading bracket…</p>
       </div>
     );
   }
@@ -305,9 +305,8 @@ export default function BracketEntryPage() {
             const regionGames = roundGames.filter(g => g.region === region);
             return (
               <div key={region}>
-                <div className="flex items-center gap-2 mb-3">
+                <div className="section-divider">
                   <h3 className="section-header mb-0">{region}</h3>
-                  <div className="flex-1 h-px bg-border/30" />
                 </div>
                 <div className="space-y-2.5">
                   {regionGames.map((game, idx) => {
