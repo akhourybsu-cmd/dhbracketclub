@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Plus, Users, ArrowRight, Trophy, BarChart3, Shield } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Plus, Users, ArrowRight, Trophy, BarChart3, Shield, Download, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES } from '@/lib/bracketUtils';
 import { cn } from '@/lib/utils';
+import { usePwaInstall } from '@/hooks/usePwaInstall';
 
 export default function DashboardPage() {
   const { user } = useAuth();
