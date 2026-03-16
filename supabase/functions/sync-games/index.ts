@@ -70,6 +70,7 @@ interface ProviderConfig {
   baseUrl: string | null;
   sport: string;
   tournamentScope: string;
+  seasonYear: number;
 }
 
 interface ProviderResult {
@@ -183,8 +184,16 @@ function extractRoundAndRegion(event: any): { roundNumber: number; roundName: st
   return { ...round, region: regionText || "Unknown" };
 }
 
+// Simple per-request cache to avoid fetching ESPN 3x during a full sync
+const espnCache = new Map<number, any[]>();
+
 /** Fetch all March Madness events from ESPN for a date range */
 async function fetchEspnScoreboard(seasonYear: number, dates?: string): Promise<any[]> {
+  if (!dates && espnCache.has(seasonYear)) {
+    console.log(`[espn] Using cached scoreboard for ${seasonYear} (${espnCache.get(seasonYear)!.length} events)`);
+    return espnCache.get(seasonYear)!;
+  }
+
   const allEvents: any[] = [];
 
   // March Madness typically spans ~3 weeks in March-April
@@ -212,11 +221,16 @@ async function fetchEspnScoreboard(seasonYear: number, dates?: string): Promise<
 
   // Deduplicate by event ID
   const seen = new Set<string>();
-  return allEvents.filter(e => {
+  const deduped = allEvents.filter(e => {
     if (seen.has(e.id)) return false;
     seen.add(e.id);
     return true;
   });
+
+  // Cache for subsequent calls in this request
+  if (!dates) espnCache.set(seasonYear, deduped);
+
+  return deduped;
 }
 
 /** Generate date strings covering the typical March Madness window */
@@ -346,15 +360,15 @@ const espnProvider: SportDataProvider = {
   name: "espn",
 
   async fetchTeams(tournamentId: string, config: ProviderConfig): Promise<NormalizedTeam[]> {
-    // Get season year from tournament
-    // We'll pass it via config or derive from current year
-    const year = new Date().getFullYear();
+    const year = config.seasonYear;
+    console.log(`[espn] fetchTeams for season ${year}`);
     const events = await fetchEspnScoreboard(year);
     return extractTeamsFromEvents(events);
   },
 
   async fetchGames(tournamentId: string, config: ProviderConfig): Promise<NormalizedGame[]> {
-    const year = new Date().getFullYear();
+    const year = config.seasonYear;
+    console.log(`[espn] fetchGames for season ${year}`);
     const events = await fetchEspnScoreboard(year);
 
     const games: NormalizedGame[] = [];
@@ -367,8 +381,7 @@ const espnProvider: SportDataProvider = {
   },
 
   async fetchResults(tournamentId: string, config: ProviderConfig): Promise<NormalizedGame[]> {
-    // Same as fetchGames — ESPN scoreboard includes scores
-    const year = new Date().getFullYear();
+    const year = config.seasonYear;
     const events = await fetchEspnScoreboard(year);
 
     const games: NormalizedGame[] = [];
@@ -381,7 +394,7 @@ const espnProvider: SportDataProvider = {
   },
 
   async fetchTournamentMeta(tournamentId: string, config: ProviderConfig) {
-    const year = new Date().getFullYear();
+    const year = config.seasonYear;
     const events = await fetchEspnScoreboard(year);
     const total = events.length;
     const finals = events.filter(e => {
@@ -1035,7 +1048,7 @@ async function recalculateStandingsForTournament(
 //  ORCHESTRATOR
 // ═══════════════════════════════════════════════════════════════════
 
-async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string) {
+async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string, seasonYear: number) {
   const providerName = req.providerName || "stub";
 
   // Load provider config
@@ -1064,8 +1077,9 @@ async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string)
         baseUrl: providerConfig.base_url,
         sport: providerConfig.sport,
         tournamentScope: providerConfig.tournament_scope,
+        seasonYear,
       }
-    : { providerName, enabled: true, baseUrl: null, sport: "basketball", tournamentScope: "mens" };
+    : { providerName, enabled: true, baseUrl: null, sport: "basketball", tournamentScope: "mens", seasonYear };
 
   // Create sync run
   const { data: syncRun, error: runErr } = await db
@@ -1200,17 +1214,17 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Server misconfigured", 500);
     }
 
-    // Verify caller
+    // Verify caller using getUser (standard, widely supported)
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claims, error: claimsErr } = await userClient.auth.getClaims(token);
-    if (claimsErr || !claims?.claims) {
+    const { data: { user: callerUser }, error: userErr } = await userClient.auth.getUser();
+    if (userErr || !callerUser) {
+      console.error("[sync-games] Auth failed:", userErr?.message);
       return errorResponse("Invalid token", 401);
     }
-    const userId = claims.claims.sub as string;
+    const userId = callerUser.id;
 
     // ─── Input Validation ────────────────────────────────────────────
     let body: SyncRequest;
@@ -1233,7 +1247,7 @@ Deno.serve(async (req: Request) => {
     // Verify tournament exists
     const { data: tournament } = await db
       .from("tournaments")
-      .select("id")
+      .select("id, season_year")
       .eq("id", body.tournamentId)
       .maybeSingle();
     if (!tournament) {
@@ -1256,9 +1270,9 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Forbidden: you must be a pool admin for this tournament", 403);
     }
 
-    console.log(`[sync-games] action=${body.action} tournament=${body.tournamentId} user=${userId} provider=${body.providerName || "stub"}`);
+    console.log(`[sync-games] action=${body.action} tournament=${body.tournamentId} season=${tournament.season_year} user=${userId} provider=${body.providerName || "stub"}`);
 
-    const result = await orchestrate(db, body, userId);
+    const result = await orchestrate(db, body, userId, tournament.season_year);
 
     return jsonResponse({ success: true, ...result });
   } catch (err) {
