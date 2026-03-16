@@ -1,9 +1,9 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
-import { Activity, Clock, CheckCircle2, Zap, Filter, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Activity, Clock, CheckCircle2, Zap, AlertTriangle, Calendar, Radio } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameUpdates } from '@/hooks/useRealtimeSubscription';
 import { Game, Team, ROUND_NAMES, ROUND_SHORT, FIRST_FOUR_ROUND_SHORT } from '@/lib/bracketUtils';
@@ -19,8 +19,8 @@ export default function GameCenterPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<TabFilter>('all');
   const [roundFilter, setRoundFilter] = useState<number | null>(null);
-  const [myPicks, setMyPicks] = useState<Map<string, string>>(new Map()); // game_id → picked_team_id
-  const [pickCounts, setPickCounts] = useState<Map<string, Map<string, number>>>(new Map()); // game_id → team_id → count
+  const [myPicks, setMyPicks] = useState<Map<string, string>>(new Map());
+  const [pickCounts, setPickCounts] = useState<Map<string, Map<string, number>>>(new Map());
 
   const fetchData = useCallback(async () => {
     if (!poolId) return;
@@ -40,7 +40,6 @@ export default function GameCenterPage() {
     }
     if (gameData) setGames(gameData as Game[]);
 
-    // Load user's picks
     if (user) {
       const { data: bracket } = await supabase.from('brackets').select('id').eq('pool_id', poolId).eq('user_id', user.id).maybeSingle();
       if (bracket) {
@@ -53,7 +52,6 @@ export default function GameCenterPage() {
       }
     }
 
-    // Load aggregate pick counts for the pool
     const { data: allBrackets } = await supabase.from('brackets').select('id').eq('pool_id', poolId);
     if (allBrackets && allBrackets.length > 0) {
       const bracketIds = allBrackets.map(b => b.id);
@@ -74,7 +72,6 @@ export default function GameCenterPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Realtime
   const { status: rtStatus, lastUpdated } = useGameUpdates(tournamentId, fetchData);
 
   const filteredGames = useMemo(() => {
@@ -93,67 +90,95 @@ export default function GameCenterPage() {
     total: games.length,
   }), [games]);
 
-  const tabs: { key: TabFilter; label: string; count: number }[] = [
-    { key: 'all', label: 'All', count: stats.total },
-    { key: 'live', label: 'Live', count: stats.live },
-    { key: 'upcoming', label: 'Upcoming', count: stats.upcoming },
-    { key: 'final', label: 'Final', count: stats.final },
+  const tabs: { key: TabFilter; label: string; count: number; icon?: React.ReactNode }[] = [
+    { key: 'all', label: 'All Games', count: stats.total },
+    { key: 'live', label: 'Live', count: stats.live, icon: <Radio className="w-3 h-3" /> },
+    { key: 'upcoming', label: 'Upcoming', count: stats.upcoming, icon: <Clock className="w-3 h-3" /> },
+    { key: 'final', label: 'Final', count: stats.final, icon: <CheckCircle2 className="w-3 h-3" /> },
   ];
 
+  // Group filtered games by round for section headers
+  const groupedGames = useMemo(() => {
+    if (roundFilter !== null) return [{ round: roundFilter, games: filteredGames }];
+    const groups: { round: number; games: Game[] }[] = [];
+    const roundMap = new Map<number, Game[]>();
+    filteredGames.forEach(g => {
+      if (!roundMap.has(g.round_number)) roundMap.set(g.round_number, []);
+      roundMap.get(g.round_number)!.push(g);
+    });
+    roundMap.forEach((games, round) => groups.push({ round, games }));
+    groups.sort((a, b) => a.round - b.round);
+    return groups;
+  }, [filteredGames, roundFilter]);
+
   if (loading) {
-    return <div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-muted-foreground">Loading games…</p>
+      </div>
+    );
   }
 
   return (
-    <div>
+    <div className="max-w-2xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Activity className="w-5 h-5 text-primary" />
-          <h1 className="text-xl font-bold">Game Center</h1>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
+            <Activity className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-extrabold tracking-tight">Game Center</h1>
+            <p className="text-sm text-muted-foreground">Live scores & results</p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col items-end gap-1">
           {rtStatus === 'connected' && (
-            <span className="flex items-center gap-1 text-[10px] text-success">
-              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-              Live
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 text-success text-[10px] font-semibold">
+              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" /> Live
             </span>
           )}
           {lastUpdated && (
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-[10px] text-muted-foreground tabular-nums">
               {lastUpdated.toLocaleTimeString()}
             </span>
           )}
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1">
+      {/* Status tabs */}
+      <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1 scrollbar-none">
         {tabs.map(t => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             className={cn(
-              "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1.5",
-              tab === t.key ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
+              "px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5",
+              tab === t.key
+                ? "bg-primary text-primary-foreground shadow-md"
+                : "bg-card text-muted-foreground hover:text-foreground border border-border/50"
             )}
           >
-            {t.key === 'live' && <Zap className="w-3 h-3" />}
+            {t.icon}
             {t.label}
-            <span className={cn("text-[10px] tabular-nums", tab === t.key ? "text-primary-foreground/70" : "text-muted-foreground")}>
+            <span className={cn(
+              "text-[10px] tabular-nums px-1.5 py-0.5 rounded-full",
+              tab === t.key ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
+            )}>
               {t.count}
             </span>
           </button>
         ))}
       </div>
 
-      {/* Round filter */}
-      <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
+      {/* Round filter pills */}
+      <div className="flex gap-1 mb-5 overflow-x-auto pb-1 scrollbar-none">
         <button
           onClick={() => setRoundFilter(null)}
           className={cn(
-            "px-2.5 py-1 rounded-md text-[11px] font-medium whitespace-nowrap transition-colors",
-            roundFilter === null ? "bg-card text-foreground border border-border" : "text-muted-foreground hover:text-foreground"
+            "px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors",
+            roundFilter === null ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
           )}
         >
           All Rounds
@@ -162,8 +187,8 @@ export default function GameCenterPage() {
           <button
             onClick={() => setRoundFilter(0)}
             className={cn(
-              "px-2.5 py-1 rounded-md text-[11px] font-medium whitespace-nowrap transition-colors",
-              roundFilter === 0 ? "bg-card text-foreground border border-border" : "text-muted-foreground hover:text-foreground"
+              "px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors",
+              roundFilter === 0 ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
             )}
           >
             {FIRST_FOUR_ROUND_SHORT}
@@ -174,8 +199,8 @@ export default function GameCenterPage() {
             key={i}
             onClick={() => setRoundFilter(i + 1)}
             className={cn(
-              "px-2.5 py-1 rounded-md text-[11px] font-medium whitespace-nowrap transition-colors",
-              roundFilter === i + 1 ? "bg-card text-foreground border border-border" : "text-muted-foreground hover:text-foreground"
+              "px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors",
+              roundFilter === i + 1 ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
             )}
           >
             {name}
@@ -185,31 +210,55 @@ export default function GameCenterPage() {
 
       {/* Games */}
       {filteredGames.length === 0 ? (
-        <div className="glass-card p-8 text-center">
-          <Activity className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+        <div className="glass-card p-12 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+            <Activity className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <p className="text-base font-semibold text-foreground mb-1">
+            {tab === 'live' ? 'No live games right now' : 'No games match your filters'}
+          </p>
           <p className="text-sm text-muted-foreground">
-            {tab === 'live' ? 'No live games right now.' : 'No games match your filters.'}
+            {tab === 'live' ? 'Check back when games tip off!' : 'Try adjusting your round or status filters.'}
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
-          <AnimatePresence mode="popLayout">
-            {filteredGames.map((game, idx) => (
-              <GameCard
-                key={game.id}
-                game={game}
-                teams={teams}
-                myPick={myPicks.get(game.id)}
-                pickCounts={pickCounts.get(game.id)}
-                index={idx}
-              />
-            ))}
-          </AnimatePresence>
+        <div className="space-y-6">
+          {groupedGames.map(group => (
+            <div key={group.round}>
+              {/* Round section header */}
+              {roundFilter === null && (
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="section-header mb-0">
+                    {group.round === 0 ? 'First Four' : ROUND_NAMES[group.round - 1]}
+                  </span>
+                  <div className="flex-1 h-px bg-border/30" />
+                  <span className="text-[10px] text-muted-foreground tabular-nums">{group.games.length} games</span>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <AnimatePresence mode="popLayout">
+                  {group.games.map((game, idx) => (
+                    <GameCard
+                      key={game.id}
+                      game={game}
+                      teams={teams}
+                      myPick={myPicks.get(game.id)}
+                      pickCounts={pickCounts.get(game.id)}
+                      index={idx}
+                    />
+                  ))}
+                </AnimatePresence>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
   );
 }
+
+/* ─── Game Card ─── */
 
 function GameCard({
   game,
@@ -229,7 +278,6 @@ function GameCard({
   const isLive = game.status === 'in_progress';
   const isFinal = game.status === 'final';
 
-  // Check for upsets (lower seed wins)
   const isUpset = isFinal && team1 && team2 && game.winner_team_id &&
     ((game.winner_team_id === team1.id && team1.seed > team2.seed) ||
      (game.winner_team_id === team2.id && team2.seed > team1.seed));
@@ -240,77 +288,93 @@ function GameCard({
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
+      exit={{ opacity: 0, scale: 0.97 }}
       transition={{ delay: Math.min(index * 0.02, 0.3) }}
       className={cn(
-        "matchup-card relative overflow-hidden",
-        isLive && "ring-1 ring-primary/40"
+        "glass-card overflow-hidden transition-all",
+        isLive && "ring-1 ring-live/40 shadow-[0_0_16px_hsl(var(--live)/0.1)]"
       )}
     >
-      {/* Status bar */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-border/30">
+      {/* Status header */}
+      <div className="flex items-center justify-between px-3.5 py-2 bg-muted/20 border-b border-border/30">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-muted-foreground font-medium">
-            {game.round_number === 0 ? FIRST_FOUR_ROUND_SHORT : ROUND_SHORT[game.round_number - 1]} · {game.region}
+          <span className="text-[10px] text-muted-foreground font-medium tracking-wide">
+            {game.round_number === 0 ? FIRST_FOUR_ROUND_SHORT : ROUND_SHORT[game.round_number - 1]}
           </span>
+          <span className="w-1 h-1 rounded-full bg-border" />
+          <span className="text-[10px] text-muted-foreground">{game.region}</span>
           {isUpset && (
-            <span className="text-[9px] font-bold text-warning bg-warning/15 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-warning bg-warning/15 px-1.5 py-0.5 rounded-full">
               <AlertTriangle className="w-2.5 h-2.5" /> UPSET
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           {isLive && (
-            <span className="flex items-center gap-1 text-[10px] font-bold text-destructive">
-              <span className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-live">
+              <span className="w-1.5 h-1.5 rounded-full bg-live animate-pulse" />
               {(game as any).live_period ? `${(game as any).live_period} · ${(game as any).live_clock}` : 'LIVE'}
             </span>
           )}
-          {isFinal && <span className="text-[10px] font-semibold text-muted-foreground">FINAL</span>}
-          {!isLive && !isFinal && <span className="text-[10px] text-muted-foreground">{game.scheduled_at ? new Date(game.scheduled_at).toLocaleDateString() : 'TBD'}</span>}
+          {isFinal && (
+            <span className="text-[10px] font-bold text-muted-foreground tracking-wider">FINAL</span>
+          )}
+          {!isLive && !isFinal && (
+            <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+              <Calendar className="w-3 h-3" />
+              {game.scheduled_at ? new Date(game.scheduled_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'TBD'}
+            </span>
+          )}
           {myPick && (
             <span className={cn(
               "text-[9px] font-bold px-1.5 py-0.5 rounded-full",
               myPickCorrect && "bg-success/15 text-success",
               myPickWrong && "bg-destructive/15 text-destructive",
-              !isFinal && "bg-primary/15 text-primary"
+              !isFinal && "bg-primary/10 text-primary"
             )}>
-              {myPickCorrect ? '✓' : myPickWrong ? '✗' : '★'} My Pick
+              {myPickCorrect ? '✓ Correct' : myPickWrong ? '✗ Wrong' : '★ Picked'}
             </span>
           )}
         </div>
       </div>
 
-      {/* Teams */}
-      <TeamRow
-        team={team1}
-        score={game.team1_score}
-        isWinner={game.winner_team_id === team1?.id}
-        isMyPick={myPick === team1?.id}
-        isFinal={isFinal}
-        pickCount={team1 ? pickCounts?.get(team1.id) : undefined}
-      />
-      <div className="h-px bg-border/30 mx-2" />
-      <TeamRow
-        team={team2}
-        score={game.team2_score}
-        isWinner={game.winner_team_id === team2?.id}
-        isMyPick={myPick === team2?.id}
-        isFinal={isFinal}
-        pickCount={team2 ? pickCounts?.get(team2.id) : undefined}
-      />
+      {/* Team rows */}
+      <div>
+        <ScoreRow
+          team={team1}
+          score={game.team1_score}
+          isWinner={game.winner_team_id === team1?.id}
+          isMyPick={myPick === team1?.id}
+          isFinal={isFinal}
+          isLive={isLive}
+          pickCount={team1 ? pickCounts?.get(team1.id) : undefined}
+        />
+        <div className="h-px bg-border/20 mx-3" />
+        <ScoreRow
+          team={team2}
+          score={game.team2_score}
+          isWinner={game.winner_team_id === team2?.id}
+          isMyPick={myPick === team2?.id}
+          isFinal={isFinal}
+          isLive={isLive}
+          pickCount={team2 ? pickCounts?.get(team2.id) : undefined}
+        />
+      </div>
     </motion.div>
   );
 }
 
-function TeamRow({
+/* ─── Score Row ─── */
+
+function ScoreRow({
   team,
   score,
   isWinner,
   isMyPick,
   isFinal,
+  isLive,
   pickCount,
 }: {
   team: Team | null;
@@ -318,47 +382,63 @@ function TeamRow({
   isWinner: boolean;
   isMyPick: boolean;
   isFinal: boolean;
+  isLive: boolean;
   pickCount?: number;
 }) {
   if (!team) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2.5">
-        <span className="text-xs text-muted-foreground italic ml-5">TBD</span>
+      <div className="flex items-center gap-2 px-3.5 py-3">
+        <span className="w-6" />
+        <span className="text-xs text-muted-foreground/50 italic">TBD</span>
       </div>
     );
   }
 
   return (
     <div className={cn(
-      "flex items-center gap-2 px-3 py-2.5 transition-colors",
+      "flex items-center gap-2.5 px-3.5 py-3 transition-all",
       isWinner && "bg-success/5",
-      !isWinner && isFinal && "opacity-50"
+      !isWinner && isFinal && "opacity-45"
     )}>
-      <span className="text-[11px] font-mono font-bold text-muted-foreground w-5 tabular-nums text-center">
+      {/* Seed */}
+      <span className="text-[11px] font-mono font-bold text-muted-foreground w-6 tabular-nums text-center flex-shrink-0">
         {team.seed}
       </span>
+
+      {/* Team name */}
       <span className={cn(
-        "text-sm font-medium flex-1 truncate",
-        isWinner && "font-bold",
-        isMyPick && !isFinal && "text-primary"
+        "text-sm flex-1 truncate",
+        isWinner ? "font-bold text-foreground" : "font-medium",
+        isMyPick && !isFinal && "text-primary",
       )}>
         {team.short_name}
       </span>
+
+      {/* My pick star */}
       {isMyPick && (
-        <span className="text-[9px] text-primary font-bold">★</span>
+        <span className="text-[10px] text-primary">★</span>
       )}
+
+      {/* Pick counts */}
       {pickCount !== undefined && pickCount > 0 && (
-        <span className="text-[10px] text-muted-foreground tabular-nums">{pickCount} picks</span>
+        <span className="text-[10px] text-muted-foreground tabular-nums bg-muted/50 px-1.5 py-0.5 rounded">
+          {pickCount}
+        </span>
       )}
+
+      {/* Score */}
       {score !== null && (
         <span className={cn(
-          "text-sm font-mono tabular-nums font-bold min-w-[1.5rem] text-right",
+          "text-base font-mono tabular-nums font-extrabold min-w-[2rem] text-right",
+          isLive && "text-foreground",
           isWinner ? "text-foreground" : "text-muted-foreground"
         )}>
           {score}
         </span>
       )}
-      {isWinner && <CheckCircle2 className="w-3.5 h-3.5 text-success flex-shrink-0" />}
+
+      {/* Winner check */}
+      {isWinner && <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />}
     </div>
   );
 }
