@@ -156,15 +156,142 @@ export type Database = {
           },
         ]
       }
+      game_external_mappings: {
+        Row: {
+          created_at: string
+          external_game_id: string
+          external_region: string | null
+          external_round_name: string | null
+          game_id: string
+          id: string
+          provider_name: string
+          tournament_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          external_game_id: string
+          external_region?: string | null
+          external_round_name?: string | null
+          game_id: string
+          id?: string
+          provider_name: string
+          tournament_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          external_game_id?: string
+          external_region?: string | null
+          external_round_name?: string | null
+          game_id?: string
+          id?: string
+          provider_name?: string
+          tournament_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_external_mappings_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_external_mappings_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_state_history: {
+        Row: {
+          changed_at: string
+          changed_by_source: string
+          game_id: string
+          id: string
+          new_score: Json | null
+          new_status: string | null
+          new_winner_team_id: string | null
+          previous_score: Json | null
+          previous_status: string | null
+          previous_winner_team_id: string | null
+          sync_run_id: string | null
+        }
+        Insert: {
+          changed_at?: string
+          changed_by_source: string
+          game_id: string
+          id?: string
+          new_score?: Json | null
+          new_status?: string | null
+          new_winner_team_id?: string | null
+          previous_score?: Json | null
+          previous_status?: string | null
+          previous_winner_team_id?: string | null
+          sync_run_id?: string | null
+        }
+        Update: {
+          changed_at?: string
+          changed_by_source?: string
+          game_id?: string
+          id?: string
+          new_score?: Json | null
+          new_status?: string | null
+          new_winner_team_id?: string | null
+          previous_score?: Json | null
+          previous_status?: string | null
+          previous_winner_team_id?: string | null
+          sync_run_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_state_history_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_state_history_new_winner_team_id_fkey"
+            columns: ["new_winner_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_state_history_previous_winner_team_id_fkey"
+            columns: ["previous_winner_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_state_history_sync_run_id_fkey"
+            columns: ["sync_run_id"]
+            isOneToOne: false
+            referencedRelation: "sync_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       games: {
         Row: {
           created_at: string
           game_slot: number
           id: string
+          is_result_final: boolean
+          live_clock: string | null
+          live_period: string | null
           region: string
           round_name: string
           round_number: number
           scheduled_at: string | null
+          source_last_updated_at: string | null
+          source_payload: Json | null
           status: string | null
           team1_id: string | null
           team1_score: number | null
@@ -178,10 +305,15 @@ export type Database = {
           created_at?: string
           game_slot: number
           id?: string
+          is_result_final?: boolean
+          live_clock?: string | null
+          live_period?: string | null
           region: string
           round_name: string
           round_number: number
           scheduled_at?: string | null
+          source_last_updated_at?: string | null
+          source_payload?: Json | null
           status?: string | null
           team1_id?: string | null
           team1_score?: number | null
@@ -195,10 +327,15 @@ export type Database = {
           created_at?: string
           game_slot?: number
           id?: string
+          is_result_final?: boolean
+          live_clock?: string | null
+          live_period?: string | null
           region?: string
           round_name?: string
           round_number?: number
           scheduled_at?: string | null
+          source_last_updated_at?: string | null
+          source_payload?: Json | null
           status?: string | null
           team1_id?: string | null
           team1_score?: number | null
@@ -350,6 +487,39 @@ export type Database = {
         }
         Relationships: []
       }
+      provider_configs: {
+        Row: {
+          base_url: string | null
+          created_at: string
+          enabled: boolean
+          id: string
+          provider_name: string
+          sport: string
+          tournament_scope: string
+          updated_at: string
+        }
+        Insert: {
+          base_url?: string | null
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          provider_name: string
+          sport?: string
+          tournament_scope?: string
+          updated_at?: string
+        }
+        Update: {
+          base_url?: string | null
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          provider_name?: string
+          sport?: string
+          tournament_scope?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       scoring_rules: {
         Row: {
           id: string
@@ -427,6 +597,145 @@ export type Database = {
           },
         ]
       }
+      standings_snapshots: {
+        Row: {
+          correct_picks: number
+          id: string
+          pool_id: string
+          possible_points_remaining: number
+          rank: number | null
+          snapshot_at: string
+          source: string
+          total_points: number
+          user_id: string
+        }
+        Insert: {
+          correct_picks?: number
+          id?: string
+          pool_id: string
+          possible_points_remaining?: number
+          rank?: number | null
+          snapshot_at?: string
+          source?: string
+          total_points?: number
+          user_id: string
+        }
+        Update: {
+          correct_picks?: number
+          id?: string
+          pool_id?: string
+          possible_points_remaining?: number
+          rank?: number | null
+          snapshot_at?: string
+          source?: string
+          total_points?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "standings_snapshots_pool_id_fkey"
+            columns: ["pool_id"]
+            isOneToOne: false
+            referencedRelation: "pools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "standings_snapshots_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sync_events: {
+        Row: {
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string
+          event_type: string
+          id: string
+          status: string
+          sync_run_id: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type: string
+          event_type: string
+          id?: string
+          status?: string
+          sync_run_id: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string
+          event_type?: string
+          id?: string
+          status?: string
+          sync_run_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_events_sync_run_id_fkey"
+            columns: ["sync_run_id"]
+            isOneToOne: false
+            referencedRelation: "sync_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sync_runs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          initiated_by_user_id: string | null
+          provider_name: string
+          raw_summary: Json | null
+          started_at: string
+          status: string
+          sync_type: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          initiated_by_user_id?: string | null
+          provider_name: string
+          raw_summary?: Json | null
+          started_at?: string
+          status?: string
+          sync_type?: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          initiated_by_user_id?: string | null
+          provider_name?: string
+          raw_summary?: Json | null
+          started_at?: string
+          status?: string
+          sync_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_runs_initiated_by_user_id_fkey"
+            columns: ["initiated_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teams: {
         Row: {
           created_at: string
@@ -468,33 +777,42 @@ export type Database = {
       tournaments: {
         Row: {
           created_at: string
+          external_season_id: string | null
           gender_division: string | null
           id: string
+          last_synced_at: string | null
           lock_time: string
           name: string
           season_year: number
           sport: string | null
           status: string | null
+          sync_status: string | null
         }
         Insert: {
           created_at?: string
+          external_season_id?: string | null
           gender_division?: string | null
           id?: string
+          last_synced_at?: string | null
           lock_time: string
           name: string
           season_year: number
           sport?: string | null
           status?: string | null
+          sync_status?: string | null
         }
         Update: {
           created_at?: string
+          external_season_id?: string | null
           gender_division?: string | null
           id?: string
+          last_synced_at?: string | null
           lock_time?: string
           name?: string
           season_year?: number
           sport?: string | null
           status?: string | null
+          sync_status?: string | null
         }
         Relationships: []
       }
