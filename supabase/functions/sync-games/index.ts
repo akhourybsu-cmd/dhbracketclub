@@ -110,26 +110,29 @@ const ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports/basketball/mens
 
 // March Madness region mapping from ESPN notes/format
 const ESPN_REGION_MAP: Record<string, string> = {
-  "south": "South", "east": "East", "west": "West", "midwest": "Midwest",
-  "south region": "South", "east region": "East", "west region": "West", "midwest region": "Midwest",
+  "midwest region": "Midwest",
+  "west region": "West",
+  "south region": "South",
+  "east region": "East",
+  "midwest regional": "Midwest",
+  "west regional": "West",
+  "south regional": "South",
+  "east regional": "East",
+  "midwest": "Midwest",
+  "west": "West",
+  "south": "South",
+  "east": "East",
 };
 
-const ESPN_ROUND_MAP: Record<string, { roundNumber: number; roundName: string }> = {
-  "round of 64": { roundNumber: 1, roundName: "Round of 64" },
-  "first round": { roundNumber: 1, roundName: "Round of 64" },
-  "1st round": { roundNumber: 1, roundName: "Round of 64" },
-  "round of 32": { roundNumber: 2, roundName: "Round of 32" },
-  "second round": { roundNumber: 2, roundName: "Round of 32" },
-  "2nd round": { roundNumber: 2, roundName: "Round of 32" },
-  "sweet 16": { roundNumber: 3, roundName: "Sweet 16" },
-  "sweet sixteen": { roundNumber: 3, roundName: "Sweet 16" },
-  "elite 8": { roundNumber: 4, roundName: "Elite 8" },
-  "elite eight": { roundNumber: 4, roundName: "Elite 8" },
-  "final four": { roundNumber: 5, roundName: "Final Four" },
-  "national semifinal": { roundNumber: 5, roundName: "Final Four" },
-  "national championship": { roundNumber: 6, roundName: "Championship" },
-  "championship": { roundNumber: 6, roundName: "Championship" },
-};
+const ESPN_ROUND_PATTERNS: Array<{ pattern: RegExp; roundNumber: number; roundName: string }> = [
+  { pattern: /first\s*four|play[-\s]*in/i, roundNumber: 0, roundName: "First Four" },
+  { pattern: /round\s*of\s*64|first\s*round|1st\s*round/i, roundNumber: 1, roundName: "Round of 64" },
+  { pattern: /round\s*of\s*32|second\s*round|2nd\s*round/i, roundNumber: 2, roundName: "Round of 32" },
+  { pattern: /sweet\s*16|sweet\s*sixteen|regional\s*semi\s*final/i, roundNumber: 3, roundName: "Sweet 16" },
+  { pattern: /elite\s*8|elite\s*eight|regional\s*final/i, roundNumber: 4, roundName: "Elite 8" },
+  { pattern: /final\s*four|national\s*semi\s*final/i, roundNumber: 5, roundName: "Final Four" },
+  { pattern: /national\s*championship|title\s*game/i, roundNumber: 6, roundName: "Championship" },
+];
 
 function parseEspnStatus(statusName: string): "scheduled" | "in_progress" | "final" {
   if (!statusName) return "scheduled";
@@ -140,48 +143,41 @@ function parseEspnStatus(statusName: string): "scheduled" | "in_progress" | "fin
 }
 
 function extractRoundAndRegion(event: any): { roundNumber: number; roundName: string; region: string } {
-  // ESPN puts round/region info in event.competitions[0].notes or event.season.slug
-  const notes: any[] = event.competitions?.[0]?.notes || [];
-  let roundText = "";
+  const comp = event.competitions?.[0];
+  const notes: any[] = comp?.notes || [];
+
+  const textBlobs: string[] = [
+    event.name || "",
+    event.shortName || "",
+    comp?.name || "",
+    comp?.type?.text || "",
+    ...notes.map((n: any) => n?.headline || ""),
+    ...notes.map((n: any) => n?.detail || ""),
+  ].filter(Boolean);
+
+  const combinedText = textBlobs.join(" | ").toLowerCase();
+
+  const round = ESPN_ROUND_PATTERNS.find((entry) => entry.pattern.test(combinedText));
+  if (!round) {
+    return { roundNumber: -1, roundName: "Unknown Round", region: "Unknown" };
+  }
+
   let regionText = "";
-
-  for (const note of notes) {
-    const headline = (note.headline || "").toLowerCase();
-    const type = (note.type || "").toLowerCase();
-
-    // Notes often have "South Region - Sweet 16" or "Final Four"
-    if (headline) {
-      // Check for region
-      for (const [key, val] of Object.entries(ESPN_REGION_MAP)) {
-        if (headline.includes(key)) { regionText = val; break; }
-      }
-      // Check for round
-      for (const [key, val] of Object.entries(ESPN_ROUND_MAP)) {
-        if (headline.includes(key)) { roundText = key; break; }
+  for (const blob of textBlobs) {
+    const lc = blob.toLowerCase();
+    for (const [key, value] of Object.entries(ESPN_REGION_MAP)) {
+      if (lc.includes(key)) {
+        regionText = value;
+        break;
       }
     }
+    if (regionText) break;
   }
 
-  // Fallback: check event name
-  if (!roundText || !regionText) {
-    const eventName = (event.name || event.shortName || "").toLowerCase();
-    if (!roundText) {
-      for (const [key] of Object.entries(ESPN_ROUND_MAP)) {
-        if (eventName.includes(key)) { roundText = key; break; }
-      }
-    }
-    if (!regionText) {
-      for (const [key, val] of Object.entries(ESPN_REGION_MAP)) {
-        if (eventName.includes(key)) { regionText = val; break; }
-      }
-    }
-  }
+  if (round.roundNumber === 5) regionText = "Final Four";
+  if (round.roundNumber === 6) regionText = "Championship";
 
-  const round = ESPN_ROUND_MAP[roundText] || { roundNumber: 1, roundName: "Round of 64" };
-  // Final Four and Championship don't have regions
-  if (round.roundNumber >= 5) regionText = "Final Four";
-
-  return { ...round, region: regionText || "Unknown" };
+  return { roundNumber: round.roundNumber, roundName: round.roundName, region: regionText || "Unknown" };
 }
 
 // Simple per-request cache to avoid fetching ESPN 3x during a full sync
@@ -255,6 +251,7 @@ function parseEspnEvent(event: any): { team: NormalizedTeam; game: NormalizedGam
   if (!comp || !comp.competitors || comp.competitors.length < 2) return null;
 
   const { roundNumber, roundName, region } = extractRoundAndRegion(event);
+  if (roundNumber < 0) return null;
 
   const statusType = comp.status?.type?.name || "";
   const status = parseEspnStatus(statusType);
@@ -303,29 +300,49 @@ function parseEspnEvent(event: any): { team: NormalizedTeam; game: NormalizedGam
   };
 }
 
-/** Compute game_slot within (round, region) based on seed ordering */
+/** Compute game_slot aligned to internal schema (global per round, not per region). */
 function assignGameSlots(games: NormalizedGame[]): NormalizedGame[] {
-  // Group by round+region, then assign sequential slots
-  const groups = new Map<string, NormalizedGame[]>();
-  for (const g of games) {
-    const key = `${g.roundNumber}:${g.region}`;
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(g);
+  const byRound = new Map<number, NormalizedGame[]>();
+  for (const game of games) {
+    if (!byRound.has(game.roundNumber)) byRound.set(game.roundNumber, []);
+    byRound.get(game.roundNumber)!.push(game);
   }
 
-  const result: NormalizedGame[] = [];
-  for (const [, groupGames] of groups) {
-    // Sort by scheduled time to maintain bracket order
-    groupGames.sort((a, b) => {
-      const ta = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;
-      const tb = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
-      return ta - tb;
+  const regionOrderByRound: Record<number, string[]> = {
+    0: ["Midwest", "West", "South", "East"],
+    1: ["East", "West", "South", "Midwest"],
+    2: ["East", "West", "South", "Midwest"],
+    3: ["East", "West", "South", "Midwest"],
+    4: ["East", "West", "South", "Midwest"],
+    5: ["Final Four"],
+    6: ["Championship"],
+  };
+
+  const assigned: NormalizedGame[] = [];
+
+  for (const [roundNumber, roundGames] of byRound.entries()) {
+    const regionOrder = regionOrderByRound[roundNumber] || [];
+
+    roundGames.sort((a, b) => {
+      const regionA = regionOrder.indexOf(a.region);
+      const regionB = regionOrder.indexOf(b.region);
+      const regionIdxA = regionA === -1 ? Number.MAX_SAFE_INTEGER : regionA;
+      const regionIdxB = regionB === -1 ? Number.MAX_SAFE_INTEGER : regionB;
+      if (regionIdxA !== regionIdxB) return regionIdxA - regionIdxB;
+
+      const timeA = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;
+      const timeB = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
+      if (timeA !== timeB) return timeA - timeB;
+
+      return a.externalGameId.localeCompare(b.externalGameId);
     });
-    groupGames.forEach((g, i) => {
-      result.push({ ...g, gameSlot: i + 1 });
+
+    roundGames.forEach((game, index) => {
+      assigned.push({ ...game, gameSlot: index + 1 });
     });
   }
-  return result;
+
+  return assigned;
 }
 
 /** Extract unique teams from ESPN events */
@@ -336,20 +353,42 @@ function extractTeamsFromEvents(events: any[]): NormalizedTeam[] {
     const comp = event.competitions?.[0];
     if (!comp?.competitors) continue;
 
-    const { region } = extractRoundAndRegion(event);
+    const roundInfo = extractRoundAndRegion(event);
+    if (roundInfo.roundNumber < 0) continue;
 
     for (const c of comp.competitors) {
       const id = c.team?.id;
-      if (!id || teamMap.has(id)) continue;
+      if (!id) continue;
 
-      const seed = c.curatedRank?.current || 0;
-      teamMap.set(id, {
+      const seedRaw = c.curatedRank?.current || 0;
+      const seed = seedRaw > 16 ? 0 : seedRaw; // curatedRank > 16 is an AP rank, not a seed
+
+      const incoming: NormalizedTeam = {
         externalTeamId: id,
         schoolName: c.team.displayName || c.team.name || "",
         shortName: c.team.shortDisplayName || c.team.abbreviation || c.team.name || "",
-        seed: seed > 16 ? 0 : seed, // curatedRank > 16 is an AP rank, not a seed
-        region: region || "Unknown",
-      });
+        seed,
+        region: roundInfo.region || "Unknown",
+      };
+
+      const existing = teamMap.get(id);
+      if (!existing) {
+        teamMap.set(id, incoming);
+        continue;
+      }
+
+      const shouldUpgradeRegion = existing.region === "Unknown" && incoming.region !== "Unknown";
+      const shouldUpgradeSeed = (!existing.seed || existing.seed === 0) && incoming.seed > 0;
+
+      if (shouldUpgradeRegion || shouldUpgradeSeed) {
+        teamMap.set(id, {
+          ...existing,
+          region: shouldUpgradeRegion ? incoming.region : existing.region,
+          seed: shouldUpgradeSeed ? incoming.seed : existing.seed,
+          schoolName: incoming.schoolName || existing.schoolName,
+          shortName: incoming.shortName || existing.shortName,
+        });
+      }
     }
   }
 
@@ -495,6 +534,32 @@ async function resolveGameId(
     return { gameId: slotMatch.id, matchMethod: "round_region_slot" };
   }
 
+  // 2b. Fallback when external region is unknown or differs from internal naming (e.g. championship)
+  if (ng.region === "Unknown" || ng.roundNumber === 6) {
+    const { data: roundSlotMatch } = await db
+      .from("games")
+      .select("id")
+      .eq("tournament_id", tournamentId)
+      .eq("round_number", ng.roundNumber)
+      .eq("game_slot", ng.gameSlot)
+      .maybeSingle();
+
+    if (roundSlotMatch) {
+      await db.from("game_external_mappings").upsert(
+        {
+          tournament_id: tournamentId,
+          game_id: roundSlotMatch.id,
+          provider_name: providerName,
+          external_game_id: ng.externalGameId,
+          external_round_name: ng.roundName,
+          external_region: ng.region,
+        },
+        { onConflict: "provider_name,external_game_id" }
+      );
+      return { gameId: roundSlotMatch.id, matchMethod: "round_slot" };
+    }
+  }
+
   // 3. Fallback: match by participating teams
   const t1Internal = ng.team1ExternalId ? teamLookup.get(ng.team1ExternalId) : null;
   const t2Internal = ng.team2ExternalId ? teamLookup.get(ng.team2ExternalId) : null;
@@ -545,35 +610,79 @@ async function buildTeamLookup(
 
   if (!internalTeams || internalTeams.length === 0) return lookup;
 
-  // Build normalized index of internal teams
   const internalIndex = internalTeams.map((t) => ({
     ...t,
     normalizedSchool: normalizeTeamName(t.school_name),
     normalizedShort: normalizeTeamName(t.short_name),
   }));
 
-  for (const ext of externalTeams) {
-    // Try exact seed+region match first (most reliable for March Madness)
-    const seedRegionMatch = internalIndex.find(
-      (t) => t.seed === ext.seed && t.region.toLowerCase() === ext.region.toLowerCase()
-    );
-    if (seedRegionMatch) {
-      lookup.set(ext.externalTeamId, seedRegionMatch.id);
-      continue;
-    }
+  const usedInternalIds = new Set<string>();
 
-    // Fuzzy name match
-    const normExt = normalizeTeamName(ext.schoolName);
-    const normExtShort = normalizeTeamName(ext.shortName);
-    const nameMatch = internalIndex.find(
+  const findStrictNameMatch = (ext: NormalizedTeam) => {
+    const normSchool = normalizeTeamName(ext.schoolName);
+    const normShort = normalizeTeamName(ext.shortName);
+
+    return internalIndex.find(
       (t) =>
-        t.normalizedSchool === normExt ||
-        t.normalizedShort === normExtShort ||
-        t.normalizedSchool === normExtShort ||
-        t.normalizedShort === normExt
+        !usedInternalIds.has(t.id) &&
+        (
+          t.normalizedSchool === normSchool ||
+          t.normalizedShort === normShort ||
+          t.normalizedSchool === normShort ||
+          t.normalizedShort === normSchool
+        )
     );
-    if (nameMatch) {
-      lookup.set(ext.externalTeamId, nameMatch.id);
+  };
+
+  // Pass 1: strict name matching (avoids seed/region collisions in First Four)
+  for (const ext of externalTeams) {
+    const strict = findStrictNameMatch(ext);
+    if (strict) {
+      lookup.set(ext.externalTeamId, strict.id);
+      usedInternalIds.add(strict.id);
+    }
+  }
+
+  // Pass 2: seed+region fallback for unresolved teams
+  for (const ext of externalTeams) {
+    if (lookup.has(ext.externalTeamId)) continue;
+
+    const candidates = internalIndex
+      .filter(
+        (t) =>
+          !usedInternalIds.has(t.id) &&
+          t.seed === ext.seed &&
+          t.region.toLowerCase() === ext.region.toLowerCase()
+      )
+      .sort((a, b) => a.id.localeCompare(b.id));
+
+    if (candidates.length > 0) {
+      lookup.set(ext.externalTeamId, candidates[0].id);
+      usedInternalIds.add(candidates[0].id);
+    }
+  }
+
+  // Pass 3: relaxed name containment fallback
+  for (const ext of externalTeams) {
+    if (lookup.has(ext.externalTeamId)) continue;
+
+    const normSchool = normalizeTeamName(ext.schoolName);
+    const normShort = normalizeTeamName(ext.shortName);
+
+    const relaxed = internalIndex.find(
+      (t) =>
+        !usedInternalIds.has(t.id) &&
+        (
+          t.normalizedSchool.includes(normSchool) ||
+          normSchool.includes(t.normalizedSchool) ||
+          t.normalizedShort.includes(normShort) ||
+          normShort.includes(t.normalizedShort)
+        )
+    );
+
+    if (relaxed) {
+      lookup.set(ext.externalTeamId, relaxed.id);
+      usedInternalIds.add(relaxed.id);
     }
   }
 
