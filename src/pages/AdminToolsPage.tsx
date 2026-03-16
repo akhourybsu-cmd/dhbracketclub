@@ -44,6 +44,7 @@ export default function AdminToolsPage() {
   const [syncRuns, setSyncRuns] = useState<SyncRun[]>([]);
   const [syncing, setSyncing] = useState<string | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+  const [providerName, setProviderName] = useState<string>('espn');
 
   // Simulation state
   const [simGameId, setSimGameId] = useState('');
@@ -208,7 +209,7 @@ export default function AdminToolsPage() {
       if (!session) throw new Error('Not authenticated');
 
       const res = await supabase.functions.invoke('sync-games', {
-        body: { action, tournamentId, poolId },
+        body: { action, tournamentId, poolId, providerName },
       });
 
       if (res.error) throw new Error(res.error.message);
@@ -536,7 +537,17 @@ export default function AdminToolsPage() {
         <div className="space-y-4">
           {/* Sync Actions */}
           <div className="glass-card p-4">
-            <h3 className="text-sm font-semibold mb-3">Sync Actions</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold">Sync Actions</h3>
+              <select
+                value={providerName}
+                onChange={e => setProviderName(e.target.value)}
+                className="bg-secondary text-foreground text-[11px] rounded-md px-2 py-1 border border-border"
+              >
+                <option value="espn">ESPN</option>
+                <option value="stub">Stub (test)</option>
+              </select>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               {([
                 { action: 'runFullSync', label: 'Full Sync', icon: RefreshCw, desc: 'Metadata + Games + Results + Standings' },

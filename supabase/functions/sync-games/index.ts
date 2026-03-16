@@ -94,27 +94,312 @@ interface SportDataProvider {
   ): Promise<{ name?: string; status?: string; externalSeasonId?: string }>;
 }
 
-// ─── Stub provider (scaffold — replace internals with real API) ────
+// ─── Stub provider ────────────────────────────────────────────────
 const stubProvider: SportDataProvider = {
   name: "stub",
-  async fetchTeams() {
-    // Real impl: const key = Deno.env.get("SPORTS_API_KEY");
-    //            const res = await fetch(`${config.baseUrl}/teams`, { headers: {...} });
-    return [];
+  async fetchTeams() { return []; },
+  async fetchGames() { return []; },
+  async fetchResults() { return []; },
+  async fetchTournamentMeta() { return { status: "in_progress" }; },
+};
+
+// ─── ESPN Provider ───────────────────────────────────────────────
+
+const ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball";
+
+// March Madness region mapping from ESPN notes/format
+const ESPN_REGION_MAP: Record<string, string> = {
+  "south": "South", "east": "East", "west": "West", "midwest": "Midwest",
+  "south region": "South", "east region": "East", "west region": "West", "midwest region": "Midwest",
+};
+
+const ESPN_ROUND_MAP: Record<string, { roundNumber: number; roundName: string }> = {
+  "round of 64": { roundNumber: 1, roundName: "Round of 64" },
+  "first round": { roundNumber: 1, roundName: "Round of 64" },
+  "1st round": { roundNumber: 1, roundName: "Round of 64" },
+  "round of 32": { roundNumber: 2, roundName: "Round of 32" },
+  "second round": { roundNumber: 2, roundName: "Round of 32" },
+  "2nd round": { roundNumber: 2, roundName: "Round of 32" },
+  "sweet 16": { roundNumber: 3, roundName: "Sweet 16" },
+  "sweet sixteen": { roundNumber: 3, roundName: "Sweet 16" },
+  "elite 8": { roundNumber: 4, roundName: "Elite 8" },
+  "elite eight": { roundNumber: 4, roundName: "Elite 8" },
+  "final four": { roundNumber: 5, roundName: "Final Four" },
+  "national semifinal": { roundNumber: 5, roundName: "Final Four" },
+  "national championship": { roundNumber: 6, roundName: "Championship" },
+  "championship": { roundNumber: 6, roundName: "Championship" },
+};
+
+function parseEspnStatus(statusName: string): "scheduled" | "in_progress" | "final" {
+  if (!statusName) return "scheduled";
+  const s = statusName.toUpperCase();
+  if (s.includes("FINAL") || s.includes("COMPLETE")) return "final";
+  if (s.includes("IN_PROGRESS") || s.includes("HALFTIME") || s.includes("END_PERIOD")) return "in_progress";
+  return "scheduled";
+}
+
+function extractRoundAndRegion(event: any): { roundNumber: number; roundName: string; region: string } {
+  // ESPN puts round/region info in event.competitions[0].notes or event.season.slug
+  const notes: any[] = event.competitions?.[0]?.notes || [];
+  let roundText = "";
+  let regionText = "";
+
+  for (const note of notes) {
+    const headline = (note.headline || "").toLowerCase();
+    const type = (note.type || "").toLowerCase();
+
+    // Notes often have "South Region - Sweet 16" or "Final Four"
+    if (headline) {
+      // Check for region
+      for (const [key, val] of Object.entries(ESPN_REGION_MAP)) {
+        if (headline.includes(key)) { regionText = val; break; }
+      }
+      // Check for round
+      for (const [key, val] of Object.entries(ESPN_ROUND_MAP)) {
+        if (headline.includes(key)) { roundText = key; break; }
+      }
+    }
+  }
+
+  // Fallback: check event name
+  if (!roundText || !regionText) {
+    const eventName = (event.name || event.shortName || "").toLowerCase();
+    if (!roundText) {
+      for (const [key] of Object.entries(ESPN_ROUND_MAP)) {
+        if (eventName.includes(key)) { roundText = key; break; }
+      }
+    }
+    if (!regionText) {
+      for (const [key, val] of Object.entries(ESPN_REGION_MAP)) {
+        if (eventName.includes(key)) { regionText = val; break; }
+      }
+    }
+  }
+
+  const round = ESPN_ROUND_MAP[roundText] || { roundNumber: 1, roundName: "Round of 64" };
+  // Final Four and Championship don't have regions
+  if (round.roundNumber >= 5) regionText = "Final Four";
+
+  return { ...round, region: regionText || "Unknown" };
+}
+
+/** Fetch all March Madness events from ESPN for a date range */
+async function fetchEspnScoreboard(seasonYear: number, dates?: string): Promise<any[]> {
+  const allEvents: any[] = [];
+
+  // March Madness typically spans ~3 weeks in March-April
+  // We fetch multiple date ranges to capture all games
+  const dateRanges = dates ? [dates] : generateTournamentDates(seasonYear);
+
+  for (const dateStr of dateRanges) {
+    const url = `${ESPN_BASE}/scoreboard?dates=${dateStr}&limit=100&groups=100&seasontype=3`;
+    console.log(`[espn] Fetching: ${url}`);
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        console.warn(`[espn] HTTP ${res.status} for date=${dateStr}`);
+        await res.text(); // consume body
+        continue;
+      }
+      const data = await res.json();
+      const events = data.events || [];
+      allEvents.push(...events);
+    } catch (err) {
+      console.warn(`[espn] Fetch failed for date=${dateStr}:`, err);
+    }
+  }
+
+  // Deduplicate by event ID
+  const seen = new Set<string>();
+  return allEvents.filter(e => {
+    if (seen.has(e.id)) return false;
+    seen.add(e.id);
+    return true;
+  });
+}
+
+/** Generate date strings covering the typical March Madness window */
+function generateTournamentDates(year: number): string[] {
+  const dates: string[] = [];
+  // First Four: ~Mar 17-18, R64: ~Mar 19-20, R32: ~Mar 21-22
+  // S16: ~Mar 26-27, E8: ~Mar 28-29, F4: ~Apr 4, Champ: ~Apr 6
+  // Cover Mar 17 through Apr 10 to be safe
+  const start = new Date(year, 2, 17); // March 17
+  const end = new Date(year, 3, 10);   // April 10
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    dates.push(`${y}${m}${day}`);
+  }
+  return dates;
+}
+
+function parseEspnEvent(event: any): { team: NormalizedTeam; game: NormalizedGame } | null {
+  const comp = event.competitions?.[0];
+  if (!comp || !comp.competitors || comp.competitors.length < 2) return null;
+
+  const { roundNumber, roundName, region } = extractRoundAndRegion(event);
+
+  const statusType = comp.status?.type?.name || "";
+  const status = parseEspnStatus(statusType);
+
+  const competitors = comp.competitors;
+  // ESPN orders: away=0, home=1 (or uses homeAway field)
+  const away = competitors.find((c: any) => c.homeAway === "away") || competitors[0];
+  const home = competitors.find((c: any) => c.homeAway === "home") || competitors[1];
+
+  const awaySeed = away.curatedRank?.current || away.statistics?.find?.((s: any) => s.name === "seed")?.value || 0;
+  const homeSeed = home.curatedRank?.current || home.statistics?.find?.((s: any) => s.name === "seed")?.value || 0;
+
+  const awayScore = away.score ? parseInt(away.score, 10) : null;
+  const homeScore = home.score ? parseInt(home.score, 10) : null;
+
+  let winnerExtId: string | null = null;
+  if (status === "final") {
+    if (away.winner) winnerExtId = away.team.id;
+    else if (home.winner) winnerExtId = home.team.id;
+    else if (awayScore != null && homeScore != null && awayScore !== homeScore) {
+      winnerExtId = awayScore > homeScore ? away.team.id : home.team.id;
+    }
+  }
+
+  return {
+    team: null as any, // teams are collected separately
+    game: {
+      externalGameId: event.id,
+      roundNumber,
+      roundName,
+      region,
+      gameSlot: 0, // will be computed below
+      team1ExternalId: away.team.id,
+      team2ExternalId: home.team.id,
+      team1Score: awayScore,
+      team2Score: homeScore,
+      winnerExternalId: winnerExtId,
+      status,
+      isResultFinal: status === "final",
+      liveClock: comp.status?.displayClock || null,
+      livePeriod: comp.status?.period ? `${comp.status.type?.shortDetail || `P${comp.status.period}`}` : null,
+      scheduledAt: event.date || null,
+      sourceLastUpdatedAt: new Date().toISOString(),
+      sourcePayload: { espnId: event.id, name: event.name },
+    },
+  };
+}
+
+/** Compute game_slot within (round, region) based on seed ordering */
+function assignGameSlots(games: NormalizedGame[]): NormalizedGame[] {
+  // Group by round+region, then assign sequential slots
+  const groups = new Map<string, NormalizedGame[]>();
+  for (const g of games) {
+    const key = `${g.roundNumber}:${g.region}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(g);
+  }
+
+  const result: NormalizedGame[] = [];
+  for (const [, groupGames] of groups) {
+    // Sort by scheduled time to maintain bracket order
+    groupGames.sort((a, b) => {
+      const ta = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;
+      const tb = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
+      return ta - tb;
+    });
+    groupGames.forEach((g, i) => {
+      result.push({ ...g, gameSlot: i + 1 });
+    });
+  }
+  return result;
+}
+
+/** Extract unique teams from ESPN events */
+function extractTeamsFromEvents(events: any[]): NormalizedTeam[] {
+  const teamMap = new Map<string, NormalizedTeam>();
+
+  for (const event of events) {
+    const comp = event.competitions?.[0];
+    if (!comp?.competitors) continue;
+
+    const { region } = extractRoundAndRegion(event);
+
+    for (const c of comp.competitors) {
+      const id = c.team?.id;
+      if (!id || teamMap.has(id)) continue;
+
+      const seed = c.curatedRank?.current || 0;
+      teamMap.set(id, {
+        externalTeamId: id,
+        schoolName: c.team.displayName || c.team.name || "",
+        shortName: c.team.shortDisplayName || c.team.abbreviation || c.team.name || "",
+        seed: seed > 16 ? 0 : seed, // curatedRank > 16 is an AP rank, not a seed
+        region: region || "Unknown",
+      });
+    }
+  }
+
+  return Array.from(teamMap.values());
+}
+
+const espnProvider: SportDataProvider = {
+  name: "espn",
+
+  async fetchTeams(tournamentId: string, config: ProviderConfig): Promise<NormalizedTeam[]> {
+    // Get season year from tournament
+    // We'll pass it via config or derive from current year
+    const year = new Date().getFullYear();
+    const events = await fetchEspnScoreboard(year);
+    return extractTeamsFromEvents(events);
   },
-  async fetchGames() {
-    return [];
+
+  async fetchGames(tournamentId: string, config: ProviderConfig): Promise<NormalizedGame[]> {
+    const year = new Date().getFullYear();
+    const events = await fetchEspnScoreboard(year);
+
+    const games: NormalizedGame[] = [];
+    for (const event of events) {
+      const parsed = parseEspnEvent(event);
+      if (parsed) games.push(parsed.game);
+    }
+
+    return assignGameSlots(games);
   },
-  async fetchResults() {
-    return [];
+
+  async fetchResults(tournamentId: string, config: ProviderConfig): Promise<NormalizedGame[]> {
+    // Same as fetchGames — ESPN scoreboard includes scores
+    const year = new Date().getFullYear();
+    const events = await fetchEspnScoreboard(year);
+
+    const games: NormalizedGame[] = [];
+    for (const event of events) {
+      const parsed = parseEspnEvent(event);
+      if (parsed) games.push(parsed.game);
+    }
+
+    return assignGameSlots(games);
   },
-  async fetchTournamentMeta() {
-    return { status: "in_progress" };
+
+  async fetchTournamentMeta(tournamentId: string, config: ProviderConfig) {
+    const year = new Date().getFullYear();
+    const events = await fetchEspnScoreboard(year);
+    const total = events.length;
+    const finals = events.filter(e => {
+      const s = e.competitions?.[0]?.status?.type?.name || "";
+      return s.toUpperCase().includes("FINAL");
+    }).length;
+
+    let status = "upcoming";
+    if (finals >= 63) status = "completed";
+    else if (finals > 0 || total > 0) status = "in_progress";
+
+    return { status, externalSeasonId: `${year}` };
   },
 };
 
 const PROVIDER_REGISTRY: Record<string, SportDataProvider> = {
   stub: stubProvider,
+  espn: espnProvider,
 };
 
 // ═══════════════════════════════════════════════════════════════════
