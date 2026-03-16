@@ -70,6 +70,7 @@ interface ProviderConfig {
   baseUrl: string | null;
   sport: string;
   tournamentScope: string;
+  seasonYear: number;
 }
 
 interface ProviderResult {
