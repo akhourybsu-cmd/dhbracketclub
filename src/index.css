@@ -172,8 +172,8 @@
      CARDS — Layered depth system
      ═══════════════════════════════════════════════════ */
   .glass-card {
-    @apply bg-card rounded-xl relative overflow-hidden;
-    border: 1px solid hsl(var(--border) / 0.5);
+    @apply bg-card rounded-2xl relative overflow-hidden;
+    border: 1px solid hsl(var(--border) / 0.4);
     box-shadow: var(--shadow-card);
   }
   .glass-card::before {
@@ -181,6 +181,15 @@
     position: absolute;
     inset: 0;
     background: var(--gradient-card-shine);
+    pointer-events: none;
+    border-radius: inherit;
+  }
+  .glass-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 10%, hsl(var(--foreground) / 0.04) 50%, transparent 90%);
     pointer-events: none;
     border-radius: inherit;
   }
