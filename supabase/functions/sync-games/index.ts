@@ -512,6 +512,32 @@ async function resolveGameId(
     return { gameId: slotMatch.id, matchMethod: "round_region_slot" };
   }
 
+  // 2b. Fallback when external region is unknown or differs from internal naming (e.g. championship)
+  if (ng.region === "Unknown" || ng.roundNumber === 6) {
+    const { data: roundSlotMatch } = await db
+      .from("games")
+      .select("id")
+      .eq("tournament_id", tournamentId)
+      .eq("round_number", ng.roundNumber)
+      .eq("game_slot", ng.gameSlot)
+      .maybeSingle();
+
+    if (roundSlotMatch) {
+      await db.from("game_external_mappings").upsert(
+        {
+          tournament_id: tournamentId,
+          game_id: roundSlotMatch.id,
+          provider_name: providerName,
+          external_game_id: ng.externalGameId,
+          external_round_name: ng.roundName,
+          external_region: ng.region,
+        },
+        { onConflict: "provider_name,external_game_id" }
+      );
+      return { gameId: roundSlotMatch.id, matchMethod: "round_slot" };
+    }
+  }
+
   // 3. Fallback: match by participating teams
   const t1Internal = ng.team1ExternalId ? teamLookup.get(ng.team1ExternalId) : null;
   const t2Internal = ng.team2ExternalId ? teamLookup.get(ng.team2ExternalId) : null;
