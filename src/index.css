@@ -263,13 +263,13 @@
   /* ═══ Stat card ═══ */
   .stat-card {
     @apply glass-card p-4 text-center flex flex-col items-center justify-center gap-1;
-    min-height: 5.5rem;
+    min-height: 5rem;
   }
   .stat-card .stat-value {
-    @apply text-2xl font-extrabold tabular-nums leading-none tracking-tight;
+    @apply text-xl font-extrabold tabular-nums leading-none tracking-tight font-mono;
   }
   .stat-card .stat-label {
-    @apply text-[9px] font-bold text-muted-foreground uppercase tracking-[0.15em];
+    @apply text-[8px] font-bold text-muted-foreground uppercase tracking-[0.18em];
   }
 
   /* ═══ Back link ═══ */
