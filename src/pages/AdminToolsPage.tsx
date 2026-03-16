@@ -44,6 +44,7 @@ export default function AdminToolsPage() {
   const [syncRuns, setSyncRuns] = useState<SyncRun[]>([]);
   const [syncing, setSyncing] = useState<string | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+  const [providerName, setProviderName] = useState<string>('espn');
 
   // Simulation state
   const [simGameId, setSimGameId] = useState('');
