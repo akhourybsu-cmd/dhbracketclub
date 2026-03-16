@@ -35,8 +35,7 @@ export default function CreatePoolPage() {
     setLoading(true);
 
     const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const lockTime = new Date();
-    lockTime.setDate(lockTime.getDate() + 14);
+    const lockTime = tournamentLockTime || new Date('2026-03-17T22:00:00Z').toISOString();
 
     try {
       const { data: pool, error } = await supabase
