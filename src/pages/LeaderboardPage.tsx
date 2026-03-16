@@ -203,13 +203,13 @@ export default function LeaderboardPage() {
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
-            <Trophy className="w-5 h-5 text-primary" />
+        <div className="page-header mb-0">
+          <div className="page-header-icon">
+            <Trophy />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">Leaderboard</h1>
-            <p className="text-sm text-muted-foreground">{pool?.name}</p>
+            <h1 className="page-header-title">Leaderboard</h1>
+            <p className="page-header-subtitle">{pool?.name}</p>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
