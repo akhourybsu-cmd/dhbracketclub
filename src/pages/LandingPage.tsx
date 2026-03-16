@@ -29,36 +29,36 @@ export default function LandingPage() {
       </header>
 
       {/* Hero */}
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 text-center -mt-4">
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 text-center -mt-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           className="max-w-lg w-full"
         >
-          {/* Single hero brand moment — monogram */}
+          {/* Hero brand moment — large monogram */}
           <motion.img
             src={dhMonogram}
             alt="DH Bracket Club"
-            className="w-28 h-28 sm:w-36 sm:h-36 object-contain mx-auto mb-7"
-            initial={{ opacity: 0, scale: 0.85 }}
+            className="w-40 h-40 sm:w-52 sm:h-52 object-contain mx-auto mb-5"
+            initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.1, type: 'spring', damping: 20 }}
-            style={{ filter: 'drop-shadow(0 0 32px hsl(var(--primary) / 0.2))' }}
+            transition={{ duration: 0.6, delay: 0.1, type: 'spring', damping: 18, stiffness: 120 }}
+            style={{ filter: 'drop-shadow(0 4px 40px hsl(var(--primary) / 0.18))' }}
           />
 
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase mb-6" style={{ background: 'hsl(var(--primary) / 0.08)', border: '1px solid hsl(var(--primary) / 0.12)', color: 'hsl(var(--primary))' }}>
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-[10px] font-bold tracking-[0.12em] uppercase mb-5" style={{ background: 'hsl(var(--primary) / 0.07)', border: '1px solid hsl(var(--primary) / 0.1)', color: 'hsl(var(--primary) / 0.85)' }}>
             <Zap className="w-3 h-3" />
             March Madness Pools
           </div>
 
-          <h2 className="text-[2rem] sm:text-5xl font-extrabold tracking-tight leading-[1.1] mb-4">
+          <h2 className="text-[1.85rem] sm:text-5xl font-extrabold tracking-tight leading-[1.1] mb-3.5">
             Your friends.{' '}
             <span className="gradient-text">Your picks.</span>{' '}
             Your bragging rights.
           </h2>
 
-          <p className="text-muted-foreground text-[15px] sm:text-base leading-relaxed mb-9 max-w-sm mx-auto">
+          <p className="text-muted-foreground text-[14px] sm:text-base leading-relaxed mb-8 max-w-xs sm:max-w-sm mx-auto">
             Build a bracket, join a private pool, and settle it on the court.
           </p>
 
