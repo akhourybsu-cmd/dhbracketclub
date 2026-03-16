@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { Activity, Clock, CheckCircle2, Zap, Filter, ChevronRight, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameUpdates } from '@/hooks/useRealtimeSubscription';
-import { Game, Team, ROUND_NAMES, ROUND_SHORT } from '@/lib/bracketUtils';
+import { Game, Team, ROUND_NAMES, ROUND_SHORT, FIRST_FOUR_ROUND_SHORT } from '@/lib/bracketUtils';
 
 type TabFilter = 'live' | 'upcoming' | 'final' | 'all';
 
