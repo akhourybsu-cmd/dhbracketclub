@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { ArrowLeft, Trophy, Eye, Crown, Medal, TrendingUp, TrendingDown, Minus, AlertCircle, Zap } from 'lucide-react';
+import dhMonogram from '@/assets/dh-monogram.png';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Team, getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES } from '@/lib/bracketUtils';
 import { useStandingsUpdates } from '@/hooks/useRealtimeSubscription';
@@ -226,10 +227,10 @@ export default function LeaderboardPage() {
         <div className="flex items-center justify-between relative z-10">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{
-              background: 'linear-gradient(135deg, hsl(var(--primary) / 0.2), hsl(var(--primary) / 0.06))',
-              boxShadow: '0 0 24px hsl(var(--primary) / 0.12), inset 0 1px 0 hsl(var(--primary) / 0.1)',
+              background: 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.04))',
+              boxShadow: '0 0 24px hsl(var(--primary) / 0.12)',
             }}>
-              <Trophy className="w-6 h-6 text-primary" />
+              <img src={dhMonogram} alt="DH" className="w-8 h-8 object-contain" style={{ filter: 'drop-shadow(0 0 6px hsl(var(--primary) / 0.2))' }} />
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Leaderboard</h1>

@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES } from '@/lib/bracketUtils';
 import { cn } from '@/lib/utils';
 import { usePwaInstall } from '@/hooks/usePwaInstall';
+import dhMonogram from '@/assets/dh-monogram.png';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -96,15 +97,26 @@ export default function DashboardPage() {
         }} />
 
         <div className="relative z-10">
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.08 }}
-            className="text-[9px] font-bold uppercase tracking-[0.25em] mb-2"
-            style={{ color: 'hsl(var(--primary) / 0.5)' }}
-          >
-            {getGreeting()}
-          </motion.p>
+          <div className="flex items-center gap-3 mb-3">
+            <motion.img
+              src={dhMonogram}
+              alt="DH"
+              className="w-9 h-9 object-contain"
+              initial={{ opacity: 0, scale: 0.7 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.05, type: 'spring', damping: 18 }}
+              style={{ filter: 'drop-shadow(0 0 10px hsl(var(--primary) / 0.18))' }}
+            />
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.08 }}
+              className="text-[9px] font-bold uppercase tracking-[0.25em]"
+              style={{ color: 'hsl(var(--primary) / 0.5)' }}
+            >
+              {getGreeting()}
+            </motion.p>
+          </div>
           <motion.h1
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -244,10 +256,8 @@ export default function DashboardPage() {
           animate={{ opacity: 1, scale: 1 }}
           className="glass-card arena-edge p-10 text-center"
         >
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 relative z-10" style={{
-            background: 'linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--primary) / 0.04))',
-          }}>
-            <Trophy className="w-6 h-6 text-primary/60" />
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 relative z-10">
+            <img src={dhMonogram} alt="DH" className="w-10 h-10 object-contain opacity-50" />
           </div>
           <p className="text-sm font-bold relative z-10 mb-1">No pools yet</p>
           <p className="text-xs text-muted-foreground leading-relaxed relative z-10 mb-5">Create a pool or join one with an invite code.</p>

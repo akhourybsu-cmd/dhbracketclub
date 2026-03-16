@@ -3,6 +3,7 @@ import { useLocation, Link } from 'react-router-dom';
 import { LayoutDashboard, Trophy, Users, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import dhMonogram from '@/assets/dh-monogram.png';
 
 const navItems = [
   { path: '/dashboard', label: 'Home', icon: LayoutDashboard },
@@ -28,12 +29,17 @@ export function AppLayout({ children }: { children: ReactNode }) {
         background: 'linear-gradient(180deg, hsl(225 28% 6%), hsl(225 28% 4%))',
         borderRight: '1px solid hsl(var(--border) / 0.3)',
       }}>
-        <div className="px-6 pt-8 pb-12">
-          <h1 className="text-lg font-extrabold tracking-tight">
-            <span className="gradient-text">Bracket</span>
-            <span className="text-foreground"> Battle</span>
-          </h1>
-          <p className="text-[9px] text-muted-foreground mt-2 font-bold uppercase tracking-[0.2em]">March Madness Pools</p>
+        <div className="px-6 pt-7 pb-10">
+          <div className="flex items-center gap-3 mb-1.5">
+            <img src={dhMonogram} alt="DH" className="w-9 h-9 object-contain drop-shadow-lg" style={{ filter: 'drop-shadow(0 0 8px hsl(var(--primary) / 0.2))' }} />
+            <div>
+              <h1 className="text-base font-extrabold tracking-tight leading-none">
+                <span className="gradient-text">DH</span>
+                <span className="text-foreground"> Bracket Club</span>
+              </h1>
+              <p className="text-[8px] text-muted-foreground/50 font-bold uppercase tracking-[0.2em] mt-0.5">March Madness Pools</p>
+            </div>
+          </div>
         </div>
         <nav className="flex flex-col gap-1 px-3">
           {navItems.map((item) => {
@@ -53,7 +59,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </nav>
         <div className="mt-auto px-6 pb-6">
           <div className="h-px bg-border/20 mb-4" />
-          <p className="text-[9px] text-muted-foreground/40 font-semibold tracking-wide">For fun, not funds.</p>
+          <p className="text-[9px] text-muted-foreground/40 font-semibold tracking-wide">DH Bracket Club — For fun, not funds.</p>
         </div>
       </aside>
 

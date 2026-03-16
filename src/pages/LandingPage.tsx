@@ -4,6 +4,8 @@ import { Trophy, Users, Shield, ArrowRight, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
+import dhLogoFull from '@/assets/dh-logo-full.png';
+import dhMonogram from '@/assets/dh-monogram.png';
 
 export default function LandingPage() {
   const { user } = useAuth();
@@ -17,9 +19,12 @@ export default function LandingPage() {
       
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between px-6 py-5">
-        <h1 className="text-lg font-extrabold tracking-tight">
-          <span className="gradient-text">Bracket</span> Battle
-        </h1>
+        <div className="flex items-center gap-2.5">
+          <img src={dhMonogram} alt="DH" className="w-8 h-8 object-contain" style={{ filter: 'drop-shadow(0 0 6px hsl(var(--primary) / 0.2))' }} />
+          <span className="text-sm font-extrabold tracking-tight">
+            <span className="gradient-text">DH</span> Bracket Club
+          </span>
+        </div>
         <Link to="/auth">
           <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground font-semibold">
             Sign In
@@ -35,6 +40,17 @@ export default function LandingPage() {
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           className="max-w-lg"
         >
+          {/* Logo hero */}
+          <motion.img
+            src={dhLogoFull}
+            alt="DH Bracket Club"
+            className="h-28 sm:h-36 object-contain mx-auto mb-8"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            style={{ filter: 'drop-shadow(0 0 24px hsl(var(--primary) / 0.15))' }}
+          />
+
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold mb-8" style={{ background: 'hsl(var(--primary) / 0.1)', border: '1px solid hsl(var(--primary) / 0.15)', color: 'hsl(var(--primary))' }}>
             <Zap className="w-3.5 h-3.5" />
             March Madness Bracket Pools
@@ -84,7 +100,7 @@ export default function LandingPage() {
       </main>
 
       <footer className="relative z-10 text-center py-8 text-[10px] text-muted-foreground/40 font-semibold uppercase tracking-wider">
-        Bracket Battle — For fun, not funds.
+        DH Bracket Club — For fun, not funds.
       </footer>
     </div>
   );
