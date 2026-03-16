@@ -70,6 +70,8 @@ export const DEFAULT_SCORING: Record<number, number> = {
 /**
  * Given a game in a later round, determine which team fills a slot
  * based on picks from feeder games.
+ * For Round of 64 games with a First Four feeder, the feeder game
+ * has round_number=0 and a matching feeder_game_slot.
  */
 export function getEffectiveTeam(
   game: Game,
@@ -81,7 +83,25 @@ export function getEffectiveTeam(
   const teamId = slot === 'team1' ? game.team1_id : game.team2_id;
   if (teamId) return teams.get(teamId) || null;
 
-  if (game.round_number <= 1) return null;
+  // For Round of 64, check if there's a First Four feeder game
+  if (game.round_number === 1) {
+    // First Four feeders are round 0 games whose game_slot matches this game's slot
+    const feederGame = games.find(
+      g => g.round_number === 0 && g.region === game.region
+    );
+    if (feederGame) {
+      // Check if the actual game result is in
+      if (feederGame.winner_team_id) {
+        return teams.get(feederGame.winner_team_id) || null;
+      }
+      // Otherwise check if user has a pick for the First Four game
+      const pick = picks.get(feederGame.id);
+      if (pick) return teams.get(pick.picked_team_id) || null;
+    }
+    return null;
+  }
+
+  if (game.round_number <= 0) return null;
 
   const prevRoundGames = games.filter(g => g.round_number === game.round_number - 1);
   const feederSlot = slot === 'team1' ? game.game_slot * 2 - 1 : game.game_slot * 2;
