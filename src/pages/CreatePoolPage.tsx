@@ -16,13 +16,15 @@ export default function CreatePoolPage() {
   const [loading, setLoading] = useState(false);
   const [tournamentId, setTournamentId] = useState('');
   const [tournamentName, setTournamentName] = useState('');
+  const [tournamentLockTime, setTournamentLockTime] = useState('');
   const [createdPool, setCreatedPool] = useState<{ id: string; invite_code: string; name: string } | null>(null);
 
   useEffect(() => {
-    supabase.from('tournaments').select('id, name, season_year').limit(1).single().then(({ data }) => {
+    supabase.from('tournaments').select('id, name, season_year, lock_time').limit(1).single().then(({ data }) => {
       if (data) {
         setTournamentId(data.id);
         setTournamentName(`${data.name} ${data.season_year}`);
+        setTournamentLockTime(data.lock_time);
       }
     });
   }, []);
