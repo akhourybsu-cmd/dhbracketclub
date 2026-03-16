@@ -887,10 +887,26 @@ async function syncGames(
   const errors: string[] = [];
   const skipReasons: Record<string, number> = {};
 
-  // NOTE: Bulk team name updates removed — they caused cross-region name corruption
-  // via loose name matching. Team names are set during initial seeding.
-  // Play-in team names are updated only via FF positional anchoring below.
-  const teamsUpdated = 0;
+  // ─── Safe team name updates ─────────────────────────────────────
+  // Update internal team names from ESPN for all confidently matched teams.
+  // This is safe because buildTeamLookup already matched by name — we're just
+  // refreshing the canonical spelling from ESPN (e.g. fixing "Creighton" → "Creighton Bluejays").
+  // We ONLY update teams that were matched, preventing cross-region corruption.
+  let teamsUpdated = 0;
+  const extTeamByInternalId = new Map<string, NormalizedTeam>();
+  for (const ext of externalTeams) {
+    const internalId = teamLookup.get(ext.externalTeamId);
+    if (internalId && ext.schoolName) {
+      extTeamByInternalId.set(internalId, ext);
+    }
+  }
+  for (const [internalId, ext] of extTeamByInternalId) {
+    const { error } = await db.from("teams").update({
+      school_name: ext.schoolName,
+      short_name: ext.shortName || ext.schoolName,
+    }).eq("id", internalId);
+    if (!error) teamsUpdated++;
+  }
 
   for (const rawGame of sortedGames) {
     const ng = validateGame(rawGame);
