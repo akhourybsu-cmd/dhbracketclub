@@ -33,14 +33,14 @@ interface SyncRequest {
   action: SyncAction;
   tournamentId: string;
   providerName?: string;
-  poolId?: string; // optional: scope recalculation to one pool
+  poolId?: string;
 }
 
 interface NormalizedTeam {
   externalTeamId: string;
   schoolName: string;
   shortName: string;
-  seed: number;
+  seed: number; // from ESPN seed field, used for display only — NOT for reconciliation
   region: string;
 }
 
@@ -62,6 +62,7 @@ interface NormalizedGame {
   scheduledAt?: string | null;
   sourceLastUpdatedAt?: string | null;
   sourcePayload?: Record<string, unknown> | null;
+  parseConfidence: "high" | "medium" | "low";
 }
 
 interface ProviderConfig {
@@ -104,11 +105,12 @@ const stubProvider: SportDataProvider = {
   async fetchTournamentMeta() { return { status: "in_progress" }; },
 };
 
-// ─── ESPN Provider ───────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════
+//  ESPN PROVIDER
+// ═══════════════════════════════════════════════════════════════════
 
 const ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball";
 
-// March Madness region mapping from ESPN notes/format
 const ESPN_REGION_MAP: Record<string, string> = {
   "midwest region": "Midwest",
   "west region": "West",
@@ -131,7 +133,7 @@ const ESPN_ROUND_PATTERNS: Array<{ pattern: RegExp; roundNumber: number; roundNa
   { pattern: /sweet\s*16|sweet\s*sixteen|regional\s*semi\s*final/i, roundNumber: 3, roundName: "Sweet 16" },
   { pattern: /elite\s*8|elite\s*eight|regional\s*final/i, roundNumber: 4, roundName: "Elite 8" },
   { pattern: /final\s*four|national\s*semi\s*final/i, roundNumber: 5, roundName: "Final Four" },
-  { pattern: /national\s*championship|title\s*game/i, roundNumber: 6, roundName: "Championship" },
+  { pattern: /national\s*championship|title\s*game|championship/i, roundNumber: 6, roundName: "Championship" },
 ];
 
 function parseEspnStatus(statusName: string): "scheduled" | "in_progress" | "final" {
@@ -142,7 +144,12 @@ function parseEspnStatus(statusName: string): "scheduled" | "in_progress" | "fin
   return "scheduled";
 }
 
-function extractRoundAndRegion(event: any): { roundNumber: number; roundName: string; region: string } {
+function extractRoundAndRegion(event: any): {
+  roundNumber: number;
+  roundName: string;
+  region: string;
+  confidence: "high" | "medium" | "low";
+} {
   const comp = event.competitions?.[0];
   const notes: any[] = comp?.notes || [];
 
@@ -159,7 +166,7 @@ function extractRoundAndRegion(event: any): { roundNumber: number; roundName: st
 
   const round = ESPN_ROUND_PATTERNS.find((entry) => entry.pattern.test(combinedText));
   if (!round) {
-    return { roundNumber: -1, roundName: "Unknown Round", region: "Unknown" };
+    return { roundNumber: -1, roundName: "Unknown Round", region: "Unknown", confidence: "low" };
   }
 
   let regionText = "";
@@ -174,16 +181,26 @@ function extractRoundAndRegion(event: any): { roundNumber: number; roundName: st
     if (regionText) break;
   }
 
+  // Final Four and Championship don't need region
   if (round.roundNumber === 5) regionText = "Final Four";
   if (round.roundNumber === 6) regionText = "Championship";
 
-  return { roundNumber: round.roundNumber, roundName: round.roundName, region: regionText || "Unknown" };
+  let confidence: "high" | "medium" | "low" = "medium";
+  if (round.roundNumber >= 5) {
+    confidence = "high"; // Final Four and Championship are unambiguous structurally
+  } else if (regionText && regionText !== "Unknown") {
+    confidence = "high";
+  } else {
+    confidence = "low";
+  }
+
+  return { roundNumber: round.roundNumber, roundName: round.roundName, region: regionText || "Unknown", confidence };
 }
 
-// Simple per-request cache to avoid fetching ESPN 3x during a full sync
+// ─── ESPN Fetch Helpers ─────────────────────────────────────────
+
 const espnCache = new Map<number, any[]>();
 
-/** Fetch all March Madness events from ESPN for a date range */
 async function fetchEspnScoreboard(seasonYear: number, dates?: string): Promise<any[]> {
   if (!dates && espnCache.has(seasonYear)) {
     console.log(`[espn] Using cached scoreboard for ${seasonYear} (${espnCache.get(seasonYear)!.length} events)`);
@@ -191,9 +208,6 @@ async function fetchEspnScoreboard(seasonYear: number, dates?: string): Promise<
   }
 
   const allEvents: any[] = [];
-
-  // March Madness typically spans ~3 weeks in March-April
-  // We fetch multiple date ranges to capture all games
   const dateRanges = dates ? [dates] : generateTournamentDates(seasonYear);
 
   for (const dateStr of dateRanges) {
@@ -204,7 +218,7 @@ async function fetchEspnScoreboard(seasonYear: number, dates?: string): Promise<
       const res = await fetch(url);
       if (!res.ok) {
         console.warn(`[espn] HTTP ${res.status} for date=${dateStr}`);
-        await res.text(); // consume body
+        await res.text();
         continue;
       }
       const data = await res.json();
@@ -215,7 +229,6 @@ async function fetchEspnScoreboard(seasonYear: number, dates?: string): Promise<
     }
   }
 
-  // Deduplicate by event ID
   const seen = new Set<string>();
   const deduped = allEvents.filter(e => {
     if (seen.has(e.id)) return false;
@@ -223,18 +236,12 @@ async function fetchEspnScoreboard(seasonYear: number, dates?: string): Promise<
     return true;
   });
 
-  // Cache for subsequent calls in this request
   if (!dates) espnCache.set(seasonYear, deduped);
-
   return deduped;
 }
 
-/** Generate date strings covering the typical March Madness window */
 function generateTournamentDates(year: number): string[] {
   const dates: string[] = [];
-  // First Four: ~Mar 17-18, R64: ~Mar 19-20, R32: ~Mar 21-22
-  // S16: ~Mar 26-27, E8: ~Mar 28-29, F4: ~Apr 4, Champ: ~Apr 6
-  // Cover Mar 17 through Apr 10 to be safe
   const start = new Date(year, 2, 17); // March 17
   const end = new Date(year, 3, 10);   // April 10
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
@@ -246,24 +253,23 @@ function generateTournamentDates(year: number): string[] {
   return dates;
 }
 
-function parseEspnEvent(event: any): { team: NormalizedTeam; game: NormalizedGame } | null {
+// ─── ESPN Event Parsing ─────────────────────────────────────────
+
+function parseEspnEvent(event: any): NormalizedGame | null {
   const comp = event.competitions?.[0];
   if (!comp || !comp.competitors || comp.competitors.length < 2) return null;
 
-  const { roundNumber, roundName, region } = extractRoundAndRegion(event);
+  const { roundNumber, roundName, region, confidence } = extractRoundAndRegion(event);
   if (roundNumber < 0) return null;
 
   const statusType = comp.status?.type?.name || "";
   const status = parseEspnStatus(statusType);
 
   const competitors = comp.competitors;
-  // ESPN orders: away=0, home=1 (or uses homeAway field)
   const away = competitors.find((c: any) => c.homeAway === "away") || competitors[0];
   const home = competitors.find((c: any) => c.homeAway === "home") || competitors[1];
 
-  const awaySeed = away.curatedRank?.current || away.statistics?.find?.((s: any) => s.name === "seed")?.value || 0;
-  const homeSeed = home.curatedRank?.current || home.statistics?.find?.((s: any) => s.name === "seed")?.value || 0;
-
+  // DO NOT use curatedRank.current — it's AP ranking, not tournament seed
   const awayScore = away.score ? parseInt(away.score, 10) : null;
   const homeScore = home.score ? parseInt(home.score, 10) : null;
 
@@ -277,30 +283,28 @@ function parseEspnEvent(event: any): { team: NormalizedTeam; game: NormalizedGam
   }
 
   return {
-    team: null as any, // teams are collected separately
-    game: {
-      externalGameId: event.id,
-      roundNumber,
-      roundName,
-      region,
-      gameSlot: 0, // will be computed below
-      team1ExternalId: away.team.id,
-      team2ExternalId: home.team.id,
-      team1Score: awayScore,
-      team2Score: homeScore,
-      winnerExternalId: winnerExtId,
-      status,
-      isResultFinal: status === "final",
-      liveClock: comp.status?.displayClock || null,
-      livePeriod: comp.status?.period ? `${comp.status.type?.shortDetail || `P${comp.status.period}`}` : null,
-      scheduledAt: event.date || null,
-      sourceLastUpdatedAt: new Date().toISOString(),
-      sourcePayload: { espnId: event.id, name: event.name },
-    },
+    externalGameId: event.id,
+    roundNumber,
+    roundName,
+    region,
+    gameSlot: 0, // computed by assignGameSlots
+    team1ExternalId: away.team.id,
+    team2ExternalId: home.team.id,
+    team1Score: awayScore,
+    team2Score: homeScore,
+    winnerExternalId: winnerExtId,
+    status,
+    isResultFinal: status === "final",
+    liveClock: comp.status?.displayClock || null,
+    livePeriod: comp.status?.period ? `${comp.status.type?.shortDetail || `P${comp.status.period}`}` : null,
+    scheduledAt: event.date || null,
+    sourceLastUpdatedAt: new Date().toISOString(),
+    sourcePayload: { espnId: event.id, name: event.name },
+    parseConfidence: confidence,
   };
 }
 
-/** Compute game_slot aligned to internal schema (global per round, not per region). */
+/** Compute game_slot hint (global per round). Used as reconciliation fallback only. */
 function assignGameSlots(games: NormalizedGame[]): NormalizedGame[] {
   const byRound = new Map<number, NormalizedGame[]>();
   for (const game of games) {
@@ -345,7 +349,7 @@ function assignGameSlots(games: NormalizedGame[]): NormalizedGame[] {
   return assigned;
 }
 
-/** Extract unique teams from ESPN events */
+/** Extract unique teams from ESPN events — seed from ESPN's seed field, NOT curatedRank */
 function extractTeamsFromEvents(events: any[]): NormalizedTeam[] {
   const teamMap = new Map<string, NormalizedTeam>();
 
@@ -360,8 +364,9 @@ function extractTeamsFromEvents(events: any[]): NormalizedTeam[] {
       const id = c.team?.id;
       if (!id) continue;
 
-      const seedRaw = c.curatedRank?.current || 0;
-      const seed = seedRaw > 16 ? 0 : seedRaw; // curatedRank > 16 is an AP rank, not a seed
+      // Use ESPN's seed field (string like "1"), NOT curatedRank which is AP ranking
+      const seedStr = typeof c.seed === "string" ? c.seed : typeof c.seed === "number" ? String(c.seed) : "";
+      const seed = parseInt(seedStr, 10) || 0;
 
       const incoming: NormalizedTeam = {
         externalTeamId: id,
@@ -377,6 +382,7 @@ function extractTeamsFromEvents(events: any[]): NormalizedTeam[] {
         continue;
       }
 
+      // Upgrade region/seed if we have better info from a later round
       const shouldUpgradeRegion = existing.region === "Unknown" && incoming.region !== "Unknown";
       const shouldUpgradeSeed = (!existing.seed || existing.seed === 0) && incoming.seed > 0;
 
@@ -413,7 +419,7 @@ const espnProvider: SportDataProvider = {
     const games: NormalizedGame[] = [];
     for (const event of events) {
       const parsed = parseEspnEvent(event);
-      if (parsed) games.push(parsed.game);
+      if (parsed) games.push(parsed);
     }
 
     return assignGameSlots(games);
@@ -426,7 +432,7 @@ const espnProvider: SportDataProvider = {
     const games: NormalizedGame[] = [];
     for (const event of events) {
       const parsed = parseEspnEvent(event);
-      if (parsed) games.push(parsed.game);
+      if (parsed) games.push(parsed);
     }
 
     return assignGameSlots(games);
@@ -458,16 +464,14 @@ const PROVIDER_REGISTRY: Record<string, SportDataProvider> = {
 //  NORMALIZATION & RECONCILIATION
 // ═══════════════════════════════════════════════════════════════════
 
-/** Normalize team name for fuzzy matching */
 function normalizeTeamName(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[^a-z0-9]/g, "")        // strip non-alphanumeric
-    .replace(/university|univ|st\b/g, "") // common abbreviations
+    .replace(/[^a-z0-9]/g, "")
+    .replace(/university|univ|st\b/g, "")
     .trim();
 }
 
-/** Validate and sanitize a normalized game */
 function validateGame(g: NormalizedGame): NormalizedGame {
   const validStatuses = ["scheduled", "in_progress", "final"];
   const status = validStatuses.includes(g.status) ? g.status : "scheduled";
@@ -476,7 +480,6 @@ function validateGame(g: NormalizedGame): NormalizedGame {
     status: status as NormalizedGame["status"],
     team1Score: g.team1Score ?? null,
     team2Score: g.team2Score ?? null,
-    // Only set winner when truly final
     winnerExternalId: status === "final" ? (g.winnerExternalId ?? null) : null,
     isResultFinal: status === "final" && g.isResultFinal !== false,
     liveClock: status === "in_progress" ? (g.liveClock ?? null) : null,
@@ -484,21 +487,46 @@ function validateGame(g: NormalizedGame): NormalizedGame {
   };
 }
 
+/** Helper: create/upsert an external mapping */
+async function createExternalMapping(
+  db: SupabaseClient,
+  tournamentId: string,
+  gameId: string,
+  providerName: string,
+  ng: NormalizedGame
+) {
+  await db.from("game_external_mappings").upsert(
+    {
+      tournament_id: tournamentId,
+      game_id: gameId,
+      provider_name: providerName,
+      external_game_id: ng.externalGameId,
+      external_round_name: ng.roundName,
+      external_region: ng.region,
+    },
+    { onConflict: "provider_name,external_game_id" }
+  );
+}
+
 /**
  * Resolve an internal game ID for an external game.
- * Strategy:
- *   1. Lookup explicit mapping in game_external_mappings
- *   2. Fallback: deterministic match by (tournament, round, region, slot)
- *   3. Fallback: match by (tournament, round, region, participating teams)
+ * Strategy (in order):
+ *   1. Explicit mapping in game_external_mappings
+ *   2. Participant-based match (both teams must resolve)
+ *   3. Championship singleton (round 6, only 1 game)
+ *   4. Final Four by slot (round 5, only 2 games)
+ *   5. Deterministic round+region+slot (high confidence only)
+ *   6. Fallback round+slot (low confidence)
  */
 async function resolveGameId(
   db: SupabaseClient,
   tournamentId: string,
   providerName: string,
   ng: NormalizedGame,
-  teamLookup: Map<string, string> // externalTeamId → internal team id
-): Promise<{ gameId: string | null; matchMethod: string }> {
-  // 1. Explicit mapping
+  teamLookup: Map<string, string>
+): Promise<{ gameId: string | null; matchMethod: string; matchConfidence: string }> {
+
+  // 1. Explicit mapping (highest confidence)
   const { data: mapping } = await db
     .from("game_external_mappings")
     .select("game_id")
@@ -506,61 +534,9 @@ async function resolveGameId(
     .eq("external_game_id", ng.externalGameId)
     .maybeSingle();
 
-  if (mapping) return { gameId: mapping.game_id, matchMethod: "explicit_mapping" };
+  if (mapping) return { gameId: mapping.game_id, matchMethod: "explicit_mapping", matchConfidence: "high" };
 
-  // 2. Deterministic: round + region + slot
-  const { data: slotMatch } = await db
-    .from("games")
-    .select("id")
-    .eq("tournament_id", tournamentId)
-    .eq("round_number", ng.roundNumber)
-    .eq("region", ng.region)
-    .eq("game_slot", ng.gameSlot)
-    .maybeSingle();
-
-  if (slotMatch) {
-    // Auto-create mapping for future syncs
-    await db.from("game_external_mappings").upsert(
-      {
-        tournament_id: tournamentId,
-        game_id: slotMatch.id,
-        provider_name: providerName,
-        external_game_id: ng.externalGameId,
-        external_round_name: ng.roundName,
-        external_region: ng.region,
-      },
-      { onConflict: "provider_name,external_game_id" }
-    );
-    return { gameId: slotMatch.id, matchMethod: "round_region_slot" };
-  }
-
-  // 2b. Fallback when external region is unknown or differs from internal naming (e.g. championship)
-  if (ng.region === "Unknown" || ng.roundNumber === 6) {
-    const { data: roundSlotMatch } = await db
-      .from("games")
-      .select("id")
-      .eq("tournament_id", tournamentId)
-      .eq("round_number", ng.roundNumber)
-      .eq("game_slot", ng.gameSlot)
-      .maybeSingle();
-
-    if (roundSlotMatch) {
-      await db.from("game_external_mappings").upsert(
-        {
-          tournament_id: tournamentId,
-          game_id: roundSlotMatch.id,
-          provider_name: providerName,
-          external_game_id: ng.externalGameId,
-          external_round_name: ng.roundName,
-          external_region: ng.region,
-        },
-        { onConflict: "provider_name,external_game_id" }
-      );
-      return { gameId: roundSlotMatch.id, matchMethod: "round_slot" };
-    }
-  }
-
-  // 3. Fallback: match by participating teams
+  // 2. Participant-based match (both ESPN teams must resolve to internal teams)
   const t1Internal = ng.team1ExternalId ? teamLookup.get(ng.team1ExternalId) : null;
   const t2Internal = ng.team2ExternalId ? teamLookup.get(ng.team2ExternalId) : null;
 
@@ -574,38 +550,94 @@ async function resolveGameId(
       .maybeSingle();
 
     if (teamMatch) {
-      await db.from("game_external_mappings").upsert(
-        {
-          tournament_id: tournamentId,
-          game_id: teamMatch.id,
-          provider_name: providerName,
-          external_game_id: ng.externalGameId,
-          external_round_name: ng.roundName,
-          external_region: ng.region,
-        },
-        { onConflict: "provider_name,external_game_id" }
-      );
-      return { gameId: teamMatch.id, matchMethod: "team_match" };
+      await createExternalMapping(db, tournamentId, teamMatch.id, providerName, ng);
+      return { gameId: teamMatch.id, matchMethod: "participant_match", matchConfidence: "high" };
     }
   }
 
-  return { gameId: null, matchMethod: "unmatched" };
+  // 3. Championship singleton: round 6 has exactly 1 game
+  if (ng.roundNumber === 6) {
+    const { data: champGame } = await db
+      .from("games")
+      .select("id")
+      .eq("tournament_id", tournamentId)
+      .eq("round_number", 6)
+      .eq("game_slot", 1)
+      .maybeSingle();
+
+    if (champGame) {
+      await createExternalMapping(db, tournamentId, champGame.id, providerName, ng);
+      return { gameId: champGame.id, matchMethod: "championship_singleton", matchConfidence: "high" };
+    }
+  }
+
+  // 4. Final Four: round 5, only 2 games — match by slot
+  if (ng.roundNumber === 5 && ng.gameSlot > 0 && ng.gameSlot <= 2) {
+    const { data: f4Match } = await db
+      .from("games")
+      .select("id")
+      .eq("tournament_id", tournamentId)
+      .eq("round_number", 5)
+      .eq("game_slot", ng.gameSlot)
+      .maybeSingle();
+
+    if (f4Match) {
+      await createExternalMapping(db, tournamentId, f4Match.id, providerName, ng);
+      return { gameId: f4Match.id, matchMethod: "final_four_slot", matchConfidence: "medium" };
+    }
+  }
+
+  // 5. Deterministic: round + region + slot (only when region is known)
+  if (ng.region && ng.region !== "Unknown" && ng.gameSlot > 0 && ng.roundNumber >= 0 && ng.roundNumber <= 4) {
+    const { data: slotMatch } = await db
+      .from("games")
+      .select("id")
+      .eq("tournament_id", tournamentId)
+      .eq("round_number", ng.roundNumber)
+      .eq("region", ng.region)
+      .eq("game_slot", ng.gameSlot)
+      .maybeSingle();
+
+    if (slotMatch) {
+      await createExternalMapping(db, tournamentId, slotMatch.id, providerName, ng);
+      return { gameId: slotMatch.id, matchMethod: "round_region_slot", matchConfidence: ng.parseConfidence === "high" ? "medium" : "low" };
+    }
+  }
+
+  // 6. Fallback: round + slot (no region) — low confidence
+  if (ng.gameSlot > 0) {
+    const { data: rsMatch } = await db
+      .from("games")
+      .select("id")
+      .eq("tournament_id", tournamentId)
+      .eq("round_number", ng.roundNumber)
+      .eq("game_slot", ng.gameSlot)
+      .maybeSingle();
+
+    if (rsMatch) {
+      await createExternalMapping(db, tournamentId, rsMatch.id, providerName, ng);
+      return { gameId: rsMatch.id, matchMethod: "round_slot_fallback", matchConfidence: "low" };
+    }
+  }
+
+  return { gameId: null, matchMethod: "unmatched", matchConfidence: "none" };
 }
 
 /**
- * Resolve an external team ID to an internal team ID.
- * Uses fuzzy name matching as fallback.
+ * Build external→internal team ID lookup.
+ * Uses NAME matching only. Does NOT use seed+region to avoid First Four collisions.
+ * Play-in teams with play_in_group are handled separately via positional matching.
  */
 async function buildTeamLookup(
   db: SupabaseClient,
   tournamentId: string,
   externalTeams: NormalizedTeam[]
 ): Promise<Map<string, string>> {
-  const lookup = new Map<string, string>(); // externalId → internalId
+  const lookup = new Map<string, string>();
 
   const { data: internalTeams } = await db
     .from("teams")
-    .select("id, school_name, short_name, seed, region")
+    .select("id, school_name, short_name, seed, region, play_in_group")
     .eq("tournament_id", tournamentId);
 
   if (!internalTeams || internalTeams.length === 0) return lookup;
@@ -616,13 +648,19 @@ async function buildTeamLookup(
     normalizedShort: normalizeTeamName(t.short_name),
   }));
 
+  // Separate non-play-in and play-in teams
+  const nonPlayIn = internalIndex.filter(t => !t.play_in_group);
+  const playInTeams = internalIndex.filter(t => !!t.play_in_group);
+
   const usedInternalIds = new Set<string>();
 
-  const findStrictNameMatch = (ext: NormalizedTeam) => {
+  // Pass 1: strict name match against non-play-in teams only
+  // (play-in teams are matched positionally in syncGames/syncGameResults)
+  for (const ext of externalTeams) {
     const normSchool = normalizeTeamName(ext.schoolName);
     const normShort = normalizeTeamName(ext.shortName);
 
-    return internalIndex.find(
+    const match = nonPlayIn.find(
       (t) =>
         !usedInternalIds.has(t.id) &&
         (
@@ -632,51 +670,29 @@ async function buildTeamLookup(
           t.normalizedShort === normSchool
         )
     );
-  };
 
-  // Pass 1: strict name matching (avoids seed/region collisions in First Four)
-  for (const ext of externalTeams) {
-    const strict = findStrictNameMatch(ext);
-    if (strict) {
-      lookup.set(ext.externalTeamId, strict.id);
-      usedInternalIds.add(strict.id);
+    if (match) {
+      lookup.set(ext.externalTeamId, match.id);
+      usedInternalIds.add(match.id);
     }
   }
 
-  // Pass 2: seed+region fallback for unresolved teams
-  for (const ext of externalTeams) {
-    if (lookup.has(ext.externalTeamId)) continue;
-
-    const candidates = internalIndex
-      .filter(
-        (t) =>
-          !usedInternalIds.has(t.id) &&
-          t.seed === ext.seed &&
-          t.region.toLowerCase() === ext.region.toLowerCase()
-      )
-      .sort((a, b) => a.id.localeCompare(b.id));
-
-    if (candidates.length > 0) {
-      lookup.set(ext.externalTeamId, candidates[0].id);
-      usedInternalIds.add(candidates[0].id);
-    }
-  }
-
-  // Pass 3: relaxed name containment fallback
+  // Pass 2: relaxed name containment for non-play-in teams only
   for (const ext of externalTeams) {
     if (lookup.has(ext.externalTeamId)) continue;
 
     const normSchool = normalizeTeamName(ext.schoolName);
     const normShort = normalizeTeamName(ext.shortName);
 
-    const relaxed = internalIndex.find(
+    // Skip very short names to avoid false matches
+    if (normSchool.length < 4 && normShort.length < 4) continue;
+
+    const relaxed = nonPlayIn.find(
       (t) =>
         !usedInternalIds.has(t.id) &&
         (
-          t.normalizedSchool.includes(normSchool) ||
-          normSchool.includes(t.normalizedSchool) ||
-          t.normalizedShort.includes(normShort) ||
-          normShort.includes(t.normalizedShort)
+          (normSchool.length >= 4 && (t.normalizedSchool.includes(normSchool) || normSchool.includes(t.normalizedSchool))) ||
+          (normShort.length >= 4 && (t.normalizedShort.includes(normShort) || normShort.includes(t.normalizedShort)))
         )
     );
 
@@ -685,6 +701,10 @@ async function buildTeamLookup(
       usedInternalIds.add(relaxed.id);
     }
   }
+
+  // NO seed+region fallback — removed to prevent First Four collisions
+
+  console.log(`[team-lookup] Matched ${lookup.size}/${externalTeams.length} ESPN teams to internal teams (${playInTeams.length} play-in teams deferred to positional matching)`);
 
   return lookup;
 }
@@ -710,6 +730,90 @@ async function logSyncEvent(
     status,
     details: details || null,
   });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  VALIDATION PASS
+// ═══════════════════════════════════════════════════════════════════
+
+async function runPreSyncValidation(
+  db: SupabaseClient,
+  tournamentId: string,
+  syncRunId: string
+): Promise<{ valid: boolean; issues: string[] }> {
+  const issues: string[] = [];
+
+  // 1. Check 67 internal games
+  const { data: games } = await db
+    .from("games")
+    .select("id, round_number, game_slot, region, team1_id, team2_id")
+    .eq("tournament_id", tournamentId);
+
+  const totalGames = games?.length || 0;
+  if (totalGames !== 67) {
+    issues.push(`Expected 67 games, found ${totalGames}`);
+  }
+
+  // 2. Check First Four structure
+  const ffGames = games?.filter(g => g.round_number === 0) || [];
+  if (ffGames.length !== 4) {
+    issues.push(`Expected 4 First Four games, found ${ffGames.length}`);
+  }
+  for (const ff of ffGames) {
+    if (!ff.team1_id || !ff.team2_id) {
+      issues.push(`First Four game slot ${ff.game_slot} missing team(s)`);
+    }
+  }
+
+  // 3. No self-matches (team1_id == team2_id)
+  for (const g of (games || [])) {
+    if (g.team1_id && g.team2_id && g.team1_id === g.team2_id) {
+      issues.push(`Game R${g.round_number} S${g.game_slot} has same team on both sides: ${g.team1_id}`);
+    }
+  }
+
+  // 4. No duplicate external mappings for same provider pointing to different internal games
+  const { data: mappings } = await db
+    .from("game_external_mappings")
+    .select("game_id, external_game_id, provider_name")
+    .eq("tournament_id", tournamentId);
+
+  const extIdToGameIds = new Map<string, Set<string>>();
+  for (const m of (mappings || [])) {
+    const key = `${m.provider_name}:${m.external_game_id}`;
+    if (!extIdToGameIds.has(key)) extIdToGameIds.set(key, new Set());
+    extIdToGameIds.get(key)!.add(m.game_id);
+  }
+  for (const [key, gameIds] of extIdToGameIds) {
+    if (gameIds.size > 1) {
+      issues.push(`External ID ${key} maps to ${gameIds.size} different internal games`);
+    }
+  }
+
+  // Check for multiple external IDs pointing to same internal game
+  const gameIdToExtIds = new Map<string, string[]>();
+  for (const m of (mappings || [])) {
+    if (!gameIdToExtIds.has(m.game_id)) gameIdToExtIds.set(m.game_id, []);
+    gameIdToExtIds.get(m.game_id)!.push(m.external_game_id);
+  }
+  for (const [gameId, extIds] of gameIdToExtIds) {
+    if (extIds.length > 1) {
+      issues.push(`Internal game ${gameId} has ${extIds.length} external mappings: ${extIds.join(", ")}`);
+    }
+  }
+
+  await logSyncEvent(db, syncRunId, "validation", null, "pre_sync_validation",
+    issues.length > 0 ? "warning" : "success",
+    { issues, gamesCount: totalGames, ffCount: ffGames.length, mappingsCount: mappings?.length || 0 }
+  );
+
+  if (issues.length > 0) {
+    console.warn(`[validation] Pre-sync validation found ${issues.length} issue(s):`, issues);
+  } else {
+    console.log(`[validation] Pre-sync validation passed (${totalGames} games, ${mappings?.length} mappings)`);
+  }
+
+  return { valid: issues.length === 0, issues };
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -745,7 +849,7 @@ async function syncTournamentMetadata(
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  ACTION: syncGames (schedule/structure, not results)
+//  ACTION: syncGames (schedule/structure — ESPN updates existing games only)
 // ═══════════════════════════════════════════════════════════════════
 
 async function syncGames(
@@ -755,48 +859,123 @@ async function syncGames(
   tournamentId: string,
   syncRunId: string
 ) {
+  // Run validation first
+  const validation = await runPreSyncValidation(db, tournamentId, syncRunId);
+
   const externalTeams = await provider.fetchTeams(tournamentId, config);
   const teamLookup = await buildTeamLookup(db, tournamentId, externalTeams);
 
-  // Update team names from provider data (fixes stale/placeholder names)
+  // Build external team map for name lookups
+  const extTeamMap = new Map<string, NormalizedTeam>();
+  for (const t of externalTeams) extTeamMap.set(t.externalTeamId, t);
+
+  const externalGames = await provider.fetchGames(tournamentId, config);
+
+  // Sort by round (FF first) so play-in positional matching populates teamLookup
+  // before later rounds need those teams for participant-based matching
+  const sortedGames = [...externalGames].sort((a, b) => a.roundNumber - b.roundNumber);
+
+  let matched = 0;
+  let unmatched = 0;
+  let updated = 0;
+  let ffTeamsAnchored = 0;
+  const errors: string[] = [];
+  const skipReasons: Record<string, number> = {};
+
+  // Update non-play-in team names (play-in teams are handled positionally below)
   let teamsUpdated = 0;
   for (const ext of externalTeams) {
     const internalId = teamLookup.get(ext.externalTeamId);
     if (internalId && ext.schoolName) {
-      const { error } = await db.from("teams").update({
-        school_name: ext.schoolName,
-        short_name: ext.shortName || ext.schoolName,
-      }).eq("id", internalId);
-      if (!error) teamsUpdated++;
+      // Verify this isn't a play-in team (play-in teams handled by positional matching)
+      const { data: team } = await db
+        .from("teams")
+        .select("play_in_group")
+        .eq("id", internalId)
+        .single();
+      if (team && !team.play_in_group) {
+        const { error } = await db.from("teams").update({
+          school_name: ext.schoolName,
+          short_name: ext.shortName || ext.schoolName,
+        }).eq("id", internalId);
+        if (!error) teamsUpdated++;
+      }
     }
   }
   if (teamsUpdated > 0) {
     await logSyncEvent(db, syncRunId, "team", null, "team_names_updated", "success", { teamsUpdated });
   }
 
-  const externalGames = await provider.fetchGames(tournamentId, config);
-
-  let matched = 0;
-  let unmatched = 0;
-  let updated = 0;
-  const errors: string[] = [];
-
-  for (const rawGame of externalGames) {
+  for (const rawGame of sortedGames) {
     const ng = validateGame(rawGame);
-    const { gameId, matchMethod } = await resolveGameId(db, tournamentId, config.providerName, ng, teamLookup);
+    const { gameId, matchMethod, matchConfidence } = await resolveGameId(db, tournamentId, config.providerName, ng, teamLookup);
 
     if (!gameId) {
       unmatched++;
+      const reason = ng.roundNumber < 0 ? "unknown_round"
+        : ng.region === "Unknown" && ng.roundNumber < 5 ? "unknown_region"
+        : ng.parseConfidence === "low" ? "low_parse_confidence"
+        : "no_slot_match";
+      skipReasons[reason] = (skipReasons[reason] || 0) + 1;
+
       await logSyncEvent(db, syncRunId, "game", null, "unmatched", "skipped", {
         external_game_id: ng.externalGameId,
         round: ng.roundNumber,
+        roundName: ng.roundName,
         region: ng.region,
         slot: ng.gameSlot,
+        parseConfidence: ng.parseConfidence,
+        skipReason: reason,
+        team1Ext: ng.team1ExternalId,
+        team2Ext: ng.team2ExternalId,
       });
       continue;
     }
 
     matched++;
+
+    // ─── First Four positional team anchoring ─────────────────────
+    // For matched FF games, anchor ESPN team IDs to internal team positions.
+    // This avoids name-collision issues and populates the lookup for later rounds.
+    if (ng.roundNumber === 0) {
+      const { data: ffGame } = await db
+        .from("games")
+        .select("team1_id, team2_id")
+        .eq("id", gameId)
+        .single();
+
+      if (ffGame) {
+        if (ng.team1ExternalId && ffGame.team1_id && !teamLookup.has(ng.team1ExternalId)) {
+          teamLookup.set(ng.team1ExternalId, ffGame.team1_id);
+          ffTeamsAnchored++;
+          // Update team name from ESPN
+          const ext = extTeamMap.get(ng.team1ExternalId);
+          if (ext?.schoolName) {
+            await db.from("teams").update({
+              school_name: ext.schoolName,
+              short_name: ext.shortName || ext.schoolName,
+            }).eq("id", ffGame.team1_id);
+          }
+        }
+        if (ng.team2ExternalId && ffGame.team2_id && !teamLookup.has(ng.team2ExternalId)) {
+          teamLookup.set(ng.team2ExternalId, ffGame.team2_id);
+          ffTeamsAnchored++;
+          const ext = extTeamMap.get(ng.team2ExternalId);
+          if (ext?.schoolName) {
+            await db.from("teams").update({
+              school_name: ext.schoolName,
+              short_name: ext.shortName || ext.schoolName,
+            }).eq("id", ffGame.team2_id);
+          }
+        }
+      }
+
+      await logSyncEvent(db, syncRunId, "game", gameId, "ff_teams_anchored", "success", {
+        matchMethod, matchConfidence,
+        team1Ext: ng.team1ExternalId,
+        team2Ext: ng.team2ExternalId,
+      });
+    }
 
     // Update schedule info (not scores/results)
     const schedulePayload: Record<string, unknown> = {
@@ -804,11 +983,13 @@ async function syncGames(
     };
     if (ng.scheduledAt) schedulePayload.scheduled_at = ng.scheduledAt;
 
-    // Populate teams if known and not already set
-    const t1 = ng.team1ExternalId ? teamLookup.get(ng.team1ExternalId) : null;
-    const t2 = ng.team2ExternalId ? teamLookup.get(ng.team2ExternalId) : null;
-    if (t1) schedulePayload.team1_id = t1;
-    if (t2) schedulePayload.team2_id = t2;
+    // Populate teams if known and not already set (non-FF games)
+    if (ng.roundNumber > 0) {
+      const t1 = ng.team1ExternalId ? teamLookup.get(ng.team1ExternalId) : null;
+      const t2 = ng.team2ExternalId ? teamLookup.get(ng.team2ExternalId) : null;
+      if (t1) schedulePayload.team1_id = t1;
+      if (t2) schedulePayload.team2_id = t2;
+    }
 
     const { error } = await db.from("games").update(schedulePayload).eq("id", gameId);
     if (error) {
@@ -816,11 +997,20 @@ async function syncGames(
       await logSyncEvent(db, syncRunId, "game", gameId, "schedule_update_failed", "error", { error: error.message });
     } else {
       updated++;
-      await logSyncEvent(db, syncRunId, "game", gameId, "schedule_synced", "success", { matchMethod });
+      await logSyncEvent(db, syncRunId, "game", gameId, "schedule_synced", "success", {
+        matchMethod, matchConfidence,
+      });
     }
   }
 
-  return { matched, unmatched, updated, errors, teamsResolved: teamLookup.size };
+  return {
+    matched, unmatched, updated, errors,
+    teamsResolved: teamLookup.size,
+    teamsUpdated,
+    ffTeamsAnchored,
+    skipReasons,
+    validationIssues: validation.issues,
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -836,23 +1026,56 @@ async function syncGameResults(
 ) {
   const externalTeams = await provider.fetchTeams(tournamentId, config);
   const teamLookup = await buildTeamLookup(db, tournamentId, externalTeams);
+
+  // Anchor FF teams positionally (same logic as syncGames)
+  const { data: ffGames } = await db
+    .from("games")
+    .select("id, team1_id, team2_id, game_slot, region")
+    .eq("tournament_id", tournamentId)
+    .eq("round_number", 0);
+
   const externalResults = await provider.fetchResults(tournamentId, config);
 
-  let updated = 0;
+  // Find FF ESPN events and anchor teams
+  for (const ng of externalResults) {
+    if (ng.roundNumber !== 0) continue;
+    const { gameId } = await resolveGameId(db, tournamentId, config.providerName, ng, teamLookup);
+    if (!gameId) continue;
+    const ffGame = ffGames?.find(g => g.id === gameId);
+    if (!ffGame) continue;
+    if (ng.team1ExternalId && ffGame.team1_id) teamLookup.set(ng.team1ExternalId, ffGame.team1_id);
+    if (ng.team2ExternalId && ffGame.team2_id) teamLookup.set(ng.team2ExternalId, ffGame.team2_id);
+  }
+
+  // Sort by round for consistent processing
+  const sortedResults = [...externalResults].sort((a, b) => a.roundNumber - b.roundNumber);
+
+  let resultUpdated = 0;
   let skippedFinal = 0;
   let skippedUnmatched = 0;
   let newFinals = 0;
   const errors: string[] = [];
   const affectedGameIds: string[] = [];
+  const skipReasons: Record<string, number> = {};
 
-  for (const rawGame of externalResults) {
+  for (const rawGame of sortedResults) {
     const ng = validateGame(rawGame);
-    const { gameId, matchMethod } = await resolveGameId(db, tournamentId, config.providerName, ng, teamLookup);
+    const { gameId, matchMethod, matchConfidence } = await resolveGameId(db, tournamentId, config.providerName, ng, teamLookup);
 
     if (!gameId) {
       skippedUnmatched++;
+      const reason = ng.roundNumber < 0 ? "unknown_round"
+        : ng.parseConfidence === "low" ? "low_parse_confidence"
+        : "no_match";
+      skipReasons[reason] = (skipReasons[reason] || 0) + 1;
+
       await logSyncEvent(db, syncRunId, "game", null, "result_unmatched", "skipped", {
         external_game_id: ng.externalGameId,
+        roundNumber: ng.roundNumber,
+        roundName: ng.roundName,
+        region: ng.region,
+        parseConfidence: ng.parseConfidence,
+        skipReason: reason,
       });
       continue;
     }
@@ -866,7 +1089,7 @@ async function syncGameResults(
 
     if (!current) continue;
 
-    // ─── RECONCILIATION: Never overwrite admin-finalized results ────
+    // ─── Never overwrite admin-finalized results ────────────────
     if (
       current.is_result_final &&
       current.status === "final" &&
@@ -892,7 +1115,7 @@ async function syncGameResults(
       source_payload: ng.sourcePayload,
     };
 
-    // Resolve winner only when final
+    // Resolve winner ONLY when final
     let winnerChanged = false;
     if (ng.status === "final" && ng.winnerExternalId) {
       const winnerInternal = teamLookup.get(ng.winnerExternalId);
@@ -901,7 +1124,7 @@ async function syncGameResults(
         updatePayload.is_result_final = true;
         winnerChanged = current.winner_team_id !== winnerInternal;
       } else {
-        // Infer from scores
+        // Infer from scores as last resort
         if (ng.team1Score != null && ng.team2Score != null && ng.team1Score !== ng.team2Score) {
           const winnerId = ng.team1Score > ng.team2Score ? current.team1_id : current.team2_id;
           if (winnerId) {
@@ -913,18 +1136,20 @@ async function syncGameResults(
         await logSyncEvent(db, syncRunId, "game", gameId, "winner_resolution_fallback", "warning", {
           external_winner: ng.winnerExternalId,
           inferred_winner: updatePayload.winner_team_id || null,
+          matchMethod, matchConfidence,
         });
       }
     } else if (ng.status !== "final") {
+      // Don't set winner for non-final games
       updatePayload.is_result_final = false;
     }
 
-    // Track if this is a newly finalized game
+    // Track newly finalized game
     if (ng.status === "final" && current.status !== "final") {
       newFinals++;
     }
 
-    // Advance winner to next round
+    // Advance winner to next round's game slot
     if (updatePayload.winner_team_id && updatePayload.is_result_final) {
       const { data: thisGame } = await db
         .from("games")
@@ -985,9 +1210,9 @@ async function syncGameResults(
       errors.push(`${gameId}: ${error.message}`);
       await logSyncEvent(db, syncRunId, "game", gameId, "result_update_failed", "error", { error: error.message });
     } else {
-      updated++;
+      resultUpdated++;
       await logSyncEvent(db, syncRunId, "game", gameId, "result_synced", "success", {
-        matchMethod,
+        matchMethod, matchConfidence,
         status: ng.status,
         hasWinner: !!updatePayload.winner_team_id,
         winnerChanged,
@@ -995,7 +1220,7 @@ async function syncGameResults(
     }
   }
 
-  return { updated, skippedFinal, skippedUnmatched, newFinals, errors, affectedGameIds };
+  return { updated: resultUpdated, skippedFinal, skippedUnmatched, newFinals, errors, affectedGameIds, skipReasons };
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1012,24 +1237,17 @@ async function recalculateStandingsForTournament(
   source = "sync",
   affectedGameIds?: string[]
 ): Promise<{ poolsProcessed: number; bracketsScored: number; standingsChanged: number }> {
-  // Get pools (optionally filtered)
   let poolQuery = db.from("pools").select("id").eq("tournament_id", tournamentId);
   if (poolIdFilter) poolQuery = poolQuery.eq("id", poolIdFilter);
   const { data: pools } = await poolQuery;
   if (!pools || pools.length === 0) return { poolsProcessed: 0, bracketsScored: 0, standingsChanged: 0 };
 
-  // Load all games once
   const { data: allGames } = await db.from("games").select("*").eq("tournament_id", tournamentId);
   if (!allGames) return { poolsProcessed: 0, bracketsScored: 0, standingsChanged: 0 };
 
   const decidedGames = new Map(
     allGames.filter((g: any) => g.winner_team_id).map((g: any) => [g.id, g])
   );
-
-  // If we have affectedGameIds, find which brackets have picks on those games
-  // for targeted recalculation (optimization). But we still recalculate full
-  // scores for those brackets to ensure idempotency.
-  const affectedGameSet = affectedGameIds ? new Set(affectedGameIds) : null;
 
   let totalBrackets = 0;
   let standingsChanged = 0;
@@ -1050,28 +1268,6 @@ async function recalculateStandingsForTournament(
       .eq("pool_id", pool.id);
     if (!brackets || brackets.length === 0) continue;
 
-    // If targeted mode, find which brackets are affected
-    let bracketsToScore = brackets;
-    if (affectedGameSet && affectedGameSet.size > 0) {
-      const affectedBracketIds = new Set<string>();
-      for (const bracket of brackets) {
-        const { data: picks } = await db
-          .from("bracket_picks")
-          .select("game_id")
-          .eq("bracket_id", bracket.id)
-          .in("game_id", [...affectedGameSet]);
-        if (picks && picks.length > 0) {
-          affectedBracketIds.add(bracket.id);
-        }
-      }
-      // If no brackets affected, still recalculate all for rank consistency
-      if (affectedBracketIds.size > 0) {
-        // We need to recalculate ALL brackets in the pool for correct ranking
-        // but we know at least some are affected
-      }
-    }
-
-    // Load existing standings for change detection
     const { data: existingStandings } = await db
       .from("standings")
       .select("user_id, total_points, correct_picks, possible_points_remaining, rank")
@@ -1088,7 +1284,7 @@ async function recalculateStandingsForTournament(
       possible_points_remaining: number;
     }> = [];
 
-    for (const bracket of bracketsToScore) {
+    for (const bracket of brackets) {
       const { data: picks } = await db
         .from("bracket_picks")
         .select("game_id, picked_team_id, picked_in_round")
@@ -1128,7 +1324,6 @@ async function recalculateStandingsForTournament(
       });
     }
 
-    // Rank
     standings.sort((a, b) => b.total_points - a.total_points);
     let rank = 1;
     for (let i = 0; i < standings.length; i++) {
@@ -1146,7 +1341,6 @@ async function recalculateStandingsForTournament(
         { onConflict: "pool_id,user_id" }
       );
 
-      // Only snapshot if something changed
       if (changed) {
         standingsChanged++;
         await db.from("standings_snapshots").insert({
@@ -1177,14 +1371,12 @@ async function recalculateStandingsForTournament(
 async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string, seasonYear: number) {
   const providerName = req.providerName || "stub";
 
-  // Load provider config
   const { data: providerConfig } = await db
     .from("provider_configs")
     .select("*")
     .eq("provider_name", providerName)
     .maybeSingle();
 
-  // For recalculateStandings, provider config is not required
   if (req.action !== "recalculateStandings") {
     if (!providerConfig || !providerConfig.enabled) {
       throw new Error(`Provider '${providerName}' is not configured or not enabled`);
@@ -1207,7 +1399,6 @@ async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string,
       }
     : { providerName, enabled: true, baseUrl: null, sport: "basketball", tournamentScope: "mens", seasonYear };
 
-  // Create sync run
   const { data: syncRun, error: runErr } = await db
     .from("sync_runs")
     .insert({
@@ -1236,7 +1427,6 @@ async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string,
       }
       case "syncGameResults": {
         const resultsOnly = await syncGameResults(db, provider!, config, req.tournamentId, syncRunId);
-        // Auto-recalculate standings if any finals changed
         let autoStandings = { poolsProcessed: 0, bracketsScored: 0, standingsChanged: 0 };
         if (resultsOnly.newFinals > 0 || resultsOnly.affectedGameIds.length > 0) {
           autoStandings = await recalculateStandingsForTournament(
@@ -1258,7 +1448,6 @@ async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string,
         const gamesResult = await syncGames(db, provider!, config, req.tournamentId, syncRunId);
         const resultsResult = await syncGameResults(db, provider!, config, req.tournamentId, syncRunId);
 
-        // Recalculate standings if any results changed
         let standingsResult = { poolsProcessed: 0, bracketsScored: 0, standingsChanged: 0 };
         if (resultsResult.updated > 0 || resultsResult.newFinals > 0) {
           standingsResult = await recalculateStandingsForTournament(
@@ -1277,21 +1466,19 @@ async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string,
       }
     }
 
-    // Update tournament last_synced_at
     await db.from("tournaments").update({ last_synced_at: new Date().toISOString() }).eq("id", req.tournamentId);
 
-    // Finalize sync run with robust error detection
     const resultStr = JSON.stringify(result);
     const hasErrors = resultStr.includes('"errors":["') || resultStr.includes('"error"');
     const hasUnmatched = resultStr.includes('"unmatched"') && /"unmatched":\s*[1-9]/.test(resultStr);
     const finalStatus = hasErrors ? "completed_with_errors" : hasUnmatched ? "completed_with_warnings" : "completed";
-    
+
     await db.from("sync_runs").update({
       status: finalStatus,
       finished_at: new Date().toISOString(),
       raw_summary: result,
     }).eq("id", syncRunId);
-    
+
     console.log(`[sync-games] COMPLETED syncRun=${syncRunId} status=${finalStatus}`);
 
     return { syncRunId, action: req.action, result };
@@ -1328,7 +1515,6 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // ─── Auth ────────────────────────────────────────────────────────
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return errorResponse("Unauthorized", 401);
@@ -1340,7 +1526,6 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Server misconfigured", 500);
     }
 
-    // Verify caller using getUser (standard, widely supported)
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
@@ -1352,7 +1537,6 @@ Deno.serve(async (req: Request) => {
     }
     const userId = callerUser.id;
 
-    // ─── Input Validation ────────────────────────────────────────────
     let body: SyncRequest;
     try {
       body = await req.json();
@@ -1367,10 +1551,8 @@ Deno.serve(async (req: Request) => {
       return errorResponse("tournamentId is required (UUID)");
     }
 
-    // Service-role client for DB writes (bypasses RLS)
     const db = createClient(supabaseUrl, serviceRoleKey);
 
-    // Verify tournament exists
     const { data: tournament } = await db
       .from("tournaments")
       .select("id, season_year")
@@ -1380,8 +1562,6 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Tournament not found", 404);
     }
 
-    // ─── Admin verification ─────────────────────────────────────────
-    // User must be admin of at least one pool linked to this tournament
     const { data: adminPools } = await db
       .from("pool_members")
       .select("pool_id, pools!inner(tournament_id)")
@@ -1403,7 +1583,7 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ success: true, ...result });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    console.error(`[sync-games] FAILED action=${(await req.clone().json().catch(() => ({}))).action || "unknown"}:`, message);
+    console.error(`[sync-games] FAILED:`, message);
     return jsonResponse({ success: false, error: message }, 500);
   }
 });
