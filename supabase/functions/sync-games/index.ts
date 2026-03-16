@@ -300,29 +300,49 @@ function parseEspnEvent(event: any): { team: NormalizedTeam; game: NormalizedGam
   };
 }
 
-/** Compute game_slot within (round, region) based on seed ordering */
+/** Compute game_slot aligned to internal schema (global per round, not per region). */
 function assignGameSlots(games: NormalizedGame[]): NormalizedGame[] {
-  // Group by round+region, then assign sequential slots
-  const groups = new Map<string, NormalizedGame[]>();
-  for (const g of games) {
-    const key = `${g.roundNumber}:${g.region}`;
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(g);
+  const byRound = new Map<number, NormalizedGame[]>();
+  for (const game of games) {
+    if (!byRound.has(game.roundNumber)) byRound.set(game.roundNumber, []);
+    byRound.get(game.roundNumber)!.push(game);
   }
 
-  const result: NormalizedGame[] = [];
-  for (const [, groupGames] of groups) {
-    // Sort by scheduled time to maintain bracket order
-    groupGames.sort((a, b) => {
-      const ta = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;
-      const tb = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
-      return ta - tb;
+  const regionOrderByRound: Record<number, string[]> = {
+    0: ["Midwest", "West", "South", "East"],
+    1: ["East", "West", "South", "Midwest"],
+    2: ["East", "West", "South", "Midwest"],
+    3: ["East", "West", "South", "Midwest"],
+    4: ["East", "West", "South", "Midwest"],
+    5: ["Final Four"],
+    6: ["Championship"],
+  };
+
+  const assigned: NormalizedGame[] = [];
+
+  for (const [roundNumber, roundGames] of byRound.entries()) {
+    const regionOrder = regionOrderByRound[roundNumber] || [];
+
+    roundGames.sort((a, b) => {
+      const regionA = regionOrder.indexOf(a.region);
+      const regionB = regionOrder.indexOf(b.region);
+      const regionIdxA = regionA === -1 ? Number.MAX_SAFE_INTEGER : regionA;
+      const regionIdxB = regionB === -1 ? Number.MAX_SAFE_INTEGER : regionB;
+      if (regionIdxA !== regionIdxB) return regionIdxA - regionIdxB;
+
+      const timeA = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;
+      const timeB = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
+      if (timeA !== timeB) return timeA - timeB;
+
+      return a.externalGameId.localeCompare(b.externalGameId);
     });
-    groupGames.forEach((g, i) => {
-      result.push({ ...g, gameSlot: i + 1 });
+
+    roundGames.forEach((game, index) => {
+      assigned.push({ ...game, gameSlot: index + 1 });
     });
   }
-  return result;
+
+  return assigned;
 }
 
 /** Extract unique teams from ESPN events */
