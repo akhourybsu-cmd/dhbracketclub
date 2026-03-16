@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Plus, Users, ArrowRight, Trophy, Zap } from 'lucide-react';
+import { Plus, Users, ArrowRight, Trophy, Zap, BarChart3, Calendar, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES } from '@/lib/bracketUtils';
 import { cn } from '@/lib/utils';
@@ -14,6 +14,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [displayName, setDisplayName] = useState('');
   const [bracketStatuses, setBracketStatuses] = useState<Map<string, string>>(new Map());
+  const [memberCounts, setMemberCounts] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     if (!user) return;
@@ -46,6 +47,17 @@ export default function DashboardPage() {
           });
           setBracketStatuses(sm);
         }
+
+        // Fetch member counts
+        const { data: allMembers } = await supabase
+          .from('pool_members')
+          .select('pool_id')
+          .in('pool_id', poolIds);
+        if (allMembers) {
+          const counts = new Map<string, number>();
+          allMembers.forEach(m => counts.set(m.pool_id, (counts.get(m.pool_id) || 0) + 1));
+          setMemberCounts(counts);
+        }
       }
       setLoading(false);
     };
@@ -54,63 +66,160 @@ export default function DashboardPage() {
 
   const isLocked = (lt: string) => new Date(lt) <= new Date();
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
   return (
-    <div>
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <h1 className="text-2xl font-extrabold tracking-tight mb-1">Hey, {displayName || 'there'} 👋</h1>
-        <p className="text-muted-foreground text-sm font-medium mb-8">Here's your bracket overview.</p>
+    <div className="max-w-2xl mx-auto">
+      {/* Hero header */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="mb-8"
+      >
+        <p className="text-sm text-muted-foreground font-medium mb-1">{getGreeting()},</p>
+        <h1 className="text-3xl font-extrabold tracking-tight">{displayName || 'there'} 👋</h1>
       </motion.div>
 
-      <div className="flex gap-3 mb-8">
-        <Link to="/pools/create">
-          <Button size="sm" className="gap-2 font-bold h-10 px-5 rounded-xl">
+      {/* Quick actions */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1, duration: 0.3 }}
+        className="flex gap-3 mb-8"
+      >
+        <Link to="/pools/create" className="flex-1">
+          <Button className="w-full gap-2 font-bold h-11 rounded-xl text-sm">
             <Plus className="w-4 h-4" /> Create Pool
           </Button>
         </Link>
-        <Link to="/pools/join">
-          <Button variant="outline" size="sm" className="gap-2 font-bold h-10 px-5 rounded-xl">
+        <Link to="/pools/join" className="flex-1">
+          <Button variant="outline" className="w-full gap-2 font-bold h-11 rounded-xl text-sm">
             <Users className="w-4 h-4" /> Join Pool
           </Button>
         </Link>
+      </motion.div>
+
+      {/* Summary stats */}
+      {!loading && pools.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15, duration: 0.3 }}
+          className="grid grid-cols-3 gap-3 mb-8"
+        >
+          <div className="stat-card">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center mb-1">
+              <Trophy className="w-4 h-4 text-primary" />
+            </div>
+            <span className="stat-value">{pools.length}</span>
+            <span className="stat-label">Active Pools</span>
+          </div>
+          <div className="stat-card">
+            <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center mb-1">
+              <BarChart3 className="w-4 h-4 text-accent" />
+            </div>
+            <span className="stat-value">
+              {Array.from(bracketStatuses.values()).filter(s => s === 'submitted' || s === 'scored').length}
+            </span>
+            <span className="stat-label">Brackets In</span>
+          </div>
+          <div className="stat-card">
+            <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center mb-1">
+              <Shield className="w-4 h-4 text-success" />
+            </div>
+            <span className="stat-value">
+              {pools.filter(p => isLocked(p.lock_time)).length}
+            </span>
+            <span className="stat-label">Locked</span>
+          </div>
+        </motion.div>
+      )}
+
+      {/* My Pools section */}
+      <div className="flex items-center gap-2 mb-4">
+        <h2 className="section-header mb-0">My Pools</h2>
+        <div className="flex-1 h-px bg-border/30" />
       </div>
 
-      <h2 className="section-header">My Pools</h2>
-
       {loading ? (
-        <div className="space-y-3">{[1, 2].map(i => <div key={i} className="glass-card p-5 animate-pulse h-20 rounded-xl" />)}</div>
-      ) : pools.length === 0 ? (
-        <div className="glass-card p-10 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <Trophy className="w-7 h-7 text-primary" />
-          </div>
-          <p className="text-sm text-muted-foreground mb-5 font-medium">You haven't joined any pools yet.</p>
-          <div className="flex gap-3 justify-center">
-            <Link to="/pools/create"><Button size="sm" className="font-bold rounded-xl">Create One</Button></Link>
-            <Link to="/pools/join"><Button variant="outline" size="sm" className="font-bold rounded-xl">Join with Code</Button></Link>
-          </div>
+        <div className="space-y-3">
+          {[1, 2].map(i => (
+            <div key={i} className="glass-card p-5 animate-pulse rounded-xl">
+              <div className="h-4 bg-muted rounded w-1/3 mb-2" />
+              <div className="h-3 bg-muted rounded w-1/2" />
+            </div>
+          ))}
         </div>
+      ) : pools.length === 0 ? (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="glass-card p-12 text-center"
+        >
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <Trophy className="w-8 h-8 text-primary" />
+          </div>
+          <p className="text-base font-semibold text-foreground mb-1">No pools yet</p>
+          <p className="text-sm text-muted-foreground mb-6">Create a pool or join one with an invite code.</p>
+          <div className="flex gap-3 justify-center">
+            <Link to="/pools/create">
+              <Button className="font-bold rounded-xl gap-2">
+                <Plus className="w-4 h-4" /> Create Pool
+              </Button>
+            </Link>
+            <Link to="/pools/join">
+              <Button variant="outline" className="font-bold rounded-xl gap-2">
+                <Users className="w-4 h-4" /> Join Pool
+              </Button>
+            </Link>
+          </div>
+        </motion.div>
       ) : (
         <div className="space-y-3">
           {pools.map((pool, i) => {
             const bs = bracketStatuses.get(pool.id) || 'none';
             const bsCfg = STATUS_CONFIG[bs];
             const locked = isLocked(pool.lock_time);
+            const members = memberCounts.get(pool.id) || 0;
             return (
               <motion.div
                 key={pool.id}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05, duration: 0.3 }}
+                transition={{ delay: 0.05 + i * 0.05, duration: 0.3 }}
               >
                 <Link to={`/pools/${pool.id}`} className="block">
                   <div className="glass-card p-4 hover-lift group cursor-pointer">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {/* Pool icon */}
+                      <div className={cn(
+                        "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
+                        locked ? "bg-muted/50" : "bg-primary/10"
+                      )}>
+                        <Trophy className={cn("w-5 h-5", locked ? "text-muted-foreground" : "text-primary")} />
+                      </div>
+
+                      {/* Pool info */}
                       <div className="min-w-0 flex-1">
                         <h3 className="font-bold text-sm truncate">{pool.name}</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5 font-medium">
-                          {pool.tournaments?.name} {pool.tournaments?.season_year}
-                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[11px] text-muted-foreground">
+                            {pool.tournaments?.name} {pool.tournaments?.season_year}
+                          </span>
+                          <span className="w-1 h-1 rounded-full bg-border" />
+                          <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
+                            <Users className="w-3 h-3" /> {members}
+                          </span>
+                        </div>
                       </div>
+
+                      {/* Status pills + arrow */}
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <span className={cn("status-pill", bsCfg.className)}>{bsCfg.label}</span>
                         <span className={cn(
