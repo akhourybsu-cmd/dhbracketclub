@@ -145,10 +145,12 @@ export default function BracketDetailPage() {
 
       {/* Round Nav */}
       <div className="flex items-center justify-between mb-3">
-        <Button variant="ghost" size="icon" disabled={currentRound <= 1} onClick={() => setCurrentRound(r => r - 1)}>
+        <Button variant="ghost" size="icon" disabled={currentRound <= (hasFirstFour ? 0 : 1)} onClick={() => setCurrentRound(r => r - 1)}>
           <ChevronLeft className="w-5 h-5" />
         </Button>
-        <p className="text-sm font-semibold">{ROUND_NAMES[currentRound - 1]}</p>
+        <p className="text-sm font-semibold">
+          {currentRound === 0 ? FIRST_FOUR_ROUND_NAME : ROUND_NAMES[currentRound - 1]}
+        </p>
         <Button variant="ghost" size="icon" disabled={currentRound >= 6} onClick={() => setCurrentRound(r => r + 1)}>
           <ChevronRight className="w-5 h-5" />
         </Button>
