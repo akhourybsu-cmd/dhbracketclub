@@ -176,40 +176,22 @@ export default function AdminToolsPage() {
   };
 
   const recalculateStandings = async () => {
-    if (!poolId) return;
+    if (!poolId || !tournamentId) return;
     setRecalculating(true);
     try {
-      const { data: brackets } = await supabase.from('brackets').select('id, user_id').eq('pool_id', poolId);
-      if (!brackets) return;
-
-      const { data: rules } = await supabase.from('scoring_rules')
-        .select('round_number, points_per_correct_pick').eq('pool_id', poolId);
-      const scoringRules: Record<number, number> = {};
-      rules?.forEach(r => { scoringRules[r.round_number] = r.points_per_correct_pick; });
-      if (Object.keys(scoringRules).length === 0) Object.assign(scoringRules, DEFAULT_SCORING);
-
-      const { data: freshGames } = await supabase.from('games').select('*').eq('tournament_id', tournamentId);
-      const allGames = (freshGames || []) as Game[];
-
-      for (const bracket of brackets) {
-        const { data: picks } = await supabase.from('bracket_picks')
-          .select('game_id, picked_team_id, picked_in_round').eq('bracket_id', bracket.id);
-        if (!picks) continue;
-        const result = calculateBracketScore(picks, allGames, scoringRules);
-        await supabase.from('standings').upsert({
-          pool_id: poolId, user_id: bracket.user_id,
-          total_points: result.totalPoints, correct_picks: result.correctPicks,
-          possible_points_remaining: result.possiblePointsRemaining,
-        }, { onConflict: 'pool_id,user_id' });
+      // Use server-side recalculation via edge function (security: never trust client scoring)
+      const res = await supabase.functions.invoke('sync-games', {
+        body: { action: 'recalculateStandings', tournamentId, poolId },
+      });
+      if (res.error) throw new Error(res.error.message);
+      const result = res.data;
+      if (result.success) {
+        const stats = result.result?.standings || result.result || {};
+        toast.success(`Standings recalculated: ${stats.bracketsScored || 0} brackets, ${stats.standingsChanged || 0} changes`);
+        fetchData();
+      } else {
+        toast.error(result.error || 'Recalculation failed');
       }
-
-      if (user) {
-        await supabase.from('admin_logs').insert({
-          pool_id: poolId, actor_user_id: user.id,
-          action_type: 'recalculate_standings', action_payload: { bracket_count: brackets.length },
-        });
-      }
-      toast.success(`Standings recalculated for ${brackets.length} brackets!`);
     } catch (err: any) {
       toast.error(err.message);
     } finally {
