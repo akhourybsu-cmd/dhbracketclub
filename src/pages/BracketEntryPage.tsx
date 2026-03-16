@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Save, Send, ChevronLeft, ChevronRight, ArrowLeft, Check, Trophy } from 'lucide-react';
+import { Save, Send, ChevronLeft, ChevronRight, ArrowLeft, Check, Trophy, Crown, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -181,6 +181,12 @@ export default function BracketEntryPage() {
   const roundGames = games.filter(g => g.round_number === currentRound);
   const regions = [...new Set(roundGames.map(g => g.region))];
 
+  // Champion pick for display
+  const champPick = useMemo(() => {
+    const p = Array.from(picks.values()).find(p => p.picked_in_round === 6);
+    return p ? teams.get(p.picked_team_id) : null;
+  }, [picks, teams]);
+
   if (loading) {
     return (
       <div className="loading-spinner">
@@ -192,19 +198,24 @@ export default function BracketEntryPage() {
 
   const currentRoundName = currentRound === 0 ? FIRST_FOUR_ROUND_NAME : ROUND_NAMES[currentRound - 1];
   const rc = roundCompletion[currentRound];
+  const isChampionshipRound = currentRound === 6;
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Header — sticky on mobile */}
-      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md -mx-4 px-4 sm:-mx-6 sm:px-6 pt-1 pb-3 mb-2 border-b border-border/20">
+    <div className="max-w-2xl mx-auto pb-8">
+      {/* ═══ Sticky Header ═══ */}
+      <div className="sticky top-0 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 pt-1 pb-3 mb-2" style={{
+        background: 'linear-gradient(180deg, hsl(var(--background)), hsl(var(--background) / 0.95))',
+        backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid hsl(var(--border) / 0.15)',
+      }}>
         <div className="flex items-center gap-3">
-          <Link to={`/pools/${poolId}`} className="text-muted-foreground hover:text-foreground transition-colors p-1 -ml-1">
+          <Link to={`/pools/${poolId}`} className="text-muted-foreground hover:text-foreground transition-colors p-1.5 -ml-1.5 rounded-xl hover:bg-secondary/50">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div className="flex-1 min-w-0">
             <h1 className="text-lg sm:text-xl font-extrabold tracking-tight">Fill Your Bracket</h1>
             {bracket?.status === 'submitted' && (
-              <p className="text-[10px] sm:text-xs text-success font-semibold">Submitted — editing will revert to draft</p>
+              <p className="text-[10px] sm:text-xs font-semibold" style={{ color: 'hsl(var(--success))' }}>Submitted — editing will revert to draft</p>
             )}
           </div>
           <div className="flex gap-2">
@@ -212,7 +223,10 @@ export default function BracketEntryPage() {
               <Save className="w-4 h-4 sm:mr-1.5" />
               <span className="hidden sm:inline">Save</span>
             </Button>
-            <Button size="sm" onClick={submitBracket} disabled={saving} className="font-semibold h-9 px-3 rounded-xl btn-press text-xs sm:text-sm">
+            <Button size="sm" onClick={submitBracket} disabled={saving} className="font-semibold h-9 px-3 rounded-xl btn-press text-xs sm:text-sm" style={{
+              background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)))',
+              boxShadow: '0 0 16px hsl(var(--primary) / 0.2)',
+            }}>
               <Send className="w-4 h-4 sm:mr-1.5" />
               <span className="hidden sm:inline">Submit</span>
             </Button>
@@ -220,61 +234,104 @@ export default function BracketEntryPage() {
         </div>
       </div>
 
-      {/* Progress Bar */}
-      <div className="glass-card p-4 mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-semibold">
-            {progress.filled} <span className="text-muted-foreground font-normal">of</span> {progress.total} <span className="text-muted-foreground font-normal">picks</span>
-          </span>
-          <span className="text-sm font-extrabold text-primary tabular-nums">{progress.pct}%</span>
+      {/* ═══ Progress Bar ═══ */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-2xl p-4 mb-5 relative overflow-hidden"
+        style={{
+          background: 'hsl(var(--card))',
+          border: '1px solid hsl(var(--border) / 0.4)',
+          boxShadow: 'var(--shadow-card)',
+        }}
+      >
+        <div className="absolute inset-0 pointer-events-none" style={{ background: 'var(--gradient-card-shine)', opacity: 0.5 }} />
+        <div className="flex items-center justify-between mb-2.5 relative z-10">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-2xl font-extrabold tabular-nums">{progress.filled}</span>
+            <span className="text-sm text-muted-foreground font-medium">/ {progress.total} picks</span>
+          </div>
+          <span className="text-lg font-extrabold tabular-nums text-primary">{progress.pct}%</span>
         </div>
-        <div className="h-2.5 bg-secondary rounded-full overflow-hidden">
+        <div className="h-2.5 rounded-full overflow-hidden relative z-10" style={{ background: 'hsl(var(--surface))' }}>
           <motion.div
             className="h-full rounded-full"
-            style={{ background: 'linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)))' }}
+            style={{
+              background: progress.pct === 100
+                ? 'linear-gradient(90deg, hsl(var(--success)), hsl(var(--accent)))'
+                : 'linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary-glow)))',
+              boxShadow: '0 0 12px hsl(var(--primary) / 0.3)',
+            }}
             initial={{ width: 0 }}
             animate={{ width: `${progress.pct}%` }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
           />
         </div>
-      </div>
+        {champPick && (
+          <div className="flex items-center gap-2 mt-3 relative z-10">
+            <Crown className="w-3.5 h-3.5 text-gold" />
+            <span className="text-xs text-muted-foreground">Champion:</span>
+            <span className="text-xs font-bold text-gold">{champPick.short_name}</span>
+          </div>
+        )}
+      </motion.div>
 
-      {/* Round Navigation — larger touch targets */}
+      {/* ═══ Round Navigation ═══ */}
       <div className="flex items-center justify-between mb-3">
-        <Button
-          variant="ghost"
-          size="icon"
+        <button
           disabled={currentRound <= (hasFirstFour ? 0 : 1)}
           onClick={() => setCurrentRound(r => r - 1)}
-          className="rounded-xl h-10 w-10 btn-press"
+          className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 disabled:opacity-20"
+          style={{
+            background: 'hsl(var(--surface-elevated))',
+            border: '1px solid hsl(var(--border) / 0.3)',
+          }}
         >
           <ChevronLeft className="w-5 h-5" />
-        </Button>
+        </button>
         <div className="text-center">
-          <h2 className="text-lg font-extrabold tracking-tight">{currentRoundName}</h2>
-          <p className="text-xs text-muted-foreground tabular-nums font-medium mt-0.5">
-            {rc?.filled}/{rc?.total} picks
-          </p>
+          <h2 className="text-xl font-extrabold tracking-tight">{currentRoundName}</h2>
+          <div className="flex items-center justify-center gap-2 mt-1">
+            <span className="text-xs text-muted-foreground tabular-nums font-medium">
+              {rc?.filled}/{rc?.total} picks
+            </span>
+            {rc && rc.filled === rc.total && rc.total > 0 && (
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                style={{
+                  background: 'hsl(var(--success) / 0.12)',
+                  color: 'hsl(var(--success))',
+                }}
+              >
+                <Check className="w-2.5 h-2.5" /> Done
+              </motion.span>
+            )}
+          </div>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
+        <button
           disabled={currentRound >= 6}
           onClick={() => setCurrentRound(r => r + 1)}
-          className="rounded-xl h-10 w-10 btn-press"
+          className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 disabled:opacity-20"
+          style={{
+            background: 'hsl(var(--surface-elevated))',
+            border: '1px solid hsl(var(--border) / 0.3)',
+          }}
         >
           <ChevronRight className="w-5 h-5" />
-        </Button>
+        </button>
       </div>
 
-      {/* Round Tabs — scrollable on mobile */}
-      <div className="flex gap-1.5 mb-5 justify-center flex-wrap">
+      {/* ═══ Round Tabs ═══ */}
+      <div className="flex gap-1.5 mb-6 justify-center flex-wrap">
         {hasFirstFour && (
           <RoundPill
             label={FIRST_FOUR_ROUND_SHORT}
             isActive={currentRound === 0}
             isComplete={roundCompletion[0]?.filled === roundCompletion[0]?.total && (roundCompletion[0]?.total ?? 0) > 0}
             onClick={() => setCurrentRound(0)}
+            progress={roundCompletion[0] ? roundCompletion[0].filled / roundCompletion[0].total : 0}
           />
         )}
         {ROUND_SHORT.map((label, i) => {
@@ -286,29 +343,41 @@ export default function BracketEntryPage() {
               isActive={currentRound === i + 1}
               isComplete={rcomp && rcomp.filled === rcomp.total && rcomp.total > 0}
               onClick={() => setCurrentRound(i + 1)}
+              progress={rcomp && rcomp.total > 0 ? rcomp.filled / rcomp.total : 0}
+              isChampionship={i + 1 === 6}
             />
           );
         })}
       </div>
 
-      {/* Games by Region */}
+      {/* ═══ Games by Region ═══ */}
       <AnimatePresence mode="wait">
         <motion.div
           key={currentRound}
-          initial={{ opacity: 0, x: 12 }}
+          initial={{ opacity: 0, x: 16 }}
           animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -12 }}
-          transition={{ duration: 0.2 }}
-          className="space-y-6"
+          exit={{ opacity: 0, x: -16 }}
+          transition={{ duration: 0.25, type: 'spring', damping: 25, stiffness: 300 }}
+          className="space-y-7"
         >
           {regions.map(region => {
             const regionGames = roundGames.filter(g => g.region === region);
             return (
               <div key={region}>
-                <div className="section-divider">
-                  <h3 className="section-header mb-0">{region}</h3>
-                </div>
-                <div className="space-y-2.5">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex items-center gap-3 mb-3"
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                    {region}
+                  </span>
+                  <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, hsl(var(--border) / 0.4), transparent)' }} />
+                  <span className="text-[10px] text-muted-foreground/40 tabular-nums font-medium">
+                    {regionGames.filter(g => picks.has(g.id)).length}/{regionGames.length}
+                  </span>
+                </motion.div>
+                <div className="space-y-3">
                   {regionGames.map((game, idx) => {
                     const team1 = getEffectiveTeam(game, 'team1', games, teams, picks);
                     const team2 = getEffectiveTeam(game, 'team2', games, teams, picks);
@@ -319,47 +388,72 @@ export default function BracketEntryPage() {
                     return (
                       <motion.div
                         key={game.id}
-                        initial={{ opacity: 0, y: 8 }}
+                        initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.03, duration: 0.25 }}
-                        className={cn(
-                          "matchup-card",
-                          isPicked && "ring-1 ring-primary/30"
-                        )}
+                        transition={{ delay: idx * 0.035, type: 'spring', damping: 25, stiffness: 300 }}
+                        className="rounded-2xl overflow-hidden relative group"
+                        style={{
+                          background: 'hsl(var(--card))',
+                          border: isPicked
+                            ? '1px solid hsl(var(--primary) / 0.25)'
+                            : '1px solid hsl(var(--border) / 0.4)',
+                          boxShadow: isPicked
+                            ? '0 0 16px hsl(var(--primary) / 0.06), var(--shadow-card)'
+                            : 'var(--shadow-card)',
+                          transition: 'border-color 0.25s ease, box-shadow 0.25s ease',
+                        }}
                       >
+                        {/* Shine overlay */}
+                        <div className="absolute inset-0 pointer-events-none rounded-2xl" style={{
+                          background: 'var(--gradient-card-shine)',
+                          opacity: 0.4,
+                        }} />
+
                         {/* Game header */}
-                        <div className="flex items-center justify-between px-4 py-1.5 border-b border-border/30">
-                          <span className="text-[10px] font-bold text-muted-foreground/50 tabular-nums">
+                        <div className="flex items-center justify-between px-4 py-2 relative z-10" style={{
+                          background: 'hsl(var(--surface) / 0.4)',
+                          borderBottom: '1px solid hsl(var(--border) / 0.15)',
+                        }}>
+                          <span className="text-[10px] font-bold text-muted-foreground/40 tabular-nums">
                             Game {game.game_slot}
                           </span>
                           {isPicked && (
                             <motion.span
                               initial={{ opacity: 0, scale: 0.8 }}
                               animate={{ opacity: 1, scale: 1 }}
-                              className="text-[10px] font-bold text-primary flex items-center gap-1"
+                              className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full"
+                              style={{
+                                background: 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))',
+                                color: 'hsl(var(--primary))',
+                                border: '1px solid hsl(var(--primary) / 0.12)',
+                              }}
                             >
                               <Check className="w-3 h-3" /> Picked
                             </motion.span>
                           )}
                         </div>
 
-                        <MatchupTeamRow
-                          team={team1}
-                          isSelected={currentPick?.picked_team_id === team1?.id}
-                          isOpponentSelected={currentPick?.picked_team_id === team2?.id}
-                          onSelect={() => team1 && handlePick(game.id, team1.id, game.round_number)}
-                          disabled={!team1}
-                          isPlayInSlot={!team1 && hasPlayIn}
-                        />
-                        <div className="h-px bg-border/30 mx-4" />
-                        <MatchupTeamRow
-                          team={team2}
-                          isSelected={currentPick?.picked_team_id === team2?.id}
-                          isOpponentSelected={currentPick?.picked_team_id === team1?.id}
-                          onSelect={() => team2 && handlePick(game.id, team2.id, game.round_number)}
-                          disabled={!team2}
-                          isPlayInSlot={!team2 && hasPlayIn}
-                        />
+                        <div className="relative z-10">
+                          <MatchupTeamRow
+                            team={team1}
+                            isSelected={currentPick?.picked_team_id === team1?.id}
+                            isOpponentSelected={currentPick?.picked_team_id === team2?.id}
+                            onSelect={() => team1 && handlePick(game.id, team1.id, game.round_number)}
+                            disabled={!team1}
+                            isPlayInSlot={!team1 && hasPlayIn}
+                            isChampionshipRound={isChampionshipRound}
+                          />
+                          <div className="h-px mx-4" style={{ background: 'linear-gradient(90deg, transparent, hsl(var(--border) / 0.2), transparent)' }} />
+                          <MatchupTeamRow
+                            team={team2}
+                            isSelected={currentPick?.picked_team_id === team2?.id}
+                            isOpponentSelected={currentPick?.picked_team_id === team1?.id}
+                            onSelect={() => team2 && handlePick(game.id, team2.id, game.round_number)}
+                            disabled={!team2}
+                            isPlayInSlot={!team2 && hasPlayIn}
+                            isChampionshipRound={isChampionshipRound}
+                          />
+                        </div>
                       </motion.div>
                     );
                   })}
@@ -370,96 +464,179 @@ export default function BracketEntryPage() {
         </motion.div>
       </AnimatePresence>
 
-      {/* Tiebreaker */}
+      {/* ═══ Tiebreaker ═══ */}
       {currentRound === 6 && (
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-6 glass-card p-5"
+          transition={{ delay: 0.2 }}
+          className="mt-8 rounded-2xl p-6 relative overflow-hidden"
+          style={{
+            background: 'linear-gradient(135deg, hsl(var(--card)), hsl(var(--surface-elevated)))',
+            border: '1px solid hsl(var(--gold) / 0.15)',
+            boxShadow: '0 0 24px hsl(var(--gold) / 0.04), var(--shadow-card)',
+          }}
         >
-          <div className="flex items-center gap-2 mb-3">
-            <Trophy className="w-4 h-4 text-gold" />
+          <div className="absolute inset-0 pointer-events-none" style={{
+            background: 'radial-gradient(ellipse 80% 50% at 50% 0%, hsl(var(--gold) / 0.04), transparent)',
+          }} />
+          <div className="flex items-center gap-2.5 mb-3 relative z-10">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{
+              background: 'linear-gradient(135deg, hsl(var(--gold) / 0.2), hsl(var(--gold) / 0.06))',
+            }}>
+              <Trophy className="w-4 h-4 text-gold" />
+            </div>
             <label className="text-sm font-bold">Tiebreaker</label>
           </div>
-          <p className="text-xs text-muted-foreground mb-3">Predict the total combined score of the Championship game</p>
+          <p className="text-xs text-muted-foreground mb-4 relative z-10">Predict the total combined score of the Championship game</p>
           <Input
             type="number"
             value={tiebreaker}
             onChange={(e) => setTiebreaker(e.target.value)}
             placeholder="e.g. 145"
-            className="font-mono h-12 text-center text-lg font-bold rounded-xl"
+            className="font-mono h-14 text-center text-xl font-bold rounded-xl relative z-10"
+            style={{
+              background: 'hsl(var(--surface))',
+              border: '1px solid hsl(var(--border) / 0.4)',
+            }}
           />
         </motion.div>
       )}
 
-      {/* Bottom spacer for mobile nav */}
       <div className="h-8" />
     </div>
   );
 }
 
-function RoundPill({ label, isActive, isComplete, onClick }: {
+/* ═══ Round Pill ═══ */
+function RoundPill({ label, isActive, isComplete, onClick, progress = 0, isChampionship }: {
   label: string;
   isActive: boolean;
   isComplete: boolean;
   onClick: () => void;
+  progress?: number;
+  isChampionship?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className={cn(
-        "round-pill btn-press relative",
-        isActive
-          ? "round-pill-active"
-          : isComplete
-            ? "round-pill-complete"
-            : "round-pill-default"
-      )}
+      className="relative px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all duration-200"
+      style={isActive ? {
+        background: isChampionship
+          ? 'linear-gradient(135deg, hsl(var(--gold) / 0.2), hsl(var(--gold) / 0.08))'
+          : 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)))',
+        color: isChampionship ? 'hsl(var(--gold))' : 'hsl(var(--primary-foreground))',
+        boxShadow: isChampionship
+          ? '0 0 16px hsl(var(--gold) / 0.15)'
+          : '0 0 16px hsl(var(--primary) / 0.25), 0 2px 8px rgba(0,0,0,0.2)',
+      } : isComplete ? {
+        background: 'linear-gradient(135deg, hsl(var(--success) / 0.12), hsl(var(--success) / 0.04))',
+        color: 'hsl(var(--success))',
+        border: '1px solid hsl(var(--success) / 0.15)',
+      } : {
+        background: 'hsl(var(--surface-elevated))',
+        color: 'hsl(var(--muted-foreground))',
+        border: '1px solid hsl(var(--border) / 0.3)',
+      }}
     >
       {label}
       {isComplete && !isActive && (
-        <Check className="w-3 h-3 absolute -top-1 -right-1 text-success" />
+        <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center" style={{
+          background: 'hsl(var(--success))',
+          boxShadow: '0 0 6px hsl(var(--success) / 0.3)',
+        }}>
+          <Check className="w-2 h-2 text-white" />
+        </span>
       )}
     </button>
   );
 }
 
-function MatchupTeamRow({ team, isSelected, isOpponentSelected, onSelect, disabled, isPlayInSlot }: {
+/* ═══ Matchup Team Row ═══ */
+function MatchupTeamRow({ team, isSelected, isOpponentSelected, onSelect, disabled, isPlayInSlot, isChampionshipRound }: {
   team: Team | null;
   isSelected: boolean;
   isOpponentSelected?: boolean;
   onSelect: () => void;
   disabled: boolean;
   isPlayInSlot?: boolean;
+  isChampionshipRound?: boolean;
 }) {
   return (
-    <button
+    <motion.button
       onClick={onSelect}
       disabled={disabled}
+      whileTap={!disabled ? { scale: 0.98 } : undefined}
       className={cn(
-        "w-full flex items-center gap-3 px-4 py-3.5 text-left btn-press",
-        "transition-all duration-150",
-        isSelected && "bg-primary/10",
-        !isSelected && !disabled && "hover:bg-secondary/60 active:bg-secondary/80",
-        isOpponentSelected && !isSelected && "opacity-45",
-        disabled && "opacity-30 cursor-not-allowed"
+        "w-full flex items-center gap-3 px-4 py-4 text-left transition-all duration-200 relative",
+        !isSelected && !disabled && "hover:bg-secondary/40",
+        isOpponentSelected && !isSelected && "opacity-35",
+        disabled && "opacity-25 cursor-not-allowed"
       )}
+      style={isSelected ? {
+        background: isChampionshipRound
+          ? 'linear-gradient(90deg, hsl(var(--gold) / 0.08), hsl(var(--gold) / 0.02))'
+          : 'linear-gradient(90deg, hsl(var(--primary) / 0.1), hsl(var(--primary) / 0.02))',
+      } : undefined}
     >
+      {/* Selection indicator bar */}
+      {isSelected && (
+        <motion.div
+          layoutId="selection-bar"
+          className="absolute left-0 top-1 bottom-1 w-[3px] rounded-full"
+          style={{
+            background: isChampionshipRound ? 'hsl(var(--gold))' : 'hsl(var(--primary))',
+            boxShadow: isChampionshipRound
+              ? '0 0 8px hsl(var(--gold) / 0.4)'
+              : '0 0 8px hsl(var(--primary) / 0.4)',
+          }}
+          initial={{ scaleY: 0 }}
+          animate={{ scaleY: 1 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+        />
+      )}
+
       {team ? (
         <>
-          <span className={cn(
-            "text-[11px] font-mono font-bold w-7 h-7 rounded-lg flex items-center justify-center tabular-nums flex-shrink-0",
-            "transition-colors duration-150",
-            isSelected ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"
-          )}>
+          {/* Seed badge */}
+          <div className={cn(
+            "w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-mono font-bold tabular-nums flex-shrink-0 transition-all duration-200",
+          )} style={isSelected ? {
+            background: isChampionshipRound
+              ? 'linear-gradient(135deg, hsl(var(--gold) / 0.2), hsl(var(--gold) / 0.08))'
+              : 'linear-gradient(135deg, hsl(var(--primary) / 0.2), hsl(var(--primary) / 0.08))',
+            color: isChampionshipRound ? 'hsl(var(--gold))' : 'hsl(var(--primary))',
+            border: `1px solid hsl(var(--${isChampionshipRound ? 'gold' : 'primary'}) / 0.15)`,
+          } : {
+            background: 'hsl(var(--surface))',
+            color: 'hsl(var(--muted-foreground))',
+            border: '1px solid hsl(var(--border) / 0.2)',
+          }}>
             {team.seed}
-          </span>
+          </div>
+
+          {/* Team name */}
           <span className={cn(
-            "text-sm flex-1 min-w-0 transition-colors duration-150",
-            isSelected ? "text-primary font-bold" : "font-medium"
+            "text-sm flex-1 min-w-0 transition-all duration-200",
+            isSelected
+              ? isChampionshipRound ? "text-gold font-bold" : "text-primary font-bold"
+              : "font-medium text-foreground/80"
           )}>
             <span className="block truncate">{team.short_name}</span>
           </span>
+
+          {/* Championship crown */}
+          {isSelected && isChampionshipRound && (
+            <motion.div
+              initial={{ rotate: -20, scale: 0 }}
+              animate={{ rotate: 0, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+            >
+              <Crown className="w-4 h-4 text-gold" style={{ filter: 'drop-shadow(0 0 4px hsl(var(--gold) / 0.3))' }} />
+            </motion.div>
+          )}
+
+          {/* Selection check */}
           <AnimatePresence>
             {isSelected && (
               <motion.div
@@ -467,21 +644,32 @@ function MatchupTeamRow({ team, isSelected, isOpponentSelected, onSelect, disabl
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0, opacity: 0 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                className="w-6 h-6 rounded-full bg-primary flex items-center justify-center flex-shrink-0"
+                className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: isChampionshipRound
+                    ? 'linear-gradient(135deg, hsl(var(--gold)), hsl(var(--gold) / 0.8))'
+                    : 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)))',
+                  boxShadow: isChampionshipRound
+                    ? '0 0 10px hsl(var(--gold) / 0.3)'
+                    : '0 0 10px hsl(var(--primary) / 0.3)',
+                }}
               >
-                <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                <Check className="w-3.5 h-3.5 text-white" />
               </motion.div>
             )}
           </AnimatePresence>
         </>
       ) : (
         <>
-          <span className="w-7 h-7 rounded-lg bg-secondary/50 flex-shrink-0" />
-          <span className="text-xs text-muted-foreground/50 italic font-medium">
+          <div className="w-8 h-8 rounded-lg flex-shrink-0" style={{
+            background: 'hsl(var(--surface))',
+            border: '1px solid hsl(var(--border) / 0.15)',
+          }} />
+          <span className="text-xs text-muted-foreground/40 italic font-medium">
             {isPlayInSlot ? 'TBD — First Four' : 'Waiting for earlier pick'}
           </span>
         </>
       )}
-    </button>
+    </motion.button>
   );
 }
