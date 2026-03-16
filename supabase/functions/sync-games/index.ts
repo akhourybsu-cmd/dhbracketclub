@@ -1233,7 +1233,7 @@ Deno.serve(async (req: Request) => {
     // Verify tournament exists
     const { data: tournament } = await db
       .from("tournaments")
-      .select("id")
+      .select("id, season_year")
       .eq("id", body.tournamentId)
       .maybeSingle();
     if (!tournament) {
