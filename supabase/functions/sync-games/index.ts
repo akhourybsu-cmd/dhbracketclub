@@ -585,26 +585,32 @@ async function recalculateStandingsForTournament(
   tournamentId: string,
   syncRunId: string | null,
   poolIdFilter?: string,
-  source = "sync"
-): Promise<{ poolsProcessed: number; bracketsScored: number }> {
-  // Get all pools (or one specific pool)
+  source = "sync",
+  affectedGameIds?: string[]
+): Promise<{ poolsProcessed: number; bracketsScored: number; standingsChanged: number }> {
+  // Get pools (optionally filtered)
   let poolQuery = db.from("pools").select("id").eq("tournament_id", tournamentId);
   if (poolIdFilter) poolQuery = poolQuery.eq("id", poolIdFilter);
   const { data: pools } = await poolQuery;
-  if (!pools || pools.length === 0) return { poolsProcessed: 0, bracketsScored: 0 };
+  if (!pools || pools.length === 0) return { poolsProcessed: 0, bracketsScored: 0, standingsChanged: 0 };
 
   // Load all games once
   const { data: allGames } = await db.from("games").select("*").eq("tournament_id", tournamentId);
-  if (!allGames) return { poolsProcessed: 0, bracketsScored: 0 };
+  if (!allGames) return { poolsProcessed: 0, bracketsScored: 0, standingsChanged: 0 };
 
   const decidedGames = new Map(
     allGames.filter((g: any) => g.winner_team_id).map((g: any) => [g.id, g])
   );
 
+  // If we have affectedGameIds, find which brackets have picks on those games
+  // for targeted recalculation (optimization). But we still recalculate full
+  // scores for those brackets to ensure idempotency.
+  const affectedGameSet = affectedGameIds ? new Set(affectedGameIds) : null;
+
   let totalBrackets = 0;
+  let standingsChanged = 0;
 
   for (const pool of pools) {
-    // Load scoring rules
     const { data: rules } = await db
       .from("scoring_rules")
       .select("round_number, points_per_correct_pick")
@@ -614,12 +620,41 @@ async function recalculateStandingsForTournament(
     rules?.forEach((r: any) => { scoring[r.round_number] = r.points_per_correct_pick; });
     if (Object.keys(scoring).length === 0) Object.assign(scoring, DEFAULT_SCORING);
 
-    // Load all brackets for pool
     const { data: brackets } = await db
       .from("brackets")
       .select("id, user_id")
       .eq("pool_id", pool.id);
     if (!brackets || brackets.length === 0) continue;
+
+    // If targeted mode, find which brackets are affected
+    let bracketsToScore = brackets;
+    if (affectedGameSet && affectedGameSet.size > 0) {
+      const affectedBracketIds = new Set<string>();
+      for (const bracket of brackets) {
+        const { data: picks } = await db
+          .from("bracket_picks")
+          .select("game_id")
+          .eq("bracket_id", bracket.id)
+          .in("game_id", [...affectedGameSet]);
+        if (picks && picks.length > 0) {
+          affectedBracketIds.add(bracket.id);
+        }
+      }
+      // If no brackets affected, still recalculate all for rank consistency
+      if (affectedBracketIds.size > 0) {
+        // We need to recalculate ALL brackets in the pool for correct ranking
+        // but we know at least some are affected
+      }
+    }
+
+    // Load existing standings for change detection
+    const { data: existingStandings } = await db
+      .from("standings")
+      .select("user_id, total_points, correct_picks, possible_points_remaining, rank")
+      .eq("pool_id", pool.id);
+    const existingMap = new Map(
+      (existingStandings || []).map((s: any) => [s.user_id, s])
+    );
 
     const standings: Array<{
       pool_id: string;
@@ -629,7 +664,7 @@ async function recalculateStandingsForTournament(
       possible_points_remaining: number;
     }> = [];
 
-    for (const bracket of brackets) {
+    for (const bracket of bracketsToScore) {
       const { data: picks } = await db
         .from("bracket_picks")
         .select("game_id, picked_team_id, picked_in_round")
@@ -650,7 +685,6 @@ async function recalculateStandingsForTournament(
             totalPoints += pts;
           }
         } else {
-          // Team still alive?
           const eliminated = allGames.some(
             (g: any) =>
               g.winner_team_id !== null &&
@@ -676,16 +710,27 @@ async function recalculateStandingsForTournament(
     for (let i = 0; i < standings.length; i++) {
       if (i > 0 && standings[i].total_points < standings[i - 1].total_points) rank = i + 1;
 
+      const existing = existingMap.get(standings[i].user_id);
+      const changed = !existing ||
+        existing.total_points !== standings[i].total_points ||
+        existing.correct_picks !== standings[i].correct_picks ||
+        existing.possible_points_remaining !== standings[i].possible_points_remaining ||
+        existing.rank !== rank;
+
       await db.from("standings").upsert(
         { ...standings[i], rank },
         { onConflict: "pool_id,user_id" }
       );
 
-      await db.from("standings_snapshots").insert({
-        ...standings[i],
-        rank,
-        source,
-      });
+      // Only snapshot if something changed
+      if (changed) {
+        standingsChanged++;
+        await db.from("standings_snapshots").insert({
+          ...standings[i],
+          rank,
+          source,
+        });
+      }
 
       totalBrackets++;
     }
@@ -693,11 +738,12 @@ async function recalculateStandingsForTournament(
     if (syncRunId) {
       await logSyncEvent(db, syncRunId, "pool", pool.id, "standings_recalculated", "success", {
         brackets: standings.length,
+        changed: standingsChanged,
       });
     }
   }
 
-  return { poolsProcessed: pools.length, bracketsScored: totalBrackets };
+  return { poolsProcessed: pools.length, bracketsScored: totalBrackets, standingsChanged };
 }
 
 // ═══════════════════════════════════════════════════════════════════
