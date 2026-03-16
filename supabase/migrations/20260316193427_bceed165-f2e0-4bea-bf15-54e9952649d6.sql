@@ -1,0 +1,2 @@
+ALTER TABLE public.teams ADD COLUMN IF NOT EXISTS play_in_group integer;
+COMMENT ON COLUMN public.teams.play_in_group IS 'First Four game_slot (1-4) this team participates in. NULL for non-play-in teams.';
