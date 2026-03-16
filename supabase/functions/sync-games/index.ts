@@ -1064,8 +1064,9 @@ async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string,
         baseUrl: providerConfig.base_url,
         sport: providerConfig.sport,
         tournamentScope: providerConfig.tournament_scope,
+        seasonYear,
       }
-    : { providerName, enabled: true, baseUrl: null, sport: "basketball", tournamentScope: "mens" };
+    : { providerName, enabled: true, baseUrl: null, sport: "basketball", tournamentScope: "mens", seasonYear };
 
   // Create sync run
   const { data: syncRun, error: runErr } = await db
