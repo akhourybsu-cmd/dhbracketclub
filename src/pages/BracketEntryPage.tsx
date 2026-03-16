@@ -350,11 +350,12 @@ export default function BracketEntryPage() {
   );
 }
 
-function MatchupTeamRow({ team, isSelected, onSelect, disabled }: {
+function MatchupTeamRow({ team, isSelected, onSelect, disabled, isPlayInSlot }: {
   team: Team | null;
   isSelected: boolean;
   onSelect: () => void;
   disabled: boolean;
+  isPlayInSlot?: boolean;
 }) {
   return (
     <button
@@ -379,7 +380,9 @@ function MatchupTeamRow({ team, isSelected, onSelect, disabled }: {
       ) : (
         <>
           <span className="w-5" />
-          <span className="text-xs text-muted-foreground/50 italic">Waiting for earlier pick</span>
+          <span className="text-xs text-muted-foreground/50 italic">
+            {isPlayInSlot ? 'TBD — First Four' : 'Waiting for earlier pick'}
+          </span>
         </>
       )}
     </button>
