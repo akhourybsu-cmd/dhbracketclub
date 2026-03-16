@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 
 export default function AuthPage() {
   const { user } = useAuth();
@@ -47,13 +48,21 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 relative overflow-hidden">
+      {/* Background glow */}
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
+      
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-sm relative z-10"
+      >
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold">
+          <h1 className="text-2xl font-extrabold tracking-tight">
             <span className="gradient-text">Bracket</span> Battle
           </h1>
-          <p className="text-sm text-muted-foreground mt-2">
+          <p className="text-sm text-muted-foreground mt-2 font-medium">
             {isSignUp ? 'Create your account' : 'Welcome back'}
           </p>
         </div>
@@ -61,26 +70,28 @@ export default function AuthPage() {
         <form onSubmit={handleSubmit} className="glass-card p-6 space-y-4">
           {isSignUp && (
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Display Name</label>
+              <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Display Name</label>
               <Input
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Your name"
+                className="h-11"
               />
             </div>
           )}
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Email</label>
+            <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Email</label>
             <Input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
+              className="h-11"
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Password</label>
+            <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Password</label>
             <Input
               type="password"
               required
@@ -88,23 +99,24 @@ export default function AuthPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
+              className="h-11"
             />
           </div>
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="w-full h-11 font-bold text-sm" disabled={loading}>
             {loading ? 'Loading...' : isSignUp ? 'Create Account' : 'Sign In'}
           </Button>
         </form>
 
-        <p className="text-center text-sm text-muted-foreground mt-4">
+        <p className="text-center text-sm text-muted-foreground mt-5">
           {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
           <button
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-primary hover:underline font-medium"
+            className="text-primary hover:underline font-semibold"
           >
             {isSignUp ? 'Sign In' : 'Sign Up'}
           </button>
         </p>
-      </div>
+      </motion.div>
     </div>
   );
 }
