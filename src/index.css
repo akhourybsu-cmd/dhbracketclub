@@ -469,7 +469,7 @@
 
   /* ═══ Pool row card ═══ */
   .pool-row {
-    @apply glass-card group cursor-pointer;
+    @apply glass-card cursor-pointer;
     transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
   }
   .pool-row:hover {
