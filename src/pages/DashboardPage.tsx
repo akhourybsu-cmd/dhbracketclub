@@ -3,18 +3,21 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Plus, Users, ArrowRight, Trophy, BarChart3, Shield } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Plus, Users, ArrowRight, Trophy, BarChart3, Shield, Download, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES } from '@/lib/bracketUtils';
 import { cn } from '@/lib/utils';
+import { usePwaInstall } from '@/hooks/usePwaInstall';
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { canInstall, install } = usePwaInstall();
   const [pools, setPools] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [displayName, setDisplayName] = useState('');
   const [bracketStatuses, setBracketStatuses] = useState<Map<string, string>>(new Map());
   const [memberCounts, setMemberCounts] = useState<Map<string, number>>(new Map());
+  const [dismissedInstall, setDismissedInstall] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -103,6 +106,34 @@ export default function DashboardPage() {
           </Button>
         </Link>
       </motion.div>
+
+      {/* PWA Install Banner */}
+      <AnimatePresence>
+        {canInstall && !dismissedInstall && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-8 overflow-hidden"
+          >
+            <div className="glass-card p-4 flex items-center gap-3 border-primary/20">
+              <div className="icon-container w-10 h-10 flex-shrink-0">
+                <Download className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold">Install Bracket Battle</p>
+                <p className="text-[11px] text-muted-foreground">Add to your home screen for the best experience</p>
+              </div>
+              <Button size="sm" onClick={install} className="rounded-xl font-bold text-xs h-9 px-4 btn-press flex-shrink-0">
+                Install
+              </Button>
+              <button onClick={() => setDismissedInstall(true)} className="text-muted-foreground hover:text-foreground p-1">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Summary stats */}
       {!loading && pools.length > 0 && (
