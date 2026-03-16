@@ -25,8 +25,8 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
       },
       manifest: {
-        name: "Bracket Battle",
-        short_name: "BracketBattle",
+        name: "DH Bracket Club",
+        short_name: "DH Bracket Club",
         description: "Private March Madness bracket pools with friends",
         theme_color: "#0C0E14",
         background_color: "#0C0E14",
