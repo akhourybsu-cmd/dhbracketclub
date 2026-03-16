@@ -15,6 +15,7 @@ import PoolDetailPage from "./pages/PoolDetailPage";
 import PoolsListPage from "./pages/PoolsListPage";
 import BracketEntryPage from "./pages/BracketEntryPage";
 import BracketDetailPage from "./pages/BracketDetailPage";
+import BracketComparePage from "./pages/BracketComparePage";
 import LeaderboardPage from "./pages/LeaderboardPage";
 import AdminToolsPage from "./pages/AdminToolsPage";
 import ProfilePage from "./pages/ProfilePage";
@@ -43,6 +44,7 @@ const App = () => (
             <Route path="/pools/join" element={<ProtectedPage><JoinPoolPage /></ProtectedPage>} />
             <Route path="/pools/:poolId" element={<ProtectedPage><PoolDetailPage /></ProtectedPage>} />
             <Route path="/pools/:poolId/bracket/edit" element={<ProtectedPage><BracketEntryPage /></ProtectedPage>} />
+            <Route path="/pools/:poolId/bracket/compare" element={<ProtectedPage><BracketComparePage /></ProtectedPage>} />
             <Route path="/pools/:poolId/bracket/:bracketId" element={<ProtectedPage><BracketDetailPage /></ProtectedPage>} />
             <Route path="/pools/:poolId/leaderboard" element={<ProtectedPage><LeaderboardPage /></ProtectedPage>} />
             <Route path="/pools/:poolId/admin" element={<ProtectedPage><AdminToolsPage /></ProtectedPage>} />
