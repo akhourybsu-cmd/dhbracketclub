@@ -347,15 +347,15 @@ const espnProvider: SportDataProvider = {
   name: "espn",
 
   async fetchTeams(tournamentId: string, config: ProviderConfig): Promise<NormalizedTeam[]> {
-    // Get season year from tournament
-    // We'll pass it via config or derive from current year
-    const year = new Date().getFullYear();
+    const year = config.seasonYear;
+    console.log(`[espn] fetchTeams for season ${year}`);
     const events = await fetchEspnScoreboard(year);
     return extractTeamsFromEvents(events);
   },
 
   async fetchGames(tournamentId: string, config: ProviderConfig): Promise<NormalizedGame[]> {
-    const year = new Date().getFullYear();
+    const year = config.seasonYear;
+    console.log(`[espn] fetchGames for season ${year}`);
     const events = await fetchEspnScoreboard(year);
 
     const games: NormalizedGame[] = [];
@@ -368,8 +368,7 @@ const espnProvider: SportDataProvider = {
   },
 
   async fetchResults(tournamentId: string, config: ProviderConfig): Promise<NormalizedGame[]> {
-    // Same as fetchGames — ESPN scoreboard includes scores
-    const year = new Date().getFullYear();
+    const year = config.seasonYear;
     const events = await fetchEspnScoreboard(year);
 
     const games: NormalizedGame[] = [];
@@ -382,7 +381,7 @@ const espnProvider: SportDataProvider = {
   },
 
   async fetchTournamentMeta(tournamentId: string, config: ProviderConfig) {
-    const year = new Date().getFullYear();
+    const year = config.seasonYear;
     const events = await fetchEspnScoreboard(year);
     const total = events.length;
     const finals = events.filter(e => {
