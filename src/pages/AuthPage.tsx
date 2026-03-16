@@ -60,8 +60,17 @@ export default function AuthPage() {
         className="w-full max-w-sm relative z-10"
       >
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-extrabold tracking-tight">
-            <span className="gradient-text">Bracket</span> Battle
+          <motion.img
+            src={dhMonogram}
+            alt="DH Bracket Club"
+            className="w-16 h-16 object-contain mx-auto mb-4"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4, type: 'spring', damping: 18 }}
+            style={{ filter: 'drop-shadow(0 0 16px hsl(var(--primary) / 0.2))' }}
+          />
+          <h1 className="text-xl font-extrabold tracking-tight">
+            <span className="gradient-text">DH</span> Bracket Club
           </h1>
           <p className="text-xs text-muted-foreground mt-2 font-semibold">
             {isSignUp ? 'Create your account' : 'Welcome back'}

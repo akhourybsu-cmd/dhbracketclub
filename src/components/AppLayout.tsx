@@ -59,7 +59,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </nav>
         <div className="mt-auto px-6 pb-6">
           <div className="h-px bg-border/20 mb-4" />
-          <p className="text-[9px] text-muted-foreground/40 font-semibold tracking-wide">For fun, not funds.</p>
+          <p className="text-[9px] text-muted-foreground/40 font-semibold tracking-wide">DH Bracket Club — For fun, not funds.</p>
         </div>
       </aside>
 

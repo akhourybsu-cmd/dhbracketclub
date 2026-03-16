@@ -256,10 +256,8 @@ export default function DashboardPage() {
           animate={{ opacity: 1, scale: 1 }}
           className="glass-card arena-edge p-10 text-center"
         >
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 relative z-10" style={{
-            background: 'linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--primary) / 0.04))',
-          }}>
-            <Trophy className="w-6 h-6 text-primary/60" />
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 relative z-10">
+            <img src={dhMonogram} alt="DH" className="w-10 h-10 object-contain opacity-50" />
           </div>
           <p className="text-sm font-bold relative z-10 mb-1">No pools yet</p>
           <p className="text-xs text-muted-foreground leading-relaxed relative z-10 mb-5">Create a pool or join one with an invite code.</p>
