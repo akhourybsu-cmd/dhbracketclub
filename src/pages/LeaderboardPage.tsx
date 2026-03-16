@@ -30,8 +30,11 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     if (!poolId) return;
+    fetchData();
+  }, [poolId]);
 
-    const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    if (!poolId) return;
       const { data: poolData } = await supabase.from('pools').select('*, tournaments(id, name)').eq('id', poolId).single();
       if (poolData) setPool(poolData);
 
