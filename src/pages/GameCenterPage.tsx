@@ -124,13 +124,13 @@ export default function GameCenterPage() {
     <div className="max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
-            <Activity className="w-5 h-5 text-primary" />
+        <div className="page-header mb-0">
+          <div className="page-header-icon">
+            <Activity />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">Game Center</h1>
-            <p className="text-sm text-muted-foreground">Live scores & results</p>
+            <h1 className="page-header-title">Game Center</h1>
+            <p className="page-header-subtitle">Live scores & results</p>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
