@@ -882,29 +882,10 @@ async function syncGames(
   const errors: string[] = [];
   const skipReasons: Record<string, number> = {};
 
-  // Update non-play-in team names (play-in teams are handled positionally below)
-  let teamsUpdated = 0;
-  for (const ext of externalTeams) {
-    const internalId = teamLookup.get(ext.externalTeamId);
-    if (internalId && ext.schoolName) {
-      // Verify this isn't a play-in team (play-in teams handled by positional matching)
-      const { data: team } = await db
-        .from("teams")
-        .select("play_in_group")
-        .eq("id", internalId)
-        .single();
-      if (team && !team.play_in_group) {
-        const { error } = await db.from("teams").update({
-          school_name: ext.schoolName,
-          short_name: ext.shortName || ext.schoolName,
-        }).eq("id", internalId);
-        if (!error) teamsUpdated++;
-      }
-    }
-  }
-  if (teamsUpdated > 0) {
-    await logSyncEvent(db, syncRunId, "team", null, "team_names_updated", "success", { teamsUpdated });
-  }
+  // NOTE: Bulk team name updates removed — they caused cross-region name corruption
+  // via loose name matching. Team names are set during initial seeding.
+  // Play-in team names are updated only via FF positional anchoring below.
+  const teamsUpdated = 0;
 
   for (const rawGame of sortedGames) {
     const ng = validateGame(rawGame);
