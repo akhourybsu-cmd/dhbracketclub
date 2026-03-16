@@ -740,6 +740,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          play_in_group: number | null
           region: string
           school_name: string
           seed: number
@@ -749,6 +750,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          play_in_group?: number | null
           region: string
           school_name: string
           seed: number
@@ -758,6 +760,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          play_in_group?: number | null
           region?: string
           school_name?: string
           seed?: number
