@@ -588,35 +588,77 @@ async function buildTeamLookup(
 
   if (!internalTeams || internalTeams.length === 0) return lookup;
 
-  // Build normalized index of internal teams
   const internalIndex = internalTeams.map((t) => ({
     ...t,
     normalizedSchool: normalizeTeamName(t.school_name),
     normalizedShort: normalizeTeamName(t.short_name),
   }));
 
-  for (const ext of externalTeams) {
-    // Try exact seed+region match first (most reliable for March Madness)
-    const seedRegionMatch = internalIndex.find(
-      (t) => t.seed === ext.seed && t.region.toLowerCase() === ext.region.toLowerCase()
-    );
-    if (seedRegionMatch) {
-      lookup.set(ext.externalTeamId, seedRegionMatch.id);
-      continue;
-    }
+  const usedInternalIds = new Set<string>();
 
-    // Fuzzy name match
-    const normExt = normalizeTeamName(ext.schoolName);
-    const normExtShort = normalizeTeamName(ext.shortName);
-    const nameMatch = internalIndex.find(
+  const findStrictNameMatch = (ext: NormalizedTeam) => {
+    const normSchool = normalizeTeamName(ext.schoolName);
+    const normShort = normalizeTeamName(ext.shortName);
+
+    return internalIndex.find(
       (t) =>
-        t.normalizedSchool === normExt ||
-        t.normalizedShort === normExtShort ||
-        t.normalizedSchool === normExtShort ||
-        t.normalizedShort === normExt
+        !usedInternalIds.has(t.id) &&
+        (
+          t.normalizedSchool === normSchool ||
+          t.normalizedShort === normShort ||
+          t.normalizedSchool === normShort ||
+          t.normalizedShort === normSchool
+        )
     );
-    if (nameMatch) {
-      lookup.set(ext.externalTeamId, nameMatch.id);
+  };
+
+  // Pass 1: strict name matching (avoids seed/region collisions in First Four)
+  for (const ext of externalTeams) {
+    const strict = findStrictNameMatch(ext);
+    if (strict) {
+      lookup.set(ext.externalTeamId, strict.id);
+      usedInternalIds.add(strict.id);
+    }
+  }
+
+  // Pass 2: unique seed+region fallback for unresolved teams
+  for (const ext of externalTeams) {
+    if (lookup.has(ext.externalTeamId)) continue;
+
+    const candidates = internalIndex.filter(
+      (t) =>
+        !usedInternalIds.has(t.id) &&
+        t.seed === ext.seed &&
+        t.region.toLowerCase() === ext.region.toLowerCase()
+    );
+
+    if (candidates.length === 1) {
+      lookup.set(ext.externalTeamId, candidates[0].id);
+      usedInternalIds.add(candidates[0].id);
+    }
+  }
+
+  // Pass 3: relaxed name containment fallback
+  for (const ext of externalTeams) {
+    if (lookup.has(ext.externalTeamId)) continue;
+
+    const normSchool = normalizeTeamName(ext.schoolName);
+    const normShort = normalizeTeamName(ext.shortName);
+
+    const relaxed = internalIndex.find(
+      (t) =>
+        !usedInternalIds.has(t.id) &&
+        (
+          t.normalizedSchool.includes(normSchool) ||
+          normSchool.includes(t.normalizedSchool) ||
+          t.normalizedShort.includes(normShort) ||
+          normShort.includes(t.normalizedShort)
+        )
+    );
+
+    if (relaxed) {
+      lookup.set(ext.externalTeamId, relaxed.id);
+      usedInternalIds.add(relaxed.id);
     }
   }
 
