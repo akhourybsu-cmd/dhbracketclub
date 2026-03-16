@@ -168,7 +168,6 @@ export default function BracketDetailPage() {
             className={cn("px-2 py-1 rounded-md text-[10px] font-semibold transition-colors",
               currentRound === i + 1 ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground")} />
         ))}
-        ))}
       </div>
 
       {/* Games */}
