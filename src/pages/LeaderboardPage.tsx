@@ -3,8 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, Trophy, Eye, Crown, Medal, TrendingUp, TrendingDown, Minus, AlertCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { ArrowLeft, Trophy, Eye, Crown, Medal, TrendingUp, TrendingDown, Minus, AlertCircle, Zap } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Team, getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES } from '@/lib/bracketUtils';
 import { useStandingsUpdates } from '@/hooks/useRealtimeSubscription';
 
@@ -150,19 +150,36 @@ export default function LeaderboardPage() {
   };
 
   const MovementPill = ({ movement }: { movement: ReturnType<typeof getMovement> }) => {
-    if (!movement) return <span className="w-10" />;
+    if (!movement) return <span className="w-8" />;
     if (movement.direction === 'up') return (
-      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success/15 text-success text-[10px] font-bold tabular-nums">
+      <motion.span
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold tabular-nums"
+        style={{
+          background: 'linear-gradient(135deg, hsl(var(--success) / 0.18), hsl(var(--success) / 0.08))',
+          color: 'hsl(var(--success))',
+          boxShadow: '0 0 8px hsl(var(--success) / 0.1)',
+        }}
+      >
         <TrendingUp className="w-3 h-3" />{movement.amount}
-      </span>
+      </motion.span>
     );
     if (movement.direction === 'down') return (
-      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-destructive/15 text-destructive text-[10px] font-bold tabular-nums">
+      <motion.span
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold tabular-nums"
+        style={{
+          background: 'linear-gradient(135deg, hsl(var(--destructive) / 0.18), hsl(var(--destructive) / 0.08))',
+          color: 'hsl(var(--destructive))',
+        }}
+      >
         <TrendingDown className="w-3 h-3" />{movement.amount}
-      </span>
+      </motion.span>
     );
     return (
-      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground text-[10px]">
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted/50 text-muted-foreground text-[10px]">
         <Minus className="w-3 h-3" />
       </span>
     );
@@ -179,47 +196,117 @@ export default function LeaderboardPage() {
 
   const podiumOrder = standings.length >= 3 && standings[0].total_points > 0
     ? [standings[1], standings[0], standings[2]] : null;
+
   const podiumMeta = [
-    { place: 2, color: 'text-silver', height: 'h-16', icon: Medal, badgeClass: 'rank-badge-silver' },
-    { place: 1, color: 'text-gold', height: 'h-24', icon: Crown, badgeClass: 'rank-badge-gold' },
-    { place: 3, color: 'text-bronze', height: 'h-12', icon: Medal, badgeClass: 'rank-badge-bronze' },
+    { place: 2, colorVar: 'silver', height: 'h-14', icon: Medal, label: '2nd' },
+    { place: 1, colorVar: 'gold', height: 'h-24', icon: Crown, label: '1st' },
+    { place: 3, colorVar: 'bronze', height: 'h-10', icon: Medal, label: '3rd' },
   ];
 
+  const leader = standings[0];
+
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto pb-8">
       <Link to={`/pools/${poolId}`} className="back-link">
         <ArrowLeft /> Back to Pool
       </Link>
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8 hero-glow relative z-10">
-        <div className="page-header mb-0">
-          <div className="page-header-icon">
-            <Trophy />
+      {/* ═══ Hero Header ═══ */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="relative mb-8"
+      >
+        {/* Ambient glow */}
+        <div className="absolute -inset-x-4 -top-8 -bottom-4 pointer-events-none" style={{
+          background: 'radial-gradient(ellipse 70% 60% at 50% 0%, hsl(var(--primary) / 0.06), transparent)',
+        }} />
+
+        <div className="flex items-center justify-between relative z-10">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{
+              background: 'linear-gradient(135deg, hsl(var(--primary) / 0.2), hsl(var(--primary) / 0.06))',
+              boxShadow: '0 0 24px hsl(var(--primary) / 0.12), inset 0 1px 0 hsl(var(--primary) / 0.1)',
+            }}>
+              <Trophy className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Leaderboard</h1>
+              <p className="text-sm text-muted-foreground font-medium mt-0.5">{pool?.name}</p>
+            </div>
           </div>
-          <div>
-            <h1 className="page-header-title">Leaderboard</h1>
-            <p className="page-header-subtitle">{pool?.name}</p>
+
+          <div className="flex flex-col items-end gap-2">
+            {rtStatus === 'connected' && (
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(var(--success) / 0.15), hsl(var(--success) / 0.05))',
+                  color: 'hsl(var(--success))',
+                  border: '1px solid hsl(var(--success) / 0.15)',
+                }}
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-50" style={{ background: 'hsl(var(--success))' }} />
+                  <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: 'hsl(var(--success))' }} />
+                </span>
+                Live
+              </motion.div>
+            )}
+            {lastUpdated && (
+              <span className="text-[10px] text-muted-foreground/60 tabular-nums">
+                {lastUpdated.toLocaleTimeString()}
+              </span>
+            )}
           </div>
         </div>
-        <div className="flex flex-col items-end gap-1.5">
-          {rtStatus === 'connected' && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/10 text-success text-[10px] font-bold">
-              <span className="live-dot" /> Live
-            </span>
-          )}
-          {lastUpdated && (
-            <span className="text-[10px] text-muted-foreground tabular-nums">
-              Updated {lastUpdated.toLocaleTimeString()}
-            </span>
-          )}
-        </div>
-      </div>
+
+        {/* Leader callout — show when there's a clear leader */}
+        {isLocked && leader && leader.total_points > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mt-5 rounded-xl p-4 flex items-center gap-4 relative z-10"
+            style={{
+              background: 'linear-gradient(135deg, hsl(var(--gold) / 0.06), hsl(var(--gold) / 0.02))',
+              border: '1px solid hsl(var(--gold) / 0.12)',
+              boxShadow: '0 0 20px hsl(var(--gold) / 0.04)',
+            }}
+          >
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-base font-extrabold"
+              style={{
+                background: 'linear-gradient(135deg, hsl(var(--gold) / 0.2), hsl(var(--gold) / 0.08))',
+                color: 'hsl(var(--gold))',
+                boxShadow: '0 0 12px hsl(var(--gold) / 0.1)',
+              }}
+            >
+              {leader.display_name[0].toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold truncate">{leader.display_name}</span>
+                <Crown className="w-3.5 h-3.5 text-gold flex-shrink-0" />
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {leader.champion_team ? `Champion: ${leader.champion_team.short_name}` : 'Current leader'}
+              </span>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-extrabold tabular-nums text-gold">{leader.total_points}</div>
+              <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Points</div>
+            </div>
+          </motion.div>
+        )}
+      </motion.div>
 
       {/* Stale warning */}
       {!lastSyncedAt && isLocked && (
         <div className="glass-card p-3.5 mb-6 flex items-center gap-3" style={{ borderColor: 'hsl(var(--warning) / 0.2)' }}>
-          <div className="w-9 h-9 rounded-xl bg-warning/12 flex items-center justify-center flex-shrink-0">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'hsl(var(--warning) / 0.1)' }}>
             <AlertCircle className="w-4 h-4 text-warning" />
           </div>
           <span className="text-xs text-muted-foreground relative z-10">Standings haven't been synced yet. Scores may not be current.</span>
@@ -234,39 +321,92 @@ export default function LeaderboardPage() {
         </div>
       ) : (
         <>
-          {/* Podium */}
+          {/* ═══ Podium ═══ */}
           {isLocked && podiumOrder && (
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-6 mb-6">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="mb-6 rounded-2xl p-6 pb-2 relative overflow-hidden"
+              style={{
+                background: 'linear-gradient(180deg, hsl(var(--surface-elevated)), hsl(var(--card)))',
+                border: '1px solid hsl(var(--border) / 0.5)',
+                boxShadow: 'var(--shadow-elevated)',
+              }}
+            >
+              {/* Subtle crown glow behind center */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-32 pointer-events-none" style={{
+                background: 'radial-gradient(ellipse at center, hsl(var(--gold) / 0.06), transparent 70%)',
+              }} />
+
               <div className="grid grid-cols-3 gap-3 items-end relative z-10">
                 {podiumOrder.map((s, i) => {
                   const meta = podiumMeta[i];
                   const movement = getMovement(s);
                   const Icon = meta.icon;
+                  const isCenter = meta.place === 1;
+
                   return (
                     <motion.div
                       key={s.user_id}
-                      initial={{ opacity: 0, y: 20 }}
+                      initial={{ opacity: 0, y: 24 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 + i * 0.1 }}
+                      transition={{ delay: 0.2 + i * 0.12, type: 'spring', damping: 20 }}
                       className="flex flex-col items-center text-center"
                     >
+                      {/* Avatar */}
                       <div className={cn(
-                        "w-14 h-14 rounded-full flex items-center justify-center text-lg font-extrabold mb-2.5 border-2",
-                        meta.place === 1 ? "border-gold bg-gold/12 text-gold" :
-                        meta.place === 2 ? "border-silver bg-silver/8 text-silver" :
-                        "border-bronze bg-bronze/8 text-bronze"
-                      )}>
+                        "rounded-full flex items-center justify-center font-extrabold relative",
+                        isCenter ? "w-16 h-16 text-xl mb-3" : "w-12 h-12 text-base mb-2"
+                      )} style={{
+                        background: `linear-gradient(135deg, hsl(var(--${meta.colorVar}) / 0.2), hsl(var(--${meta.colorVar}) / 0.06))`,
+                        border: `2px solid hsl(var(--${meta.colorVar}) / 0.35)`,
+                        color: `hsl(var(--${meta.colorVar}))`,
+                        boxShadow: isCenter ? `0 0 20px hsl(var(--${meta.colorVar}) / 0.12)` : 'none',
+                      }}>
                         {s.display_name[0].toUpperCase()}
+                        {isCenter && (
+                          <div className="absolute -top-2.5 -right-1">
+                            <Crown className="w-4 h-4 text-gold" style={{ filter: 'drop-shadow(0 0 4px hsl(var(--gold) / 0.3))' }} />
+                          </div>
+                        )}
                       </div>
-                      <p className="text-xs font-semibold truncate w-full mb-1">{s.display_name}</p>
-                      <div className="flex items-center gap-1 mb-2">
-                        <span className={cn("text-2xl font-extrabold tabular-nums", meta.color)}>{s.total_points}</span>
+
+                      {/* Name */}
+                      <p className={cn(
+                        "font-semibold truncate w-full",
+                        isCenter ? "text-sm" : "text-xs"
+                      )}>{s.display_name}</p>
+
+                      {/* Champion pick */}
+                      {s.champion_team && (
+                        <span className="text-[10px] text-muted-foreground mt-0.5 truncate w-full">
+                          {s.champion_team.short_name}
+                        </span>
+                      )}
+
+                      {/* Points */}
+                      <div className={cn(
+                        "font-extrabold tabular-nums mt-1.5",
+                        isCenter ? "text-3xl" : "text-xl"
+                      )} style={{ color: `hsl(var(--${meta.colorVar}))` }}>
+                        {s.total_points}
                       </div>
-                      <MovementPill movement={movement} />
-                      <div className={cn("w-full rounded-t-xl flex items-end justify-center mt-3", "bg-gradient-to-t from-transparent", meta.height)}
-                        style={{ background: `linear-gradient(to top, hsl(var(--${meta.place === 1 ? 'gold' : meta.place === 2 ? 'silver' : 'bronze'}) / 0.08), transparent)` }}
-                      >
-                        <Icon className={cn("w-5 h-5 mb-2", meta.color)} />
+                      <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground mt-0.5">pts</span>
+
+                      {/* Movement */}
+                      <div className="mt-2">
+                        <MovementPill movement={movement} />
+                      </div>
+
+                      {/* Podium bar */}
+                      <div className={cn("w-full rounded-t-xl mt-3", meta.height)} style={{
+                        background: `linear-gradient(to top, hsl(var(--${meta.colorVar}) / 0.12), hsl(var(--${meta.colorVar}) / 0.03))`,
+                        borderTop: `2px solid hsl(var(--${meta.colorVar}) / 0.25)`,
+                      }}>
+                        <div className="flex items-end justify-center h-full pb-1.5">
+                          <Icon className="w-4 h-4" style={{ color: `hsl(var(--${meta.colorVar}))`, opacity: 0.7 }} />
+                        </div>
                       </div>
                     </motion.div>
                   );
@@ -275,87 +415,180 @@ export default function LeaderboardPage() {
             </motion.div>
           )}
 
-          {/* Standings table */}
-          <div className="glass-card overflow-hidden">
-            <div className="grid grid-cols-[2.5rem_1fr_auto_3.5rem_3rem_3.5rem] gap-2 px-4 py-3 text-[9px] font-bold text-muted-foreground uppercase tracking-[0.15em] border-b border-border/30 relative z-10" style={{ background: 'hsl(var(--surface))' }}>
-              <span className="text-center">#</span>
-              <span>Player</span>
-              <span className="text-center">Champ</span>
-              <span className="text-right">Pts</span>
-              <span className="text-right">✓</span>
-              <span className="text-right">Poss</span>
+          {/* ═══ Standings Table ═══ */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="rounded-2xl overflow-hidden relative"
+            style={{
+              background: 'hsl(var(--card))',
+              border: '1px solid hsl(var(--border) / 0.5)',
+              boxShadow: 'var(--shadow-card)',
+            }}
+          >
+            {/* Shine overlay */}
+            <div className="absolute inset-0 pointer-events-none rounded-2xl" style={{
+              background: 'var(--gradient-card-shine)',
+            }} />
+
+            {/* Table header */}
+            <div
+              className="grid grid-cols-[2.5rem_1fr_5rem_4rem_3rem_3rem] gap-2 px-5 py-3 relative z-10"
+              style={{
+                background: 'linear-gradient(180deg, hsl(var(--surface-elevated)), hsl(var(--surface)))',
+                borderBottom: '1px solid hsl(var(--border) / 0.4)',
+              }}
+            >
+              <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em] text-center">Rank</span>
+              <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em]">Player</span>
+              <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em] text-center">Champ</span>
+              <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em] text-right">Pts</span>
+              <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em] text-right">✓</span>
+              <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em] text-right">Max</span>
             </div>
 
-            {standings.map((s, i) => {
-              const movement = getMovement(s);
-              const isMe = s.user_id === user?.id;
+            {/* Rows */}
+            <AnimatePresence mode="popLayout">
+              {standings.map((s, i) => {
+                const movement = getMovement(s);
+                const isMe = s.user_id === user?.id;
+                const isTop3 = s.rank <= 3 && s.total_points > 0;
 
-              return (
-                <motion.div
-                  key={s.user_id}
-                  layout
-                  initial={{ opacity: 0, x: -6 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: Math.min(i * 0.025, 0.4) }}
-                  className={cn(
-                    "grid grid-cols-[2.5rem_1fr_auto_3.5rem_3rem_3.5rem] gap-2 px-4 py-3.5 items-center transition-colors relative z-10",
-                    isMe && "bg-primary/5",
-                    i < standings.length - 1 && "border-b border-border/15"
-                  )}
-                >
-                  <div className="flex flex-col items-center">
-                    {s.rank <= 3 ? (
-                      <div className={cn("rank-badge", s.rank === 1 && "rank-badge-gold", s.rank === 2 && "rank-badge-silver", s.rank === 3 && "rank-badge-bronze")}>
-                        {s.rank}
-                      </div>
-                    ) : (
-                      <span className="text-sm font-mono font-bold tabular-nums text-muted-foreground">{s.rank}</span>
+                return (
+                  <motion.div
+                    key={s.user_id}
+                    layout
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: Math.min(i * 0.03, 0.5), type: 'spring', damping: 25, stiffness: 300 }}
+                    className={cn(
+                      "grid grid-cols-[2.5rem_1fr_5rem_4rem_3rem_3rem] gap-2 px-5 items-center relative z-10 group transition-colors duration-200",
+                      isMe ? "py-4" : "py-3.5",
+                      i < standings.length - 1 && "border-b border-border/10",
                     )}
-                  </div>
+                    style={{
+                      ...(isMe ? {
+                        background: 'linear-gradient(90deg, hsl(var(--primary) / 0.06), hsl(var(--primary) / 0.02))',
+                        borderLeft: '2px solid hsl(var(--primary) / 0.4)',
+                      } : {}),
+                    }}
+                    whileHover={{
+                      backgroundColor: 'hsl(var(--surface-elevated) / 0.5)',
+                    }}
+                  >
+                    {/* Rank */}
+                    <div className="flex justify-center">
+                      {isTop3 ? (
+                        <div className={cn(
+                          "w-8 h-8 rounded-lg flex items-center justify-center text-xs font-extrabold",
+                        )} style={{
+                          background: `linear-gradient(135deg, hsl(var(--${s.rank === 1 ? 'gold' : s.rank === 2 ? 'silver' : 'bronze'}) / 0.2), hsl(var(--${s.rank === 1 ? 'gold' : s.rank === 2 ? 'silver' : 'bronze'}) / 0.06))`,
+                          color: `hsl(var(--${s.rank === 1 ? 'gold' : s.rank === 2 ? 'silver' : 'bronze'}))`,
+                          boxShadow: s.rank === 1 ? '0 0 10px hsl(var(--gold) / 0.12)' : 'none',
+                          border: `1px solid hsl(var(--${s.rank === 1 ? 'gold' : s.rank === 2 ? 'silver' : 'bronze'}) / 0.15)`,
+                        }}>
+                          {s.rank}
+                        </div>
+                      ) : (
+                        <span className="text-sm font-mono font-bold tabular-nums text-muted-foreground/60">{s.rank}</span>
+                      )}
+                    </div>
 
-                  <div className="min-w-0 flex items-center gap-2">
-                    <div className="min-w-0 flex flex-col">
-                      <span className={cn("text-sm font-semibold truncate", isMe && "text-primary")}>
-                        {s.display_name}
-                        {isMe && <span className="text-[10px] font-normal text-primary/50 ml-1">(you)</span>}
+                    {/* Player info */}
+                    <div className="min-w-0 flex items-center gap-2.5">
+                      {/* Avatar initial */}
+                      <div className={cn(
+                        "w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0",
+                        isMe ? "text-primary" : "text-foreground/70"
+                      )} style={{
+                        background: isMe
+                          ? 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))'
+                          : 'hsl(var(--surface-elevated))',
+                        border: isMe ? '1px solid hsl(var(--primary) / 0.15)' : '1px solid hsl(var(--border) / 0.3)',
+                      }}>
+                        {s.display_name[0].toUpperCase()}
+                      </div>
+
+                      <div className="min-w-0 flex flex-col">
+                        <div className="flex items-center gap-1.5">
+                          <span className={cn(
+                            "text-sm font-semibold truncate",
+                            isMe && "text-primary"
+                          )}>
+                            {s.display_name}
+                          </span>
+                          {isMe && (
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-primary/50">You</span>
+                          )}
+                        </div>
+                        <MovementPill movement={movement} />
+                      </div>
+
+                      {isLocked && s.bracket_id && (
+                        <Link
+                          to={`/pools/${poolId}/bracket/${s.bracket_id}`}
+                          className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-primary/10"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-muted-foreground" />
+                        </Link>
+                      )}
+                    </div>
+
+                    {/* Champion pick */}
+                    <div className="flex justify-center">
+                      {s.champion_team ? (
+                        <span className="text-[11px] font-semibold truncate px-2.5 py-1 rounded-lg max-w-full"
+                          style={{
+                            background: 'hsl(var(--surface))',
+                            color: 'hsl(var(--foreground) / 0.7)',
+                            border: '1px solid hsl(var(--border) / 0.3)',
+                          }}
+                        >
+                          {s.champion_team.short_name}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/25 text-xs">—</span>
+                      )}
+                    </div>
+
+                    {/* Points */}
+                    <div className="text-right">
+                      <span className={cn(
+                        "text-base font-extrabold tabular-nums",
+                        isTop3 && s.rank === 1 && "text-gold",
+                        isTop3 && s.rank === 2 && "text-silver",
+                        isTop3 && s.rank === 3 && "text-bronze",
+                        !isTop3 && "text-foreground",
+                      )} style={{
+                        ...(s.rank === 1 && s.total_points > 0 ? { textShadow: '0 0 12px hsl(var(--gold) / 0.2)' } : {}),
+                      }}>
+                        {s.total_points}
                       </span>
                     </div>
-                    <MovementPill movement={movement} />
-                    {isLocked && s.bracket_id && (
-                      <Link to={`/pools/${poolId}/bracket/${s.bracket_id}`} className="flex-shrink-0 opacity-30 hover:opacity-100 transition-opacity">
-                        <Eye className="w-3.5 h-3.5 text-muted-foreground" />
-                      </Link>
-                    )}
-                  </div>
 
-                  <span className={cn(
-                    "text-[11px] font-medium truncate max-w-[5rem] text-center px-2 py-0.5 rounded-lg",
-                    s.champion_team ? "bg-muted/40 text-muted-foreground" : "text-muted-foreground/30"
-                  )}>
-                    {s.champion_team?.short_name || '—'}
-                  </span>
+                    {/* Correct picks */}
+                    <span className="text-xs tabular-nums text-right text-muted-foreground font-medium">{s.correct_picks}</span>
 
-                  <span className={cn(
-                    "text-sm font-extrabold tabular-nums text-right",
-                    s.rank === 1 && s.total_points > 0 && "text-gold",
-                    s.rank === 2 && s.total_points > 0 && "text-silver",
-                    s.rank === 3 && s.total_points > 0 && "text-bronze",
-                  )}>
-                    {s.total_points}
-                  </span>
+                    {/* Possible remaining */}
+                    <span className="text-xs tabular-nums text-right text-muted-foreground/50 font-medium">{s.possible_points_remaining}</span>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </motion.div>
 
-                  <span className="text-sm tabular-nums text-right text-muted-foreground">{s.correct_picks}</span>
-                  <span className="text-sm tabular-nums text-right text-muted-foreground">{s.possible_points_remaining}</span>
-                </motion.div>
-              );
-            })}
+          {/* Member count + sync info */}
+          <div className="flex items-center justify-between mt-5 px-1">
+            <span className="text-[10px] text-muted-foreground/40 font-medium">
+              {standings.length} {standings.length === 1 ? 'member' : 'members'}
+            </span>
+            {lastSyncedAt && (
+              <span className="text-[10px] text-muted-foreground/40 tabular-nums">
+                Synced {new Date(lastSyncedAt).toLocaleString()}
+              </span>
+            )}
           </div>
-
-          {lastSyncedAt && (
-            <p className="text-[10px] text-muted-foreground/60 text-center mt-5 tabular-nums">
-              Last synced: {new Date(lastSyncedAt).toLocaleString()}
-            </p>
-          )}
         </>
       )}
     </div>
