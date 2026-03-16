@@ -136,7 +136,7 @@ export default function GameCenterPage() {
         <div className="flex flex-col items-end gap-1">
           {rtStatus === 'connected' && (
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 text-success text-[10px] font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" /> Live
+              <span className="live-dot" /> Live
             </span>
           )}
           {lastUpdated && (
