@@ -705,6 +705,43 @@ const PROVIDER_REGISTRY: Record<string, SportDataProvider> = {
 //  NORMALIZATION & RECONCILIATION
 // ═══════════════════════════════════════════════════════════════════
 
+/**
+ * Disambiguation map for teams with similar names that cause false matches.
+ * Maps normalized partial name → array of full normalized names that should NOT match each other.
+ * When a containment match candidate is found, check if the pair is in a collision group.
+ */
+const DISAMBIGUATION_GROUPS: string[][] = [
+  // Tennessee vs Tennessee State vs Tennessee Tech
+  ["tennesseevolunteers", "tennesseestatetiger", "tennesseestate", "tennesseevols"],
+  // Miami (FL) vs Miami (OH)
+  ["miamihurricanes", "miamiflhurricanes", "miamiflorida", "miamiohredhawks", "miamioh", "miamiredh"],
+  // Texas vs Texas Tech vs Texas A&M vs Texas State
+  ["texaslonghorns", "texastechredraiders", "texastech", "texasamaggies", "texasam", "texasstate"],
+  // NC State vs North Carolina
+  ["ncstatewolfpack", "ncstate", "northcarolinatarheels", "northcarolina"],
+  // Saint Mary's vs Saint Louis vs St. John's vs St. Francis
+  ["saintmarysgaels", "saintmarys", "saintlouisbillikens", "saintlouis", "stjohnsredstorm", "stjohns", "stfrancis"],
+  // Georgia vs Georgia Tech vs Georgia State
+  ["georgiabulldogs", "georgia", "georgiatech", "georgiastate"],
+  // Prairie View vs Penn (short names could collide)
+  ["prairieviewam", "prairieview", "pennsylvaniaquakers", "penn", "pennstate"],
+];
+
+/** Check if two normalized names are in the same disambiguation group (should NOT match) */
+function isDisambiguationConflict(norm1: string, norm2: string): boolean {
+  for (const group of DISAMBIGUATION_GROUPS) {
+    const match1 = group.some(g => norm1.includes(g) || g.includes(norm1));
+    const match2 = group.some(g => norm2.includes(g) || g.includes(norm2));
+    if (match1 && match2) {
+      // Both names relate to this group — check if they're actually the same team
+      const exact1 = group.find(g => norm1.includes(g) || g.includes(norm1));
+      const exact2 = group.find(g => norm2.includes(g) || g.includes(norm2));
+      if (exact1 !== exact2) return true; // Different teams in same collision group
+    }
+  }
+  return false;
+}
+
 function normalizeTeamName(name: string): string {
   if (!name) return "";
   return name
