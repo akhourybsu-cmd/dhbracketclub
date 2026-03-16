@@ -107,6 +107,34 @@ export default function DashboardPage() {
         </Link>
       </motion.div>
 
+      {/* PWA Install Banner */}
+      <AnimatePresence>
+        {canInstall && !dismissedInstall && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-8 overflow-hidden"
+          >
+            <div className="glass-card p-4 flex items-center gap-3 border-primary/20">
+              <div className="icon-container w-10 h-10 flex-shrink-0">
+                <Download className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold">Install Bracket Battle</p>
+                <p className="text-[11px] text-muted-foreground">Add to your home screen for the best experience</p>
+              </div>
+              <Button size="sm" onClick={install} className="rounded-xl font-bold text-xs h-9 px-4 btn-press flex-shrink-0">
+                Install
+              </Button>
+              <button onClick={() => setDismissedInstall(true)} className="text-muted-foreground hover:text-foreground p-1">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Summary stats */}
       {!loading && pools.length > 0 && (
         <motion.div
