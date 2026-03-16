@@ -417,7 +417,9 @@ async function syncGameResults(
   let updated = 0;
   let skippedFinal = 0;
   let skippedUnmatched = 0;
+  let newFinals = 0;
   const errors: string[] = [];
+  const affectedGameIds: string[] = [];
 
   for (const rawGame of externalResults) {
     const ng = validateGame(rawGame);
@@ -441,17 +443,13 @@ async function syncGameResults(
     if (!current) continue;
 
     // ─── RECONCILIATION: Never overwrite admin-finalized results ────
-    // If the game is already final AND is_result_final is true AND the
-    // incoming data doesn't change the winner, skip to prevent churn
     if (
       current.is_result_final &&
       current.status === "final" &&
       ng.status === "final"
     ) {
-      // Check if winner is the same (or incoming has no winner)
       const incomingWinner = ng.winnerExternalId ? teamLookup.get(ng.winnerExternalId) : null;
       if (!incomingWinner || incomingWinner === current.winner_team_id) {
-        // Only update scores if they changed (e.g., stat correction)
         if (current.team1_score === ng.team1Score && current.team2_score === ng.team2Score) {
           skippedFinal++;
           continue;
@@ -471,23 +469,21 @@ async function syncGameResults(
     };
 
     // Resolve winner only when final
+    let winnerChanged = false;
     if (ng.status === "final" && ng.winnerExternalId) {
       const winnerInternal = teamLookup.get(ng.winnerExternalId);
       if (winnerInternal) {
         updatePayload.winner_team_id = winnerInternal;
         updatePayload.is_result_final = true;
+        winnerChanged = current.winner_team_id !== winnerInternal;
       } else {
-        // Winner external ID doesn't map — try inferring from scores + team IDs
-        if (
-          ng.team1Score != null &&
-          ng.team2Score != null &&
-          ng.team1Score !== ng.team2Score
-        ) {
-          const winnerId =
-            ng.team1Score > ng.team2Score ? current.team1_id : current.team2_id;
+        // Infer from scores
+        if (ng.team1Score != null && ng.team2Score != null && ng.team1Score !== ng.team2Score) {
+          const winnerId = ng.team1Score > ng.team2Score ? current.team1_id : current.team2_id;
           if (winnerId) {
             updatePayload.winner_team_id = winnerId;
             updatePayload.is_result_final = true;
+            winnerChanged = current.winner_team_id !== winnerId;
           }
         }
         await logSyncEvent(db, syncRunId, "game", gameId, "winner_resolution_fallback", "warning", {
@@ -496,11 +492,15 @@ async function syncGameResults(
         });
       }
     } else if (ng.status !== "final") {
-      // Live game — do NOT set winner or is_result_final
       updatePayload.is_result_final = false;
     }
 
-    // ─── Advance winner to next round game ──────────────────────────
+    // Track if this is a newly finalized game
+    if (ng.status === "final" && current.status !== "final") {
+      newFinals++;
+    }
+
+    // Advance winner to next round
     if (updatePayload.winner_team_id && updatePayload.is_result_final) {
       const { data: thisGame } = await db
         .from("games")
@@ -538,7 +538,7 @@ async function syncGameResults(
       current.status !== ng.status ||
       current.team1_score !== ng.team1Score ||
       current.team2_score !== ng.team2Score ||
-      (updatePayload.winner_team_id && current.winner_team_id !== updatePayload.winner_team_id);
+      winnerChanged;
 
     if (hasChanges) {
       await db.from("game_state_history").insert({
@@ -552,6 +552,7 @@ async function syncGameResults(
         changed_by_source: `sync:${config.providerName}`,
         sync_run_id: syncRunId,
       });
+      affectedGameIds.push(gameId);
     }
 
     // Apply update
@@ -565,11 +566,12 @@ async function syncGameResults(
         matchMethod,
         status: ng.status,
         hasWinner: !!updatePayload.winner_team_id,
+        winnerChanged,
       });
     }
   }
 
-  return { updated, skippedFinal, skippedUnmatched, errors };
+  return { updated, skippedFinal, skippedUnmatched, newFinals, errors, affectedGameIds };
 }
 
 // ═══════════════════════════════════════════════════════════════════
