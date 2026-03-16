@@ -21,6 +21,7 @@ export default function BracketDetailPage() {
   const [owner, setOwner] = useState<string>('');
   const [pool, setPool] = useState<any>(null);
   const [currentRound, setCurrentRound] = useState(1);
+  const [hasFirstFour, setHasFirstFour] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
