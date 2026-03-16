@@ -5,9 +5,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Save, Send, ChevronLeft, ChevronRight, ArrowLeft, Check } from 'lucide-react';
+import { Save, Send, ChevronLeft, ChevronRight, ArrowLeft, Check, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Team, Game, Pick, ROUND_NAMES, ROUND_SHORT, TOTAL_GAMES, FIRST_FOUR_GAMES,
   FIRST_FOUR_ROUND_NAME, FIRST_FOUR_ROUND_SHORT,
@@ -24,7 +24,7 @@ export default function BracketEntryPage() {
   const [bracket, setBracket] = useState<any>(null);
   const [tiebreaker, setTiebreaker] = useState<string>('');
   const [hasFirstFour, setHasFirstFour] = useState(false);
-  const [currentRound, setCurrentRound] = useState(0); // Will be set after data loads
+  const [currentRound, setCurrentRound] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [pool, setPool] = useState<any>(null);
@@ -99,14 +99,12 @@ export default function BracketEntryPage() {
     setPicks(prev => handlePickWithCascade(gameId, teamId, round, games, teams, prev));
   };
 
-  // Progress calculation
   const progress = useMemo(() => {
     const total = games.length;
     const filled = picks.size;
     return { filled, total, pct: total > 0 ? Math.round((filled / total) * 100) : 0 };
   }, [games, picks]);
 
-  // Per-round completion
   const roundCompletion = useMemo(() => {
     const result: Record<number, { total: number; filled: number }> = {};
     const startRound = hasFirstFour ? 0 : 1;
@@ -184,179 +182,241 @@ export default function BracketEntryPage() {
   const regions = [...new Set(roundGames.map(g => g.region))];
 
   if (loading) {
-    return <div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
+    return (
+      <div className="flex justify-center py-16">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
+  const currentRoundName = currentRound === 0 ? FIRST_FOUR_ROUND_NAME : ROUND_NAMES[currentRound - 1];
+  const rc = roundCompletion[currentRound];
+
   return (
-    <div>
+    <div className="max-w-2xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-4">
-        <Link to={`/pools/${poolId}`} className="text-muted-foreground hover:text-foreground">
+      <div className="flex items-center gap-3 mb-6">
+        <Link to={`/pools/${poolId}`} className="text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="w-5 h-5" />
         </Link>
-        <div className="flex-1">
-          <h1 className="text-lg font-bold">Fill Your Bracket</h1>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl font-extrabold tracking-tight">Fill Your Bracket</h1>
           {bracket?.status === 'submitted' && (
-            <p className="text-xs text-success font-medium">Submitted — editing will set back to draft</p>
+            <p className="text-xs text-success font-semibold mt-0.5">Submitted — editing will revert to draft</p>
           )}
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={saveDraft} disabled={saving}>
-            <Save className="w-4 h-4 mr-1" /> Save
+          <Button variant="outline" size="sm" onClick={saveDraft} disabled={saving} className="font-semibold">
+            <Save className="w-4 h-4 mr-1.5" /> Save
           </Button>
-          <Button size="sm" onClick={submitBracket} disabled={saving}>
-            <Send className="w-4 h-4 mr-1" /> Submit
+          <Button size="sm" onClick={submitBracket} disabled={saving} className="font-semibold">
+            <Send className="w-4 h-4 mr-1.5" /> Submit
           </Button>
         </div>
       </div>
 
       {/* Progress Bar */}
-      <div className="glass-card p-3 mb-4">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-xs font-medium">
-            {progress.filled} of {progress.total} picks
+      <div className="glass-card p-4 mb-5">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-semibold">
+            {progress.filled} <span className="text-muted-foreground font-normal">of</span> {progress.total} <span className="text-muted-foreground font-normal">picks</span>
           </span>
-          <span className="text-xs font-bold text-primary tabular-nums">{progress.pct}%</span>
+          <span className="text-sm font-extrabold text-primary tabular-nums">{progress.pct}%</span>
         </div>
-        <div className="h-2 bg-secondary rounded-full overflow-hidden">
+        <div className="h-2.5 bg-secondary rounded-full overflow-hidden">
           <motion.div
-            className="h-full bg-primary rounded-full"
+            className="h-full rounded-full"
+            style={{ background: 'linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)))' }}
             initial={{ width: 0 }}
             animate={{ width: `${progress.pct}%` }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
           />
         </div>
       </div>
 
       {/* Round Navigation */}
-      <div className="flex items-center justify-between mb-3">
-        <Button variant="ghost" size="icon" disabled={currentRound <= (hasFirstFour ? 0 : 1)} onClick={() => setCurrentRound(r => r - 1)}>
+      <div className="flex items-center justify-between mb-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          disabled={currentRound <= (hasFirstFour ? 0 : 1)}
+          onClick={() => setCurrentRound(r => r - 1)}
+          className="rounded-xl"
+        >
           <ChevronLeft className="w-5 h-5" />
         </Button>
         <div className="text-center">
-          <p className="text-sm font-semibold">
-            {currentRound === 0 ? FIRST_FOUR_ROUND_NAME : ROUND_NAMES[currentRound - 1]}
-          </p>
-          <p className="text-[10px] text-muted-foreground tabular-nums">
-            {roundCompletion[currentRound]?.filled}/{roundCompletion[currentRound]?.total} picks
+          <h2 className="text-lg font-extrabold tracking-tight">{currentRoundName}</h2>
+          <p className="text-xs text-muted-foreground tabular-nums font-medium mt-0.5">
+            {rc?.filled}/{rc?.total} picks
           </p>
         </div>
-        <Button variant="ghost" size="icon" disabled={currentRound >= 6} onClick={() => setCurrentRound(r => r + 1)}>
+        <Button
+          variant="ghost"
+          size="icon"
+          disabled={currentRound >= 6}
+          onClick={() => setCurrentRound(r => r + 1)}
+          className="rounded-xl"
+        >
           <ChevronRight className="w-5 h-5" />
         </Button>
       </div>
 
       {/* Round Tabs */}
-      <div className="flex gap-1.5 mb-5 justify-center flex-wrap">
+      <div className="flex gap-1.5 mb-6 justify-center flex-wrap">
         {hasFirstFour && (
-          <button
+          <RoundPill
+            label={FIRST_FOUR_ROUND_SHORT}
+            isActive={currentRound === 0}
+            isComplete={roundCompletion[0]?.filled === roundCompletion[0]?.total && (roundCompletion[0]?.total ?? 0) > 0}
             onClick={() => setCurrentRound(0)}
-            className={cn(
-              "px-2 py-1 rounded-md text-[10px] font-semibold transition-colors relative",
-              currentRound === 0
-                ? "bg-primary text-primary-foreground"
-                : roundCompletion[0]?.filled === roundCompletion[0]?.total && roundCompletion[0]?.total > 0
-                  ? "bg-success/15 text-success"
-                  : "bg-secondary text-secondary-foreground"
-            )}
-          >
-            {FIRST_FOUR_ROUND_SHORT}
-            {roundCompletion[0]?.filled === roundCompletion[0]?.total && roundCompletion[0]?.total > 0 && currentRound !== 0 && (
-              <Check className="w-2.5 h-2.5 absolute -top-1 -right-1" />
-            )}
-          </button>
+          />
         )}
         {ROUND_SHORT.map((label, i) => {
-          const rc = roundCompletion[i + 1];
-          const isComplete = rc && rc.filled === rc.total && rc.total > 0;
+          const rcomp = roundCompletion[i + 1];
           return (
-            <button
+            <RoundPill
               key={i}
+              label={label}
+              isActive={currentRound === i + 1}
+              isComplete={rcomp && rcomp.filled === rcomp.total && rcomp.total > 0}
               onClick={() => setCurrentRound(i + 1)}
-              className={cn(
-                "px-2 py-1 rounded-md text-[10px] font-semibold transition-colors relative",
-                currentRound === i + 1
-                  ? "bg-primary text-primary-foreground"
-                  : isComplete
-                    ? "bg-success/15 text-success"
-                    : "bg-secondary text-secondary-foreground"
-              )}
-            >
-              {label}
-              {isComplete && currentRound !== i + 1 && (
-                <Check className="w-2.5 h-2.5 absolute -top-1 -right-1" />
-              )}
-            </button>
+            />
           );
         })}
       </div>
 
-      {/* Games */}
-      <div className="space-y-5">
-        {regions.map(region => {
-          const regionGames = roundGames.filter(g => g.region === region);
-          return (
-            <div key={region}>
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{region}</h3>
-              <div className="space-y-2">
-                {regionGames.map(game => {
-                  const team1 = getEffectiveTeam(game, 'team1', games, teams, picks);
-                  const team2 = getEffectiveTeam(game, 'team2', games, teams, picks);
-                  const currentPick = picks.get(game.id);
-                  // Check if null team slots are due to First Four play-in
-                  const hasPlayIn = game.round_number === 1 && games.some(g => g.round_number === 0 && g.region === game.region);
+      {/* Games by Region */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentRound}
+          initial={{ opacity: 0, x: 12 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -12 }}
+          transition={{ duration: 0.2 }}
+          className="space-y-6"
+        >
+          {regions.map(region => {
+            const regionGames = roundGames.filter(g => g.region === region);
+            return (
+              <div key={region}>
+                <h3 className="section-header">{region}</h3>
+                <div className="space-y-2.5">
+                  {regionGames.map((game, idx) => {
+                    const team1 = getEffectiveTeam(game, 'team1', games, teams, picks);
+                    const team2 = getEffectiveTeam(game, 'team2', games, teams, picks);
+                    const currentPick = picks.get(game.id);
+                    const hasPlayIn = game.round_number === 1 && games.some(g => g.round_number === 0 && g.region === game.region);
+                    const isPicked = !!currentPick;
 
-                  return (
-                    <div key={game.id} className="matchup-card">
-                      <MatchupTeamRow
-                        team={team1}
-                        isSelected={currentPick?.picked_team_id === team1?.id}
-                        onSelect={() => team1 && handlePick(game.id, team1.id, game.round_number)}
-                        disabled={!team1}
-                        isPlayInSlot={!team1 && hasPlayIn}
-                      />
-                      <div className="h-px bg-border mx-2" />
-                      <MatchupTeamRow
-                        team={team2}
-                        isSelected={currentPick?.picked_team_id === team2?.id}
-                        onSelect={() => team2 && handlePick(game.id, team2.id, game.round_number)}
-                        disabled={!team2}
-                        isPlayInSlot={!team2 && hasPlayIn}
-                      />
-                    </div>
-                  );
-                })}
+                    return (
+                      <motion.div
+                        key={game.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.03, duration: 0.25 }}
+                        className={cn(
+                          "matchup-card",
+                          isPicked && "ring-1 ring-primary/30"
+                        )}
+                      >
+                        {/* Game number indicator */}
+                        <div className="flex items-center justify-between px-3 py-1 border-b border-border/30">
+                          <span className="text-[10px] font-bold text-muted-foreground/50 tabular-nums">
+                            Game {game.game_slot}
+                          </span>
+                          {isPicked && (
+                            <span className="text-[10px] font-bold text-primary flex items-center gap-1">
+                              <Check className="w-3 h-3" /> Picked
+                            </span>
+                          )}
+                        </div>
+
+                        <MatchupTeamRow
+                          team={team1}
+                          isSelected={currentPick?.picked_team_id === team1?.id}
+                          isOpponentSelected={currentPick?.picked_team_id === team2?.id}
+                          onSelect={() => team1 && handlePick(game.id, team1.id, game.round_number)}
+                          disabled={!team1}
+                          isPlayInSlot={!team1 && hasPlayIn}
+                        />
+                        <div className="h-px bg-border/40 mx-3" />
+                        <MatchupTeamRow
+                          team={team2}
+                          isSelected={currentPick?.picked_team_id === team2?.id}
+                          isOpponentSelected={currentPick?.picked_team_id === team1?.id}
+                          onSelect={() => team2 && handlePick(game.id, team2.id, game.round_number)}
+                          disabled={!team2}
+                          isPlayInSlot={!team2 && hasPlayIn}
+                        />
+                      </motion.div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </motion.div>
+      </AnimatePresence>
 
       {/* Tiebreaker */}
       {currentRound === 6 && (
-        <div className="mt-5 glass-card p-4">
-          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-            Tiebreaker: Predicted total score of the Championship game
-          </label>
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-6 glass-card p-5"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <Trophy className="w-4 h-4 text-gold" />
+            <label className="text-sm font-bold">Tiebreaker</label>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">Predict the total combined score of the Championship game</p>
           <Input
             type="number"
             value={tiebreaker}
             onChange={(e) => setTiebreaker(e.target.value)}
             placeholder="e.g. 145"
-            className="font-mono"
+            className="font-mono h-11 text-center text-lg font-bold"
           />
-        </div>
+        </motion.div>
       )}
 
       {/* Bottom spacer for mobile nav */}
-      <div className="h-4" />
+      <div className="h-6" />
     </div>
   );
 }
 
-function MatchupTeamRow({ team, isSelected, onSelect, disabled, isPlayInSlot }: {
+function RoundPill({ label, isActive, isComplete, onClick }: {
+  label: string;
+  isActive: boolean;
+  isComplete: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "round-pill relative",
+        isActive
+          ? "round-pill-active"
+          : isComplete
+            ? "round-pill-complete"
+            : "round-pill-default"
+      )}
+    >
+      {label}
+      {isComplete && !isActive && (
+        <Check className="w-3 h-3 absolute -top-1 -right-1 text-success" />
+      )}
+    </button>
+  );
+}
+
+function MatchupTeamRow({ team, isSelected, isOpponentSelected, onSelect, disabled, isPlayInSlot }: {
   team: Team | null;
   isSelected: boolean;
+  isOpponentSelected?: boolean;
   onSelect: () => void;
   disabled: boolean;
   isPlayInSlot?: boolean;
@@ -366,25 +426,44 @@ function MatchupTeamRow({ team, isSelected, onSelect, disabled, isPlayInSlot }: 
       onClick={onSelect}
       disabled={disabled}
       className={cn(
-        "w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all",
-        isSelected ? "bg-primary/12" : "hover:bg-secondary/50",
+        "w-full flex items-center gap-3 px-3 py-3 text-left transition-all duration-150",
+        isSelected && "bg-primary/10",
+        !isSelected && !disabled && "hover:bg-secondary/60 active:bg-secondary/80",
+        isOpponentSelected && !isSelected && "opacity-50",
         disabled && "opacity-30 cursor-not-allowed"
       )}
     >
       {team ? (
         <>
-          <span className="text-[11px] font-mono font-bold text-muted-foreground w-5 tabular-nums text-center">
+          <span className={cn(
+            "text-[11px] font-mono font-bold w-6 h-6 rounded-md flex items-center justify-center tabular-nums flex-shrink-0",
+            isSelected ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"
+          )}>
             {team.seed}
           </span>
-          <span className={cn("text-sm font-medium flex-1 truncate", isSelected && "text-primary font-semibold")}>
+          <span className={cn(
+            "text-sm flex-1 truncate transition-colors",
+            isSelected ? "text-primary font-bold" : "font-medium"
+          )}>
             {team.short_name}
           </span>
-          {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-primary flex-shrink-0" />}
+          <AnimatePresence>
+            {isSelected && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
+                className="w-5 h-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0"
+              >
+                <Check className="w-3 h-3 text-primary-foreground" />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </>
       ) : (
         <>
-          <span className="w-5" />
-          <span className="text-xs text-muted-foreground/50 italic">
+          <span className="w-6 h-6 rounded-md bg-secondary/50 flex-shrink-0" />
+          <span className="text-xs text-muted-foreground/50 italic font-medium">
             {isPlayInSlot ? 'TBD — First Four' : 'Waiting for earlier pick'}
           </span>
         </>
