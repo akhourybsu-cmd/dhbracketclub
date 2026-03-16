@@ -197,8 +197,8 @@ export default function LeaderboardPage() {
   return (
     <div className="max-w-2xl mx-auto">
       {/* Back link */}
-      <Link to={`/pools/${poolId}`} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-5">
-        <ArrowLeft className="w-4 h-4" /> Back to Pool
+      <Link to={`/pools/${poolId}`} className="back-link">
+        <ArrowLeft /> Back to Pool
       </Link>
 
       {/* Header */}
