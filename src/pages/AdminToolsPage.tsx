@@ -328,7 +328,54 @@ export default function AdminToolsPage() {
       </Link>
 
       <h1 className="text-xl font-bold mb-1">Admin Control Center</h1>
-      <p className="text-sm text-muted-foreground mb-4">Manage games, sync data, and simulate results.</p>
+      <p className="text-sm text-muted-foreground mb-2">Manage games, sync data, and simulate results.</p>
+
+      {/* Sync Health Banner */}
+      {(() => {
+        const lastRun = syncRuns[0];
+        const isCurrentlySyncing = !!syncing || lastRun?.status === 'running';
+        const staleMinutes = lastSyncedAt ? (Date.now() - new Date(lastSyncedAt).getTime()) / 60000 : Infinity;
+        const hasRecentError = lastRun?.status === 'failed';
+        const hasWarnings = lastRun?.status === 'completed_with_errors' || lastRun?.status === 'completed_with_warnings';
+
+        let healthLabel: string;
+        let healthColor: string;
+        let healthBg: string;
+
+        if (isCurrentlySyncing) {
+          healthLabel = 'Syncing';
+          healthColor = 'text-primary';
+          healthBg = 'bg-primary/10 border-primary/20';
+        } else if (hasRecentError) {
+          healthLabel = 'Degraded';
+          healthColor = 'text-destructive';
+          healthBg = 'bg-destructive/10 border-destructive/20';
+        } else if (staleMinutes > 120) {
+          healthLabel = lastSyncedAt ? 'Stale' : 'Manual Mode';
+          healthColor = 'text-warning';
+          healthBg = 'bg-warning/10 border-warning/20';
+        } else if (hasWarnings) {
+          healthLabel = 'Healthy (warnings)';
+          healthColor = 'text-warning';
+          healthBg = 'bg-warning/10 border-warning/20';
+        } else {
+          healthLabel = 'Healthy';
+          healthColor = 'text-success';
+          healthBg = 'bg-success/10 border-success/20';
+        }
+
+        return (
+          <div className={cn("rounded-lg px-3 py-2 mb-4 flex items-center justify-between border", healthBg)}>
+            <div className="flex items-center gap-2">
+              <span className={cn("w-2 h-2 rounded-full", healthColor.replace('text-', 'bg-'), isCurrentlySyncing && "animate-pulse")} />
+              <span className={cn("text-xs font-semibold", healthColor)}>{healthLabel}</span>
+            </div>
+            <span className="text-[10px] text-muted-foreground tabular-nums">
+              {lastSyncedAt ? `Synced ${Math.round(staleMinutes)}m ago` : 'Never synced'}
+            </span>
+          </div>
+        );
+      })()}
 
       {/* Stats Strip */}
       <div className="grid grid-cols-4 gap-2 mb-4">
