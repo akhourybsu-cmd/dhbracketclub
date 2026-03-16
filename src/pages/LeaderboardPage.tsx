@@ -110,9 +110,10 @@ export default function LeaderboardPage() {
 
       setStandings(rows);
       setLoading(false);
-    };
-    fetchData();
-  }, [poolId]);
+    }, [poolId]);
+
+  // Realtime standings updates
+  const { status: rtStatus, lastUpdated } = useStandingsUpdates(poolId, fetchData);
 
   const isLocked = pool ? new Date(pool.lock_time) <= new Date() : false;
 
