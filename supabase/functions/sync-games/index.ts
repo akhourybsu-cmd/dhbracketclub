@@ -184,8 +184,16 @@ function extractRoundAndRegion(event: any): { roundNumber: number; roundName: st
   return { ...round, region: regionText || "Unknown" };
 }
 
+// Simple per-request cache to avoid fetching ESPN 3x during a full sync
+const espnCache = new Map<number, any[]>();
+
 /** Fetch all March Madness events from ESPN for a date range */
 async function fetchEspnScoreboard(seasonYear: number, dates?: string): Promise<any[]> {
+  if (!dates && espnCache.has(seasonYear)) {
+    console.log(`[espn] Using cached scoreboard for ${seasonYear} (${espnCache.get(seasonYear)!.length} events)`);
+    return espnCache.get(seasonYear)!;
+  }
+
   const allEvents: any[] = [];
 
   // March Madness typically spans ~3 weeks in March-April
