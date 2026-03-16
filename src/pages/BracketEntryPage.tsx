@@ -230,11 +230,13 @@ export default function BracketEntryPage() {
 
       {/* Round Navigation */}
       <div className="flex items-center justify-between mb-3">
-        <Button variant="ghost" size="icon" disabled={currentRound <= 1} onClick={() => setCurrentRound(r => r - 1)}>
+        <Button variant="ghost" size="icon" disabled={currentRound <= (hasFirstFour ? 0 : 1)} onClick={() => setCurrentRound(r => r - 1)}>
           <ChevronLeft className="w-5 h-5" />
         </Button>
         <div className="text-center">
-          <p className="text-sm font-semibold">{ROUND_NAMES[currentRound - 1]}</p>
+          <p className="text-sm font-semibold">
+            {currentRound === 0 ? FIRST_FOUR_ROUND_NAME : ROUND_NAMES[currentRound - 1]}
+          </p>
           <p className="text-[10px] text-muted-foreground tabular-nums">
             {roundCompletion[currentRound]?.filled}/{roundCompletion[currentRound]?.total} picks
           </p>
@@ -245,7 +247,25 @@ export default function BracketEntryPage() {
       </div>
 
       {/* Round Tabs */}
-      <div className="flex gap-1.5 mb-5 justify-center">
+      <div className="flex gap-1.5 mb-5 justify-center flex-wrap">
+        {hasFirstFour && (
+          <button
+            onClick={() => setCurrentRound(0)}
+            className={cn(
+              "px-2 py-1 rounded-md text-[10px] font-semibold transition-colors relative",
+              currentRound === 0
+                ? "bg-primary text-primary-foreground"
+                : roundCompletion[0]?.filled === roundCompletion[0]?.total && roundCompletion[0]?.total > 0
+                  ? "bg-success/15 text-success"
+                  : "bg-secondary text-secondary-foreground"
+            )}
+          >
+            {FIRST_FOUR_ROUND_SHORT}
+            {roundCompletion[0]?.filled === roundCompletion[0]?.total && roundCompletion[0]?.total > 0 && currentRound !== 0 && (
+              <Check className="w-2.5 h-2.5 absolute -top-1 -right-1" />
+            )}
+          </button>
+        )}
         {ROUND_SHORT.map((label, i) => {
           const rc = roundCompletion[i + 1];
           const isComplete = rc && rc.filled === rc.total && rc.total > 0;
