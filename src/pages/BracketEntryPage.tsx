@@ -303,6 +303,8 @@ export default function BracketEntryPage() {
                   const team1 = getEffectiveTeam(game, 'team1', games, teams, picks);
                   const team2 = getEffectiveTeam(game, 'team2', games, teams, picks);
                   const currentPick = picks.get(game.id);
+                  // Check if null team slots are due to First Four play-in
+                  const hasPlayIn = game.round_number === 1 && games.some(g => g.round_number === 0 && g.region === game.region);
 
                   return (
                     <div key={game.id} className="matchup-card">
@@ -311,6 +313,7 @@ export default function BracketEntryPage() {
                         isSelected={currentPick?.picked_team_id === team1?.id}
                         onSelect={() => team1 && handlePick(game.id, team1.id, game.round_number)}
                         disabled={!team1}
+                        isPlayInSlot={!team1 && hasPlayIn}
                       />
                       <div className="h-px bg-border mx-2" />
                       <MatchupTeamRow
@@ -318,6 +321,7 @@ export default function BracketEntryPage() {
                         isSelected={currentPick?.picked_team_id === team2?.id}
                         onSelect={() => team2 && handlePick(game.id, team2.id, game.round_number)}
                         disabled={!team2}
+                        isPlayInSlot={!team2 && hasPlayIn}
                       />
                     </div>
                   );
