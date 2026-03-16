@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { LogOut } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
@@ -33,33 +34,37 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="max-w-md mx-auto">
-      <h1 className="text-xl font-bold mb-6">Profile</h1>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="max-w-md mx-auto"
+    >
+      <h1 className="text-xl font-extrabold tracking-tight mb-6">Profile</h1>
 
-      <div className="glass-card p-6 space-y-4 mb-6">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center text-xl font-bold text-primary">
+      <div className="glass-card p-6 space-y-5 mb-6">
+        <div className="flex items-center gap-4 mb-2">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-2xl font-extrabold text-primary">
             {displayName ? displayName[0].toUpperCase() : '?'}
           </div>
           <div>
-            <p className="font-semibold">{displayName}</p>
-            <p className="text-xs text-muted-foreground">{user?.email}</p>
+            <p className="font-bold text-lg">{displayName}</p>
+            <p className="text-xs text-muted-foreground font-medium">{user?.email}</p>
           </div>
         </div>
 
         <div>
-          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Display Name</label>
-          <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+          <label className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wider">Display Name</label>
+          <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="h-11" />
         </div>
 
-        <Button onClick={handleSave} className="w-full" disabled={loading}>
+        <Button onClick={handleSave} className="w-full h-11 font-bold rounded-xl" disabled={loading}>
           {loading ? 'Saving...' : 'Save Changes'}
         </Button>
       </div>
 
-      <Button variant="outline" className="w-full gap-2 text-destructive" onClick={signOut}>
+      <Button variant="outline" className="w-full gap-2 h-11 text-destructive hover:text-destructive font-bold rounded-xl" onClick={signOut}>
         <LogOut className="w-4 h-4" /> Sign Out
       </Button>
-    </div>
+    </motion.div>
   );
 }
