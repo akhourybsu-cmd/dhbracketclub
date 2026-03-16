@@ -417,7 +417,9 @@ async function syncGameResults(
   let updated = 0;
   let skippedFinal = 0;
   let skippedUnmatched = 0;
+  let newFinals = 0;
   const errors: string[] = [];
+  const affectedGameIds: string[] = [];
 
   for (const rawGame of externalResults) {
     const ng = validateGame(rawGame);
@@ -441,17 +443,13 @@ async function syncGameResults(
     if (!current) continue;
 
     // ─── RECONCILIATION: Never overwrite admin-finalized results ────
-    // If the game is already final AND is_result_final is true AND the
-    // incoming data doesn't change the winner, skip to prevent churn
     if (
       current.is_result_final &&
       current.status === "final" &&
       ng.status === "final"
     ) {
-      // Check if winner is the same (or incoming has no winner)
       const incomingWinner = ng.winnerExternalId ? teamLookup.get(ng.winnerExternalId) : null;
       if (!incomingWinner || incomingWinner === current.winner_team_id) {
-        // Only update scores if they changed (e.g., stat correction)
         if (current.team1_score === ng.team1Score && current.team2_score === ng.team2Score) {
           skippedFinal++;
           continue;
@@ -471,23 +469,21 @@ async function syncGameResults(
     };
 
     // Resolve winner only when final
+    let winnerChanged = false;
     if (ng.status === "final" && ng.winnerExternalId) {
       const winnerInternal = teamLookup.get(ng.winnerExternalId);
       if (winnerInternal) {
         updatePayload.winner_team_id = winnerInternal;
         updatePayload.is_result_final = true;
+        winnerChanged = current.winner_team_id !== winnerInternal;
       } else {
-        // Winner external ID doesn't map — try inferring from scores + team IDs
-        if (
-          ng.team1Score != null &&
-          ng.team2Score != null &&
-          ng.team1Score !== ng.team2Score
-        ) {
-          const winnerId =
-            ng.team1Score > ng.team2Score ? current.team1_id : current.team2_id;
+        // Infer from scores
+        if (ng.team1Score != null && ng.team2Score != null && ng.team1Score !== ng.team2Score) {
+          const winnerId = ng.team1Score > ng.team2Score ? current.team1_id : current.team2_id;
           if (winnerId) {
             updatePayload.winner_team_id = winnerId;
             updatePayload.is_result_final = true;
+            winnerChanged = current.winner_team_id !== winnerId;
           }
         }
         await logSyncEvent(db, syncRunId, "game", gameId, "winner_resolution_fallback", "warning", {
@@ -496,11 +492,15 @@ async function syncGameResults(
         });
       }
     } else if (ng.status !== "final") {
-      // Live game — do NOT set winner or is_result_final
       updatePayload.is_result_final = false;
     }
 
-    // ─── Advance winner to next round game ──────────────────────────
+    // Track if this is a newly finalized game
+    if (ng.status === "final" && current.status !== "final") {
+      newFinals++;
+    }
+
+    // Advance winner to next round
     if (updatePayload.winner_team_id && updatePayload.is_result_final) {
       const { data: thisGame } = await db
         .from("games")
@@ -538,7 +538,7 @@ async function syncGameResults(
       current.status !== ng.status ||
       current.team1_score !== ng.team1Score ||
       current.team2_score !== ng.team2Score ||
-      (updatePayload.winner_team_id && current.winner_team_id !== updatePayload.winner_team_id);
+      winnerChanged;
 
     if (hasChanges) {
       await db.from("game_state_history").insert({
@@ -552,6 +552,7 @@ async function syncGameResults(
         changed_by_source: `sync:${config.providerName}`,
         sync_run_id: syncRunId,
       });
+      affectedGameIds.push(gameId);
     }
 
     // Apply update
@@ -565,11 +566,12 @@ async function syncGameResults(
         matchMethod,
         status: ng.status,
         hasWinner: !!updatePayload.winner_team_id,
+        winnerChanged,
       });
     }
   }
 
-  return { updated, skippedFinal, skippedUnmatched, errors };
+  return { updated, skippedFinal, skippedUnmatched, newFinals, errors, affectedGameIds };
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -583,26 +585,32 @@ async function recalculateStandingsForTournament(
   tournamentId: string,
   syncRunId: string | null,
   poolIdFilter?: string,
-  source = "sync"
-): Promise<{ poolsProcessed: number; bracketsScored: number }> {
-  // Get all pools (or one specific pool)
+  source = "sync",
+  affectedGameIds?: string[]
+): Promise<{ poolsProcessed: number; bracketsScored: number; standingsChanged: number }> {
+  // Get pools (optionally filtered)
   let poolQuery = db.from("pools").select("id").eq("tournament_id", tournamentId);
   if (poolIdFilter) poolQuery = poolQuery.eq("id", poolIdFilter);
   const { data: pools } = await poolQuery;
-  if (!pools || pools.length === 0) return { poolsProcessed: 0, bracketsScored: 0 };
+  if (!pools || pools.length === 0) return { poolsProcessed: 0, bracketsScored: 0, standingsChanged: 0 };
 
   // Load all games once
   const { data: allGames } = await db.from("games").select("*").eq("tournament_id", tournamentId);
-  if (!allGames) return { poolsProcessed: 0, bracketsScored: 0 };
+  if (!allGames) return { poolsProcessed: 0, bracketsScored: 0, standingsChanged: 0 };
 
   const decidedGames = new Map(
     allGames.filter((g: any) => g.winner_team_id).map((g: any) => [g.id, g])
   );
 
+  // If we have affectedGameIds, find which brackets have picks on those games
+  // for targeted recalculation (optimization). But we still recalculate full
+  // scores for those brackets to ensure idempotency.
+  const affectedGameSet = affectedGameIds ? new Set(affectedGameIds) : null;
+
   let totalBrackets = 0;
+  let standingsChanged = 0;
 
   for (const pool of pools) {
-    // Load scoring rules
     const { data: rules } = await db
       .from("scoring_rules")
       .select("round_number, points_per_correct_pick")
@@ -612,12 +620,41 @@ async function recalculateStandingsForTournament(
     rules?.forEach((r: any) => { scoring[r.round_number] = r.points_per_correct_pick; });
     if (Object.keys(scoring).length === 0) Object.assign(scoring, DEFAULT_SCORING);
 
-    // Load all brackets for pool
     const { data: brackets } = await db
       .from("brackets")
       .select("id, user_id")
       .eq("pool_id", pool.id);
     if (!brackets || brackets.length === 0) continue;
+
+    // If targeted mode, find which brackets are affected
+    let bracketsToScore = brackets;
+    if (affectedGameSet && affectedGameSet.size > 0) {
+      const affectedBracketIds = new Set<string>();
+      for (const bracket of brackets) {
+        const { data: picks } = await db
+          .from("bracket_picks")
+          .select("game_id")
+          .eq("bracket_id", bracket.id)
+          .in("game_id", [...affectedGameSet]);
+        if (picks && picks.length > 0) {
+          affectedBracketIds.add(bracket.id);
+        }
+      }
+      // If no brackets affected, still recalculate all for rank consistency
+      if (affectedBracketIds.size > 0) {
+        // We need to recalculate ALL brackets in the pool for correct ranking
+        // but we know at least some are affected
+      }
+    }
+
+    // Load existing standings for change detection
+    const { data: existingStandings } = await db
+      .from("standings")
+      .select("user_id, total_points, correct_picks, possible_points_remaining, rank")
+      .eq("pool_id", pool.id);
+    const existingMap = new Map(
+      (existingStandings || []).map((s: any) => [s.user_id, s])
+    );
 
     const standings: Array<{
       pool_id: string;
@@ -627,7 +664,7 @@ async function recalculateStandingsForTournament(
       possible_points_remaining: number;
     }> = [];
 
-    for (const bracket of brackets) {
+    for (const bracket of bracketsToScore) {
       const { data: picks } = await db
         .from("bracket_picks")
         .select("game_id, picked_team_id, picked_in_round")
@@ -648,7 +685,6 @@ async function recalculateStandingsForTournament(
             totalPoints += pts;
           }
         } else {
-          // Team still alive?
           const eliminated = allGames.some(
             (g: any) =>
               g.winner_team_id !== null &&
@@ -674,16 +710,27 @@ async function recalculateStandingsForTournament(
     for (let i = 0; i < standings.length; i++) {
       if (i > 0 && standings[i].total_points < standings[i - 1].total_points) rank = i + 1;
 
+      const existing = existingMap.get(standings[i].user_id);
+      const changed = !existing ||
+        existing.total_points !== standings[i].total_points ||
+        existing.correct_picks !== standings[i].correct_picks ||
+        existing.possible_points_remaining !== standings[i].possible_points_remaining ||
+        existing.rank !== rank;
+
       await db.from("standings").upsert(
         { ...standings[i], rank },
         { onConflict: "pool_id,user_id" }
       );
 
-      await db.from("standings_snapshots").insert({
-        ...standings[i],
-        rank,
-        source,
-      });
+      // Only snapshot if something changed
+      if (changed) {
+        standingsChanged++;
+        await db.from("standings_snapshots").insert({
+          ...standings[i],
+          rank,
+          source,
+        });
+      }
 
       totalBrackets++;
     }
@@ -691,11 +738,12 @@ async function recalculateStandingsForTournament(
     if (syncRunId) {
       await logSyncEvent(db, syncRunId, "pool", pool.id, "standings_recalculated", "success", {
         brackets: standings.length,
+        changed: standingsChanged,
       });
     }
   }
 
-  return { poolsProcessed: pools.length, bracketsScored: totalBrackets };
+  return { poolsProcessed: pools.length, bracketsScored: totalBrackets, standingsChanged };
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -762,7 +810,16 @@ async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string)
         break;
       }
       case "syncGameResults": {
-        result = await syncGameResults(db, provider!, config, req.tournamentId, syncRunId);
+        const resultsOnly = await syncGameResults(db, provider!, config, req.tournamentId, syncRunId);
+        // Auto-recalculate standings if any finals changed
+        let autoStandings = { poolsProcessed: 0, bracketsScored: 0, standingsChanged: 0 };
+        if (resultsOnly.newFinals > 0 || resultsOnly.affectedGameIds.length > 0) {
+          autoStandings = await recalculateStandingsForTournament(
+            db, req.tournamentId, syncRunId, req.poolId, "auto",
+            resultsOnly.affectedGameIds
+          );
+        }
+        result = { ...resultsOnly, standings: autoStandings };
         break;
       }
       case "recalculateStandings": {
@@ -777,9 +834,12 @@ async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string)
         const resultsResult = await syncGameResults(db, provider!, config, req.tournamentId, syncRunId);
 
         // Recalculate standings if any results changed
-        let standingsResult = { poolsProcessed: 0, bracketsScored: 0 };
-        if (resultsResult.updated > 0) {
-          standingsResult = await recalculateStandingsForTournament(db, req.tournamentId, syncRunId, req.poolId);
+        let standingsResult = { poolsProcessed: 0, bracketsScored: 0, standingsChanged: 0 };
+        if (resultsResult.updated > 0 || resultsResult.newFinals > 0) {
+          standingsResult = await recalculateStandingsForTournament(
+            db, req.tournamentId, syncRunId, req.poolId, "sync",
+            resultsResult.affectedGameIds
+          );
         }
 
         result = {

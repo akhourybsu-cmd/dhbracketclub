@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { ArrowLeft, Trophy, Eye, Crown, Medal } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Team, Pick as BPick, getChampionPick, getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES } from '@/lib/bracketUtils';
+import { useStandingsUpdates } from '@/hooks/useRealtimeSubscription';
 
 interface StandingRow {
   user_id: string;
@@ -29,8 +30,11 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     if (!poolId) return;
+    fetchData();
+  }, [poolId]);
 
-    const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    if (!poolId) return;
       const { data: poolData } = await supabase.from('pools').select('*, tournaments(id, name)').eq('id', poolId).single();
       if (poolData) setPool(poolData);
 
@@ -106,9 +110,10 @@ export default function LeaderboardPage() {
 
       setStandings(rows);
       setLoading(false);
-    };
-    fetchData();
-  }, [poolId]);
+    }, [poolId]);
+
+  // Realtime standings updates
+  const { status: rtStatus, lastUpdated } = useStandingsUpdates(poolId, fetchData);
 
   const isLocked = pool ? new Date(pool.lock_time) <= new Date() : false;
 
@@ -129,12 +134,20 @@ export default function LeaderboardPage() {
         <ArrowLeft className="w-4 h-4" /> Back to Pool
       </Link>
 
-      <div className="flex items-center gap-3 mb-6">
-        <Trophy className="w-6 h-6 text-gold" />
-        <div>
-          <h1 className="text-xl font-bold">Leaderboard</h1>
-          <p className="text-sm text-muted-foreground">{pool?.name}</p>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <Trophy className="w-6 h-6 text-gold" />
+          <div>
+            <h1 className="text-xl font-bold">Leaderboard</h1>
+            <p className="text-sm text-muted-foreground">{pool?.name}</p>
+          </div>
         </div>
+        {rtStatus === 'connected' && (
+          <span className="flex items-center gap-1 text-[10px] text-success">
+            <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+            Live
+          </span>
+        )}
       </div>
 
       {standings.length === 0 ? (

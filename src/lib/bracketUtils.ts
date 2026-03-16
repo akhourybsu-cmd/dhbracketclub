@@ -21,6 +21,11 @@ export interface Game {
   team1_score: number | null;
   team2_score: number | null;
   status: string | null;
+  scheduled_at?: string | null;
+  live_clock?: string | null;
+  live_period?: string | null;
+  source_last_updated_at?: string | null;
+  is_result_final?: boolean;
 }
 
 export interface Pick {

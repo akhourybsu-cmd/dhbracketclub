@@ -18,6 +18,7 @@ import BracketDetailPage from "./pages/BracketDetailPage";
 import BracketComparePage from "./pages/BracketComparePage";
 import LeaderboardPage from "./pages/LeaderboardPage";
 import AdminToolsPage from "./pages/AdminToolsPage";
+import GameCenterPage from "./pages/GameCenterPage";
 import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/pools/:poolId/bracket/:bracketId" element={<ProtectedPage><BracketDetailPage /></ProtectedPage>} />
             <Route path="/pools/:poolId/leaderboard" element={<ProtectedPage><LeaderboardPage /></ProtectedPage>} />
             <Route path="/pools/:poolId/admin" element={<ProtectedPage><AdminToolsPage /></ProtectedPage>} />
+            <Route path="/pools/:poolId/games" element={<ProtectedPage><GameCenterPage /></ProtectedPage>} />
             <Route path="/leaderboard" element={<ProtectedPage><LeaderboardPage /></ProtectedPage>} />
             <Route path="/profile" element={<ProtectedPage><ProfilePage /></ProtectedPage>} />
             <Route path="*" element={<NotFound />} />
