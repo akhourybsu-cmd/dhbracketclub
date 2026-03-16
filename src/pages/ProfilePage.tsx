@@ -50,14 +50,14 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="glass-card p-6 space-y-5 mb-6">
+      <div className="glass-card p-6 space-y-5 mb-4">
         <div className="flex items-center gap-4 mb-2">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-2xl font-extrabold text-primary">
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-extrabold text-primary" style={{ background: 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))' }}>
             {displayName ? displayName[0].toUpperCase() : '?'}
           </div>
           <div>
-            <p className="font-bold text-lg">{displayName}</p>
-            <p className="text-xs text-muted-foreground font-medium">{user?.email}</p>
+            <p className="font-bold text-lg leading-tight">{displayName}</p>
+            <p className="text-[11px] text-muted-foreground font-medium">{user?.email}</p>
           </div>
         </div>
 

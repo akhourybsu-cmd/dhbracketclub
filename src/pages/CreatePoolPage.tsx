@@ -85,29 +85,29 @@ export default function CreatePoolPage() {
 
   if (createdPool) {
     return (
-      <div className="max-w-md mx-auto px-1">
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-8 sm:p-10 text-center">
+      <div className="max-w-sm mx-auto">
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-8 text-center">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', stiffness: 400, damping: 20, delay: 0.1 }}
           >
-            <CheckCircle2 className="w-14 h-14 text-success mx-auto mb-5" />
+            <CheckCircle2 className="w-12 h-12 text-success mx-auto mb-5" />
           </motion.div>
-          <h1 className="text-2xl font-extrabold mb-1">Pool Created!</h1>
-          <p className="text-sm text-muted-foreground mb-6">Share this code with your friends to join.</p>
+          <h1 className="text-xl font-extrabold mb-1">Pool Created!</h1>
+          <p className="text-xs text-muted-foreground mb-6">Share this code with your friends to join.</p>
 
-          <div className="bg-surface rounded-xl p-5 mb-5">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2 font-semibold">Invite Code</p>
+          <div className="inset-panel p-5 mb-5">
+            <p className="text-[9px] text-muted-foreground uppercase tracking-[0.15em] mb-2 font-bold">Invite Code</p>
             <div className="flex items-center justify-center gap-3">
-              <span className="text-3xl sm:text-4xl font-mono font-extrabold tracking-[0.3em] text-primary">{createdPool.invite_code}</span>
-              <button onClick={copyCode} className="p-2.5 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors btn-press">
+              <span className="text-3xl font-mono font-extrabold tracking-[0.3em] text-primary">{createdPool.invite_code}</span>
+              <button onClick={copyCode} className="p-2.5 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors btn-press">
                 <Copy className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          <p className="text-xs text-muted-foreground mb-6">
+          <p className="text-[11px] text-muted-foreground mb-6">
             Picks lock in 14 days. You can change this in pool settings.
           </p>
 
@@ -120,15 +120,15 @@ export default function CreatePoolPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto px-1">
+    <div className="max-w-sm mx-auto">
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
-            <Trophy className="w-5 h-5 text-primary" />
+        <div className="page-header">
+          <div className="page-header-icon">
+            <Trophy />
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">Create a Pool</h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">Set up a bracket competition</p>
+            <h1 className="page-header-title">Create a Pool</h1>
+            <p className="page-header-subtitle">Set up a bracket competition</p>
           </div>
         </div>
       </motion.div>
@@ -138,7 +138,7 @@ export default function CreatePoolPage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="glass-card p-5 sm:p-6 space-y-5"
+        className="glass-card p-5 space-y-5"
       >
         <div>
           <label className="form-label">Pool Name</label>
@@ -148,22 +148,22 @@ export default function CreatePoolPage() {
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Office Bracket Bash"
             maxLength={50}
-            className="h-11 rounded-xl"
+            className="form-input"
           />
         </div>
         <div>
-          <label className="form-label">Description <span className="normal-case font-normal">(optional)</span></label>
+          <label className="form-label">Description <span className="normal-case font-normal tracking-normal">(optional)</span></label>
           <Input
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="What's this pool about?"
             maxLength={200}
-            className="h-11 rounded-xl"
+            className="form-input"
           />
         </div>
         {tournamentName && (
-          <div className="bg-surface rounded-xl p-4">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1 font-semibold">Tournament</p>
+          <div className="inset-panel">
+            <p className="text-[9px] text-muted-foreground uppercase tracking-[0.15em] mb-1 font-bold">Tournament</p>
             <p className="text-sm font-semibold">{tournamentName}</p>
           </div>
         )}

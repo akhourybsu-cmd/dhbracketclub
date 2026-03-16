@@ -12,8 +12,8 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
-      {/* Subtle background glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
+      {/* Background glow */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] rounded-full blur-[140px] pointer-events-none" style={{ background: 'radial-gradient(circle, hsl(217, 91%, 60%, 0.08), transparent)' }} />
       
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between px-6 py-5">
@@ -35,20 +35,20 @@ export default function LandingPage() {
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           className="max-w-lg"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold mb-8">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold mb-8" style={{ background: 'hsl(var(--primary) / 0.1)', border: '1px solid hsl(var(--primary) / 0.15)', color: 'hsl(var(--primary))' }}>
             <Zap className="w-3.5 h-3.5" />
             March Madness Bracket Pools
           </div>
-          <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-[1.1] mb-5">
+          <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-[1.08] mb-5">
             Your friends.{' '}
             <span className="gradient-text">Your picks.</span>{' '}
             Your bragging rights.
           </h2>
-          <p className="text-muted-foreground text-lg leading-relaxed mb-10 max-w-md mx-auto">
+          <p className="text-muted-foreground text-base sm:text-lg leading-relaxed mb-10 max-w-md mx-auto">
             Create a private pool, fill out your bracket, and see who knows college basketball best.
           </p>
           <Link to="/auth">
-            <Button size="lg" className="gap-2.5 px-8 h-12 text-base font-bold rounded-xl shadow-lg hover:shadow-xl transition-shadow">
+            <Button size="lg" className="gap-2.5 px-8 h-12 text-base font-bold rounded-xl btn-press">
               Get Started <ArrowRight className="w-4 h-4" />
             </Button>
           </Link>
@@ -59,7 +59,7 @@ export default function LandingPage() {
           initial={{ opacity: 0, y: 32 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
-          className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-20 max-w-2xl w-full"
+          className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-20 max-w-xl w-full"
         >
           {[
             { icon: Users, title: 'Private Pools', desc: 'Invite friends with a simple code' },
@@ -73,17 +73,17 @@ export default function LandingPage() {
               transition={{ duration: 0.5, delay: 0.4 + i * 0.08 }}
               className="glass-card p-5 text-center hover-lift"
             >
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+              <div className="icon-container w-10 h-10 mx-auto mb-3">
                 <f.icon className="w-5 h-5 text-primary" />
               </div>
               <h3 className="text-sm font-bold mb-1">{f.title}</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">{f.desc}</p>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">{f.desc}</p>
             </motion.div>
           ))}
         </motion.div>
       </main>
 
-      <footer className="relative z-10 text-center py-8 text-xs text-muted-foreground/50 font-medium">
+      <footer className="relative z-10 text-center py-8 text-[10px] text-muted-foreground/40 font-semibold uppercase tracking-wider">
         Bracket Battle — For fun, not funds.
       </footer>
     </div>
