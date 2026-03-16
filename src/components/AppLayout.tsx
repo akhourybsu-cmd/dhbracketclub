@@ -3,6 +3,7 @@ import { useLocation, Link } from 'react-router-dom';
 import { LayoutDashboard, Trophy, Users, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import dhMonogram from '@/assets/dh-monogram.png';
 
 const navItems = [
   { path: '/dashboard', label: 'Home', icon: LayoutDashboard },
