@@ -810,7 +810,16 @@ async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string)
         break;
       }
       case "syncGameResults": {
-        result = await syncGameResults(db, provider!, config, req.tournamentId, syncRunId);
+        const resultsOnly = await syncGameResults(db, provider!, config, req.tournamentId, syncRunId);
+        // Auto-recalculate standings if any finals changed
+        let autoStandings = { poolsProcessed: 0, bracketsScored: 0, standingsChanged: 0 };
+        if (resultsOnly.newFinals > 0 || resultsOnly.affectedGameIds.length > 0) {
+          autoStandings = await recalculateStandingsForTournament(
+            db, req.tournamentId, syncRunId, req.poolId, "auto",
+            resultsOnly.affectedGameIds
+          );
+        }
+        result = { ...resultsOnly, standings: autoStandings };
         break;
       }
       case "recalculateStandings": {
@@ -825,9 +834,12 @@ async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string)
         const resultsResult = await syncGameResults(db, provider!, config, req.tournamentId, syncRunId);
 
         // Recalculate standings if any results changed
-        let standingsResult = { poolsProcessed: 0, bracketsScored: 0 };
-        if (resultsResult.updated > 0) {
-          standingsResult = await recalculateStandingsForTournament(db, req.tournamentId, syncRunId, req.poolId);
+        let standingsResult = { poolsProcessed: 0, bracketsScored: 0, standingsChanged: 0 };
+        if (resultsResult.updated > 0 || resultsResult.newFinals > 0) {
+          standingsResult = await recalculateStandingsForTournament(
+            db, req.tournamentId, syncRunId, req.poolId, "sync",
+            resultsResult.affectedGameIds
+          );
         }
 
         result = {
