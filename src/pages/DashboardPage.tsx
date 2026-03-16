@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES } from '@/lib/bracketUtils';
 import { cn } from '@/lib/utils';
 import { usePwaInstall } from '@/hooks/usePwaInstall';
+import dhMonogram from '@/assets/dh-monogram.png';
 
 export default function DashboardPage() {
   const { user } = useAuth();
