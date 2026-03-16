@@ -353,20 +353,42 @@ function extractTeamsFromEvents(events: any[]): NormalizedTeam[] {
     const comp = event.competitions?.[0];
     if (!comp?.competitors) continue;
 
-    const { region } = extractRoundAndRegion(event);
+    const roundInfo = extractRoundAndRegion(event);
+    if (roundInfo.roundNumber < 0) continue;
 
     for (const c of comp.competitors) {
       const id = c.team?.id;
-      if (!id || teamMap.has(id)) continue;
+      if (!id) continue;
 
-      const seed = c.curatedRank?.current || 0;
-      teamMap.set(id, {
+      const seedRaw = c.curatedRank?.current || 0;
+      const seed = seedRaw > 16 ? 0 : seedRaw; // curatedRank > 16 is an AP rank, not a seed
+
+      const incoming: NormalizedTeam = {
         externalTeamId: id,
         schoolName: c.team.displayName || c.team.name || "",
         shortName: c.team.shortDisplayName || c.team.abbreviation || c.team.name || "",
-        seed: seed > 16 ? 0 : seed, // curatedRank > 16 is an AP rank, not a seed
-        region: region || "Unknown",
-      });
+        seed,
+        region: roundInfo.region || "Unknown",
+      };
+
+      const existing = teamMap.get(id);
+      if (!existing) {
+        teamMap.set(id, incoming);
+        continue;
+      }
+
+      const shouldUpgradeRegion = existing.region === "Unknown" && incoming.region !== "Unknown";
+      const shouldUpgradeSeed = (!existing.seed || existing.seed === 0) && incoming.seed > 0;
+
+      if (shouldUpgradeRegion || shouldUpgradeSeed) {
+        teamMap.set(id, {
+          ...existing,
+          region: shouldUpgradeRegion ? incoming.region : existing.region,
+          seed: shouldUpgradeSeed ? incoming.seed : existing.seed,
+          schoolName: incoming.schoolName || existing.schoolName,
+          shortName: incoming.shortName || existing.shortName,
+        });
+      }
     }
   }
 
