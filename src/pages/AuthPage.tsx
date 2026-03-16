@@ -50,7 +50,7 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 relative overflow-hidden">
       {/* Background glow */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[350px] rounded-full blur-[120px] pointer-events-none" style={{ background: 'radial-gradient(circle, hsl(217, 91%, 60%, 0.06), transparent)' }} />
       
       <motion.div
         initial={{ opacity: 0, y: 16 }}
@@ -62,7 +62,7 @@ export default function AuthPage() {
           <h1 className="text-2xl font-extrabold tracking-tight">
             <span className="gradient-text">Bracket</span> Battle
           </h1>
-          <p className="text-sm text-muted-foreground mt-2 font-medium">
+          <p className="text-xs text-muted-foreground mt-2 font-semibold">
             {isSignUp ? 'Create your account' : 'Welcome back'}
           </p>
         </div>
@@ -102,16 +102,16 @@ export default function AuthPage() {
               className="form-input"
             />
           </div>
-          <Button type="submit" className="w-full h-11 font-bold text-sm rounded-xl btn-press" disabled={loading}>
+          <Button type="submit" className="w-full h-11 font-bold rounded-xl btn-press" disabled={loading}>
             {loading ? 'Loading...' : isSignUp ? 'Create Account' : 'Sign In'}
           </Button>
         </form>
 
-        <p className="text-center text-sm text-muted-foreground mt-5">
+        <p className="text-center text-xs text-muted-foreground mt-5">
           {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
           <button
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-primary hover:underline font-semibold"
+            className="text-primary hover:underline font-bold"
           >
             {isSignUp ? 'Sign In' : 'Sign Up'}
           </button>

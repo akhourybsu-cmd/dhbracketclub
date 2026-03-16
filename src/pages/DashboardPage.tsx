@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Plus, Users, ArrowRight, Trophy, Zap, BarChart3, Calendar, Shield } from 'lucide-react';
+import { Plus, Users, ArrowRight, Trophy, BarChart3, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES } from '@/lib/bracketUtils';
 import { cn } from '@/lib/utils';
@@ -48,7 +48,6 @@ export default function DashboardPage() {
           setBracketStatuses(sm);
         }
 
-        // Fetch member counts
         const { data: allMembers } = await supabase
           .from('pool_members')
           .select('pool_id')
@@ -74,32 +73,32 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div>
       {/* Hero header */}
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
+        transition={{ duration: 0.35 }}
         className="mb-8"
       >
-        <p className="text-sm text-muted-foreground font-medium mb-1">{getGreeting()},</p>
-        <h1 className="text-3xl font-extrabold tracking-tight">{displayName || 'there'} 👋</h1>
+        <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1.5">{getGreeting()}</p>
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">{displayName || 'there'} 👋</h1>
       </motion.div>
 
       {/* Quick actions */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1, duration: 0.3 }}
-        className="flex gap-3 mb-8"
+        transition={{ delay: 0.08, duration: 0.3 }}
+        className="flex gap-2.5 mb-8"
       >
         <Link to="/pools/create" className="flex-1">
-          <Button className="w-full gap-2 font-bold h-11 rounded-xl text-sm">
+          <Button className="w-full gap-2 font-bold h-11 rounded-xl text-sm btn-press">
             <Plus className="w-4 h-4" /> Create Pool
           </Button>
         </Link>
         <Link to="/pools/join" className="flex-1">
-          <Button variant="outline" className="w-full gap-2 font-bold h-11 rounded-xl text-sm">
+          <Button variant="outline" className="w-full gap-2 font-bold h-11 rounded-xl text-sm btn-press">
             <Users className="w-4 h-4" /> Join Pool
           </Button>
         </Link>
@@ -110,34 +109,22 @@ export default function DashboardPage() {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15, duration: 0.3 }}
-          className="grid grid-cols-3 gap-3 mb-8"
+          transition={{ delay: 0.12, duration: 0.3 }}
+          className="grid grid-cols-3 gap-2.5 mb-8"
         >
-          <div className="stat-card">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center mb-1">
-              <Trophy className="w-4 h-4 text-primary" />
+          {[
+            { icon: Trophy, value: pools.length, label: 'Pools', iconColor: 'text-primary', iconBg: 'bg-primary/10' },
+            { icon: BarChart3, value: Array.from(bracketStatuses.values()).filter(s => s === 'submitted' || s === 'scored').length, label: 'Brackets In', iconColor: 'text-accent', iconBg: 'bg-accent/10' },
+            { icon: Shield, value: pools.filter(p => isLocked(p.lock_time)).length, label: 'Locked', iconColor: 'text-success', iconBg: 'bg-success/10' },
+          ].map((stat, i) => (
+            <div key={i} className="stat-card">
+              <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center mb-1", stat.iconBg)}>
+                <stat.icon className={cn("w-3.5 h-3.5", stat.iconColor)} />
+              </div>
+              <span className="stat-value">{stat.value}</span>
+              <span className="stat-label">{stat.label}</span>
             </div>
-            <span className="stat-value">{pools.length}</span>
-            <span className="stat-label">Active Pools</span>
-          </div>
-          <div className="stat-card">
-            <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center mb-1">
-              <BarChart3 className="w-4 h-4 text-accent" />
-            </div>
-            <span className="stat-value">
-              {Array.from(bracketStatuses.values()).filter(s => s === 'submitted' || s === 'scored').length}
-            </span>
-            <span className="stat-label">Brackets In</span>
-          </div>
-          <div className="stat-card">
-            <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center mb-1">
-              <Shield className="w-4 h-4 text-success" />
-            </div>
-            <span className="stat-value">
-              {pools.filter(p => isLocked(p.lock_time)).length}
-            </span>
-            <span className="stat-label">Locked</span>
-          </div>
+          ))}
         </motion.div>
       )}
 
@@ -147,11 +134,11 @@ export default function DashboardPage() {
       </div>
 
       {loading ? (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {[1, 2].map(i => (
-            <div key={i} className="glass-card p-5 animate-pulse rounded-xl">
-              <div className="h-4 bg-muted rounded w-1/3 mb-2" />
-              <div className="h-3 bg-muted rounded w-1/2" />
+            <div key={i} className="glass-card p-5">
+              <div className="h-4 bg-muted rounded-lg w-1/3 mb-2.5 skeleton-shimmer" />
+              <div className="h-3 bg-muted rounded-lg w-1/2 skeleton-shimmer" />
             </div>
           ))}
         </div>
@@ -166,7 +153,7 @@ export default function DashboardPage() {
           </div>
           <p className="empty-state-title">No pools yet</p>
           <p className="empty-state-desc mb-6">Create a pool or join one with an invite code.</p>
-          <div className="flex gap-3 justify-center">
+          <div className="flex gap-2.5 justify-center">
             <Link to="/pools/create">
               <Button className="font-bold rounded-xl gap-2 btn-press">
                 <Plus className="w-4 h-4" /> Create Pool
@@ -180,7 +167,7 @@ export default function DashboardPage() {
           </div>
         </motion.div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {pools.map((pool, i) => {
             const bs = bracketStatuses.get(pool.id) || 'none';
             const bsCfg = STATUS_CONFIG[bs];
@@ -189,45 +176,42 @@ export default function DashboardPage() {
             return (
               <motion.div
                 key={pool.id}
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 + i * 0.05, duration: 0.3 }}
+                transition={{ delay: 0.04 + i * 0.04, duration: 0.25 }}
               >
                 <Link to={`/pools/${pool.id}`} className="block">
                   <div className="glass-card p-4 hover-lift group cursor-pointer">
                     <div className="flex items-center gap-3">
-                      {/* Pool icon */}
                       <div className={cn(
                         "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-                        locked ? "bg-muted/50" : "bg-primary/10"
+                        locked ? "bg-muted/50" : "icon-container"
                       )}>
                         <Trophy className={cn("w-5 h-5", locked ? "text-muted-foreground" : "text-primary")} />
                       </div>
 
-                      {/* Pool info */}
                       <div className="min-w-0 flex-1">
                         <h3 className="font-bold text-sm truncate">{pool.name}</h3>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[11px] text-muted-foreground">
+                          <span className="text-[10px] text-muted-foreground font-medium">
                             {pool.tournaments?.name} {pool.tournaments?.season_year}
                           </span>
-                          <span className="w-1 h-1 rounded-full bg-border" />
-                          <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
+                          <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/30" />
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 font-medium">
                             <Users className="w-3 h-3" /> {members}
                           </span>
                         </div>
                       </div>
 
-                      {/* Status pills + arrow */}
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
                         <span className={cn("status-pill", bsCfg.className)}>{bsCfg.label}</span>
                         <span className={cn(
                           "status-pill",
-                          locked ? 'bg-destructive/15 text-destructive' : 'bg-success/15 text-success'
+                          locked ? 'bg-destructive/12 text-destructive' : 'bg-success/12 text-success'
                         )}>
                           {locked ? 'Locked' : 'Open'}
                         </span>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
+                        <ArrowRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all" />
                       </div>
                     </div>
                   </div>
