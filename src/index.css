@@ -241,7 +241,8 @@
     @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150;
   }
   .nav-item-active {
-    @apply bg-primary/12 text-primary;
+    @apply text-primary;
+    background-color: hsl(var(--primary) / 0.12);
   }
   .nav-item-inactive {
     @apply text-muted-foreground hover:text-foreground hover:bg-secondary/60;

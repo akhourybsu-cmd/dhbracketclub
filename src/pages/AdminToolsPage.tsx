@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import {
   ArrowLeft, CheckCircle2, RotateCcw, RefreshCw, Play, Zap, Clock,
-  AlertTriangle, Database, Activity, FlaskConical, ChevronDown, ChevronRight
+  AlertTriangle, Database, Activity, FlaskConical, ChevronDown, ChevronRight, Settings2, Radio
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SyncRunCard } from '@/components/admin/SyncRunCard';
@@ -41,13 +41,11 @@ export default function AdminToolsPage() {
   const [tournamentId, setTournamentId] = useState('');
   const [activeTab, setActiveTab] = useState<AdminTab>('games');
 
-  // Sync state
   const [syncRuns, setSyncRuns] = useState<SyncRun[]>([]);
   const [syncing, setSyncing] = useState<string | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [providerName, setProviderName] = useState<string>('espn');
 
-  // Simulation state
   const [simGameId, setSimGameId] = useState('');
   const [simStatus, setSimStatus] = useState<'scheduled' | 'in_progress' | 'final'>('in_progress');
   const [simScore1, setSimScore1] = useState('');
@@ -94,11 +92,10 @@ export default function AdminToolsPage() {
 
   useEffect(() => { fetchData(); fetchSyncRuns(); }, [fetchData, fetchSyncRuns]);
 
-  // Realtime
   useGameUpdates(tournamentId, fetchData);
   useSyncRunUpdates(fetchSyncRuns);
 
-  // ─── Manual Game Controls (preserved from phase 1) ─────────────────
+  // ─── Manual Game Controls ─────────────────────────────────────────
   const setWinner = async (gameId: string, winnerId: string) => {
     setSaving(gameId);
     try {
@@ -115,7 +112,6 @@ export default function AdminToolsPage() {
         team2_score: s?.team2 ? parseInt(s.team2) : null,
       } : g));
 
-      // Advance winner
       const game = games.find(g => g.id === gameId);
       if (game) {
         const nextRound = game.round_number + 1;
@@ -129,7 +125,6 @@ export default function AdminToolsPage() {
         }
       }
 
-      // Log + history
       if (user) {
         await supabase.from('admin_logs').insert({
           pool_id: poolId!, actor_user_id: user.id,
@@ -181,7 +176,6 @@ export default function AdminToolsPage() {
     if (!poolId || !tournamentId) return;
     setRecalculating(true);
     try {
-      // Use server-side recalculation via edge function (security: never trust client scoring)
       const res = await supabase.functions.invoke('sync-games', {
         body: { action: 'recalculateStandings', tournamentId, poolId },
       });
@@ -258,7 +252,6 @@ export default function AdminToolsPage() {
           updatePayload.winner_team_id = game.team2_id;
         }
 
-        // Advance winner
         if (updatePayload.winner_team_id) {
           const nextRound = game.round_number + 1;
           const nextSlot = Math.ceil(game.game_slot / 2);
@@ -280,7 +273,6 @@ export default function AdminToolsPage() {
 
       await supabase.from('games').update(updatePayload).eq('id', simGameId);
 
-      // Log to game_state_history
       await supabase.from('game_state_history').insert({
         game_id: simGameId,
         previous_status: game.status,
@@ -301,7 +293,6 @@ export default function AdminToolsPage() {
       toast.success(`Simulation: Game → ${simStatus}`);
       fetchData();
 
-      // Auto-recalculate if finalized
       if (simStatus === 'final') {
         await recalculateStandings();
       }
@@ -320,87 +311,85 @@ export default function AdminToolsPage() {
   const totalLive = games.filter(g => g.status === 'in_progress').length;
 
   if (loading) {
-    return <div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-muted-foreground">Loading admin tools…</p>
+      </div>
+    );
   }
 
+  // Sync health
+  const lastRun = syncRuns[0];
+  const isCurrentlySyncing = !!syncing || lastRun?.status === 'running';
+  const staleMinutes = lastSyncedAt ? (Date.now() - new Date(lastSyncedAt).getTime()) / 60000 : Infinity;
+  const hasRecentError = lastRun?.status === 'failed';
+  const hasWarnings = lastRun?.status === 'completed_with_errors' || lastRun?.status === 'completed_with_warnings';
+
+  let healthLabel: string, healthColor: string, healthDot: string;
+  if (isCurrentlySyncing) { healthLabel = 'Syncing…'; healthColor = 'text-primary'; healthDot = 'bg-primary animate-pulse'; }
+  else if (hasRecentError) { healthLabel = 'Degraded'; healthColor = 'text-destructive'; healthDot = 'bg-destructive'; }
+  else if (staleMinutes > 120) { healthLabel = lastSyncedAt ? 'Stale' : 'Manual Mode'; healthColor = 'text-warning'; healthDot = 'bg-warning'; }
+  else if (hasWarnings) { healthLabel = 'Warnings'; healthColor = 'text-warning'; healthDot = 'bg-warning'; }
+  else { healthLabel = 'Healthy'; healthColor = 'text-success'; healthDot = 'bg-success'; }
+
   return (
-    <div>
-      <Link to={`/pools/${poolId}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
+    <div className="max-w-2xl mx-auto">
+      {/* Back */}
+      <Link to={`/pools/${poolId}`} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-5">
         <ArrowLeft className="w-4 h-4" /> Back to Pool
       </Link>
 
-      <h1 className="text-xl font-bold mb-1">Admin Control Center</h1>
-      <p className="text-sm text-muted-foreground mb-2">Manage games, sync data, and simulate results.</p>
-
-      {/* Sync Health Banner */}
-      {(() => {
-        const lastRun = syncRuns[0];
-        const isCurrentlySyncing = !!syncing || lastRun?.status === 'running';
-        const staleMinutes = lastSyncedAt ? (Date.now() - new Date(lastSyncedAt).getTime()) / 60000 : Infinity;
-        const hasRecentError = lastRun?.status === 'failed';
-        const hasWarnings = lastRun?.status === 'completed_with_errors' || lastRun?.status === 'completed_with_warnings';
-
-        let healthLabel: string;
-        let healthColor: string;
-        let healthBg: string;
-
-        if (isCurrentlySyncing) {
-          healthLabel = 'Syncing';
-          healthColor = 'text-primary';
-          healthBg = 'bg-primary/10 border-primary/20';
-        } else if (hasRecentError) {
-          healthLabel = 'Degraded';
-          healthColor = 'text-destructive';
-          healthBg = 'bg-destructive/10 border-destructive/20';
-        } else if (staleMinutes > 120) {
-          healthLabel = lastSyncedAt ? 'Stale' : 'Manual Mode';
-          healthColor = 'text-warning';
-          healthBg = 'bg-warning/10 border-warning/20';
-        } else if (hasWarnings) {
-          healthLabel = 'Healthy (warnings)';
-          healthColor = 'text-warning';
-          healthBg = 'bg-warning/10 border-warning/20';
-        } else {
-          healthLabel = 'Healthy';
-          healthColor = 'text-success';
-          healthBg = 'bg-success/10 border-success/20';
-        }
-
-        return (
-          <div className={cn("rounded-lg px-3 py-2 mb-4 flex items-center justify-between border", healthBg)}>
-            <div className="flex items-center gap-2">
-              <span className={cn("w-2 h-2 rounded-full", healthColor.replace('text-', 'bg-'), isCurrentlySyncing && "animate-pulse")} />
-              <span className={cn("text-xs font-semibold", healthColor)}>{healthLabel}</span>
-            </div>
-            <span className="text-[10px] text-muted-foreground tabular-nums">
-              {lastSyncedAt ? `Synced ${Math.round(staleMinutes)}m ago` : 'Never synced'}
-            </span>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
+            <Settings2 className="w-5 h-5 text-primary" />
           </div>
-        );
-      })()}
-
-      {/* Stats Strip */}
-      <div className="grid grid-cols-4 gap-2 mb-4">
-        <div className="glass-card p-2 text-center">
-          <p className="text-lg font-bold tabular-nums">{totalDecided}</p>
-          <p className="text-[9px] text-muted-foreground">Final</p>
-        </div>
-        <div className="glass-card p-2 text-center">
-          <p className="text-lg font-bold tabular-nums text-primary">{totalLive}</p>
-          <p className="text-[9px] text-muted-foreground">Live</p>
-        </div>
-        <div className="glass-card p-2 text-center">
-          <p className="text-lg font-bold tabular-nums">{games.length - totalDecided - totalLive}</p>
-          <p className="text-[9px] text-muted-foreground">Upcoming</p>
-        </div>
-        <div className="glass-card p-2 text-center">
-          <p className="text-[10px] font-bold truncate">{lastSyncedAt ? new Date(lastSyncedAt).toLocaleTimeString() : '—'}</p>
-          <p className="text-[9px] text-muted-foreground">Last Sync</p>
+          <div>
+            <h1 className="text-2xl font-extrabold tracking-tight">Admin Tools</h1>
+            <p className="text-sm text-muted-foreground">Manage games, sync, and simulate</p>
+          </div>
         </div>
       </div>
 
-      {/* Tab Selector */}
-      <div className="flex gap-1.5 mb-4">
+      {/* Sync Health Banner */}
+      <div className={cn(
+        "glass-card px-4 py-3 mb-5 flex items-center justify-between",
+        hasRecentError && "border-destructive/30",
+        staleMinutes > 120 && !hasRecentError && "border-warning/30"
+      )}>
+        <div className="flex items-center gap-2.5">
+          <span className={cn("w-2.5 h-2.5 rounded-full", healthDot)} />
+          <div>
+            <span className={cn("text-xs font-bold", healthColor)}>{healthLabel}</span>
+            <span className="text-[10px] text-muted-foreground ml-2 tabular-nums">
+              {lastSyncedAt ? `${Math.round(staleMinutes)}m ago` : 'Never synced'}
+            </span>
+          </div>
+        </div>
+        <div className="text-[10px] text-muted-foreground tabular-nums">
+          {lastSyncedAt ? new Date(lastSyncedAt).toLocaleTimeString() : '—'}
+        </div>
+      </div>
+
+      {/* Stats strip */}
+      <div className="grid grid-cols-4 gap-2 mb-5">
+        {[
+          { value: totalDecided, label: 'Final', color: '' },
+          { value: totalLive, label: 'Live', color: 'text-live' },
+          { value: games.length - totalDecided - totalLive, label: 'Upcoming', color: '' },
+          { value: lastSyncedAt ? new Date(lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—', label: 'Last Sync', color: 'text-xs' },
+        ].map((s, i) => (
+          <div key={i} className="stat-card py-3">
+            <span className={cn("stat-value", s.color)}>{s.value}</span>
+            <span className="stat-label">{s.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Tab selector */}
+      <div className="flex gap-1.5 mb-5 p-1 bg-muted/30 rounded-xl">
         {([
           { key: 'games' as AdminTab, icon: Database, label: 'Games' },
           { key: 'sync' as AdminTab, icon: RefreshCw, label: 'Sync' },
@@ -410,8 +399,10 @@ export default function AdminToolsPage() {
             key={t.key}
             onClick={() => setActiveTab(t.key)}
             className={cn(
-              "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors",
-              activeTab === t.key ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
+              "flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all",
+              activeTab === t.key
+                ? "bg-primary text-primary-foreground shadow-md"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
             <t.icon className="w-3.5 h-3.5" />
@@ -423,16 +414,16 @@ export default function AdminToolsPage() {
       {/* ═══ GAMES TAB ═══ */}
       {activeTab === 'games' && (
         <div>
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-4">
             <span className="text-xs text-muted-foreground font-medium">Manual game entry & overrides</span>
-            <Button variant="outline" size="sm" onClick={recalculateStandings} disabled={recalculating} className="gap-1 text-xs h-7">
+            <Button variant="outline" size="sm" onClick={recalculateStandings} disabled={recalculating} className="gap-1.5 text-xs h-8 rounded-lg">
               <RefreshCw className={cn("w-3 h-3", recalculating && "animate-spin")} />
-              Recalc
+              Recalculate
             </Button>
           </div>
 
-          {/* Round Selector */}
-          <div className="flex gap-1 mb-3 overflow-x-auto pb-1">
+          {/* Round selector */}
+          <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1 scrollbar-none">
             {ROUND_SHORT.map((name, i) => {
               const rGames = games.filter(g => g.round_number === i + 1);
               const decided = rGames.filter(g => g.winner_team_id).length;
@@ -441,32 +432,47 @@ export default function AdminToolsPage() {
                   key={i}
                   onClick={() => setSelectedRound(i + 1)}
                   className={cn(
-                    "px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-colors flex items-center gap-1",
-                    selectedRound === i + 1 ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
+                    "px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all flex items-center gap-1.5",
+                    selectedRound === i + 1
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-card text-muted-foreground hover:text-foreground border border-border/50"
                   )}
                 >
                   {name}
-                  {decided > 0 && <span className={cn("text-[9px] tabular-nums", selectedRound === i + 1 ? "text-primary-foreground/70" : "text-muted-foreground")}>{decided}/{rGames.length}</span>}
+                  {decided > 0 && (
+                    <span className={cn(
+                      "text-[9px] tabular-nums px-1 py-0.5 rounded",
+                      selectedRound === i + 1 ? "bg-primary-foreground/20" : "bg-muted"
+                    )}>
+                      {decided}/{rGames.length}
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
 
-          {/* Progress */}
-          <div className="glass-card p-2.5 mb-3 flex items-center justify-between">
-            <span className="text-[11px] text-muted-foreground">{ROUND_NAMES[selectedRound - 1]}: {roundStats.decided}/{roundStats.total} decided</span>
-            <div className="h-1.5 w-20 bg-secondary rounded-full overflow-hidden">
-              <div className="h-full bg-success rounded-full" style={{ width: `${roundStats.total > 0 ? (roundStats.decided / roundStats.total) * 100 : 0}%` }} />
+          {/* Round progress */}
+          <div className="glass-card px-4 py-3 mb-4 flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">{ROUND_NAMES[selectedRound - 1]}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold tabular-nums">{roundStats.decided}/{roundStats.total}</span>
+              <div className="h-1.5 w-24 bg-muted rounded-full overflow-hidden">
+                <div className="h-full bg-success rounded-full transition-all" style={{ width: `${roundStats.total > 0 ? (roundStats.decided / roundStats.total) * 100 : 0}%` }} />
+              </div>
             </div>
           </div>
 
-          {/* Game cards */}
-          <div className="space-y-4">
+          {/* Game cards by region */}
+          <div className="space-y-5">
             {regions.map(region => {
               const regionGames = roundGames.filter(g => g.region === region);
               return (
                 <div key={region}>
-                  <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">{region}</h3>
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <span className="section-header mb-0">{region}</span>
+                    <div className="flex-1 h-px bg-border/30" />
+                  </div>
                   <div className="space-y-2">
                     {regionGames.map(game => {
                       const team1 = game.team1_id ? teams.get(game.team1_id) : null;
@@ -476,49 +482,61 @@ export default function AdminToolsPage() {
                       const gameScores = scores.get(game.id) || { team1: '', team2: '' };
 
                       return (
-                        <div key={game.id} className={cn("matchup-card relative", isLive && "ring-1 ring-primary/30")}>
-                          {/* Status badges */}
+                        <div key={game.id} className={cn(
+                          "glass-card overflow-hidden",
+                          isLive && "ring-1 ring-live/40"
+                        )}>
+                          {/* Status badges row */}
                           {(isLive || game.is_result_final) && (
-                            <div className="absolute top-1 right-2 flex gap-1">
-                              {isLive && <span className="text-[8px] font-bold text-primary bg-primary/15 px-1.5 py-0.5 rounded-full">LIVE</span>}
-                              {game.is_result_final && <span className="text-[8px] font-bold text-success bg-success/15 px-1.5 py-0.5 rounded-full">SYNCED</span>}
+                            <div className="px-3 py-1.5 bg-muted/20 border-b border-border/30 flex items-center gap-1.5">
+                              {isLive && (
+                                <span className="inline-flex items-center gap-1 text-[9px] font-bold text-live">
+                                  <Radio className="w-2.5 h-2.5 animate-pulse" /> LIVE
+                                </span>
+                              )}
+                              {game.is_result_final && (
+                                <span className="text-[9px] font-bold text-success bg-success/10 px-1.5 py-0.5 rounded-full">SYNCED</span>
+                              )}
                             </div>
                           )}
 
                           {/* Team 1 */}
                           <button onClick={() => team1 && setWinner(game.id, team1.id)} disabled={!team1 || saving === game.id}
-                            className={cn("w-full flex items-center gap-2 px-3 py-2 transition-colors text-left",
-                              game.winner_team_id === team1?.id ? "bg-success/5" : "hover:bg-secondary/50", !team1 && "cursor-default")}>
+                            className={cn("w-full flex items-center gap-2 px-3.5 py-2.5 transition-colors text-left",
+                              game.winner_team_id === team1?.id ? "bg-success/5" : "hover:bg-muted/30", !team1 && "cursor-default")}>
                             {team1 ? (<>
                               <span className="text-[11px] font-mono font-bold text-muted-foreground w-5 tabular-nums text-center">{team1.seed}</span>
                               <span className="text-sm font-medium flex-1 truncate">{team1.short_name}</span>
                               <Input type="number" placeholder="—" value={gameScores.team1}
                                 onClick={(e) => e.stopPropagation()}
                                 onChange={(e) => { e.stopPropagation(); setScores(prev => { const n = new Map(prev); n.set(game.id, { ...gameScores, team1: e.target.value }); return n; }); }}
-                                className="w-12 h-7 text-center text-xs font-mono p-0" />
+                                className="w-14 h-8 text-center text-xs font-mono p-0 rounded-lg" />
                               {game.winner_team_id === team1.id && <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />}
-                            </>) : <span className="text-xs text-muted-foreground italic ml-5">TBD</span>}
+                            </>) : <span className="text-xs text-muted-foreground/50 italic ml-5">TBD</span>}
                           </button>
-                          <div className="h-px bg-border mx-2" />
+
+                          <div className="h-px bg-border/20 mx-3" />
+
                           {/* Team 2 */}
                           <button onClick={() => team2 && setWinner(game.id, team2.id)} disabled={!team2 || saving === game.id}
-                            className={cn("w-full flex items-center gap-2 px-3 py-2 transition-colors text-left",
-                              game.winner_team_id === team2?.id ? "bg-success/5" : "hover:bg-secondary/50", !team2 && "cursor-default")}>
+                            className={cn("w-full flex items-center gap-2 px-3.5 py-2.5 transition-colors text-left",
+                              game.winner_team_id === team2?.id ? "bg-success/5" : "hover:bg-muted/30", !team2 && "cursor-default")}>
                             {team2 ? (<>
                               <span className="text-[11px] font-mono font-bold text-muted-foreground w-5 tabular-nums text-center">{team2.seed}</span>
                               <span className="text-sm font-medium flex-1 truncate">{team2.short_name}</span>
                               <Input type="number" placeholder="—" value={gameScores.team2}
                                 onClick={(e) => e.stopPropagation()}
                                 onChange={(e) => { e.stopPropagation(); setScores(prev => { const n = new Map(prev); n.set(game.id, { ...gameScores, team2: e.target.value }); return n; }); }}
-                                className="w-12 h-7 text-center text-xs font-mono p-0" />
+                                className="w-14 h-8 text-center text-xs font-mono p-0 rounded-lg" />
                               {game.winner_team_id === team2.id && <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />}
-                            </>) : <span className="text-xs text-muted-foreground italic ml-5">TBD</span>}
+                            </>) : <span className="text-xs text-muted-foreground/50 italic ml-5">TBD</span>}
                           </button>
+
                           {isFinal && (
-                            <div className="px-3 py-1 border-t border-border/30">
+                            <div className="px-3.5 py-2 border-t border-border/20 bg-muted/10">
                               <button onClick={() => resetGame(game.id)} disabled={saving === game.id}
-                                className="text-[10px] text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors">
-                                <RotateCcw className="w-3 h-3" /> Reset
+                                className="text-[10px] text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors font-medium">
+                                <RotateCcw className="w-3 h-3" /> Reset Result
                               </button>
                             </div>
                           )}
@@ -535,21 +553,21 @@ export default function AdminToolsPage() {
 
       {/* ═══ SYNC TAB ═══ */}
       {activeTab === 'sync' && (
-        <div className="space-y-4">
-          {/* Sync Actions */}
-          <div className="glass-card p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold">Sync Actions</h3>
+        <div className="space-y-5">
+          {/* Sync actions */}
+          <div className="glass-card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold">Sync Actions</h3>
               <select
                 value={providerName}
                 onChange={e => setProviderName(e.target.value)}
-                className="bg-secondary text-foreground text-[11px] rounded-md px-2 py-1 border border-border"
+                className="bg-muted text-foreground text-[11px] font-medium rounded-lg px-2.5 py-1.5 border border-border"
               >
                 <option value="espn">ESPN</option>
                 <option value="stub">Stub (test)</option>
               </select>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2.5">
               {([
                 { action: 'runFullSync', label: 'Full Sync', icon: RefreshCw, desc: 'Metadata + Games + Results + Standings' },
                 { action: 'syncGameResults', label: 'Results Only', icon: Activity, desc: 'Scores & winners only' },
@@ -561,23 +579,32 @@ export default function AdminToolsPage() {
                   onClick={() => triggerSync(s.action)}
                   disabled={!!syncing}
                   className={cn(
-                    "glass-card p-3 text-left hover:bg-card/90 transition-colors",
+                    "glass-card p-3.5 text-left hover-lift transition-all",
                     syncing === s.action && "ring-1 ring-primary/50"
                   )}
                 >
-                  <s.icon className={cn("w-4 h-4 text-primary mb-1", syncing === s.action && "animate-spin")} />
-                  <p className="text-xs font-semibold">{s.label}</p>
-                  <p className="text-[9px] text-muted-foreground">{s.desc}</p>
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
+                    <s.icon className={cn("w-4 h-4 text-primary", syncing === s.action && "animate-spin")} />
+                  </div>
+                  <p className="text-xs font-bold mb-0.5">{s.label}</p>
+                  <p className="text-[10px] text-muted-foreground leading-snug">{s.desc}</p>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Recent Sync Runs */}
-          <div className="glass-card p-4">
-            <h3 className="text-sm font-semibold mb-3">Recent Sync Runs</h3>
+          {/* Recent sync runs */}
+          <div className="glass-card p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <h3 className="text-sm font-bold">Recent Sync Runs</h3>
+              <div className="flex-1 h-px bg-border/30" />
+              <span className="text-[10px] text-muted-foreground tabular-nums">{syncRuns.length} total</span>
+            </div>
             {syncRuns.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No sync runs yet.</p>
+              <div className="text-center py-6">
+                <RefreshCw className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                <p className="text-xs text-muted-foreground">No sync runs yet.</p>
+              </div>
             ) : (
               <div className="space-y-2">
                 {syncRuns.slice(0, 10).map(run => (
@@ -591,20 +618,23 @@ export default function AdminToolsPage() {
 
       {/* ═══ SIMULATE TAB ═══ */}
       {activeTab === 'simulate' && (
-        <div className="space-y-4">
-          <div className="glass-card p-3 flex items-center gap-2 border border-warning/30">
-            <FlaskConical className="w-4 h-4 text-warning flex-shrink-0" />
+        <div className="space-y-5">
+          {/* Warning banner */}
+          <div className="glass-card p-4 flex items-start gap-3 border-warning/30">
+            <div className="w-8 h-8 rounded-lg bg-warning/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <FlaskConical className="w-4 h-4 text-warning" />
+            </div>
             <div>
-              <p className="text-xs font-semibold text-warning">Simulation Mode</p>
-              <p className="text-[10px] text-muted-foreground">For testing only. Changes are written to the database and will affect standings.</p>
+              <p className="text-xs font-bold text-warning">Simulation Mode</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">For testing only. Changes are written to the database and will affect standings.</p>
             </div>
           </div>
 
-          <div className="glass-card p-4">
-            <h3 className="text-sm font-semibold mb-3">Simulate Game State</h3>
+          {/* Simulate game state */}
+          <div className="glass-card p-5">
+            <h3 className="text-sm font-bold mb-4">Simulate Game State</h3>
 
-            {/* Game selector */}
-            <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Select Game</label>
+            <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wider">Select Game</label>
             <select
               value={simGameId}
               onChange={e => {
@@ -615,7 +645,7 @@ export default function AdminToolsPage() {
                   setSimScore2(g.team2_score?.toString() || '');
                 }
               }}
-              className="w-full bg-secondary text-foreground text-sm rounded-lg px-3 py-2 mb-3 border border-border"
+              className="w-full bg-muted text-foreground text-sm rounded-lg px-3 py-2.5 mb-4 border border-border focus:ring-1 focus:ring-primary"
             >
               <option value="">— Choose a game —</option>
               {games.map(g => {
@@ -635,16 +665,15 @@ export default function AdminToolsPage() {
               const t2 = game?.team2_id ? teams.get(game.team2_id) : null;
               return (
                 <>
-                  {/* Status */}
-                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">New Status</label>
-                  <div className="flex gap-1.5 mb-3">
+                  <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wider">New Status</label>
+                  <div className="flex gap-1.5 mb-4">
                     {(['scheduled', 'in_progress', 'final'] as const).map(s => (
                       <button
                         key={s}
                         onClick={() => setSimStatus(s)}
                         className={cn(
-                          "flex-1 px-2 py-1.5 rounded-lg text-[11px] font-medium transition-colors",
-                          simStatus === s ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
+                          "flex-1 px-2.5 py-2 rounded-lg text-xs font-semibold transition-all",
+                          simStatus === s ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:text-foreground"
                         )}
                       >
                         {s === 'in_progress' ? 'In Progress' : s.charAt(0).toUpperCase() + s.slice(1)}
@@ -652,54 +681,52 @@ export default function AdminToolsPage() {
                     ))}
                   </div>
 
-                  {/* Scores */}
                   {simStatus !== 'scheduled' && (
-                    <div className="grid grid-cols-2 gap-2 mb-3">
+                    <div className="grid grid-cols-2 gap-3 mb-4">
                       <div>
-                        <label className="text-[10px] text-muted-foreground block mb-0.5">{t1?.short_name || 'Team 1'}</label>
-                        <Input type="number" value={simScore1} onChange={e => setSimScore1(e.target.value)} placeholder="0" className="h-8 text-center font-mono" />
+                        <label className="text-[10px] text-muted-foreground font-medium block mb-1">{t1?.short_name || 'Team 1'}</label>
+                        <Input type="number" value={simScore1} onChange={e => setSimScore1(e.target.value)} placeholder="0" className="h-9 text-center font-mono rounded-lg" />
                       </div>
                       <div>
-                        <label className="text-[10px] text-muted-foreground block mb-0.5">{t2?.short_name || 'Team 2'}</label>
-                        <Input type="number" value={simScore2} onChange={e => setSimScore2(e.target.value)} placeholder="0" className="h-8 text-center font-mono" />
+                        <label className="text-[10px] text-muted-foreground font-medium block mb-1">{t2?.short_name || 'Team 2'}</label>
+                        <Input type="number" value={simScore2} onChange={e => setSimScore2(e.target.value)} placeholder="0" className="h-9 text-center font-mono rounded-lg" />
                       </div>
                     </div>
                   )}
 
-                  {/* Winner */}
                   {simStatus === 'final' && (
                     <>
-                      <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Winner</label>
-                      <div className="flex gap-1.5 mb-3">
+                      <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wider">Winner</label>
+                      <div className="flex gap-1.5 mb-4">
                         <button onClick={() => setSimWinner('team1')}
-                          className={cn("flex-1 px-2 py-1.5 rounded-lg text-[11px] font-medium transition-colors",
-                            simWinner === 'team1' ? "bg-success text-success-foreground" : "bg-secondary text-secondary-foreground")}>
+                          className={cn("flex-1 px-2.5 py-2 rounded-lg text-xs font-semibold transition-all",
+                            simWinner === 'team1' ? "bg-success text-white shadow-sm" : "bg-muted text-muted-foreground")}>
                           {t1?.short_name || 'Team 1'}
                         </button>
                         <button onClick={() => setSimWinner('team2')}
-                          className={cn("flex-1 px-2 py-1.5 rounded-lg text-[11px] font-medium transition-colors",
-                            simWinner === 'team2' ? "bg-success text-success-foreground" : "bg-secondary text-secondary-foreground")}>
+                          className={cn("flex-1 px-2.5 py-2 rounded-lg text-xs font-semibold transition-all",
+                            simWinner === 'team2' ? "bg-success text-white shadow-sm" : "bg-muted text-muted-foreground")}>
                           {t2?.short_name || 'Team 2'}
                         </button>
                       </div>
                     </>
                   )}
 
-                  <Button onClick={runSimulation} disabled={simRunning} className="w-full gap-2">
+                  <Button onClick={runSimulation} disabled={simRunning} className="w-full gap-2 h-10 rounded-xl font-bold">
                     <Play className={cn("w-4 h-4", simRunning && "animate-spin")} />
-                    {simRunning ? 'Simulating...' : `Apply Simulation → ${simStatus}`}
+                    {simRunning ? 'Simulating…' : `Apply → ${simStatus}`}
                   </Button>
                 </>
               );
             })()}
           </div>
 
-          {/* Quick multi-step simulation */}
-          <div className="glass-card p-4">
-            <h3 className="text-sm font-semibold mb-2">Quick Simulation Presets</h3>
-            <p className="text-[10px] text-muted-foreground mb-3">Rapidly simulate game progression for testing.</p>
+          {/* Quick presets */}
+          <div className="glass-card p-5">
+            <h3 className="text-sm font-bold mb-1">Quick Presets</h3>
+            <p className="text-[11px] text-muted-foreground mb-4">Rapidly simulate game progression for testing.</p>
             <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" size="sm" className="text-xs h-8"
+              <Button variant="outline" size="sm" className="text-xs h-9 rounded-lg font-semibold gap-1.5"
                 onClick={async () => {
                   const scheduled = games.filter(g => g.status === 'scheduled' && g.team1_id && g.team2_id);
                   if (scheduled.length === 0) { toast.error('No scheduled games with teams'); return; }
@@ -708,9 +735,9 @@ export default function AdminToolsPage() {
                   toast.success('Started first scheduled game');
                   fetchData();
                 }}>
-                <Play className="w-3 h-3 mr-1" /> Start Next Game
+                <Play className="w-3.5 h-3.5" /> Start Next
               </Button>
-              <Button variant="outline" size="sm" className="text-xs h-8"
+              <Button variant="outline" size="sm" className="text-xs h-9 rounded-lg font-semibold gap-1.5"
                 onClick={async () => {
                   const live = games.filter(g => g.status === 'in_progress');
                   if (live.length === 0) { toast.error('No live games'); return; }
@@ -722,7 +749,6 @@ export default function AdminToolsPage() {
                       status: 'final', team1_score: s1, team2_score: s2, winner_team_id: winnerId,
                       is_result_final: true, live_clock: null, live_period: null,
                     }).eq('id', g.id);
-                    // Advance winner
                     if (winnerId) {
                       const nextRound = g.round_number + 1;
                       const nextSlot = Math.ceil(g.game_slot / 2);
@@ -737,7 +763,7 @@ export default function AdminToolsPage() {
                   fetchData();
                   setTimeout(recalculateStandings, 500);
                 }}>
-                <CheckCircle2 className="w-3 h-3 mr-1" /> Finalize All Live
+                <CheckCircle2 className="w-3.5 h-3.5" /> Finalize All
               </Button>
             </div>
           </div>
