@@ -183,8 +183,9 @@ export default function BracketEntryPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-16">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-muted-foreground">Loading bracket…</p>
       </div>
     );
   }
@@ -194,29 +195,33 @@ export default function BracketEntryPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <Link to={`/pools/${poolId}`} className="text-muted-foreground hover:text-foreground transition-colors">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-extrabold tracking-tight">Fill Your Bracket</h1>
-          {bracket?.status === 'submitted' && (
-            <p className="text-xs text-success font-semibold mt-0.5">Submitted — editing will revert to draft</p>
-          )}
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={saveDraft} disabled={saving} className="font-semibold">
-            <Save className="w-4 h-4 mr-1.5" /> Save
-          </Button>
-          <Button size="sm" onClick={submitBracket} disabled={saving} className="font-semibold">
-            <Send className="w-4 h-4 mr-1.5" /> Submit
-          </Button>
+      {/* Header — sticky on mobile */}
+      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md -mx-4 px-4 sm:-mx-6 sm:px-6 pt-1 pb-3 mb-2 border-b border-border/20">
+        <div className="flex items-center gap-3">
+          <Link to={`/pools/${poolId}`} className="text-muted-foreground hover:text-foreground transition-colors p-1 -ml-1">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg sm:text-xl font-extrabold tracking-tight">Fill Your Bracket</h1>
+            {bracket?.status === 'submitted' && (
+              <p className="text-[10px] sm:text-xs text-success font-semibold">Submitted — editing will revert to draft</p>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={saveDraft} disabled={saving} className="font-semibold h-9 px-3 rounded-xl btn-press text-xs sm:text-sm">
+              <Save className="w-4 h-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Save</span>
+            </Button>
+            <Button size="sm" onClick={submitBracket} disabled={saving} className="font-semibold h-9 px-3 rounded-xl btn-press text-xs sm:text-sm">
+              <Send className="w-4 h-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Submit</span>
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Progress Bar */}
-      <div className="glass-card p-4 mb-5">
+      <div className="glass-card p-4 mb-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-semibold">
             {progress.filled} <span className="text-muted-foreground font-normal">of</span> {progress.total} <span className="text-muted-foreground font-normal">picks</span>
@@ -234,14 +239,14 @@ export default function BracketEntryPage() {
         </div>
       </div>
 
-      {/* Round Navigation */}
-      <div className="flex items-center justify-between mb-4">
+      {/* Round Navigation — larger touch targets */}
+      <div className="flex items-center justify-between mb-3">
         <Button
           variant="ghost"
           size="icon"
           disabled={currentRound <= (hasFirstFour ? 0 : 1)}
           onClick={() => setCurrentRound(r => r - 1)}
-          className="rounded-xl"
+          className="rounded-xl h-10 w-10 btn-press"
         >
           <ChevronLeft className="w-5 h-5" />
         </Button>
@@ -256,14 +261,14 @@ export default function BracketEntryPage() {
           size="icon"
           disabled={currentRound >= 6}
           onClick={() => setCurrentRound(r => r + 1)}
-          className="rounded-xl"
+          className="rounded-xl h-10 w-10 btn-press"
         >
           <ChevronRight className="w-5 h-5" />
         </Button>
       </div>
 
-      {/* Round Tabs */}
-      <div className="flex gap-1.5 mb-6 justify-center flex-wrap">
+      {/* Round Tabs — scrollable on mobile */}
+      <div className="flex gap-1.5 mb-5 justify-center flex-wrap">
         {hasFirstFour && (
           <RoundPill
             label={FIRST_FOUR_ROUND_SHORT}
@@ -300,7 +305,10 @@ export default function BracketEntryPage() {
             const regionGames = roundGames.filter(g => g.region === region);
             return (
               <div key={region}>
-                <h3 className="section-header">{region}</h3>
+                <div className="flex items-center gap-2 mb-3">
+                  <h3 className="section-header mb-0">{region}</h3>
+                  <div className="flex-1 h-px bg-border/30" />
+                </div>
                 <div className="space-y-2.5">
                   {regionGames.map((game, idx) => {
                     const team1 = getEffectiveTeam(game, 'team1', games, teams, picks);
@@ -320,15 +328,19 @@ export default function BracketEntryPage() {
                           isPicked && "ring-1 ring-primary/30"
                         )}
                       >
-                        {/* Game number indicator */}
-                        <div className="flex items-center justify-between px-3 py-1 border-b border-border/30">
+                        {/* Game header */}
+                        <div className="flex items-center justify-between px-4 py-1.5 border-b border-border/30">
                           <span className="text-[10px] font-bold text-muted-foreground/50 tabular-nums">
                             Game {game.game_slot}
                           </span>
                           {isPicked && (
-                            <span className="text-[10px] font-bold text-primary flex items-center gap-1">
+                            <motion.span
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="text-[10px] font-bold text-primary flex items-center gap-1"
+                            >
                               <Check className="w-3 h-3" /> Picked
-                            </span>
+                            </motion.span>
                           )}
                         </div>
 
@@ -340,7 +352,7 @@ export default function BracketEntryPage() {
                           disabled={!team1}
                           isPlayInSlot={!team1 && hasPlayIn}
                         />
-                        <div className="h-px bg-border/40 mx-3" />
+                        <div className="h-px bg-border/30 mx-4" />
                         <MatchupTeamRow
                           team={team2}
                           isSelected={currentPick?.picked_team_id === team2?.id}
@@ -376,13 +388,13 @@ export default function BracketEntryPage() {
             value={tiebreaker}
             onChange={(e) => setTiebreaker(e.target.value)}
             placeholder="e.g. 145"
-            className="font-mono h-11 text-center text-lg font-bold"
+            className="font-mono h-12 text-center text-lg font-bold rounded-xl"
           />
         </motion.div>
       )}
 
       {/* Bottom spacer for mobile nav */}
-      <div className="h-6" />
+      <div className="h-8" />
     </div>
   );
 }
@@ -397,7 +409,7 @@ function RoundPill({ label, isActive, isComplete, onClick }: {
     <button
       onClick={onClick}
       className={cn(
-        "round-pill relative",
+        "round-pill btn-press relative",
         isActive
           ? "round-pill-active"
           : isComplete
@@ -426,43 +438,46 @@ function MatchupTeamRow({ team, isSelected, isOpponentSelected, onSelect, disabl
       onClick={onSelect}
       disabled={disabled}
       className={cn(
-        "w-full flex items-center gap-3 px-3 py-3 text-left transition-all duration-150",
+        "w-full flex items-center gap-3 px-4 py-3.5 text-left btn-press",
+        "transition-all duration-150",
         isSelected && "bg-primary/10",
         !isSelected && !disabled && "hover:bg-secondary/60 active:bg-secondary/80",
-        isOpponentSelected && !isSelected && "opacity-50",
+        isOpponentSelected && !isSelected && "opacity-45",
         disabled && "opacity-30 cursor-not-allowed"
       )}
     >
       {team ? (
         <>
           <span className={cn(
-            "text-[11px] font-mono font-bold w-6 h-6 rounded-md flex items-center justify-center tabular-nums flex-shrink-0",
+            "text-[11px] font-mono font-bold w-7 h-7 rounded-lg flex items-center justify-center tabular-nums flex-shrink-0",
+            "transition-colors duration-150",
             isSelected ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"
           )}>
             {team.seed}
           </span>
           <span className={cn(
-            "text-sm flex-1 truncate transition-colors",
+            "text-sm flex-1 min-w-0 transition-colors duration-150",
             isSelected ? "text-primary font-bold" : "font-medium"
           )}>
-            {team.short_name}
+            <span className="block truncate">{team.short_name}</span>
           </span>
           <AnimatePresence>
             {isSelected && (
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                exit={{ scale: 0 }}
-                className="w-5 h-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                className="w-6 h-6 rounded-full bg-primary flex items-center justify-center flex-shrink-0"
               >
-                <Check className="w-3 h-3 text-primary-foreground" />
+                <Check className="w-3.5 h-3.5 text-primary-foreground" />
               </motion.div>
             )}
           </AnimatePresence>
         </>
       ) : (
         <>
-          <span className="w-6 h-6 rounded-md bg-secondary/50 flex-shrink-0" />
+          <span className="w-7 h-7 rounded-lg bg-secondary/50 flex-shrink-0" />
           <span className="text-xs text-muted-foreground/50 italic font-medium">
             {isPlayInSlot ? 'TBD — First Four' : 'Waiting for earlier pick'}
           </span>

@@ -52,14 +52,20 @@ export default function JoinPoolPage() {
 
   if (joinedPool) {
     return (
-      <div className="max-w-md mx-auto">
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-8 text-center">
-          <CheckCircle2 className="w-12 h-12 text-success mx-auto mb-4" />
-          <h1 className="text-xl font-bold mb-1">You're In!</h1>
+      <div className="max-w-md mx-auto px-1">
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-8 sm:p-10 text-center">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 20, delay: 0.1 }}
+          >
+            <CheckCircle2 className="w-14 h-14 text-success mx-auto mb-5" />
+          </motion.div>
+          <h1 className="text-2xl font-extrabold mb-1">You're In!</h1>
           <p className="text-sm text-muted-foreground mb-6">
             Welcome to <span className="font-semibold text-foreground">{joinedPool.name}</span>
           </p>
-          <Button className="w-full gap-2" onClick={() => navigate(`/pools/${joinedPool.id}`)}>
+          <Button className="w-full gap-2 h-11 rounded-xl font-bold btn-press" onClick={() => navigate(`/pools/${joinedPool.id}`)}>
             Go to Pool <ArrowRight className="w-4 h-4" />
           </Button>
         </motion.div>
@@ -68,25 +74,41 @@ export default function JoinPoolPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto">
-      <h1 className="text-xl font-bold mb-2">Join a Pool</h1>
-      <p className="text-sm text-muted-foreground mb-6">Enter the invite code shared by the pool creator.</p>
-      <form onSubmit={handleJoin} className="glass-card p-6 space-y-4">
+    <div className="max-w-md mx-auto px-1">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center">
+            <Users className="w-5 h-5 text-accent" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">Join a Pool</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Enter the invite code from a friend</p>
+          </div>
+        </div>
+      </motion.div>
+
+      <motion.form
+        onSubmit={handleJoin}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="glass-card p-5 sm:p-6 space-y-5"
+      >
         <div>
-          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Invite Code</label>
+          <label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wider">Invite Code</label>
           <Input
             required
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="ABCDEF"
-            className="uppercase tracking-[0.3em] text-center text-xl font-mono font-bold"
+            className="uppercase tracking-[0.3em] text-center text-xl sm:text-2xl font-mono font-bold h-14 rounded-xl"
             maxLength={6}
           />
         </div>
-        <Button type="submit" className="w-full gap-2" disabled={loading || code.length < 3}>
-          {loading ? 'Joining...' : <><Users className="w-4 h-4" /> Join Pool</>}
+        <Button type="submit" className="w-full gap-2 h-11 rounded-xl font-bold btn-press" disabled={loading || code.length < 3}>
+          {loading ? 'Joining…' : <><Users className="w-4 h-4" /> Join Pool</>}
         </Button>
-      </form>
+      </motion.form>
     </div>
   );
 }
