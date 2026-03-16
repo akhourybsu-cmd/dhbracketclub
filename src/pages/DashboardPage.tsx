@@ -11,11 +11,13 @@ import { usePwaInstall } from '@/hooks/usePwaInstall';
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { canInstall, install } = usePwaInstall();
   const [pools, setPools] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [displayName, setDisplayName] = useState('');
   const [bracketStatuses, setBracketStatuses] = useState<Map<string, string>>(new Map());
   const [memberCounts, setMemberCounts] = useState<Map<string, number>>(new Map());
+  const [dismissedInstall, setDismissedInstall] = useState(false);
 
   useEffect(() => {
     if (!user) return;
