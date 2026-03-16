@@ -949,14 +949,30 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Tournament not found", 404);
     }
 
-    console.log(`[sync-games] action=${body.action} tournament=${body.tournamentId} user=${userId}`);
+    // ─── Admin verification ─────────────────────────────────────────
+    // User must be admin of at least one pool linked to this tournament
+    const { data: adminPools } = await db
+      .from("pool_members")
+      .select("pool_id, pools!inner(tournament_id)")
+      .eq("user_id", userId)
+      .eq("role", "admin");
+
+    const isAdminOfTournament = adminPools?.some(
+      (pm: any) => pm.pools?.tournament_id === body.tournamentId
+    );
+    if (!isAdminOfTournament) {
+      console.warn(`[sync-games] DENIED: user=${userId} not admin for tournament=${body.tournamentId}`);
+      return errorResponse("Forbidden: you must be a pool admin for this tournament", 403);
+    }
+
+    console.log(`[sync-games] action=${body.action} tournament=${body.tournamentId} user=${userId} provider=${body.providerName || "stub"}`);
 
     const result = await orchestrate(db, body, userId);
 
     return jsonResponse({ success: true, ...result });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("[sync-games] Error:", message);
+    console.error(`[sync-games] FAILED action=${(await req.clone().json().catch(() => ({}))).action || "unknown"}:`, message);
     return jsonResponse({ success: false, error: message }, 500);
   }
 });
