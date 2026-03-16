@@ -20,7 +20,7 @@ export default function LandingPage() {
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between px-6 py-5">
         <div className="flex items-center gap-2.5">
-          <img src={dhMonogram} alt="DH" className="w-8 h-8 object-contain" style={{ filter: 'drop-shadow(0 0 6px hsl(var(--primary) / 0.2))' }} />
+          <img src={dhMonogram} alt="DH" className="w-11 h-11 object-contain" style={{ filter: 'drop-shadow(0 0 8px hsl(var(--primary) / 0.2))' }} />
           <span className="text-sm font-extrabold tracking-tight">
             <span className="gradient-text">DH</span> Bracket Club
           </span>
