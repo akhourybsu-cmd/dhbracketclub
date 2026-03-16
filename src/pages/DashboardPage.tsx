@@ -97,15 +97,26 @@ export default function DashboardPage() {
         }} />
 
         <div className="relative z-10">
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.08 }}
-            className="text-[9px] font-bold uppercase tracking-[0.25em] mb-2"
-            style={{ color: 'hsl(var(--primary) / 0.5)' }}
-          >
-            {getGreeting()}
-          </motion.p>
+          <div className="flex items-center gap-3 mb-3">
+            <motion.img
+              src={dhMonogram}
+              alt="DH"
+              className="w-9 h-9 object-contain"
+              initial={{ opacity: 0, scale: 0.7 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.05, type: 'spring', damping: 18 }}
+              style={{ filter: 'drop-shadow(0 0 10px hsl(var(--primary) / 0.18))' }}
+            />
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.08 }}
+              className="text-[9px] font-bold uppercase tracking-[0.25em]"
+              style={{ color: 'hsl(var(--primary) / 0.5)' }}
+            >
+              {getGreeting()}
+            </motion.p>
+          </div>
           <motion.h1
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
