@@ -142,9 +142,8 @@ export default function DashboardPage() {
       )}
 
       {/* My Pools section */}
-      <div className="flex items-center gap-2 mb-4">
+      <div className="section-divider">
         <h2 className="section-header mb-0">My Pools</h2>
-        <div className="flex-1 h-px bg-border/30" />
       </div>
 
       {loading ? (
