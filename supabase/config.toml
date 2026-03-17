@@ -2,3 +2,6 @@ project_id = "wnurxuvwljjbwmtoeqnm"
 
 [functions.sync-games]
 verify_jwt = false
+
+[functions.suggest-items]
+verify_jwt = false

@@ -8,6 +8,8 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { MessageCircle, Plus, X, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAISuggestions } from '@/hooks/useAISuggestions';
+import AISuggestions from '@/components/AISuggestions';
 
 export default function CreatePollPage() {
   const { user } = useAuth();
@@ -15,6 +17,17 @@ export default function CreatePollPage() {
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState(['', '']);
   const [loading, setLoading] = useState(false);
+  const { suggestions, loading: aiLoading, fetchSuggestions, removeSuggestion } = useAISuggestions();
+
+  const handleAddSuggestion = (text: string) => {
+    removeSuggestion(text);
+    const emptyIdx = options.findIndex(o => !o.trim());
+    if (emptyIdx !== -1) {
+      setOptions(options.map((o, i) => i === emptyIdx ? text : o));
+    } else if (options.length < 10) {
+      setOptions([...options, text]);
+    }
+  };
 
   const addOption = () => {
     if (options.length >= 10) return;
@@ -130,9 +143,18 @@ export default function CreatePollPage() {
         </div>
 
         <div className="glass-card p-5">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <label className="form-label mb-0">Options</label>
             <span className="text-[10px] text-muted-foreground font-mono">{options.filter(o => o.trim()).length} options</span>
+          </div>
+          <div className="mb-4">
+            <AISuggestions
+              suggestions={suggestions}
+              loading={aiLoading}
+              onFetch={() => fetchSuggestions(question, 'poll', options)}
+              onAdd={handleAddSuggestion}
+              disabled={!question.trim()}
+            />
           </div>
           <div className="space-y-2">
             {options.map((opt, idx) => (

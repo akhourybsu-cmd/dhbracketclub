@@ -8,6 +8,8 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { BarChart3, Plus, X, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAISuggestions } from '@/hooks/useAISuggestions';
+import AISuggestions from '@/components/AISuggestions';
 
 export default function CreateRankingPage() {
   const { user } = useAuth();
@@ -16,6 +18,17 @@ export default function CreateRankingPage() {
   const [description, setDescription] = useState('');
   const [items, setItems] = useState<string[]>(['', '', '', '', '']);
   const [loading, setLoading] = useState(false);
+  const { suggestions, loading: aiLoading, fetchSuggestions, removeSuggestion } = useAISuggestions();
+
+  const handleAddSuggestion = (text: string) => {
+    removeSuggestion(text);
+    const emptyIdx = items.findIndex(i => !i.trim());
+    if (emptyIdx !== -1) {
+      setItems(items.map((item, i) => i === emptyIdx ? text : item));
+    } else if (items.length < 20) {
+      setItems([...items, text]);
+    }
+  };
 
   const addItem = () => {
     if (items.length >= 20) return;
@@ -138,9 +151,18 @@ export default function CreateRankingPage() {
         </div>
 
         <div className="glass-card p-5">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <label className="form-label mb-0">Items to Rank</label>
             <span className="text-[10px] text-muted-foreground font-mono">{items.filter(i => i.trim()).length} items</span>
+          </div>
+          <div className="mb-4">
+            <AISuggestions
+              suggestions={suggestions}
+              loading={aiLoading}
+              onFetch={() => fetchSuggestions(topic, 'ranking', items)}
+              onAdd={handleAddSuggestion}
+              disabled={!topic.trim()}
+            />
           </div>
           <div className="space-y-2">
             {items.map((item, idx) => (
