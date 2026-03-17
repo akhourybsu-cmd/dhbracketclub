@@ -44,7 +44,7 @@ export default function PoolsListPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="page-header mb-0">
           <div className="page-header-icon">
-            <Users />
+            <Trophy />
           </div>
           <div>
             <h1 className="page-header-title">Brackets</h1>
@@ -69,8 +69,8 @@ export default function PoolsListPage() {
         <div className="space-y-2.5">
           {[1, 2].map(i => (
             <div key={i} className="glass-card p-5">
-              <div className="h-4 bg-muted rounded-lg w-1/3 mb-2.5 skeleton-shimmer" />
-              <div className="h-3 bg-muted rounded-lg w-1/2 skeleton-shimmer" />
+              <div className="h-4 rounded-lg w-1/3 mb-2.5 skeleton-shimmer" />
+              <div className="h-3 rounded-lg w-1/2 skeleton-shimmer" />
             </div>
           ))}
         </div>
@@ -83,17 +83,17 @@ export default function PoolsListPage() {
           <div className="empty-state-icon">
             <Trophy />
           </div>
-          <p className="empty-state-title">No pools yet</p>
-          <p className="empty-state-desc mb-6">Create a pool or join one with an invite code.</p>
+          <p className="empty-state-title">No brackets yet</p>
+          <p className="empty-state-desc mb-6">Create a bracket pool or join one with an invite code.</p>
           <div className="flex gap-2.5 justify-center">
             <Link to="/pools/create">
               <Button className="font-bold rounded-xl gap-2 btn-press">
-                <Plus className="w-4 h-4" /> Create Pool
+                <Plus className="w-4 h-4" /> Create Bracket
               </Button>
             </Link>
             <Link to="/pools/join">
               <Button variant="outline" className="font-bold rounded-xl gap-2 btn-press">
-                <Users className="w-4 h-4" /> Join Pool
+                <Users className="w-4 h-4" /> Join
               </Button>
             </Link>
           </div>
@@ -111,17 +111,19 @@ export default function PoolsListPage() {
               >
                 <Link to={`/pools/${pool.id}`} className="block">
                   <div className="glass-card p-4 hover-lift group cursor-pointer">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between relative z-10">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className={cn(
                           "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-                          locked ? "bg-muted/50" : "icon-container"
-                        )}>
+                          locked ? "bg-muted/50" : ""
+                        )} style={!locked ? {
+                          background: 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.04))',
+                        } : undefined}>
                           <Trophy className={cn("w-5 h-5", locked ? "text-muted-foreground" : "text-primary")} />
                         </div>
                         <div className="min-w-0">
                           <h3 className="font-bold text-sm truncate">{pool.name}</h3>
-                          <p className="text-[10px] text-muted-foreground font-medium">{pool.tournaments?.name} {pool.tournaments?.season_year}</p>
+                          <p className="text-[10px] text-muted-foreground/50 font-medium">{pool.tournaments?.name} {pool.tournaments?.season_year}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">

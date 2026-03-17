@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trophy, Users, Shield, ArrowRight, Zap, BarChart3, MessageCircle } from 'lucide-react';
+import { Trophy, Users, Shield, ArrowRight, Zap, BarChart3, MessageCircle, Bookmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -18,9 +18,13 @@ export default function LandingPage() {
 
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between px-5 py-4">
-        <span className="text-[13px] font-extrabold tracking-tight text-muted-foreground/70">
-          <span className="text-foreground">DH</span> Club
-        </span>
+        <div className="flex items-center gap-2">
+          <img src={dhMonogram} alt="DH" className="w-7 h-7 object-contain" style={{ filter: 'drop-shadow(0 0 6px hsl(var(--primary) / 0.2))' }} />
+          <span className="text-[13px] font-extrabold tracking-tight">
+            <span className="text-foreground">DH</span>
+            <span className="text-muted-foreground/70"> Club</span>
+          </span>
+        </div>
         <Link to="/auth">
           <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground font-semibold text-[13px] h-9 px-3">
             Sign In
@@ -49,7 +53,7 @@ export default function LandingPage() {
 
           <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-[10px] font-bold tracking-[0.12em] uppercase mb-5" style={{ background: 'hsl(var(--primary) / 0.07)', border: '1px solid hsl(var(--primary) / 0.1)', color: 'hsl(var(--primary) / 0.85)' }}>
             <Zap className="w-3 h-3" />
-            Brackets • Rankings • Polls • Drafts
+            Private Group Competitions
           </div>
 
           <h2 className="text-[1.85rem] sm:text-5xl font-extrabold tracking-tight leading-[1.1] mb-3.5">
@@ -59,7 +63,7 @@ export default function LandingPage() {
           </h2>
 
           <p className="text-muted-foreground text-[14px] sm:text-base leading-relaxed mb-8 max-w-xs sm:max-w-sm mx-auto">
-            Private competitions for your friend group. Brackets, power rankings, polls, and snake drafts — all in one place.
+            Brackets, power rankings, polls, and snake drafts — all in one place. For fun, not funds.
           </p>
 
           <Link to="/auth">
@@ -69,7 +73,7 @@ export default function LandingPage() {
           </Link>
         </motion.div>
 
-        {/* Features */}
+        {/* Module showcase */}
         <motion.div
           initial={{ opacity: 0, y: 28 }}
           animate={{ opacity: 1, y: 0 }}
@@ -77,10 +81,10 @@ export default function LandingPage() {
           className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-16 sm:mt-20 max-w-md sm:max-w-lg w-full"
         >
           {[
-            { icon: Trophy, title: 'Brackets', desc: 'March Madness & more' },
-            { icon: BarChart3, title: 'Rankings', desc: 'Power rankings & tiers' },
-            { icon: MessageCircle, title: 'Polls', desc: 'Quick group votes' },
-            { icon: Shield, title: 'Private', desc: 'Friends only' },
+            { icon: Trophy, title: 'Brackets', desc: 'March Madness & more', color: 'primary' },
+            { icon: BarChart3, title: 'Rankings', desc: 'Power rankings & tiers', color: 'accent' },
+            { icon: MessageCircle, title: 'Polls', desc: 'Quick group votes', color: 'warning' },
+            { icon: Bookmark, title: 'Drafts', desc: 'Snake drafts & picks', color: 'gold' },
           ].map((f, i) => (
             <motion.div
               key={i}
@@ -89,8 +93,10 @@ export default function LandingPage() {
               transition={{ duration: 0.4, delay: 0.4 + i * 0.06 }}
               className="glass-card p-4 text-center"
             >
-              <div className="icon-container w-9 h-9 mx-auto mb-2.5">
-                <f.icon className="w-4 h-4 text-primary" />
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center mx-auto mb-2.5" style={{
+                background: `linear-gradient(135deg, hsl(var(--${f.color}) / 0.15), hsl(var(--${f.color}) / 0.04))`,
+              }}>
+                <f.icon className="w-4 h-4" style={{ color: `hsl(var(--${f.color}))` }} />
               </div>
               <h3 className="text-[11px] font-bold mb-0.5">{f.title}</h3>
               <p className="text-[10px] text-muted-foreground/60 leading-snug">{f.desc}</p>
@@ -99,8 +105,10 @@ export default function LandingPage() {
         </motion.div>
       </main>
 
-      <footer className="relative z-10 text-center py-6 text-[9px] text-muted-foreground/30 font-semibold uppercase tracking-[0.15em]">
-        For fun, not funds.
+      <footer className="relative z-10 text-center py-6">
+        <p className="text-[9px] text-muted-foreground/30 font-semibold uppercase tracking-[0.15em]">
+          For fun, not funds.
+        </p>
       </footer>
     </div>
   );
