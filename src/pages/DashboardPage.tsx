@@ -128,7 +128,7 @@ export default function DashboardPage() {
               className="text-[9px] font-bold uppercase tracking-[0.25em]"
               style={{ color: 'hsl(var(--primary) / 0.5)' }}
             >
-              {getGreeting()}
+              DH Club
             </motion.p>
           </div>
           <motion.h1
