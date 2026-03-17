@@ -18,6 +18,17 @@ export default function CreateRankingPage() {
   const [description, setDescription] = useState('');
   const [items, setItems] = useState<string[]>(['', '', '', '', '']);
   const [loading, setLoading] = useState(false);
+  const { suggestions, loading: aiLoading, fetchSuggestions, removeSuggestion } = useAISuggestions();
+
+  const handleAddSuggestion = (text: string) => {
+    removeSuggestion(text);
+    const emptyIdx = items.findIndex(i => !i.trim());
+    if (emptyIdx !== -1) {
+      setItems(items.map((item, i) => i === emptyIdx ? text : item));
+    } else if (items.length < 20) {
+      setItems([...items, text]);
+    }
+  };
 
   const addItem = () => {
     if (items.length >= 20) return;
