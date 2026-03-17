@@ -78,8 +78,9 @@ export default function GameCenterPage() {
   const hasLiveGames = useMemo(() => games.some(g => g.status === 'in_progress'), [games]);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
 
+  // Auto-sync: run once on load, then every 60s if live games exist
   useEffect(() => {
-    if (!hasLiveGames || !tournamentId || !poolId) return;
+    if (!tournamentId || !poolId) return;
 
     const doSync = async () => {
       try {
@@ -92,8 +93,11 @@ export default function GameCenterPage() {
       }
     };
 
-    // Run immediately on first detection of live games
+    // Always sync once on page load
     doSync();
+
+    // Continue polling every 60s only if there are live games
+    if (!hasLiveGames) return;
     const interval = setInterval(doSync, 60_000);
     return () => clearInterval(interval);
   }, [hasLiveGames, tournamentId, poolId]);
