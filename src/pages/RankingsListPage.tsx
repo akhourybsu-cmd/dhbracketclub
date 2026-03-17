@@ -1,9 +1,52 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { BarChart3, Plus } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { BarChart3, Plus, ArrowRight, Users, CheckCircle2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 export default function RankingsListPage() {
+  const { user } = useAuth();
+  const [rankings, setRankings] = useState<any[]>([]);
+  const [submissionCounts, setSubmissionCounts] = useState<Map<string, number>>(new Map());
+  const [mySubmissions, setMySubmissions] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetch = async () => {
+      const { data } = await supabase
+        .from('rankings')
+        .select('*, competitions(title, status), profiles:created_by(display_name)')
+        .order('created_at', { ascending: false });
+
+      if (data) {
+        setRankings(data);
+        const rankingIds = data.map(r => r.id);
+
+        if (rankingIds.length > 0) {
+          const [{ data: subs }, { data: mySubs }] = await Promise.all([
+            supabase.from('ranking_submissions').select('ranking_id').in('ranking_id', rankingIds),
+            supabase.from('ranking_submissions').select('ranking_id').eq('user_id', user.id).in('ranking_id', rankingIds),
+          ]);
+
+          if (subs) {
+            const counts = new Map<string, number>();
+            subs.forEach(s => counts.set(s.ranking_id, (counts.get(s.ranking_id) || 0) + 1));
+            setSubmissionCounts(counts);
+          }
+          if (mySubs) {
+            setMySubmissions(new Set(mySubs.map(s => s.ranking_id)));
+          }
+        }
+      }
+      setLoading(false);
+    };
+    fetch();
+  }, [user]);
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -14,17 +57,78 @@ export default function RankingsListPage() {
             <p className="page-header-subtitle">Power rankings & tier lists</p>
           </div>
         </div>
+        <Link to="/rankings/create">
+          <Button size="sm" className="gap-1.5 rounded-lg font-bold btn-press">
+            <Plus className="w-4 h-4" /> Create
+          </Button>
+        </Link>
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, scale: 0.97 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="empty-state"
-      >
-        <div className="empty-state-icon"><BarChart3 /></div>
-        <p className="empty-state-title">Rankings coming soon</p>
-        <p className="empty-state-desc mb-6">Create power rankings, tier lists, and ranked votes with your crew.</p>
-      </motion.div>
+      {loading ? (
+        <div className="space-y-2.5">
+          {[1, 2].map(i => (
+            <div key={i} className="glass-card p-5">
+              <div className="h-4 rounded-lg w-1/3 mb-2.5 skeleton-shimmer" />
+              <div className="h-3 rounded-lg w-1/2 skeleton-shimmer" />
+            </div>
+          ))}
+        </div>
+      ) : rankings.length === 0 ? (
+        <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} className="empty-state">
+          <div className="empty-state-icon"><BarChart3 /></div>
+          <p className="empty-state-title">No rankings yet</p>
+          <p className="empty-state-desc mb-6">Create a ranking to get your crew's takes.</p>
+          <Link to="/rankings/create">
+            <Button className="font-bold rounded-xl gap-2 btn-press">
+              <Plus className="w-4 h-4" /> Create Ranking
+            </Button>
+          </Link>
+        </motion.div>
+      ) : (
+        <div className="space-y-2">
+          {rankings.map((r, i) => {
+            const count = submissionCounts.get(r.id) || 0;
+            const submitted = mySubmissions.has(r.id);
+            return (
+              <motion.div key={r.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 + i * 0.04 }}>
+                <Link to={`/rankings/${r.id}`} className="block group">
+                  <div className="glass-card p-4 hover-lift cursor-pointer">
+                    <div className="flex items-center justify-between relative z-10">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{
+                          background: 'linear-gradient(135deg, hsl(var(--accent) / 0.15), hsl(var(--accent) / 0.04))',
+                        }}>
+                          <BarChart3 className="w-5 h-5" style={{ color: 'hsl(var(--accent))' }} />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-sm truncate">{r.topic}</h3>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[10px] text-muted-foreground/50 font-medium">{r.item_count} items</span>
+                            <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/15" />
+                            <span className="text-[10px] text-muted-foreground/50 flex items-center gap-0.5 font-medium">
+                              <Users className="w-2.5 h-2.5" /> {count} ranked
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {submitted ? (
+                          <span className="status-pill bg-success/10 text-success"><CheckCircle2 className="w-3 h-3 mr-0.5" />Done</span>
+                        ) : (
+                          <span className={cn("status-pill", r.status === 'open' ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground')}>
+                            {r.status === 'open' ? 'Open' : 'Closed'}
+                          </span>
+                        )}
+                        <ArrowRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-all" />
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
