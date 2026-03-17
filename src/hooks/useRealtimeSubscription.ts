@@ -88,7 +88,8 @@ export function useRealtimeSubscription<T = any>({
     channelRef.current = channel;
 
     return cleanup;
-  }, [channelName, enabled, configs.map(c => `${c.table}:${c.filter || ''}`).join(',')]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channelName, enabled, JSON.stringify(configs)]);
 
   return { status, lastUpdated, cleanup };
 }

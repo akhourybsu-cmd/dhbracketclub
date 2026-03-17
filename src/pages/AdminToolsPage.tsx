@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -31,10 +31,12 @@ interface SyncRun {
 export default function AdminToolsPage() {
   const { poolId } = useParams<{ poolId: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [games, setGames] = useState<Game[]>([]);
   const [teams, setTeams] = useState<Map<string, Team>>(new Map());
   const [selectedRound, setSelectedRound] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [isAdminVerified, setIsAdminVerified] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
   const [recalculating, setRecalculating] = useState(false);
   const [scores, setScores] = useState<Map<string, { team1: string; team2: string }>>(new Map());
@@ -52,6 +54,20 @@ export default function AdminToolsPage() {
   const [simScore2, setSimScore2] = useState('');
   const [simWinner, setSimWinner] = useState<'team1' | 'team2' | ''>('');
   const [simRunning, setSimRunning] = useState(false);
+
+  // Admin guard: verify user is pool admin
+  useEffect(() => {
+    if (!poolId || !user) return;
+    supabase.from('pool_members').select('role').eq('pool_id', poolId).eq('user_id', user.id).maybeSingle()
+      .then(({ data }) => {
+        if (data?.role === 'admin') {
+          setIsAdminVerified(true);
+        } else {
+          toast.error('You don\'t have admin access to this pool.');
+          navigate(`/pools/${poolId}`, { replace: true });
+        }
+      });
+  }, [poolId, user, navigate]);
 
   const fetchData = useCallback(async () => {
     if (!poolId) return;
@@ -310,7 +326,7 @@ export default function AdminToolsPage() {
   const totalDecided = games.filter(g => g.winner_team_id).length;
   const totalLive = games.filter(g => g.status === 'in_progress').length;
 
-  if (loading) {
+  if (loading || !isAdminVerified) {
     return (
       <div className="loading-spinner">
         <div className="loading-spinner-ring" />

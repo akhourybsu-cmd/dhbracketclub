@@ -62,17 +62,20 @@ export default function LeaderboardPage() {
     brackets?.forEach(b => bracketMap.set(b.user_id, b));
 
     const champPicks = new Map<string, Team | null>();
-    if (brackets) {
-      for (const b of brackets) {
-        const { data: picks } = await supabase
-          .from('bracket_picks')
-          .select('picked_team_id, picked_in_round')
-          .eq('bracket_id', b.id)
-          .eq('picked_in_round', 6)
-          .limit(1);
-        if (picks && picks.length > 0) {
-          champPicks.set(b.user_id, teamMap.get(picks[0].picked_team_id) || null);
-        }
+    if (brackets && brackets.length > 0) {
+      const bracketIds = brackets.map(b => b.id);
+      const { data: allChampPicks } = await supabase
+        .from('bracket_picks')
+        .select('bracket_id, picked_team_id')
+        .in('bracket_id', bracketIds)
+        .eq('picked_in_round', 6);
+      if (allChampPicks) {
+        const bracketUserMap = new Map<string, string>();
+        brackets.forEach(b => bracketUserMap.set(b.id, b.user_id));
+        allChampPicks.forEach(p => {
+          const userId = bracketUserMap.get(p.bracket_id);
+          if (userId) champPicks.set(userId, teamMap.get(p.picked_team_id) || null);
+        });
       }
     }
 
@@ -522,9 +525,13 @@ export default function LeaderboardPage() {
                       {isLocked && s.bracket_id && (
                         <Link
                           to={`/pools/${poolId}/bracket/${s.bracket_id}`}
-                          className="flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200"
+                          className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center opacity-60 hover:opacity-100 active:scale-95 transition-all duration-200"
+                          style={{
+                            background: 'hsl(var(--surface-elevated))',
+                            border: '1px solid hsl(var(--border) / 0.2)',
+                          }}
                         >
-                          <Eye className="w-3 h-3 text-muted-foreground/40" />
+                          <Eye className="w-3.5 h-3.5 text-muted-foreground" />
                         </Link>
                       )}
                     </div>

@@ -8,7 +8,6 @@ import dhMonogram from '@/assets/dh-monogram.png';
 const navItems = [
   { path: '/dashboard', label: 'Home', icon: LayoutDashboard },
   { path: '/pools', label: 'Pools', icon: Users },
-  { path: '/leaderboard', label: 'Ranks', icon: Trophy },
   { path: '/profile', label: 'Profile', icon: User },
 ];
 

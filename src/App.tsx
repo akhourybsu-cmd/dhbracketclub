@@ -20,6 +20,7 @@ import LeaderboardPage from "./pages/LeaderboardPage";
 import AdminToolsPage from "./pages/AdminToolsPage";
 import GameCenterPage from "./pages/GameCenterPage";
 import ProfilePage from "./pages/ProfilePage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/dashboard" element={<ProtectedPage><DashboardPage /></ProtectedPage>} />
             <Route path="/pools" element={<ProtectedPage><PoolsListPage /></ProtectedPage>} />
             <Route path="/pools/create" element={<ProtectedPage><CreatePoolPage /></ProtectedPage>} />
@@ -50,7 +52,7 @@ const App = () => (
             <Route path="/pools/:poolId/leaderboard" element={<ProtectedPage><LeaderboardPage /></ProtectedPage>} />
             <Route path="/pools/:poolId/admin" element={<ProtectedPage><AdminToolsPage /></ProtectedPage>} />
             <Route path="/pools/:poolId/games" element={<ProtectedPage><GameCenterPage /></ProtectedPage>} />
-            <Route path="/leaderboard" element={<ProtectedPage><LeaderboardPage /></ProtectedPage>} />
+            {/* /leaderboard without poolId redirects to pools list */}
             <Route path="/profile" element={<ProtectedPage><ProfilePage /></ProtectedPage>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

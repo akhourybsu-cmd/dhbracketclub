@@ -38,15 +38,29 @@ export default function DashboardPage() {
 
         const { data: brackets } = await supabase
           .from('brackets')
-          .select('pool_id, status')
+          .select('id, pool_id, status')
           .eq('user_id', user.id)
           .in('pool_id', poolIds);
 
         if (brackets && poolData) {
+          // Fetch pick counts for all user brackets in one query
+          const bracketPickCounts = new Map<string, number>();
+          if (brackets.length > 0) {
+            const bracketIds = brackets.map(b => b.id);
+            const { data: pickData } = await supabase
+              .from('bracket_picks')
+              .select('bracket_id')
+              .in('bracket_id', bracketIds);
+            if (pickData) {
+              pickData.forEach(p => bracketPickCounts.set(p.bracket_id, (bracketPickCounts.get(p.bracket_id) || 0) + 1));
+            }
+          }
+
           const sm = new Map<string, string>();
           poolData.forEach(p => {
             const b = brackets.find(br => br.pool_id === p.id);
-            const ds = getBracketDisplayStatus(b?.status || null, p.lock_time, 0, TOTAL_GAMES);
+            const picksCount = b ? (bracketPickCounts.get(b.id) || 0) : 0;
+            const ds = getBracketDisplayStatus(b?.status || null, p.lock_time, picksCount, TOTAL_GAMES);
             sm.set(p.id, ds);
           });
           setBracketStatuses(sm);
