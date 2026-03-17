@@ -8,6 +8,8 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { MessageCircle, Plus, X, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAISuggestions } from '@/hooks/useAISuggestions';
+import AISuggestions from '@/components/AISuggestions';
 
 export default function CreatePollPage() {
   const { user } = useAuth();
