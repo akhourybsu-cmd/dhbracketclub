@@ -26,7 +26,11 @@ import RankingsListPage from "./pages/RankingsListPage";
 import CreateRankingPage from "./pages/CreateRankingPage";
 import RankingDetailPage from "./pages/RankingDetailPage";
 import PollsListPage from "./pages/PollsListPage";
+import CreatePollPage from "./pages/CreatePollPage";
+import PollDetailPage from "./pages/PollDetailPage";
 import DraftsListPage from "./pages/DraftsListPage";
+import CreateDraftPage from "./pages/CreateDraftPage";
+import DraftDetailPage from "./pages/DraftDetailPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -72,9 +76,13 @@ const App = () => (
 
             {/* Polls module */}
             <Route path="/polls" element={<ProtectedPage><PollsListPage /></ProtectedPage>} />
+            <Route path="/polls/create" element={<ProtectedPage><CreatePollPage /></ProtectedPage>} />
+            <Route path="/polls/:pollId" element={<ProtectedPage><PollDetailPage /></ProtectedPage>} />
 
             {/* Drafts module */}
             <Route path="/drafts" element={<ProtectedPage><DraftsListPage /></ProtectedPage>} />
+            <Route path="/drafts/create" element={<ProtectedPage><CreateDraftPage /></ProtectedPage>} />
+            <Route path="/drafts/:draftId" element={<ProtectedPage><DraftDetailPage /></ProtectedPage>} />
 
             <Route path="/profile" element={<ProtectedPage><ProfilePage /></ProtectedPage>} />
             <Route path="*" element={<NotFound />} />
