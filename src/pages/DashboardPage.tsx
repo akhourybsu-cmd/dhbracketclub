@@ -486,8 +486,17 @@ export default function DashboardPage() {
               const actColor = actConfig?.color || 'primary';
               const label = ACTIVITY_LABELS[a.event_type] || a.event_type.replace(/_/g, ' ');
 
-              return (
-                <div key={a.id} className="px-4 py-3 flex items-center gap-3 relative z-10">
+              // Build link target based on activity type
+              const targetLink = a.target_id && a.target_type
+                ? a.target_type === 'ranking' ? `/rankings/${a.target_id}`
+                  : a.target_type === 'poll' ? `/polls/${a.target_id}`
+                  : a.target_type === 'draft' ? `/drafts/${a.target_id}`
+                  : a.target_type === 'bracket' ? `/pools/${a.target_id}`
+                  : null
+                : null;
+
+              const content = (
+                <div className="px-4 py-3 flex items-center gap-3 relative z-10">
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{
                     background: `linear-gradient(135deg, hsl(var(--${actColor}) / 0.12), hsl(var(--${actColor}) / 0.04))`,
                   }}>
@@ -503,6 +512,14 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 </div>
+              );
+
+              return targetLink ? (
+                <Link key={a.id} to={targetLink} className="block hover:bg-muted/20 transition-colors">
+                  {content}
+                </Link>
+              ) : (
+                <div key={a.id}>{content}</div>
               );
             })}
           </div>
