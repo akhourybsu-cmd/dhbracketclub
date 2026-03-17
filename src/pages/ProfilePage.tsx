@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { LogOut, User } from 'lucide-react';
 import { motion } from 'framer-motion';
+import dhMonogram from '@/assets/dh-monogram.png';
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
@@ -46,7 +47,7 @@ export default function ProfilePage() {
         </div>
         <div>
           <h1 className="page-header-title">Profile</h1>
-          <p className="page-header-subtitle">Manage your account</p>
+          <p className="page-header-subtitle">Manage your DH Club account</p>
         </div>
       </div>
 
@@ -78,7 +79,13 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Sign out — secondary treatment */}
+      {/* DH Club branding */}
+      <div className="flex items-center justify-center gap-2 py-4 mb-2">
+        <img src={dhMonogram} alt="DH Club" className="w-5 h-5 object-contain opacity-30" />
+        <span className="text-[9px] text-muted-foreground/30 font-bold uppercase tracking-[0.15em]">DH Club Member</span>
+      </div>
+
+      {/* Sign out */}
       <button
         onClick={signOut}
         className="w-full flex items-center justify-center gap-2 h-10 rounded-xl text-[13px] font-medium text-muted-foreground/60 hover:text-destructive transition-colors duration-200"

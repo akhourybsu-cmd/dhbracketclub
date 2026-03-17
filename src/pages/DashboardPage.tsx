@@ -12,19 +12,41 @@ import { getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES } from '@/lib/brack
 import { cn } from '@/lib/utils';
 import { usePwaInstall } from '@/hooks/usePwaInstall';
 import dhMonogram from '@/assets/dh-monogram.png';
+import { formatDistanceToNow } from 'date-fns';
 
-const MODULE_ICONS = {
+const MODULE_ICONS: Record<string, any> = {
   bracket_pool: Trophy,
   ranking: BarChart3,
   poll: MessageCircle,
   draft: Bookmark,
 };
 
-const MODULE_COLORS = {
+const MODULE_COLORS: Record<string, string> = {
   bracket_pool: 'primary',
   ranking: 'accent',
   poll: 'warning',
   draft: 'gold',
+};
+
+// Humanized activity labels
+const ACTIVITY_LABELS: Record<string, string> = {
+  ranking_created: 'created a ranking',
+  ranking_submitted: 'submitted a ranking',
+  poll_created: 'created a poll',
+  poll_voted: 'voted on a poll',
+  draft_created: 'created a draft',
+  draft_completed: 'completed a draft',
+  bracket_submitted: 'submitted a bracket',
+};
+
+const ACTIVITY_ICONS: Record<string, { icon: any; color: string }> = {
+  ranking_created: { icon: BarChart3, color: 'accent' },
+  ranking_submitted: { icon: BarChart3, color: 'accent' },
+  poll_created: { icon: MessageCircle, color: 'warning' },
+  poll_voted: { icon: MessageCircle, color: 'warning' },
+  draft_created: { icon: Bookmark, color: 'gold' },
+  draft_completed: { icon: Bookmark, color: 'gold' },
+  bracket_submitted: { icon: Trophy, color: 'primary' },
 };
 
 export default function DashboardPage() {
@@ -141,7 +163,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-3 mb-3">
             <motion.img
               src={dhMonogram}
-              alt="DH"
+              alt="DH Club"
               className="w-9 h-9 object-contain"
               initial={{ opacity: 0, scale: 0.7 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -228,7 +250,7 @@ export default function DashboardPage() {
                 <Download className="w-5 h-5 text-primary" />
               </div>
               <div className="flex-1 min-w-0 relative z-10">
-                <p className="text-[13px] font-bold">Install App</p>
+                <p className="text-[13px] font-bold">Install DH Club</p>
                 <p className="text-[10px] text-muted-foreground">Best experience on home screen</p>
               </div>
               <button onClick={install} className="rounded-xl font-bold text-xs h-8 px-3.5 flex-shrink-0 relative z-10 btn-premium">
@@ -365,6 +387,51 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
+      {/* ═══ Active Drafts ═══ */}
+      {drafts.length > 0 && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.38 }}>
+          <div className="section-divider mb-3">
+            <h2 className="section-header mb-0">
+              <Bookmark className="w-3.5 h-3.5 inline-block mr-1.5" style={{ color: 'hsl(var(--gold))' }} />
+              Drafts
+            </h2>
+            <Link to="/drafts" className="text-[10px] font-bold text-primary/60 hover:text-primary transition-colors">View All</Link>
+          </div>
+          <div className="space-y-2 mb-7">
+            {drafts.slice(0, 3).map((d: any, i: number) => (
+              <motion.div key={d.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 + i * 0.04 }}>
+                <Link to={`/drafts/${d.id}`} className="block group">
+                  <div className="glass-card p-3.5 transition-all duration-200 group-hover:border-gold/15">
+                    <div className="flex items-center gap-3 relative z-10">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{
+                        background: 'linear-gradient(135deg, hsl(var(--gold) / 0.15), hsl(var(--gold) / 0.04))',
+                      }}>
+                        <Bookmark className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-bold text-[13px] truncate tracking-tight">{d.topic}</h3>
+                        <p className="text-[10px] text-muted-foreground/50 font-medium">
+                          {d.num_rounds} rounds • {d.status === 'in_progress' ? 'Live' : d.status === 'setup' ? 'Setup' : 'Complete'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <span className={cn(
+                          "status-pill",
+                          d.status === 'in_progress' ? 'bg-success/10 text-success' : d.status === 'setup' ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
+                        )}>
+                          {d.status === 'in_progress' ? 'Live' : d.status === 'setup' ? 'Setup' : 'Done'}
+                        </span>
+                        <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/15" />
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
       {/* ═══ Empty state — no activity at all ═══ */}
       {!loading && totalActive === 0 && (
         <motion.div
@@ -373,7 +440,7 @@ export default function DashboardPage() {
           className="glass-card arena-edge p-10 text-center"
         >
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 relative z-10">
-            <img src={dhMonogram} alt="DH" className="w-10 h-10 object-contain opacity-50" />
+            <img src={dhMonogram} alt="DH Club" className="w-10 h-10 object-contain opacity-50" />
           </div>
           <p className="text-sm font-bold relative z-10 mb-1">Welcome to DH Club</p>
           <p className="text-xs text-muted-foreground leading-relaxed relative z-10 mb-5">Start a competition with your crew — brackets, rankings, polls, or drafts.</p>
@@ -405,23 +472,31 @@ export default function DashboardPage() {
             </h2>
           </div>
           <div className="glass-card divide-y divide-border/10 overflow-hidden">
-            {activity.slice(0, 5).map((a: any) => (
-              <div key={a.id} className="px-4 py-3 flex items-center gap-3">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[9px] font-bold flex-shrink-0" style={{
-                  background: 'hsl(var(--surface-elevated))',
-                  border: '1px solid hsl(var(--border) / 0.2)',
-                }}>
-                  {(a.profiles?.display_name || '?')[0].toUpperCase()}
+            {activity.slice(0, 6).map((a: any) => {
+              const actConfig = ACTIVITY_ICONS[a.event_type];
+              const ActIcon = actConfig?.icon || Zap;
+              const actColor = actConfig?.color || 'primary';
+              const label = ACTIVITY_LABELS[a.event_type] || a.event_type.replace(/_/g, ' ');
+
+              return (
+                <div key={a.id} className="px-4 py-3 flex items-center gap-3 relative z-10">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{
+                    background: `linear-gradient(135deg, hsl(var(--${actColor}) / 0.12), hsl(var(--${actColor}) / 0.04))`,
+                  }}>
+                    <ActIcon className="w-3 h-3" style={{ color: `hsl(var(--${actColor}))` }} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[12px] font-medium truncate">
+                      <span className="font-bold">{a.profiles?.display_name || 'Someone'}</span>{' '}
+                      <span className="text-muted-foreground">{label}</span>
+                    </p>
+                    <p className="text-[9px] text-muted-foreground/40 font-medium">
+                      {formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[12px] font-medium truncate">
-                    <span className="font-bold">{a.profiles?.display_name || 'Someone'}</span>{' '}
-                    <span className="text-muted-foreground">{a.event_type.replace(/_/g, ' ')}</span>
-                  </p>
-                  <p className="text-[9px] text-muted-foreground/50">{new Date(a.created_at).toLocaleDateString()}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </motion.div>
       )}

@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { LayoutDashboard, Trophy, BarChart3, MessageCircle, User } from 'lucide-react';
+import { LayoutDashboard, Trophy, BarChart3, MessageCircle, User, Bookmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import dhMonogram from '@/assets/dh-monogram.png';
@@ -13,14 +13,22 @@ const navItems = [
   { path: '/profile', label: 'Profile', icon: User },
 ];
 
+const sidebarModules = [
+  { path: '/dashboard', label: 'Home', icon: LayoutDashboard },
+  { path: '/brackets', label: 'Brackets', icon: Trophy },
+  { path: '/rankings', label: 'Rankings', icon: BarChart3 },
+  { path: '/polls', label: 'Polls', icon: MessageCircle },
+  { path: '/drafts', label: 'Drafts', icon: Bookmark },
+];
+
 export function AppLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
 
-  // Match active nav — /pools/* should highlight Brackets
   const isNavActive = (path: string) => {
     if (path === '/brackets') {
       return location.pathname.startsWith('/brackets') || location.pathname.startsWith('/pools');
     }
+    if (path === '/dashboard') return location.pathname === '/dashboard';
     return location.pathname.startsWith(path);
   };
 
@@ -50,8 +58,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </div>
           </div>
         </div>
-        <nav className="flex flex-col gap-1 px-3">
-          {navItems.map((item) => {
+        <nav className="flex flex-col gap-1 px-3 flex-1">
+          {sidebarModules.map((item) => {
             const Icon = item.icon;
             const active = isNavActive(item.path);
             return (
@@ -65,19 +73,17 @@ export function AppLayout({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
-          {/* Drafts as secondary sidebar item */}
-          <div className="h-px bg-border/10 my-2" />
-          <Link
-            to="/drafts"
-            className={cn("nav-item", location.pathname.startsWith('/drafts') ? "nav-item-active" : "nav-item-inactive")}
-          >
-            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M16 3H8a2 2 0 0 0-2 2v14l6-3 6 3V5a2 2 0 0 0-2-2Z" />
-            </svg>
-            Drafts
-          </Link>
         </nav>
-        <div className="mt-auto px-6 pb-6">
+        <div className="px-3 pb-3">
+          <Link
+            to="/profile"
+            className={cn("nav-item", location.pathname === '/profile' ? "nav-item-active" : "nav-item-inactive")}
+          >
+            <User className="w-[18px] h-[18px]" />
+            Profile
+          </Link>
+        </div>
+        <div className="px-6 pb-6">
           <div className="h-px bg-border/20 mb-4" />
           <p className="text-[9px] text-muted-foreground/40 font-semibold tracking-wide">DH Club — For fun, not funds.</p>
         </div>
