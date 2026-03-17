@@ -143,9 +143,18 @@ export default function CreatePollPage() {
         </div>
 
         <div className="glass-card p-5">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <label className="form-label mb-0">Options</label>
             <span className="text-[10px] text-muted-foreground font-mono">{options.filter(o => o.trim()).length} options</span>
+          </div>
+          <div className="mb-4">
+            <AISuggestions
+              suggestions={suggestions}
+              loading={aiLoading}
+              onFetch={() => fetchSuggestions(question, 'poll', options)}
+              onAdd={handleAddSuggestion}
+              disabled={!question.trim()}
+            />
           </div>
           <div className="space-y-2">
             {options.map((opt, idx) => (

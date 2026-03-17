@@ -151,9 +151,18 @@ export default function CreateRankingPage() {
         </div>
 
         <div className="glass-card p-5">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <label className="form-label mb-0">Items to Rank</label>
             <span className="text-[10px] text-muted-foreground font-mono">{items.filter(i => i.trim()).length} items</span>
+          </div>
+          <div className="mb-4">
+            <AISuggestions
+              suggestions={suggestions}
+              loading={aiLoading}
+              onFetch={() => fetchSuggestions(topic, 'ranking', items)}
+              onAdd={handleAddSuggestion}
+              disabled={!topic.trim()}
+            />
           </div>
           <div className="space-y-2">
             {items.map((item, idx) => (
