@@ -17,6 +17,17 @@ export default function CreatePollPage() {
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState(['', '']);
   const [loading, setLoading] = useState(false);
+  const { suggestions, loading: aiLoading, fetchSuggestions, removeSuggestion } = useAISuggestions();
+
+  const handleAddSuggestion = (text: string) => {
+    removeSuggestion(text);
+    const emptyIdx = options.findIndex(o => !o.trim());
+    if (emptyIdx !== -1) {
+      setOptions(options.map((o, i) => i === emptyIdx ? text : o));
+    } else if (options.length < 10) {
+      setOptions([...options, text]);
+    }
+  };
 
   const addOption = () => {
     if (options.length >= 10) return;
