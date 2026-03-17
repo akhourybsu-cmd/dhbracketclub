@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { Bookmark, ArrowLeft, Users, Play, Send, Trophy, Clock } from 'lucide-react';
+import { Bookmark, ArrowLeft, Users, Play, Send, Trophy, Clock, Wifi } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useDraftUpdates } from '@/hooks/useRealtimeSubscription';
 
 interface Participant {
   id: string;
