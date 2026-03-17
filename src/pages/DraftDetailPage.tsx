@@ -241,6 +241,32 @@ export default function DraftDetailPage() {
             <p className="text-[10px] text-muted-foreground/40 mt-3">Share this draft link to invite others. Snake order follows the list above.</p>
           </div>
 
+          {/* Join button for non-participants */}
+          {!isParticipant && user && (
+            <Button
+              onClick={async () => {
+                try {
+                  const nextOrder = participants.length + 1;
+                  const { error } = await supabase.from('draft_participants').insert({
+                    draft_id: draftId!,
+                    user_id: user.id,
+                    pick_order: nextOrder,
+                  });
+                  if (error) throw error;
+                  toast.success('Joined the draft!');
+                  fetchData();
+                } catch (err: any) {
+                  toast.error(err.message || 'Failed to join');
+                }
+              }}
+              className="w-full h-12 rounded-xl font-bold btn-press gap-2 text-[13px] mb-3"
+              variant="outline"
+            >
+              <Users className="w-4 h-4" />
+              Join Draft
+            </Button>
+          )}
+
           {isCreator && (
             <Button onClick={handleStartDraft} disabled={starting || participants.length < 2} className="w-full h-12 rounded-xl font-bold btn-press gap-2 text-[13px]">
               <Play className="w-4 h-4" />
