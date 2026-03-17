@@ -23,6 +23,8 @@ import GameCenterPage from "./pages/GameCenterPage";
 import ProfilePage from "./pages/ProfilePage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import RankingsListPage from "./pages/RankingsListPage";
+import CreateRankingPage from "./pages/CreateRankingPage";
+import RankingDetailPage from "./pages/RankingDetailPage";
 import PollsListPage from "./pages/PollsListPage";
 import DraftsListPage from "./pages/DraftsListPage";
 import NotFound from "./pages/NotFound";
@@ -49,7 +51,7 @@ const App = () => (
             {/* Dashboard */}
             <Route path="/dashboard" element={<ProtectedPage><DashboardPage /></ProtectedPage>} />
 
-            {/* Brackets module — /brackets is the list, /pools/* are the detail routes */}
+            {/* Brackets module */}
             <Route path="/brackets" element={<ProtectedPage><PoolsListPage /></ProtectedPage>} />
             <Route path="/pools" element={<Navigate to="/brackets" replace />} />
             <Route path="/pools/create" element={<ProtectedPage><CreatePoolPage /></ProtectedPage>} />
@@ -65,6 +67,8 @@ const App = () => (
 
             {/* Rankings module */}
             <Route path="/rankings" element={<ProtectedPage><RankingsListPage /></ProtectedPage>} />
+            <Route path="/rankings/create" element={<ProtectedPage><CreateRankingPage /></ProtectedPage>} />
+            <Route path="/rankings/:rankingId" element={<ProtectedPage><RankingDetailPage /></ProtectedPage>} />
 
             {/* Polls module */}
             <Route path="/polls" element={<ProtectedPage><PollsListPage /></ProtectedPage>} />
