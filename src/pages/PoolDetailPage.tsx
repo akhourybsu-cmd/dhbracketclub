@@ -243,11 +243,14 @@ export default function PoolDetailPage() {
       </motion.div>
 
       {/* Quick Links — action tiles */}
-      <div className={cn("grid gap-2.5 mb-7", isAdmin ? "grid-cols-3" : "grid-cols-2")}>
+      <div className={cn("grid gap-2.5 mb-7", isAdmin ? "grid-cols-4" : "grid-cols-2")}>
         {[
           { to: `/pools/${poolId}/leaderboard`, icon: Trophy, label: 'Leaderboard', color: 'gold' },
           { to: `/pools/${poolId}/games`, icon: Activity, label: 'Game Center', color: 'primary' },
-          ...(isAdmin ? [{ to: `/pools/${poolId}/admin`, icon: Settings, label: 'Admin', color: 'muted-foreground' }] : []),
+          ...(isAdmin ? [
+            { to: `/pools/${poolId}/settings`, icon: SlidersHorizontal, label: 'Settings', color: 'muted-foreground' },
+            { to: `/pools/${poolId}/admin`, icon: Settings, label: 'Admin', color: 'muted-foreground' },
+          ] : []),
         ].map((link, i) => (
           <motion.div key={link.to} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 + i * 0.04 }}>
             <Link to={link.to}>
