@@ -31,10 +31,12 @@ interface SyncRun {
 export default function AdminToolsPage() {
   const { poolId } = useParams<{ poolId: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [games, setGames] = useState<Game[]>([]);
   const [teams, setTeams] = useState<Map<string, Team>>(new Map());
   const [selectedRound, setSelectedRound] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [isAdminVerified, setIsAdminVerified] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
   const [recalculating, setRecalculating] = useState(false);
   const [scores, setScores] = useState<Map<string, { team1: string; team2: string }>>(new Map());
