@@ -1,18 +1,28 @@
 import { ReactNode } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { LayoutDashboard, Trophy, Users, User } from 'lucide-react';
+import { LayoutDashboard, Trophy, BarChart3, MessageCircle, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import dhMonogram from '@/assets/dh-monogram.png';
 
 const navItems = [
   { path: '/dashboard', label: 'Home', icon: LayoutDashboard },
-  { path: '/pools', label: 'Pools', icon: Users },
+  { path: '/brackets', label: 'Brackets', icon: Trophy },
+  { path: '/rankings', label: 'Rankings', icon: BarChart3 },
+  { path: '/polls', label: 'Polls', icon: MessageCircle },
   { path: '/profile', label: 'Profile', icon: User },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
+
+  // Match active nav — /pools/* should highlight Brackets
+  const isNavActive = (path: string) => {
+    if (path === '/brackets') {
+      return location.pathname.startsWith('/brackets') || location.pathname.startsWith('/pools');
+    }
+    return location.pathname.startsWith(path);
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -34,31 +44,42 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <div>
               <h1 className="text-base font-extrabold tracking-tight leading-none">
                 <span className="gradient-text">DH</span>
-                <span className="text-foreground"> Bracket Club</span>
+                <span className="text-foreground"> Club</span>
               </h1>
-              <p className="text-[8px] text-muted-foreground/50 font-bold uppercase tracking-[0.2em] mt-0.5">March Madness Pools</p>
+              <p className="text-[8px] text-muted-foreground/50 font-bold uppercase tracking-[0.2em] mt-0.5">Compete With Your Crew</p>
             </div>
           </div>
         </div>
         <nav className="flex flex-col gap-1 px-3">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname.startsWith(item.path);
+            const active = isNavActive(item.path);
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className={cn("nav-item", isActive ? "nav-item-active" : "nav-item-inactive")}
+                className={cn("nav-item", active ? "nav-item-active" : "nav-item-inactive")}
               >
                 <Icon className="w-[18px] h-[18px]" />
                 {item.label}
               </Link>
             );
           })}
+          {/* Drafts as secondary sidebar item */}
+          <div className="h-px bg-border/10 my-2" />
+          <Link
+            to="/drafts"
+            className={cn("nav-item", location.pathname.startsWith('/drafts') ? "nav-item-active" : "nav-item-inactive")}
+          >
+            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 3H8a2 2 0 0 0-2 2v14l6-3 6 3V5a2 2 0 0 0-2-2Z" />
+            </svg>
+            Drafts
+          </Link>
         </nav>
         <div className="mt-auto px-6 pb-6">
           <div className="h-px bg-border/20 mb-4" />
-          <p className="text-[9px] text-muted-foreground/40 font-semibold tracking-wide">DH Bracket Club — For fun, not funds.</p>
+          <p className="text-[9px] text-muted-foreground/40 font-semibold tracking-wide">DH Club — For fun, not funds.</p>
         </div>
       </aside>
 
@@ -68,29 +89,29 @@ export function AppLayout({ children }: { children: ReactNode }) {
         backdropFilter: 'blur(24px) saturate(180%)',
         borderTop: '1px solid hsl(var(--border) / 0.12)',
       }}>
-        <div className="flex items-center justify-around h-[4rem] px-3">
+        <div className="flex items-center justify-around h-[4rem] px-1">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname.startsWith(item.path);
+            const active = isNavActive(item.path);
             return (
               <Link
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-0.5 py-2 px-3.5 rounded-xl min-w-[4rem] min-h-[2.75rem] btn-press relative",
+                  "flex flex-col items-center justify-center gap-0.5 py-2 px-2.5 rounded-xl min-w-[3.5rem] min-h-[2.75rem] btn-press relative",
                   "transition-colors duration-150",
-                  isActive ? "text-primary" : "text-muted-foreground/50 active:text-foreground"
+                  active ? "text-primary" : "text-muted-foreground/50 active:text-foreground"
                 )}
               >
-                <Icon className={cn("w-[19px] h-[19px] transition-all duration-200", isActive && "scale-105")} />
+                <Icon className={cn("w-[18px] h-[18px] transition-all duration-200", active && "scale-105")} />
                 <span className={cn(
-                  "text-[9px] font-bold tracking-wide transition-colors duration-150",
-                  isActive ? "text-primary" : "text-muted-foreground/40"
+                  "text-[8px] font-bold tracking-wide transition-colors duration-150",
+                  active ? "text-primary" : "text-muted-foreground/40"
                 )}>{item.label}</span>
-                {isActive && (
+                {active && (
                   <motion.div
                     layoutId="nav-indicator"
-                    className="absolute -top-px left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full"
+                    className="absolute -top-px left-1/2 -translate-x-1/2 w-5 h-[2px] rounded-full"
                     style={{ background: 'linear-gradient(90deg, hsl(var(--primary) / 0.7), hsl(var(--primary) / 0.2))' }}
                     transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                   />

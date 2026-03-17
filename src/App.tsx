@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -13,15 +13,18 @@ import CreatePoolPage from "./pages/CreatePoolPage";
 import JoinPoolPage from "./pages/JoinPoolPage";
 import PoolDetailPage from "./pages/PoolDetailPage";
 import PoolsListPage from "./pages/PoolsListPage";
+import PoolSettingsPage from "./pages/PoolSettingsPage";
 import BracketEntryPage from "./pages/BracketEntryPage";
 import BracketDetailPage from "./pages/BracketDetailPage";
 import BracketComparePage from "./pages/BracketComparePage";
 import LeaderboardPage from "./pages/LeaderboardPage";
 import AdminToolsPage from "./pages/AdminToolsPage";
-import PoolSettingsPage from "./pages/PoolSettingsPage";
 import GameCenterPage from "./pages/GameCenterPage";
 import ProfilePage from "./pages/ProfilePage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import RankingsListPage from "./pages/RankingsListPage";
+import PollsListPage from "./pages/PollsListPage";
+import DraftsListPage from "./pages/DraftsListPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,19 +45,33 @@ const App = () => (
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+            {/* Dashboard */}
             <Route path="/dashboard" element={<ProtectedPage><DashboardPage /></ProtectedPage>} />
-            <Route path="/pools" element={<ProtectedPage><PoolsListPage /></ProtectedPage>} />
+
+            {/* Brackets module — /brackets is the list, /pools/* are the detail routes */}
+            <Route path="/brackets" element={<ProtectedPage><PoolsListPage /></ProtectedPage>} />
+            <Route path="/pools" element={<Navigate to="/brackets" replace />} />
             <Route path="/pools/create" element={<ProtectedPage><CreatePoolPage /></ProtectedPage>} />
             <Route path="/pools/join" element={<ProtectedPage><JoinPoolPage /></ProtectedPage>} />
             <Route path="/pools/:poolId" element={<ProtectedPage><PoolDetailPage /></ProtectedPage>} />
+            <Route path="/pools/:poolId/settings" element={<ProtectedPage><PoolSettingsPage /></ProtectedPage>} />
             <Route path="/pools/:poolId/bracket/edit" element={<ProtectedPage><BracketEntryPage /></ProtectedPage>} />
             <Route path="/pools/:poolId/bracket/compare" element={<ProtectedPage><BracketComparePage /></ProtectedPage>} />
             <Route path="/pools/:poolId/bracket/:bracketId" element={<ProtectedPage><BracketDetailPage /></ProtectedPage>} />
             <Route path="/pools/:poolId/leaderboard" element={<ProtectedPage><LeaderboardPage /></ProtectedPage>} />
             <Route path="/pools/:poolId/admin" element={<ProtectedPage><AdminToolsPage /></ProtectedPage>} />
-            <Route path="/pools/:poolId/settings" element={<ProtectedPage><PoolSettingsPage /></ProtectedPage>} />
             <Route path="/pools/:poolId/games" element={<ProtectedPage><GameCenterPage /></ProtectedPage>} />
-            {/* /leaderboard without poolId redirects to pools list */}
+
+            {/* Rankings module */}
+            <Route path="/rankings" element={<ProtectedPage><RankingsListPage /></ProtectedPage>} />
+
+            {/* Polls module */}
+            <Route path="/polls" element={<ProtectedPage><PollsListPage /></ProtectedPage>} />
+
+            {/* Drafts module */}
+            <Route path="/drafts" element={<ProtectedPage><DraftsListPage /></ProtectedPage>} />
+
             <Route path="/profile" element={<ProtectedPage><ProfilePage /></ProtectedPage>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
