@@ -92,6 +92,9 @@ export default function RankingDetailPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Realtime: auto-refresh when someone submits a ranking
+  useRankingUpdates(rankingId, fetchData);
+
   const moveItem = (fromIdx: number, direction: 'up' | 'down') => {
     if (mySubmission) return; // Already submitted
     const toIdx = direction === 'up' ? fromIdx - 1 : fromIdx + 1;

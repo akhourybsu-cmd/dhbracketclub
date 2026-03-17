@@ -51,6 +51,9 @@ export default function PollDetailPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Realtime: auto-refresh when anyone votes
+  usePollVoteUpdates(pollId, fetchData);
+
   const handleVote = async () => {
     if (!user || !pollId || !selectedOption || myVote) return;
     setVoting(true);

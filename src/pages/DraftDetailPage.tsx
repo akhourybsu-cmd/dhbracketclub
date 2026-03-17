@@ -54,6 +54,9 @@ export default function DraftDetailPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Realtime: auto-refresh on picks, participants, or draft status changes
+  const { status: realtimeStatus } = useDraftUpdates(draftId, fetchData);
+
   const isCreator = draft?.created_by === user?.id;
   const isParticipant = participants.some(p => p.user_id === user?.id);
 
