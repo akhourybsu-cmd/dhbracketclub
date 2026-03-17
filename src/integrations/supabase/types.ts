@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_feed: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          target_id: string | null
+          target_type: string | null
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_feed_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_logs: {
         Row: {
           action_payload: Json | null
@@ -150,6 +188,195 @@ export type Database = {
           {
             foreignKeyName: "brackets_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      competitions: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          status: string
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          status?: string
+          title: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competitions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      draft_participants: {
+        Row: {
+          draft_id: string
+          id: string
+          pick_order: number
+          user_id: string
+        }
+        Insert: {
+          draft_id: string
+          id?: string
+          pick_order: number
+          user_id: string
+        }
+        Update: {
+          draft_id?: string
+          id?: string
+          pick_order?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "draft_participants_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draft_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      draft_picks: {
+        Row: {
+          draft_id: string
+          id: string
+          pick_number: number
+          pick_text: string
+          picked_at: string
+          round: number
+          user_id: string
+        }
+        Insert: {
+          draft_id: string
+          id?: string
+          pick_number: number
+          pick_text: string
+          picked_at?: string
+          round: number
+          user_id: string
+        }
+        Update: {
+          draft_id?: string
+          id?: string
+          pick_number?: number
+          pick_text?: string
+          picked_at?: string
+          round?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "draft_picks_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draft_picks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      drafts: {
+        Row: {
+          competition_id: string
+          created_at: string
+          created_by: string
+          current_pick_number: number
+          current_pick_user_id: string | null
+          current_round: number
+          id: string
+          num_rounds: number
+          status: string
+          timer_seconds: number | null
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          competition_id: string
+          created_at?: string
+          created_by: string
+          current_pick_number?: number
+          current_pick_user_id?: string | null
+          current_round?: number
+          id?: string
+          num_rounds?: number
+          status?: string
+          timer_seconds?: number | null
+          topic: string
+          updated_at?: string
+        }
+        Update: {
+          competition_id?: string
+          created_at?: string
+          created_by?: string
+          current_pick_number?: number
+          current_pick_user_id?: string | null
+          current_round?: number
+          id?: string
+          num_rounds?: number
+          status?: string
+          timer_seconds?: number | null
+          topic?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drafts_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drafts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drafts_current_pick_user_id_fkey"
+            columns: ["current_pick_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -376,6 +603,132 @@ export type Database = {
           },
         ]
       }
+      poll_options: {
+        Row: {
+          id: string
+          label: string
+          poll_id: string
+          position: number
+        }
+        Insert: {
+          id?: string
+          label: string
+          poll_id: string
+          position?: number
+        }
+        Update: {
+          id?: string
+          label?: string
+          poll_id?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poll_options_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      poll_votes: {
+        Row: {
+          created_at: string
+          id: string
+          option_id: string
+          poll_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          option_id: string
+          poll_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          option_id?: string
+          poll_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poll_votes_option_id_fkey"
+            columns: ["option_id"]
+            isOneToOne: false
+            referencedRelation: "poll_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "poll_votes_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "polls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "poll_votes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      polls: {
+        Row: {
+          closes_at: string | null
+          competition_id: string
+          created_at: string
+          created_by: string
+          id: string
+          poll_type: string
+          question: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          closes_at?: string | null
+          competition_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          poll_type?: string
+          question: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          closes_at?: string | null
+          competition_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          poll_type?: string
+          question?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "polls_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "polls_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pool_members: {
         Row: {
           id: string
@@ -519,6 +872,193 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      ranking_items: {
+        Row: {
+          id: string
+          image_url: string | null
+          label: string
+          position: number
+          ranking_id: string
+        }
+        Insert: {
+          id?: string
+          image_url?: string | null
+          label: string
+          position?: number
+          ranking_id: string
+        }
+        Update: {
+          id?: string
+          image_url?: string | null
+          label?: string
+          position?: number
+          ranking_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ranking_items_ranking_id_fkey"
+            columns: ["ranking_id"]
+            isOneToOne: false
+            referencedRelation: "rankings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ranking_submission_entries: {
+        Row: {
+          id: string
+          item_id: string
+          rank: number
+          submission_id: string
+        }
+        Insert: {
+          id?: string
+          item_id: string
+          rank: number
+          submission_id: string
+        }
+        Update: {
+          id?: string
+          item_id?: string
+          rank?: number
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ranking_submission_entries_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ranking_submission_entries_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ranking_submissions: {
+        Row: {
+          id: string
+          ranking_id: string
+          submitted_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          ranking_id: string
+          submitted_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          ranking_id?: string
+          submitted_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ranking_submissions_ranking_id_fkey"
+            columns: ["ranking_id"]
+            isOneToOne: false
+            referencedRelation: "rankings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ranking_submissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rankings: {
+        Row: {
+          competition_id: string
+          created_at: string
+          created_by: string
+          id: string
+          item_count: number
+          status: string
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          competition_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          item_count?: number
+          status?: string
+          topic: string
+          updated_at?: string
+        }
+        Update: {
+          competition_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          item_count?: number
+          status?: string
+          topic?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rankings_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rankings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reactions: {
+        Row: {
+          created_at: string
+          id: string
+          reaction_type: string
+          target_id: string
+          target_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reaction_type: string
+          target_id: string
+          target_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reaction_type?: string
+          target_id?: string
+          target_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scoring_rules: {
         Row: {

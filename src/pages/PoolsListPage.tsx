@@ -47,7 +47,7 @@ export default function PoolsListPage() {
             <Users />
           </div>
           <div>
-            <h1 className="page-header-title">My Pools</h1>
+            <h1 className="page-header-title">Brackets</h1>
             <p className="page-header-subtitle">Your bracket competitions</p>
           </div>
         </div>
