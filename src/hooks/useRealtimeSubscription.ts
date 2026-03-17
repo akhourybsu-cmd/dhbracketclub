@@ -141,3 +141,76 @@ export function useSyncRunUpdates(onUpdate: () => void, enabled = true) {
     enabled,
   });
 }
+
+/**
+ * Subscribe to poll vote updates.
+ */
+export function usePollVoteUpdates(
+  pollId: string | undefined,
+  onUpdate: () => void,
+  enabled = true
+) {
+  return useRealtimeSubscription({
+    channelName: `poll-votes-${pollId}`,
+    configs: pollId
+      ? [{ table: 'poll_votes', event: '*', filter: `poll_id=eq.${pollId}` }]
+      : [],
+    onPayload: onUpdate,
+    enabled: enabled && !!pollId,
+  });
+}
+
+/**
+ * Subscribe to draft updates (picks, participants, and draft status).
+ */
+export function useDraftUpdates(
+  draftId: string | undefined,
+  onUpdate: () => void,
+  enabled = true
+) {
+  return useRealtimeSubscription({
+    channelName: `draft-${draftId}`,
+    configs: draftId
+      ? [
+          { table: 'draft_picks', event: '*', filter: `draft_id=eq.${draftId}` },
+          { table: 'draft_participants', event: '*', filter: `draft_id=eq.${draftId}` },
+          { table: 'drafts', event: 'UPDATE', filter: `id=eq.${draftId}` },
+        ]
+      : [],
+    onPayload: onUpdate,
+    enabled: enabled && !!draftId,
+  });
+}
+
+/**
+ * Subscribe to ranking submission updates.
+ */
+export function useRankingUpdates(
+  rankingId: string | undefined,
+  onUpdate: () => void,
+  enabled = true
+) {
+  return useRealtimeSubscription({
+    channelName: `ranking-${rankingId}`,
+    configs: rankingId
+      ? [{ table: 'ranking_submissions', event: '*', filter: `ranking_id=eq.${rankingId}` }]
+      : [],
+    onPayload: onUpdate,
+    enabled: enabled && !!rankingId,
+  });
+}
+
+/**
+ * Subscribe to activity feed updates.
+ */
+export function useActivityFeedUpdates(
+  onUpdate: () => void,
+  enabled = true
+) {
+  return useRealtimeSubscription({
+    channelName: 'activity-feed',
+    configs: [{ table: 'activity_feed', event: 'INSERT' }],
+    onPayload: onUpdate,
+    enabled,
+  });
+}
