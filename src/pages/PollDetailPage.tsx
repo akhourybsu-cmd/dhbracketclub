@@ -4,10 +4,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { MessageCircle, ArrowLeft, Users, Check, Clock } from 'lucide-react';
+import { MessageCircle, ArrowLeft, Users, Check, Clock, Wifi } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
+import { usePollVoteUpdates } from '@/hooks/useRealtimeSubscription';
 
 interface PollOption {
   id: string;
