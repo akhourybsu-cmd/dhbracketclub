@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { usePwaInstall } from '@/hooks/usePwaInstall';
 import dhMonogram from '@/assets/dh-monogram.png';
 import { formatDistanceToNow } from 'date-fns';
+import { useActivityFeedUpdates } from '@/hooks/useRealtimeSubscription';
 
 const MODULE_ICONS: Record<string, any> = {
   bracket_pool: Trophy,
