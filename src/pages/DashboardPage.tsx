@@ -137,6 +137,14 @@ export default function DashboardPage() {
     fetchData();
   }, [user]);
 
+  // Realtime: refresh activity feed when new events come in
+  useActivityFeedUpdates(() => {
+    if (!user) return;
+    supabase.from('activity_feed').select('*, profiles:actor_user_id(display_name)').order('created_at', { ascending: false }).limit(10).then(({ data }) => {
+      if (data) setActivity(data);
+    });
+  });
+
   const isLocked = (lt: string) => new Date(lt) <= new Date();
 
   const getGreeting = () => {
