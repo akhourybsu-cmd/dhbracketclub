@@ -55,6 +55,20 @@ export default function AdminToolsPage() {
   const [simWinner, setSimWinner] = useState<'team1' | 'team2' | ''>('');
   const [simRunning, setSimRunning] = useState(false);
 
+  // Admin guard: verify user is pool admin
+  useEffect(() => {
+    if (!poolId || !user) return;
+    supabase.from('pool_members').select('role').eq('pool_id', poolId).eq('user_id', user.id).maybeSingle()
+      .then(({ data }) => {
+        if (data?.role === 'admin') {
+          setIsAdminVerified(true);
+        } else {
+          toast.error('You don\'t have admin access to this pool.');
+          navigate(`/pools/${poolId}`, { replace: true });
+        }
+      });
+  }, [poolId, user, navigate]);
+
   const fetchData = useCallback(async () => {
     if (!poolId) return;
     const { data: pool } = await supabase.from('pools').select('tournament_id, tournaments(last_synced_at)').eq('id', poolId).single();
