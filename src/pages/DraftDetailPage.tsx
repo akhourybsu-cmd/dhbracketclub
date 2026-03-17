@@ -75,7 +75,7 @@ export default function DraftDetailPage() {
   const currentPicker = getExpectedPicker();
   const isMyTurn = currentPicker?.user_id === user?.id;
   const currentRound = participants.length > 0 ? Math.floor(picks.length / participants.length) + 1 : 1;
-  const isDraftComplete = draft?.status === 'complete' || (draft && currentRound > draft.num_rounds);
+  const isDraftComplete = draft?.status === 'complete' || (draft && participants.length > 0 && currentRound > draft.num_rounds);
   const isInProgress = draft?.status === 'in_progress';
   const isSetup = draft?.status === 'setup';
 

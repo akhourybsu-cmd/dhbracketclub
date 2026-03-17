@@ -444,18 +444,26 @@ export default function DashboardPage() {
           </div>
           <p className="text-sm font-bold relative z-10 mb-1">Welcome to DH Club</p>
           <p className="text-xs text-muted-foreground leading-relaxed relative z-10 mb-5">Start a competition with your crew — brackets, rankings, polls, or drafts.</p>
-          <div className="flex gap-2.5 justify-center relative z-10">
-            <Link to="/pools/create">
+          <div className="flex flex-wrap gap-2 justify-center relative z-10">
+            <Link to="/polls/create">
               <button className="flex items-center gap-2 font-bold rounded-xl px-4 py-2.5 text-[13px] btn-premium btn-press">
-                <Plus className="w-4 h-4" /> Create
+                <MessageCircle className="w-4 h-4" /> Quick Poll
               </button>
             </Link>
-            <Link to="/pools/join">
+            <Link to="/rankings/create">
               <button className="flex items-center gap-2 font-bold rounded-xl px-4 py-2.5 text-[13px] btn-press" style={{
                 background: 'hsl(var(--surface-elevated))',
                 border: '1px solid hsl(var(--border) / 0.5)',
               }}>
-                <Users className="w-4 h-4" /> Join
+                <BarChart3 className="w-4 h-4" /> Ranking
+              </button>
+            </Link>
+            <Link to="/drafts/create">
+              <button className="flex items-center gap-2 font-bold rounded-xl px-4 py-2.5 text-[13px] btn-press" style={{
+                background: 'hsl(var(--surface-elevated))',
+                border: '1px solid hsl(var(--border) / 0.5)',
+              }}>
+                <Bookmark className="w-4 h-4" /> Draft
               </button>
             </Link>
           </div>
