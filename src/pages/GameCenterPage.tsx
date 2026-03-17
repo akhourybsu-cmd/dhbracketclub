@@ -74,6 +74,30 @@ export default function GameCenterPage() {
 
   const { status: rtStatus, lastUpdated } = useGameUpdates(tournamentId, fetchData);
 
+  // Auto-poll: call sync-games every 60s when any game is in_progress
+  const hasLiveGames = useMemo(() => games.some(g => g.status === 'in_progress'), [games]);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+
+  useEffect(() => {
+    if (!hasLiveGames || !tournamentId || !poolId) return;
+
+    const doSync = async () => {
+      try {
+        await supabase.functions.invoke('sync-games', {
+          body: { action: 'syncGameResults', tournamentId, poolId },
+        });
+        setLastSyncTime(new Date());
+      } catch (err) {
+        console.error('Auto-sync failed:', err);
+      }
+    };
+
+    // Run immediately on first detection of live games
+    doSync();
+    const interval = setInterval(doSync, 60_000);
+    return () => clearInterval(interval);
+  }, [hasLiveGames, tournamentId, poolId]);
+
   const filteredGames = useMemo(() => {
     let filtered = games;
     if (tab === 'live') filtered = filtered.filter(g => g.status === 'in_progress');
