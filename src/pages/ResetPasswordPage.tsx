@@ -81,7 +81,7 @@ export default function ResetPasswordPage() {
         <div className="text-center mb-8">
           <motion.img
             src={dhMonogram}
-            alt="DH Bracket Club"
+            alt="DH Club"
             className="w-24 h-24 object-contain mx-auto mb-5"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}

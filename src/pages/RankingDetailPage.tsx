@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { BarChart3, ArrowLeft, GripVertical, Send, Users, Trophy, ChevronDown, ChevronUp } from 'lucide-react';
+import { BarChart3, ArrowLeft, Send, Users, Trophy, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface RankingItem {

@@ -70,7 +70,7 @@ export default function AuthPage() {
             style={{ filter: 'drop-shadow(0 0 16px hsl(var(--primary) / 0.2))' }}
           />
           <h1 className="text-xl font-extrabold tracking-tight">
-            <span className="gradient-text">DH</span> Bracket Club
+            <span className="gradient-text">DH</span> Club
           </h1>
           <p className="text-xs text-muted-foreground mt-2 font-semibold">
             {isSignUp ? 'Create your account' : 'Welcome back'}

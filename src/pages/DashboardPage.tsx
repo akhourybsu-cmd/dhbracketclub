@@ -444,18 +444,26 @@ export default function DashboardPage() {
           </div>
           <p className="text-sm font-bold relative z-10 mb-1">Welcome to DH Club</p>
           <p className="text-xs text-muted-foreground leading-relaxed relative z-10 mb-5">Start a competition with your crew — brackets, rankings, polls, or drafts.</p>
-          <div className="flex gap-2.5 justify-center relative z-10">
-            <Link to="/pools/create">
+          <div className="flex flex-wrap gap-2 justify-center relative z-10">
+            <Link to="/polls/create">
               <button className="flex items-center gap-2 font-bold rounded-xl px-4 py-2.5 text-[13px] btn-premium btn-press">
-                <Plus className="w-4 h-4" /> Create
+                <MessageCircle className="w-4 h-4" /> Quick Poll
               </button>
             </Link>
-            <Link to="/pools/join">
+            <Link to="/rankings/create">
               <button className="flex items-center gap-2 font-bold rounded-xl px-4 py-2.5 text-[13px] btn-press" style={{
                 background: 'hsl(var(--surface-elevated))',
                 border: '1px solid hsl(var(--border) / 0.5)',
               }}>
-                <Users className="w-4 h-4" /> Join
+                <BarChart3 className="w-4 h-4" /> Ranking
+              </button>
+            </Link>
+            <Link to="/drafts/create">
+              <button className="flex items-center gap-2 font-bold rounded-xl px-4 py-2.5 text-[13px] btn-press" style={{
+                background: 'hsl(var(--surface-elevated))',
+                border: '1px solid hsl(var(--border) / 0.5)',
+              }}>
+                <Bookmark className="w-4 h-4" /> Draft
               </button>
             </Link>
           </div>
@@ -478,8 +486,17 @@ export default function DashboardPage() {
               const actColor = actConfig?.color || 'primary';
               const label = ACTIVITY_LABELS[a.event_type] || a.event_type.replace(/_/g, ' ');
 
-              return (
-                <div key={a.id} className="px-4 py-3 flex items-center gap-3 relative z-10">
+              // Build link target based on activity type
+              const targetLink = a.target_id && a.target_type
+                ? a.target_type === 'ranking' ? `/rankings/${a.target_id}`
+                  : a.target_type === 'poll' ? `/polls/${a.target_id}`
+                  : a.target_type === 'draft' ? `/drafts/${a.target_id}`
+                  : a.target_type === 'bracket' ? `/pools/${a.target_id}`
+                  : null
+                : null;
+
+              const content = (
+                <div className="px-4 py-3 flex items-center gap-3 relative z-10">
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{
                     background: `linear-gradient(135deg, hsl(var(--${actColor}) / 0.12), hsl(var(--${actColor}) / 0.04))`,
                   }}>
@@ -495,6 +512,14 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 </div>
+              );
+
+              return targetLink ? (
+                <Link key={a.id} to={targetLink} className="block hover:bg-muted/20 transition-colors">
+                  {content}
+                </Link>
+              ) : (
+                <div key={a.id}>{content}</div>
               );
             })}
           </div>
