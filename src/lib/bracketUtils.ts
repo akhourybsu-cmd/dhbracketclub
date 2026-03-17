@@ -6,6 +6,7 @@ export interface Team {
   short_name: string;
   seed: number;
   region: string;
+  play_in_group?: number | null;
 }
 
 export interface Game {

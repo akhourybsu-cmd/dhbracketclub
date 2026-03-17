@@ -525,9 +525,13 @@ export default function LeaderboardPage() {
                       {isLocked && s.bracket_id && (
                         <Link
                           to={`/pools/${poolId}/bracket/${s.bracket_id}`}
-                          className="flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200"
+                          className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center opacity-60 hover:opacity-100 active:scale-95 transition-all duration-200"
+                          style={{
+                            background: 'hsl(var(--surface-elevated))',
+                            border: '1px solid hsl(var(--border) / 0.2)',
+                          }}
                         >
-                          <Eye className="w-3 h-3 text-muted-foreground/40" />
+                          <Eye className="w-3.5 h-3.5 text-muted-foreground" />
                         </Link>
                       )}
                     </div>

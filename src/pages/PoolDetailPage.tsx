@@ -295,8 +295,11 @@ export default function PoolDetailPage() {
               <div className="flex items-center gap-2 flex-shrink-0">
                 <span className={cn("status-pill", msCfg.className)}>{msCfg.label}</span>
                 {canViewBracket && m.user_id !== user?.id && (
-                  <Link to={`/pools/${poolId}/bracket/${mb.id}`}>
-                    <Eye className="w-3.5 h-3.5 text-muted-foreground/30 hover:text-foreground transition-colors" />
+                  <Link to={`/pools/${poolId}/bracket/${mb.id}`} className="w-8 h-8 rounded-lg flex items-center justify-center opacity-60 hover:opacity-100 active:scale-95 transition-all" style={{
+                    background: 'hsl(var(--surface-elevated))',
+                    border: '1px solid hsl(var(--border) / 0.2)',
+                  }}>
+                    <Eye className="w-3.5 h-3.5 text-muted-foreground" />
                   </Link>
                 )}
               </div>

@@ -326,7 +326,7 @@ export default function AdminToolsPage() {
   const totalDecided = games.filter(g => g.winner_team_id).length;
   const totalLive = games.filter(g => g.status === 'in_progress').length;
 
-  if (loading) {
+  if (loading || !isAdminVerified) {
     return (
       <div className="loading-spinner">
         <div className="loading-spinner-ring" />
