@@ -18,6 +18,7 @@ import BracketDetailPage from "./pages/BracketDetailPage";
 import BracketComparePage from "./pages/BracketComparePage";
 import LeaderboardPage from "./pages/LeaderboardPage";
 import AdminToolsPage from "./pages/AdminToolsPage";
+import PoolSettingsPage from "./pages/PoolSettingsPage";
 import GameCenterPage from "./pages/GameCenterPage";
 import ProfilePage from "./pages/ProfilePage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";

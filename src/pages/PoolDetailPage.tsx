@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Trophy, Edit3, Eye, Settings, Copy, Users, Clock, Activity, Trash2 } from 'lucide-react';
+import { Trophy, Edit3, Eye, Settings, Copy, Users, Clock, Activity, Trash2, SlidersHorizontal } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
