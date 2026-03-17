@@ -1967,18 +1967,28 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Tournament not found", 404);
     }
 
-    const { data: adminPools } = await db
+    // syncGameResults can be triggered by any pool member (for auto-polling from Game Center)
+    // All other actions require pool admin
+    const requiredRole = body.action === "syncGameResults" ? undefined : "admin";
+    
+    let memberQuery = db
       .from("pool_members")
-      .select("pool_id, pools!inner(tournament_id)")
-      .eq("user_id", userId)
-      .eq("role", "admin");
+      .select("pool_id, role, pools!inner(tournament_id)")
+      .eq("user_id", userId);
+    if (requiredRole) {
+      memberQuery = memberQuery.eq("role", requiredRole);
+    }
+    const { data: memberPools } = await memberQuery;
 
-    const isAdminOfTournament = adminPools?.some(
+    const hasAccess = memberPools?.some(
       (pm: any) => pm.pools?.tournament_id === body.tournamentId
     );
-    if (!isAdminOfTournament) {
-      console.warn(`[sync-games] DENIED: user=${userId} not admin for tournament=${body.tournamentId}`);
-      return errorResponse("Forbidden: you must be a pool admin for this tournament", 403);
+    if (!hasAccess) {
+      const msg = requiredRole
+        ? `Forbidden: you must be a pool admin for this tournament`
+        : `Forbidden: you must be a pool member for this tournament`;
+      console.warn(`[sync-games] DENIED: user=${userId} action=${body.action} tournament=${body.tournamentId}`);
+      return errorResponse(msg, 403);
     }
 
     console.log(`[sync-games] action=${body.action} tournament=${body.tournamentId} season=${tournament.season_year} user=${userId} provider=${body.providerName || "stub"}`);
