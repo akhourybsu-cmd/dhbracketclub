@@ -5,8 +5,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { BarChart3, ArrowLeft, Send, Users, Trophy, ChevronDown, ChevronUp } from 'lucide-react';
+import { BarChart3, ArrowLeft, Send, Users, Trophy, ChevronDown, ChevronUp, Wifi } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useRankingUpdates } from '@/hooks/useRealtimeSubscription';
 
 interface RankingItem {
   id: string;
@@ -90,6 +91,9 @@ export default function RankingDetailPage() {
   }, [rankingId, user]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Realtime: auto-refresh when someone submits a ranking
+  useRankingUpdates(rankingId, fetchData);
 
   const moveItem = (fromIdx: number, direction: 'up' | 'down') => {
     if (mySubmission) return; // Already submitted

@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { Bookmark, ArrowLeft, Users, Play, Send, Trophy, Clock } from 'lucide-react';
+import { Bookmark, ArrowLeft, Users, Play, Send, Trophy, Clock, Wifi } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useDraftUpdates } from '@/hooks/useRealtimeSubscription';
 
 interface Participant {
   id: string;
@@ -52,6 +53,9 @@ export default function DraftDetailPage() {
   }, [draftId, user]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Realtime: auto-refresh on picks, participants, or draft status changes
+  const { status: realtimeStatus } = useDraftUpdates(draftId, fetchData);
 
   const isCreator = draft?.created_by === user?.id;
   const isParticipant = participants.some(p => p.user_id === user?.id);
