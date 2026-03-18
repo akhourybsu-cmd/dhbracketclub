@@ -65,6 +65,7 @@ export default function PoolSettingsPage() {
       setDescription(pool.description || '');
       setInviteCode(pool.invite_code);
       setVisibility(pool.visibility || 'private');
+      setAllowLateEntries(pool.allow_late_entries ?? false);
       // Format lock_time for datetime-local input
       const lt = new Date(pool.lock_time);
       setLockTime(toLocalDatetimeString(lt));
