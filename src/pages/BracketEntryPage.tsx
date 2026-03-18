@@ -44,7 +44,10 @@ export default function BracketEntryPage() {
       const tournamentId = poolData.tournaments?.id;
       if (!tournamentId) return;
 
-      if (new Date(poolData.lock_time) <= new Date()) {
+      const isLocked = new Date(poolData.lock_time) <= new Date();
+      const allowLate = (poolData as any).allow_late_entries === true;
+
+      if (isLocked && !allowLate) {
         toast.error('This pool is locked.');
         navigate(`/pools/${poolId}`);
         return;
