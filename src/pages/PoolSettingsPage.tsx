@@ -235,8 +235,23 @@ export default function PoolSettingsPage() {
                   {v}
                 </button>
               ))}
+          </div>
+          <div>
+            <label className="form-label">Late Entries</label>
+            <div className="flex items-center justify-between rounded-xl p-3.5" style={{
+              background: 'hsl(var(--surface))',
+              border: '1px solid hsl(var(--border) / 0.3)',
+            }}>
+              <div className="flex-1 mr-3">
+                <p className="text-xs font-semibold">Allow late bracket entries</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Users can submit after lock time, but games already in progress or final cannot be picked.
+                </p>
+              </div>
+              <Switch checked={allowLateEntries} onCheckedChange={setAllowLateEntries} />
             </div>
           </div>
+        </div>
         </div>
       </motion.div>
 
