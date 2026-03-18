@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Save, RefreshCw, Settings, Copy } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
 const DEFAULT_SCORING = [
   { round_number: 1, points_per_correct_pick: 1 },
