@@ -422,6 +422,7 @@ export default function BracketEntryPage() {
                     const currentPick = picks.get(game.id);
                     const hasPlayIn = game.round_number === 1 && games.some(g => g.round_number === 0 && g.region === game.region);
                     const isPicked = !!currentPick;
+                    const isGameLocked = lockedGameIds.has(game.id);
 
                     return (
                       <motion.div
@@ -429,13 +430,15 @@ export default function BracketEntryPage() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.035, type: 'spring', damping: 25, stiffness: 300 }}
-                        className="rounded-2xl overflow-hidden relative group"
+                        className={cn("rounded-2xl overflow-hidden relative group", isGameLocked && "opacity-50")}
                         style={{
                           background: 'hsl(var(--card))',
-                          border: isPicked
-                            ? '1px solid hsl(var(--primary) / 0.25)'
-                            : '1px solid hsl(var(--border) / 0.4)',
-                          boxShadow: isPicked
+                          border: isGameLocked
+                            ? '1px solid hsl(var(--destructive) / 0.2)'
+                            : isPicked
+                              ? '1px solid hsl(var(--primary) / 0.25)'
+                              : '1px solid hsl(var(--border) / 0.4)',
+                          boxShadow: isPicked && !isGameLocked
                             ? '0 0 16px hsl(var(--primary) / 0.06), var(--shadow-card)'
                             : 'var(--shadow-card)',
                           transition: 'border-color 0.25s ease, box-shadow 0.25s ease',
@@ -449,13 +452,23 @@ export default function BracketEntryPage() {
 
                         {/* Game header */}
                         <div className="flex items-center justify-between px-4 py-2 relative z-10" style={{
-                          background: 'hsl(var(--surface) / 0.4)',
+                          background: isGameLocked
+                            ? 'hsl(var(--destructive) / 0.04)'
+                            : 'hsl(var(--surface) / 0.4)',
                           borderBottom: '1px solid hsl(var(--border) / 0.15)',
                         }}>
                           <span className="text-[10px] font-bold text-muted-foreground/40 tabular-nums">
                             Game {game.game_slot}
                           </span>
-                          {isPicked && (
+                          {isGameLocked ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{
+                              background: 'hsl(var(--destructive) / 0.1)',
+                              color: 'hsl(var(--destructive))',
+                              border: '1px solid hsl(var(--destructive) / 0.15)',
+                            }}>
+                              <Lock className="w-2.5 h-2.5" /> Locked
+                            </span>
+                          ) : isPicked ? (
                             <motion.span
                               initial={{ opacity: 0, scale: 0.8 }}
                               animate={{ opacity: 1, scale: 1 }}
@@ -468,7 +481,7 @@ export default function BracketEntryPage() {
                             >
                               <Check className="w-3 h-3" /> Picked
                             </motion.span>
-                          )}
+                          ) : null}
                         </div>
 
                         <div className="relative z-10">
@@ -477,7 +490,7 @@ export default function BracketEntryPage() {
                             isSelected={currentPick?.picked_team_id === team1?.id}
                             isOpponentSelected={currentPick?.picked_team_id === team2?.id}
                             onSelect={() => team1 && handlePick(game.id, team1.id, game.round_number)}
-                            disabled={!team1}
+                            disabled={!team1 || isGameLocked}
                             isPlayInSlot={!team1 && hasPlayIn}
                             isChampionshipRound={isChampionshipRound}
                           />
@@ -487,7 +500,7 @@ export default function BracketEntryPage() {
                             isSelected={currentPick?.picked_team_id === team2?.id}
                             isOpponentSelected={currentPick?.picked_team_id === team1?.id}
                             onSelect={() => team2 && handlePick(game.id, team2.id, game.round_number)}
-                            disabled={!team2}
+                            disabled={!team2 || isGameLocked}
                             isPlayInSlot={!team2 && hasPlayIn}
                             isChampionshipRound={isChampionshipRound}
                           />
