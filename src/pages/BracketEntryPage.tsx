@@ -28,6 +28,7 @@ export default function BracketEntryPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [pool, setPool] = useState<any>(null);
+  const [isLateEntry, setIsLateEntry] = useState(false);
 
   useEffect(() => {
     if (!poolId || !user) return;
