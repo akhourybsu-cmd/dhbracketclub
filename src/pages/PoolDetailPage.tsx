@@ -100,6 +100,8 @@ export default function PoolDetailPage() {
   }, [poolId, user]);
 
   const isLocked = pool ? new Date(pool.lock_time) <= new Date() : false;
+  const allowLateEntries = (pool as any)?.allow_late_entries === true;
+  const canStillEdit = !isLocked || allowLateEntries;
 
   const myStatus = useMemo(() => {
     if (!pool) return 'none';
