@@ -53,6 +53,9 @@ export default function BracketEntryPage() {
         navigate(`/pools/${poolId}`);
         return;
       }
+      if (isLocked && allowLate) {
+        setIsLateEntry(true);
+      }
 
       const { data: teamData } = await supabase.from('teams').select('*').eq('tournament_id', tournamentId);
       if (teamData) {
