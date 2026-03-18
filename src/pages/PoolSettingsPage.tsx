@@ -101,7 +101,8 @@ export default function PoolSettingsPage() {
           description: description.trim() || null,
           lock_time: lockDate.toISOString(),
           visibility,
-        })
+          allow_late_entries: allowLateEntries,
+        } as any)
         .eq('id', poolId);
 
       if (poolError) throw poolError;
