@@ -34,6 +34,7 @@ export default function PoolSettingsPage() {
   const [lockTime, setLockTime] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [visibility, setVisibility] = useState('private');
+  const [allowLateEntries, setAllowLateEntries] = useState(false);
   const [scoringRules, setScoringRules] = useState<{ id?: string; round_number: number; points_per_correct_pick: number }[]>([]);
 
   const fetchPool = useCallback(async () => {
