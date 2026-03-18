@@ -173,8 +173,11 @@ export default function BracketEntryPage() {
   };
 
   const submitBracket = async () => {
-    if (progress.filled < progress.total) {
-      toast.error(`Complete all ${progress.total} picks before submitting. You have ${progress.filled}.`);
+    const pickableGames = games.filter(g => !lockedGameIds.has(g.id));
+    const pickableCount = pickableGames.length;
+    const filledPickable = pickableGames.filter(g => picks.has(g.id)).length;
+    if (filledPickable < pickableCount) {
+      toast.error(`Complete all ${pickableCount} available picks before submitting. You have ${filledPickable}.`);
       return;
     }
     const bracketId = await saveDraft();
