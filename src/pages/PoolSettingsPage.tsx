@@ -122,7 +122,7 @@ export default function PoolSettingsPage() {
           pool_id: poolId,
           actor_user_id: user.id,
           action_type: 'pool_settings_updated',
-          action_payload: { name: name.trim(), lock_time: lockDate.toISOString(), visibility },
+          action_payload: { name: name.trim(), lock_time: lockDate.toISOString(), visibility, allow_late_entries: allowLateEntries },
         });
       }
 
