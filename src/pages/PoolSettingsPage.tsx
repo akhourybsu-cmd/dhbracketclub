@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Save, RefreshCw, Settings, Copy } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
 const DEFAULT_SCORING = [
   { round_number: 1, points_per_correct_pick: 1 },
@@ -33,6 +34,7 @@ export default function PoolSettingsPage() {
   const [lockTime, setLockTime] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [visibility, setVisibility] = useState('private');
+  const [allowLateEntries, setAllowLateEntries] = useState(false);
   const [scoringRules, setScoringRules] = useState<{ id?: string; round_number: number; points_per_correct_pick: number }[]>([]);
 
   const fetchPool = useCallback(async () => {
@@ -63,6 +65,7 @@ export default function PoolSettingsPage() {
       setDescription(pool.description || '');
       setInviteCode(pool.invite_code);
       setVisibility(pool.visibility || 'private');
+      setAllowLateEntries(pool.allow_late_entries ?? false);
       // Format lock_time for datetime-local input
       const lt = new Date(pool.lock_time);
       setLockTime(toLocalDatetimeString(lt));
@@ -98,7 +101,8 @@ export default function PoolSettingsPage() {
           description: description.trim() || null,
           lock_time: lockDate.toISOString(),
           visibility,
-        })
+          allow_late_entries: allowLateEntries,
+        } as any)
         .eq('id', poolId);
 
       if (poolError) throw poolError;
@@ -118,7 +122,7 @@ export default function PoolSettingsPage() {
           pool_id: poolId,
           actor_user_id: user.id,
           action_type: 'pool_settings_updated',
-          action_payload: { name: name.trim(), lock_time: lockDate.toISOString(), visibility },
+          action_payload: { name: name.trim(), lock_time: lockDate.toISOString(), visibility, allow_late_entries: allowLateEntries },
         });
       }
 
@@ -231,8 +235,23 @@ export default function PoolSettingsPage() {
                   {v}
                 </button>
               ))}
+          </div>
+          <div>
+            <label className="form-label">Late Entries</label>
+            <div className="flex items-center justify-between rounded-xl p-3.5" style={{
+              background: 'hsl(var(--surface))',
+              border: '1px solid hsl(var(--border) / 0.3)',
+            }}>
+              <div className="flex-1 mr-3">
+                <p className="text-xs font-semibold">Allow late bracket entries</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Users can submit after lock time, but games already in progress or final cannot be picked.
+                </p>
+              </div>
+              <Switch checked={allowLateEntries} onCheckedChange={setAllowLateEntries} />
             </div>
           </div>
+        </div>
         </div>
       </motion.div>
 

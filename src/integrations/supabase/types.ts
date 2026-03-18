@@ -770,6 +770,7 @@ export type Database = {
       }
       pools: {
         Row: {
+          allow_late_entries: boolean
           created_at: string
           description: string | null
           id: string
@@ -781,6 +782,7 @@ export type Database = {
           visibility: string | null
         }
         Insert: {
+          allow_late_entries?: boolean
           created_at?: string
           description?: string | null
           id?: string
@@ -792,6 +794,7 @@ export type Database = {
           visibility?: string | null
         }
         Update: {
+          allow_late_entries?: boolean
           created_at?: string
           description?: string | null
           id?: string
