@@ -102,7 +102,14 @@ export default function BracketEntryPage() {
     fetchData();
   }, [poolId, user, navigate]);
 
+  // Games that are locked for late entries (in_progress or final)
+  const lockedGameIds = useMemo(() => {
+    if (!isLateEntry) return new Set<string>();
+    return new Set(games.filter(g => g.status === 'in_progress' || g.status === 'final').map(g => g.id));
+  }, [games, isLateEntry]);
+
   const handlePick = (gameId: string, teamId: string, round: number) => {
+    if (lockedGameIds.has(gameId)) return;
     setPicks(prev => handlePickWithCascade(gameId, teamId, round, games, teams, prev));
   };
 
