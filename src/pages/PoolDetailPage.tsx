@@ -197,10 +197,10 @@ export default function PoolDetailPage() {
           <span className={cn("status-pill", statusCfg.className)}>{statusCfg.label}</span>
         </div>
         <div className="relative z-10">
-          {myStatus === 'none' && !isLocked && (
+          {myStatus === 'none' && canStillEdit && (
             <Link to={`/pools/${poolId}/bracket/edit`}>
               <button className="w-full flex items-center justify-center gap-2 h-12 font-bold rounded-xl text-[13px] btn-premium btn-press">
-                <Edit3 className="w-4 h-4" /> Start Your Bracket
+                <Edit3 className="w-4 h-4" /> {isLocked && allowLateEntries ? 'Start Late Entry Bracket' : 'Start Your Bracket'}
               </button>
             </Link>
           )}
@@ -223,7 +223,7 @@ export default function PoolDetailPage() {
               </Link>
             </>
           )}
-          {myStatus === 'submitted' && (
+          {myStatus === 'submitted' && canStillEdit && (
             <div className="flex gap-2 mt-1">
               <Link to={`/pools/${poolId}/bracket/edit`} className="flex-1">
                 <Button variant="outline" className="w-full gap-2 h-11 font-bold rounded-xl btn-press text-[13px]"><Edit3 className="w-4 h-4" /> Edit</Button>
@@ -233,12 +233,27 @@ export default function PoolDetailPage() {
               </Link>
             </div>
           )}
-          {(myStatus === 'locked' || myStatus === 'incomplete') && myBracket && (
+          {myStatus === 'submitted' && !canStillEdit && (
+            <Link to={`/pools/${poolId}/bracket/${myBracket?.id}`}>
+              <Button variant="outline" className="w-full gap-2 h-11 font-bold rounded-xl mt-1 btn-press text-[13px]"><Eye className="w-4 h-4" /> View My Bracket</Button>
+            </Link>
+          )}
+          {(myStatus === 'locked' || myStatus === 'incomplete') && myBracket && !allowLateEntries && (
             <Link to={`/pools/${poolId}/bracket/${myBracket.id}`}>
               <Button variant="outline" className="w-full gap-2 h-11 font-bold rounded-xl mt-1 btn-press text-[13px]"><Eye className="w-4 h-4" /> View My Bracket</Button>
             </Link>
           )}
-          {myStatus === 'none' && isLocked && (
+          {(myStatus === 'locked' || myStatus === 'incomplete') && myBracket && allowLateEntries && (
+            <div className="flex gap-2 mt-1">
+              <Link to={`/pools/${poolId}/bracket/edit`} className="flex-1">
+                <Button variant="outline" className="w-full gap-2 h-11 font-bold rounded-xl btn-press text-[13px]"><Edit3 className="w-4 h-4" /> Edit</Button>
+              </Link>
+              <Link to={`/pools/${poolId}/bracket/${myBracket.id}`} className="flex-1">
+                <Button variant="outline" className="w-full gap-2 h-11 font-bold rounded-xl btn-press text-[13px]"><Eye className="w-4 h-4" /> View</Button>
+              </Link>
+            </div>
+          )}
+          {myStatus === 'none' && isLocked && !allowLateEntries && (
             <p className="text-[11px] text-muted-foreground/60 mt-1">No bracket submitted before the deadline.</p>
           )}
         </div>
