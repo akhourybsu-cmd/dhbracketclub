@@ -293,6 +293,27 @@ export default function BracketEntryPage() {
         )}
       </motion.div>
 
+      {/* ═══ Late Entry Banner ═══ */}
+      {isLateEntry && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl p-4 mb-5 flex items-start gap-3"
+          style={{
+            background: 'linear-gradient(135deg, hsl(var(--warning) / 0.1), hsl(var(--warning) / 0.03))',
+            border: '1px solid hsl(var(--warning) / 0.2)',
+          }}
+        >
+          <Lock className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: 'hsl(var(--warning))' }} />
+          <div>
+            <p className="text-xs font-bold" style={{ color: 'hsl(var(--warning))' }}>Late Entry Mode</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              Games that are in progress or finished are locked. You'll miss points for those games.
+            </p>
+          </div>
+        </motion.div>
+      )}
+
       {/* ═══ Round Navigation ═══ */}
       <div className="flex items-center justify-between mb-3">
         <button
