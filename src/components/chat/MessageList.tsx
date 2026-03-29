@@ -86,7 +86,7 @@ export function MessageList({
     : messages;
 
   return (
-    <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 sm:px-5 relative">
+    <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-5 relative">
       <div className="py-3 space-y-0.5">
         {loadingMore && (
           <div className="text-center py-2">

@@ -467,7 +467,7 @@ export default function ChatPage() {
   /* ═══ CHANNEL LIST VIEW (mobile only — desktop uses sidebar) ═══ */
   if (showChannelList) {
     return (
-      <div className="flex -mx-4 sm:-mx-5 -mt-5 sm:-mt-6 lg:-mt-8" style={{ height: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom, 0px))', maxHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom, 0px))' }}>
+      <div className="flex overflow-hidden -mx-4 sm:-mx-5 -mt-5 sm:-mt-6 lg:-mt-8" style={{ height: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom, 0px))', maxHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom, 0px))' }}>
         {/* Desktop: always show sidebar + placeholder */}
         <div className="w-full lg:w-[260px] lg:border-r lg:border-border/25 flex-shrink-0">
           <ChannelList
@@ -489,7 +489,7 @@ export default function ChatPage() {
 
   /* ═══ MESSAGE VIEW ═══ */
   return (
-    <div className="flex -mx-4 sm:-mx-5 -mt-5 sm:-mt-6 lg:-mt-8" style={{ height: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom, 0px))', maxHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom, 0px))' }}>
+    <div className="flex overflow-hidden -mx-4 sm:-mx-5 -mt-5 sm:-mt-6 lg:-mt-8" style={{ height: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom, 0px))', maxHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom, 0px))' }}>
       {/* Desktop sidebar */}
       <div className="hidden lg:block w-[260px] border-r border-border/25 flex-shrink-0 overflow-y-auto">
         <ChannelList
