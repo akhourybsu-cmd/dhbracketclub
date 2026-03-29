@@ -136,22 +136,24 @@ export default function EventDetailPage() {
           </button>
           <div className="flex items-center gap-1">
             <ShareButton contentType="event" contentId={eventId!} title={event.title} />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="p-1.5 rounded-lg hover:bg-muted/50 transition-colors">
-                  <MoreVertical className="w-4 h-4 text-muted-foreground/70" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-[140px]">
-                <DropdownMenuItem onClick={() => setEditing(true)} className="text-xs gap-2">
-                  <Pencil className="w-3.5 h-3.5" /> Edit Event
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setShowDeleteAlert(true)} className="text-xs gap-2 text-destructive focus:text-destructive">
-                  <Trash2 className="w-3.5 h-3.5" /> Delete Event
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+            {isCreator && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="p-1.5 rounded-lg hover:bg-muted/50 transition-colors">
+                    <MoreVertical className="w-4 h-4 text-muted-foreground/70" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-[140px]">
+                  <DropdownMenuItem onClick={() => setEditing(true)} className="text-xs gap-2">
+                    <Pencil className="w-3.5 h-3.5" /> Edit Event
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowDeleteAlert(true)} className="text-xs gap-2 text-destructive focus:text-destructive">
+                    <Trash2 className="w-3.5 h-3.5" /> Delete Event
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
 
         {/* Edit mode */}
