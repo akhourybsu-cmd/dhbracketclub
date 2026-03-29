@@ -10,6 +10,7 @@ import { BarChart3, Plus, X, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAISuggestions } from '@/hooks/useAISuggestions';
 import AISuggestions from '@/components/AISuggestions';
+import { useEnrichRanking } from '@/hooks/useItemEnrichments';
 
 export default function CreateRankingPage() {
   const { user } = useAuth();
