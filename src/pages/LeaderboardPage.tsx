@@ -444,11 +444,11 @@ export default function LeaderboardPage() {
                 borderBottom: '1px solid hsl(var(--border) / 0.3)',
               }}
             >
-              <span className="text-[8px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em] text-center">#</span>
-              <span className="text-[8px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em]">Player</span>
-              <span className="text-[8px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em] text-center">Champ</span>
-              <span className="text-[8px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em] text-right">Pts</span>
-              <span className="text-[8px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em] text-right">✓</span>
+              <span className="text-[8px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em] text-center">#</span>
+              <span className="text-[8px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em]">Player</span>
+              <span className="text-[8px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em] text-center">Champ</span>
+              <span className="text-[8px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em] text-right">Pts</span>
+              <span className="text-[8px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em] text-right">✓</span>
             </div>
 
             {/* Rows */}
@@ -578,11 +578,11 @@ export default function LeaderboardPage() {
 
           {/* Member count — minimal */}
           <div className="flex items-center justify-between mt-4 px-1">
-            <span className="text-[9px] text-muted-foreground/50 font-medium">
+            <span className="text-[9px] text-muted-foreground/70 font-medium">
               {standings.length} {standings.length === 1 ? 'member' : 'members'}
             </span>
             {lastSyncedAt && (
-              <span className="text-[9px] text-muted-foreground/50 tabular-nums">
+              <span className="text-[9px] text-muted-foreground/70 tabular-nums">
                 Synced {new Date(lastSyncedAt).toLocaleDateString()}
               </span>
             )}

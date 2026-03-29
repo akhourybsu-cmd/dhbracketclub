@@ -113,11 +113,11 @@ export default function PollsListPage() {
                         <div className="min-w-0">
                           <h3 className="font-bold text-sm truncate">{p.question}</h3>
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-[10px] text-muted-foreground/50 font-medium">
+                            <span className="text-[10px] text-muted-foreground/70 font-medium">
                               {formatDistanceToNow(new Date(p.created_at), { addSuffix: true })}
                             </span>
                             <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/15" />
-                            <span className="text-[10px] text-muted-foreground/50 flex items-center gap-0.5 font-medium">
+                            <span className="text-[10px] text-muted-foreground/70 flex items-center gap-0.5 font-medium">
                               <Users className="w-2.5 h-2.5" /> {count} vote{count !== 1 ? 's' : ''}
                             </span>
                           </div>

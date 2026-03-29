@@ -241,7 +241,7 @@ export default function EventsPage() {
             {/* Day headers */}
             <div className="grid grid-cols-7 gap-px mb-1">
               {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                <div key={i} className="text-center text-[9px] font-bold text-muted-foreground/50 py-1">{d}</div>
+                <div key={i} className="text-center text-[9px] font-bold text-muted-foreground/70 py-1">{d}</div>
               ))}
             </div>
             {/* Day cells */}
@@ -296,7 +296,7 @@ export default function EventsPage() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <h4 className="font-bold text-[13px] truncate">{event.title}</h4>
-                          <p className="text-[10px] text-muted-foreground/50">{format(new Date(event.starts_at), 'h:mm a')}{event.location ? ` · ${event.location}` : ''}</p>
+                          <p className="text-[10px] text-muted-foreground/70">{format(new Date(event.starts_at), 'h:mm a')}{event.location ? ` · ${event.location}` : ''}</p>
                         </div>
                         <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
                       </div>
@@ -364,7 +364,7 @@ export default function EventsPage() {
                                       "px-2.5 py-1 rounded-lg text-[10px] font-bold capitalize transition-colors",
                                       event.user_rsvp === status
                                         ? status === 'going' ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'
-                                        : 'bg-muted/50 text-muted-foreground/50 hover:bg-muted/50'
+                                        : 'bg-muted/50 text-muted-foreground/70 hover:bg-muted/50'
                                     )}
                                   >
                                     {status === 'going' ? '✓ Going' : 'Maybe'}
@@ -407,8 +407,8 @@ export default function EventsPage() {
         {events.length === 0 && !loading && (
           <div className="text-center py-16">
             <CalendarDays className="w-10 h-10 mx-auto text-muted-foreground/60 mb-3" />
-            <p className="text-sm text-muted-foreground/50 font-medium">No events yet</p>
-            <p className="text-xs text-muted-foreground/50 mt-1">Plan something with the crew</p>
+            <p className="text-sm text-muted-foreground/70 font-medium">No events yet</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">Plan something with the crew</p>
             <Button size="sm" variant="outline" onClick={() => setShowCreate(true)} className="mt-4 gap-1.5 text-xs rounded-xl">
               <Plus className="w-3.5 h-3.5" /> Create Event
             </Button>

@@ -130,14 +130,14 @@ export default function EventDetailPage() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         {/* Nav */}
         <div className="flex items-center justify-between mb-4">
-          <button onClick={() => navigate('/events')} className="flex items-center gap-1 text-xs text-muted-foreground/50 hover:text-foreground transition-colors">
+          <button onClick={() => navigate('/events')} className="flex items-center gap-1 text-xs text-muted-foreground/70 hover:text-foreground transition-colors">
             <ArrowLeft className="w-3.5 h-3.5" /> Events
           </button>
           {isCreator && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="p-1.5 rounded-lg hover:bg-muted/50 transition-colors">
-                  <MoreVertical className="w-4 h-4 text-muted-foreground/50" />
+                  <MoreVertical className="w-4 h-4 text-muted-foreground/70" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-[140px]">
@@ -191,16 +191,16 @@ export default function EventDetailPage() {
               <div className="w-12 h-12 rounded-xl flex flex-col items-center justify-center flex-shrink-0" style={{
                 background: eventPast ? 'hsl(var(--muted) / 0.5)' : 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.04))',
               }}>
-                <span className={cn("text-[9px] font-bold uppercase leading-none", eventPast ? 'text-muted-foreground/50' : 'text-primary')}>
+                <span className={cn("text-[9px] font-bold uppercase leading-none", eventPast ? 'text-muted-foreground/70' : 'text-primary')}>
                   {format(new Date(event.starts_at), 'MMM')}
                 </span>
-                <span className={cn("text-[18px] font-extrabold leading-none", eventPast ? 'text-muted-foreground/50' : 'text-primary')}>
+                <span className={cn("text-[18px] font-extrabold leading-none", eventPast ? 'text-muted-foreground/70' : 'text-primary')}>
                   {format(new Date(event.starts_at), 'd')}
                 </span>
               </div>
               <div className="min-w-0 flex-1">
                 <h1 className="text-xl font-extrabold tracking-tight leading-tight">{event.title}</h1>
-                <p className="text-[10px] text-muted-foreground/50 mt-0.5">by {event.profiles?.display_name}</p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">by {event.profiles?.display_name}</p>
               </div>
             </div>
 
@@ -237,7 +237,7 @@ export default function EventDetailPage() {
                     ? status === 'going' ? 'bg-success/20 text-success border border-success/30'
                       : status === 'maybe' ? 'bg-warning/20 text-warning border border-warning/30'
                       : 'bg-destructive/15 text-destructive border border-destructive/30'
-                    : 'bg-muted/50 text-muted-foreground/50 border border-transparent hover:bg-muted/50'
+                    : 'bg-muted/50 text-muted-foreground/70 border border-transparent hover:bg-muted/50'
                 )}
               >
                 {status === 'going' ? '✓ Going' : status === 'maybe' ? 'Maybe' : "Can't go"}
@@ -248,7 +248,7 @@ export default function EventDetailPage() {
 
         {eventPast && (
           <div className="mb-6 px-3 py-2 rounded-xl bg-muted/50 border border-border/25">
-            <p className="text-[11px] text-muted-foreground/50 font-medium text-center">This event has passed</p>
+            <p className="text-[11px] text-muted-foreground/70 font-medium text-center">This event has passed</p>
           </div>
         )}
 
@@ -297,13 +297,13 @@ export default function EventDetailPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[11px] font-bold text-foreground/80">{c.profiles?.display_name}</span>
-                    <span className="text-[9px] text-muted-foreground/50">{format(new Date(c.created_at), 'MMM d · h:mm a')}</span>
+                    <span className="text-[9px] text-muted-foreground/70">{format(new Date(c.created_at), 'MMM d · h:mm a')}</span>
                   </div>
                   <p className="text-[12px] text-foreground/80 leading-relaxed">{c.content}</p>
                 </div>
               </div>
             ))}
-            {comments.length === 0 && <p className="text-xs text-muted-foreground/50">No comments yet — start the conversation</p>}
+            {comments.length === 0 && <p className="text-xs text-muted-foreground/70">No comments yet — start the conversation</p>}
           </div>
           <div className="flex items-center gap-2">
             <Input

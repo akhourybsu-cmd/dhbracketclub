@@ -116,7 +116,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <h1 className="text-base font-extrabold tracking-tight leading-none">
                 <span className="gradient-text">DH</span>
               </h1>
-              <p className="text-[8px] text-muted-foreground/50 font-bold uppercase tracking-[0.2em] mt-0.5">Compete With Your Crew</p>
+              <p className="text-[8px] text-muted-foreground/70 font-bold uppercase tracking-[0.2em] mt-0.5">Compete With Your Crew</p>
             </div>
           </div>
         </div>
@@ -125,7 +125,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             if ('type' in item && item.type === 'divider') {
               return (
                 <div key={idx} className="mt-4 mb-1.5 px-3">
-                  <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">{item.label}</p>
+                  <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70">{item.label}</p>
                 </div>
               );
             }
@@ -154,7 +154,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </nav>
         <div className="px-3 pb-3 space-y-0.5">
           <div className="flex items-center justify-between px-3 py-2">
-            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/50">Theme</span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/70">Theme</span>
             <ThemeToggle />
           </div>
           <Link
@@ -191,7 +191,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 className={cn(
                   "flex flex-col items-center justify-center gap-0.5 py-2 px-2.5 rounded-xl min-w-[3.5rem] min-h-[2.75rem] btn-press relative",
                   "transition-colors duration-150",
-                  active ? "text-primary" : "text-muted-foreground/50 active:text-foreground"
+                  active ? "text-primary" : "text-muted-foreground/70 active:text-foreground"
                 )}
               >
                 <div className="relative">

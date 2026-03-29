@@ -118,7 +118,7 @@ export default function AuthPage() {
         </form>
 
         {!isSignUp && (
-          <p className="text-center text-[11px] text-muted-foreground/50 mt-3">
+          <p className="text-center text-[11px] text-muted-foreground/70 mt-3">
             <button
               onClick={async () => {
                 if (!email) { toast.error('Enter your email first'); return; }
@@ -128,7 +128,7 @@ export default function AuthPage() {
                 if (error) toast.error(error.message);
                 else toast.success('Password reset link sent! Check your email.');
               }}
-              className="text-primary/70 hover:text-primary hover:underline font-semibold transition-colors"
+              className="text-primary/85 hover:text-primary hover:underline font-semibold transition-colors"
             >
               Forgot password?
             </button>

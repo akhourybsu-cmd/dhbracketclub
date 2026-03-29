@@ -299,7 +299,7 @@ export default function GameCenterPage() {
                     {group.round === 0 ? 'First Four' : ROUND_NAMES[group.round - 1]}
                   </span>
                   <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, hsl(var(--border) / 0.4), transparent)' }} />
-                  <span className="text-[10px] text-muted-foreground/50 tabular-nums font-medium">{group.games.length}</span>
+                  <span className="text-[10px] text-muted-foreground/70 tabular-nums font-medium">{group.games.length}</span>
                 </motion.div>
               )}
 
@@ -395,7 +395,7 @@ function GameCard({ game, teams, myPick, pickCounts, index }: {
             {game.round_number === 0 ? FIRST_FOUR_ROUND_SHORT : ROUND_SHORT[game.round_number - 1]}
           </span>
           <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/20" />
-          <span className="text-[10px] text-muted-foreground/50 font-medium">{game.region}</span>
+          <span className="text-[10px] text-muted-foreground/70 font-medium">{game.region}</span>
           {isUpset && (
             <motion.span
               initial={{ scale: 0.8, opacity: 0 }}
@@ -422,10 +422,10 @@ function GameCard({ game, teams, myPick, pickCounts, index }: {
             </span>
           )}
           {isFinal && (
-            <span className="text-[10px] font-bold tracking-wider text-muted-foreground/50 uppercase">Final</span>
+            <span className="text-[10px] font-bold tracking-wider text-muted-foreground/70 uppercase">Final</span>
           )}
           {!isLive && !isFinal && (
-            <span className="inline-flex items-center gap-1.5 text-[10px] text-muted-foreground/50 font-medium">
+            <span className="inline-flex items-center gap-1.5 text-[10px] text-muted-foreground/70 font-medium">
               <Calendar className="w-3 h-3" />
               {game.scheduled_at ? new Date(game.scheduled_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'TBD'}
             </span>
@@ -472,7 +472,7 @@ function ScoreRow({ team, score, isWinner, isMyPick, isFinal, isLive, pickCount 
     return (
       <div className="flex items-center gap-2 px-4 py-4">
         <span className="w-7" />
-        <span className="text-xs text-muted-foreground/50 italic font-medium">TBD</span>
+        <span className="text-xs text-muted-foreground/70 italic font-medium">TBD</span>
       </div>
     );
   }

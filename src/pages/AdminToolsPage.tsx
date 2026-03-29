@@ -526,7 +526,7 @@ export default function AdminToolsPage() {
                                 onChange={(e) => { e.stopPropagation(); setScores(prev => { const n = new Map(prev); n.set(game.id, { ...gameScores, team1: e.target.value }); return n; }); }}
                                 className="w-14 h-8 text-center text-xs font-mono p-0 rounded-lg" />
                               {game.winner_team_id === team1.id && <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />}
-                            </>) : <span className="text-xs text-muted-foreground/50 italic ml-5">TBD</span>}
+                            </>) : <span className="text-xs text-muted-foreground/70 italic ml-5">TBD</span>}
                           </button>
 
                           <div className="h-px bg-border/20 mx-3" />
@@ -543,7 +543,7 @@ export default function AdminToolsPage() {
                                 onChange={(e) => { e.stopPropagation(); setScores(prev => { const n = new Map(prev); n.set(game.id, { ...gameScores, team2: e.target.value }); return n; }); }}
                                 className="w-14 h-8 text-center text-xs font-mono p-0 rounded-lg" />
                               {game.winner_team_id === team2.id && <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />}
-                            </>) : <span className="text-xs text-muted-foreground/50 italic ml-5">TBD</span>}
+                            </>) : <span className="text-xs text-muted-foreground/70 italic ml-5">TBD</span>}
                           </button>
 
                           {isFinal && (

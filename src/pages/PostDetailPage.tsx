@@ -82,7 +82,7 @@ export default function PostDetailPage() {
   return (
     <div className="pb-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <button onClick={() => navigate('/feed')} className="flex items-center gap-1 text-xs text-muted-foreground/50 hover:text-foreground mb-4 transition-colors">
+        <button onClick={() => navigate('/feed')} className="flex items-center gap-1 text-xs text-muted-foreground/70 hover:text-foreground mb-4 transition-colors">
           <ArrowLeft className="w-3.5 h-3.5" /> Feed
         </button>
 
@@ -103,7 +103,7 @@ export default function PostDetailPage() {
 
         {isAuthor && (
           <div className="flex gap-2 mb-6">
-            <Button variant="ghost" size="sm" onClick={togglePin} className="text-xs h-7 text-muted-foreground/50">
+            <Button variant="ghost" size="sm" onClick={togglePin} className="text-xs h-7 text-muted-foreground/70">
               <Pin className="w-3 h-3 mr-1" /> {post.is_pinned ? 'Unpin' : 'Pin'}
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setShowDeleteAlert(true)} className="text-xs h-7 text-destructive/60 hover:text-destructive">
@@ -128,13 +128,13 @@ export default function PostDetailPage() {
                 <div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-[11px] font-bold text-foreground/80">{c.profiles?.display_name}</span>
-                    <span className="text-[9px] text-muted-foreground/50">{formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}</span>
+                    <span className="text-[9px] text-muted-foreground/70">{formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}</span>
                   </div>
                   <p className="text-[12px] text-foreground/80 leading-relaxed">{c.content}</p>
                 </div>
               </div>
             ))}
-            {comments.length === 0 && <p className="text-xs text-muted-foreground/50">No comments yet</p>}
+            {comments.length === 0 && <p className="text-xs text-muted-foreground/70">No comments yet</p>}
           </div>
           <div className="flex items-center gap-2">
             <Input

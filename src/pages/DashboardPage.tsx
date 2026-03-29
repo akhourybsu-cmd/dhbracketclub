@@ -259,7 +259,7 @@ export default function DashboardPage() {
           <motion.div key={item.to} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 + i * 0.04 }}>
             <Link to={item.to}>
               <div className="action-tile py-3">
-                <Plus className="w-3 h-3 absolute top-2 right-2 text-muted-foreground/50" />
+                <Plus className="w-3 h-3 absolute top-2 right-2 text-muted-foreground/70" />
                 <item.icon className="w-5 h-5 mx-auto mb-1.5 relative z-10" style={{ color: `hsl(var(--${item.color}))` }} />
                 <p className="text-[10px] font-bold relative z-10">{item.label}</p>
               </div>
@@ -306,7 +306,7 @@ export default function DashboardPage() {
               <CalendarDays className="w-3.5 h-3.5 inline-block mr-1.5 text-primary" />
               Upcoming Events
             </h2>
-            <Link to="/events" className="text-[10px] font-bold text-primary/60 hover:text-primary transition-colors">View All</Link>
+            <Link to="/events" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors">View All</Link>
           </div>
           <div className="space-y-2 mb-7">
             {upcomingEvents.map((ev: any, i: number) => {
@@ -331,11 +331,11 @@ export default function DashboardPage() {
                         <div className="min-w-0 flex-1">
                           <h3 className="font-bold text-[13px] truncate tracking-tight">{ev.title}</h3>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[10px] text-primary/70 font-semibold flex items-center gap-1">
+                            <span className="text-[10px] text-primary/85 font-semibold flex items-center gap-1">
                               <Clock className="w-2.5 h-2.5" /> {getLabel(ev.starts_at)} · {format(new Date(ev.starts_at), 'h:mm a')}
                             </span>
                             {ev.location && (
-                              <span className="text-[10px] text-muted-foreground/50 flex items-center gap-1">
+                              <span className="text-[10px] text-muted-foreground/70 flex items-center gap-1">
                                 <MapPin className="w-2.5 h-2.5" /> {ev.location}
                               </span>
                             )}
@@ -359,7 +359,7 @@ export default function DashboardPage() {
               <Trophy className="w-3.5 h-3.5 inline-block mr-1.5 text-primary" />
               Brackets
             </h2>
-            <Link to="/brackets" className="text-[10px] font-bold text-primary/60 hover:text-primary transition-colors">View All</Link>
+            <Link to="/brackets" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors">View All</Link>
           </div>
           <div className="space-y-2 mb-7">
             {pools.slice(0, 3).map((pool, i) => {
@@ -380,9 +380,9 @@ export default function DashboardPage() {
                         <div className="min-w-0 flex-1">
                           <h3 className="font-bold text-[13px] truncate tracking-tight">{pool.name}</h3>
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-[10px] text-muted-foreground/50 font-medium">{pool.tournaments?.name}</span>
+                            <span className="text-[10px] text-muted-foreground/70 font-medium">{pool.tournaments?.name}</span>
                             <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/15" />
-                            <span className="text-[10px] text-muted-foreground/50 flex items-center gap-0.5 font-medium">
+                            <span className="text-[10px] text-muted-foreground/70 flex items-center gap-0.5 font-medium">
                               <Users className="w-2.5 h-2.5" /> {members}
                             </span>
                           </div>
@@ -409,7 +409,7 @@ export default function DashboardPage() {
               <BarChart3 className="w-3.5 h-3.5 inline-block mr-1.5" style={{ color: 'hsl(var(--accent))' }} />
               Rankings
             </h2>
-            <Link to="/rankings" className="text-[10px] font-bold text-primary/60 hover:text-primary transition-colors">View All</Link>
+            <Link to="/rankings" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors">View All</Link>
           </div>
           <div className="space-y-2 mb-7">
             {rankings.slice(0, 3).map((r: any, i: number) => (
@@ -424,7 +424,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <h3 className="font-bold text-[13px] truncate tracking-tight">{r.topic}</h3>
-                        <p className="text-[10px] text-muted-foreground/50 font-medium">{r.item_count} items to rank</p>
+                        <p className="text-[10px] text-muted-foreground/70 font-medium">{r.item_count} items to rank</p>
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         <span className="status-pill bg-success/10 text-success">Open</span>
@@ -447,7 +447,7 @@ export default function DashboardPage() {
               <MessageCircle className="w-3.5 h-3.5 inline-block mr-1.5" style={{ color: 'hsl(var(--warning))' }} />
               Polls
             </h2>
-            <Link to="/polls" className="text-[10px] font-bold text-primary/60 hover:text-primary transition-colors">View All</Link>
+            <Link to="/polls" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors">View All</Link>
           </div>
           <div className="space-y-2 mb-7">
             {polls.slice(0, 3).map((p: any, i: number) => (
@@ -462,7 +462,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <h3 className="font-bold text-[13px] truncate tracking-tight">{p.question}</h3>
-                        <p className="text-[10px] text-muted-foreground/50 font-medium capitalize">{p.poll_type} choice</p>
+                        <p className="text-[10px] text-muted-foreground/70 font-medium capitalize">{p.poll_type} choice</p>
                       </div>
                       <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
                     </div>
@@ -482,7 +482,7 @@ export default function DashboardPage() {
               <Bookmark className="w-3.5 h-3.5 inline-block mr-1.5" style={{ color: 'hsl(var(--gold))' }} />
               Drafts
             </h2>
-            <Link to="/drafts" className="text-[10px] font-bold text-primary/60 hover:text-primary transition-colors">View All</Link>
+            <Link to="/drafts" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors">View All</Link>
           </div>
           <div className="space-y-2 mb-7">
             {drafts.slice(0, 3).map((d: any, i: number) => (
@@ -497,7 +497,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <h3 className="font-bold text-[13px] truncate tracking-tight">{d.topic}</h3>
-                        <p className="text-[10px] text-muted-foreground/50 font-medium">
+                        <p className="text-[10px] text-muted-foreground/70 font-medium">
                           {d.num_rounds} rounds • {d.status === 'in_progress' ? 'Live' : d.status === 'setup' ? 'Setup' : 'Complete'}
                         </p>
                       </div>

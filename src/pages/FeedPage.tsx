@@ -164,7 +164,7 @@ export default function FeedPage() {
         {!loading && posts.filter(p => !p.is_pinned).length > 0 && (
           <div className="mb-6">
             <h2 className="section-header mb-3">
-              <FileText className="w-3.5 h-3.5 inline-block mr-1.5 text-primary/60" />
+              <FileText className="w-3.5 h-3.5 inline-block mr-1.5 text-primary/80" />
               Discussions
             </h2>
             <div className="space-y-2">
@@ -175,7 +175,7 @@ export default function FeedPage() {
                       <div className="relative z-10">
                         <h3 className="font-bold text-[13px] tracking-tight mb-0.5">{post.title}</h3>
                         <p className="text-[11px] text-foreground/60 line-clamp-1 mb-1.5">{post.content}</p>
-                        <div className="flex items-center justify-between text-[10px] text-muted-foreground/50">
+                        <div className="flex items-center justify-between text-[10px] text-muted-foreground/70">
                           <span>{post.profiles?.display_name} · {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}</span>
                           <span className="flex items-center gap-1"><MessageCircle className="w-2.5 h-2.5" /> {post.comments_count}</span>
                         </div>
@@ -192,7 +192,7 @@ export default function FeedPage() {
         {!loading && (
         <div>
           <h2 className="section-header mb-3">
-            <Zap className="w-3.5 h-3.5 inline-block mr-1.5 text-primary/60" />
+            <Zap className="w-3.5 h-3.5 inline-block mr-1.5 text-primary/80" />
             Activity
           </h2>
           <div className="space-y-1">
@@ -217,9 +217,9 @@ export default function FeedPage() {
                       <span className="text-foreground/65">{label}</span>
                       {title && <span className="text-foreground/80 font-semibold"> — {title}</span>}
                     </p>
-                    <p className="text-[9px] text-muted-foreground/50 mt-0.5">{formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}</p>
+                    <p className="text-[9px] text-muted-foreground/70 mt-0.5">{formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}</p>
                   </div>
-                  {link && <ChevronRight className="w-3 h-3 text-muted-foreground/10 group-hover:text-muted-foreground/50 transition-colors flex-shrink-0" />}
+                  {link && <ChevronRight className="w-3 h-3 text-muted-foreground/10 group-hover:text-muted-foreground/70 transition-colors flex-shrink-0" />}
                 </div>
               );
 

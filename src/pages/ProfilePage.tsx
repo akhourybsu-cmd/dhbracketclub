@@ -164,7 +164,7 @@ export default function ProfilePage() {
                       {a.event_type.replace(/_/g, ' ')}
                       {title && <span className="font-semibold"> — {title}</span>}
                     </p>
-                    <p className="text-[9px] text-muted-foreground/50">{formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}</p>
+                    <p className="text-[9px] text-muted-foreground/70">{formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}</p>
                   </div>
                 </div>
               );
@@ -225,7 +225,7 @@ export default function ProfilePage() {
       {/* DH branding */}
       <div className="flex items-center justify-center gap-2 py-4 mb-2">
         <img src={dhMonogram} alt="DH" className="w-5 h-5 object-contain opacity-30" />
-        <span className="text-[9px] text-muted-foreground/50 font-bold uppercase tracking-[0.15em]">DH Member</span>
+        <span className="text-[9px] text-muted-foreground/70 font-bold uppercase tracking-[0.15em]">DH Member</span>
       </div>
 
       {/* Sign out */}

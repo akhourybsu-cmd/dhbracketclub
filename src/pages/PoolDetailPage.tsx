@@ -164,7 +164,7 @@ export default function PoolDetailPage() {
             {isLocked ? 'Locked' : 'Open'}
           </span>
         </div>
-        {pool.description && <p className="text-[11px] text-muted-foreground/50 mt-2 leading-relaxed relative z-10">{pool.description}</p>}
+        {pool.description && <p className="text-[11px] text-muted-foreground/70 mt-2 leading-relaxed relative z-10">{pool.description}</p>}
       </div>
 
       {/* Info Cards */}
@@ -309,7 +309,7 @@ export default function PoolDetailPage() {
                 </div>
                 <div className="min-w-0">
                   <span className="text-[13px] font-semibold block truncate">{m.profiles?.display_name || 'Unknown'}</span>
-                  {m.role === 'admin' && <span className="text-[8px] text-primary/60 font-bold uppercase tracking-[0.15em]">Admin</span>}
+                  {m.role === 'admin' && <span className="text-[8px] text-primary/80 font-bold uppercase tracking-[0.15em]">Admin</span>}
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">

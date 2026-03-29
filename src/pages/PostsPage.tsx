@@ -140,8 +140,8 @@ export default function PostsPage() {
         {posts.length === 0 && !loading && (
           <div className="text-center py-16">
             <FileText className="w-10 h-10 mx-auto text-muted-foreground/60 mb-3" />
-            <p className="text-sm text-muted-foreground/50 font-medium">No discussions yet</p>
-            <p className="text-xs text-muted-foreground/50 mt-1">Start a conversation</p>
+            <p className="text-sm text-muted-foreground/70 font-medium">No discussions yet</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">Start a conversation</p>
           </div>
         )}
       </motion.div>

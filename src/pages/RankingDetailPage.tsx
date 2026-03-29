@@ -460,7 +460,7 @@ export default function RankingDetailPage() {
                   rank={idx + 1}
                   enrichment={enrichments.get(entry.item.id)}
                   actions={
-                    <span className="text-[10px] font-mono text-muted-foreground/50 flex-shrink-0">
+                    <span className="text-[10px] font-mono text-muted-foreground/70 flex-shrink-0">
                       avg {entry.avgRank.toFixed(1)}
                     </span>
                   }
@@ -479,7 +479,7 @@ export default function RankingDetailPage() {
                 {submissions.map((sub: any) => (
                   <div key={sub.id} className="glass-card p-4">
                     <p className="text-[12px] font-bold mb-2">{sub.profiles?.display_name || 'Unknown'}</p>
-                    <p className="text-[10px] text-muted-foreground/50">
+                    <p className="text-[10px] text-muted-foreground/70">
                       Submitted {new Date(sub.submitted_at).toLocaleDateString()}
                     </p>
                   </div>

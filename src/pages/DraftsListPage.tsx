@@ -115,11 +115,11 @@ export default function DraftsListPage() {
                         <div className="min-w-0">
                           <h3 className="font-bold text-sm truncate">{d.topic}</h3>
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-[10px] text-muted-foreground/50 font-medium">
+                            <span className="text-[10px] text-muted-foreground/70 font-medium">
                               {d.num_rounds} rounds
                             </span>
                             <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/15" />
-                            <span className="text-[10px] text-muted-foreground/50 flex items-center gap-0.5 font-medium">
+                            <span className="text-[10px] text-muted-foreground/70 flex items-center gap-0.5 font-medium">
                               <Users className="w-2.5 h-2.5" /> {count}
                             </span>
                           </div>

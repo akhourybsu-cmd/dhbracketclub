@@ -375,7 +375,7 @@ export default function PollDetailPage() {
                   return (
                     <div key={v.id} className="flex items-center justify-between px-4 py-2.5 relative z-10">
                       <span className="text-[12px] font-semibold">{v.profiles?.display_name || 'Unknown'}</span>
-                      <span className="text-[10px] text-muted-foreground/50 font-medium truncate max-w-[40%] text-right">{optLabel}</span>
+                      <span className="text-[10px] text-muted-foreground/70 font-medium truncate max-w-[40%] text-right">{optLabel}</span>
                     </div>
                   );
                 })}

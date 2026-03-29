@@ -56,7 +56,7 @@ export default function CompetePage() {
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-muted-foreground/50">{mod.description}</p>
+                        <p className="text-[11px] text-muted-foreground/70">{mod.description}</p>
                       </div>
                     </div>
                     <div className="flex gap-2">

@@ -571,7 +571,7 @@ export default function DraftDetailPage() {
                           showRank
                           compact={!hasEnrichments}
                           actions={
-                            <span className="text-[10px] font-mono text-muted-foreground/50 flex-shrink-0">
+                            <span className="text-[10px] font-mono text-muted-foreground/70 flex-shrink-0">
                               Rd {pick.round}
                             </span>
                           }
