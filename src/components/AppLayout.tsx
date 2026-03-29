@@ -1,9 +1,10 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { LayoutDashboard, Trophy, BarChart3, MessageCircle, User, Bookmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import dhMonogram from '@/assets/dh-monogram.png';
+import { useSoundEffect } from '@/hooks/useSoundEffect';
 
 const navItems = [
   { path: '/dashboard', label: 'Home', icon: LayoutDashboard },
@@ -23,6 +24,14 @@ const sidebarModules = [
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
+  const { play } = useSoundEffect();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 12);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const isNavActive = (path: string) => {
     if (path === '/brackets') {
@@ -41,10 +50,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </div>
       </main>
 
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar — frosted glass */}
       <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 flex-col z-40" style={{
-        background: 'linear-gradient(180deg, hsl(225 28% 6%), hsl(225 28% 4%))',
-        borderRight: '1px solid hsl(var(--border) / 0.3)',
+        background: 'linear-gradient(180deg, hsl(225 28% 6% / 0.92), hsl(225 28% 4% / 0.96))',
+        backdropFilter: 'blur(24px) saturate(180%)',
+        borderRight: '1px solid hsl(var(--border) / 0.2)',
+        boxShadow: 'inset -1px 0 0 hsl(var(--foreground) / 0.02)',
       }}>
         <div className="px-6 pt-7 pb-10">
           <div className="flex items-center gap-3 mb-1.5">
@@ -66,6 +77,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <Link
                 key={item.path}
                 to={item.path}
+                onClick={() => play('tap')}
                 className={cn("nav-item", active ? "nav-item-active" : "nav-item-inactive")}
               >
                 <Icon className="w-[18px] h-[18px]" />
@@ -77,6 +89,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <div className="px-3 pb-3">
           <Link
             to="/profile"
+            onClick={() => play('tap')}
             className={cn("nav-item", location.pathname === '/profile' ? "nav-item-active" : "nav-item-inactive")}
           >
             <User className="w-[18px] h-[18px]" />
@@ -89,11 +102,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      {/* Mobile Bottom Nav */}
+      {/* Mobile Bottom Nav — premium frosted glass */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 safe-area-inset-bottom" style={{
-        background: 'linear-gradient(180deg, hsl(225 20% 7% / 0.95), hsl(225 28% 4% / 0.98))',
-        backdropFilter: 'blur(24px) saturate(180%)',
-        borderTop: '1px solid hsl(var(--border) / 0.12)',
+        background: 'linear-gradient(180deg, hsl(225 20% 7% / 0.88), hsl(225 28% 4% / 0.95))',
+        backdropFilter: 'blur(28px) saturate(200%)',
+        borderTop: '1px solid hsl(var(--border) / 0.1)',
+        boxShadow: '0 -4px 24px rgba(0,0,0,0.3), inset 0 1px 0 hsl(var(--foreground) / 0.02)',
       }}>
         <div className="flex items-center justify-around h-[4rem] px-1">
           {navItems.map((item) => {
@@ -103,6 +117,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <Link
                 key={item.path}
                 to={item.path}
+                onClick={() => play('tap')}
                 className={cn(
                   "flex flex-col items-center justify-center gap-0.5 py-2 px-2.5 rounded-xl min-w-[3.5rem] min-h-[2.75rem] btn-press relative",
                   "transition-colors duration-150",
@@ -118,8 +133,17 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   <motion.div
                     layoutId="nav-indicator"
                     className="absolute -top-px left-1/2 -translate-x-1/2 w-5 h-[2px] rounded-full"
-                    style={{ background: 'linear-gradient(90deg, hsl(var(--primary) / 0.7), hsl(var(--primary) / 0.2))' }}
+                    style={{ background: 'linear-gradient(90deg, hsl(var(--primary) / 0.8), hsl(var(--primary) / 0.2))' }}
                     transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                  />
+                )}
+                {/* Active underglow */}
+                {active && (
+                  <motion.div
+                    layoutId="nav-underglow"
+                    className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-3 rounded-full"
+                    style={{ background: 'hsl(var(--primary) / 0.08)', filter: 'blur(6px)' }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                   />
                 )}
               </Link>

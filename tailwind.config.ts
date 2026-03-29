@@ -67,6 +67,12 @@ export default {
           elevated: "hsl(var(--surface-elevated))",
           overlay: "hsl(var(--surface-overlay))",
         },
+        "premium-warm": "hsl(var(--premium-warm))",
+        surface: {
+          DEFAULT: "hsl(var(--surface))",
+          elevated: "hsl(var(--surface-elevated))",
+          overlay: "hsl(var(--surface-overlay))",
+        },
         success: "hsl(var(--success))",
         warning: "hsl(var(--warning))",
         correct: "hsl(var(--correct))",

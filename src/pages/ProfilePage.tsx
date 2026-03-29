@@ -3,15 +3,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Volume2, VolumeX } from 'lucide-react';
 import { motion } from 'framer-motion';
 import dhMonogram from '@/assets/dh-monogram.png';
+import { useSoundEffect } from '@/hooks/useSoundEffect';
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
+  const { play, soundEnabled, toggleSound } = useSoundEffect();
 
   useEffect(() => {
     if (!user) return;
@@ -29,8 +32,13 @@ export default function ProfilePage() {
       .update({ display_name: displayName })
       .eq('id', user.id);
 
-    if (error) toast.error(error.message);
-    else toast.success('Profile updated!');
+    if (error) {
+      toast.error(error.message);
+      play('error');
+    } else {
+      toast.success('Profile updated!');
+      play('success');
+    }
     setLoading(false);
   };
 
@@ -38,6 +46,7 @@ export default function ProfilePage() {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring' as const, stiffness: 380, damping: 30 }}
       className="max-w-md mx-auto"
     >
       {/* Page header */}
@@ -76,6 +85,30 @@ export default function ProfilePage() {
           <Button onClick={handleSave} className="w-full h-11 font-bold rounded-xl btn-press text-[13px]" disabled={loading}>
             {loading ? 'Saving...' : 'Save Changes'}
           </Button>
+        </div>
+      </div>
+
+      {/* Sound & Haptics settings */}
+      <div className="glass-card p-5 mb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {soundEnabled ? (
+              <Volume2 className="w-4 h-4 text-primary" />
+            ) : (
+              <VolumeX className="w-4 h-4 text-muted-foreground" />
+            )}
+            <div>
+              <p className="text-[13px] font-semibold">Sound & Haptics</p>
+              <p className="text-[10px] text-muted-foreground">UI sounds and vibration feedback</p>
+            </div>
+          </div>
+          <Switch
+            checked={soundEnabled}
+            onCheckedChange={() => {
+              toggleSound();
+              play('tap');
+            }}
+          />
         </div>
       </div>
 
