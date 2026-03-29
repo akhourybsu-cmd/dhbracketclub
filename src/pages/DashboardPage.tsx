@@ -276,7 +276,60 @@ export default function DashboardPage() {
         )}
       </AnimatePresence>
 
-      {/* ═══ Active Brackets ═══ */}
+      {/* ═══ Upcoming Events ═══ */}
+      {upcomingEvents.length > 0 && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.18 }}>
+          <div className="section-divider mb-3">
+            <h2 className="section-header mb-0">
+              <CalendarDays className="w-3.5 h-3.5 inline-block mr-1.5 text-primary" />
+              Upcoming Events
+            </h2>
+            <Link to="/events" className="text-[10px] font-bold text-primary/60 hover:text-primary transition-colors">View All</Link>
+          </div>
+          <div className="space-y-2 mb-7">
+            {upcomingEvents.map((ev: any, i: number) => {
+              const getLabel = (d: string) => {
+                const dt = new Date(d);
+                if (isToday(dt)) return 'Today';
+                if (isTomorrow(dt)) return 'Tomorrow';
+                if (isThisWeek(dt)) return format(dt, 'EEEE');
+                return format(dt, 'MMM d');
+              };
+              return (
+                <motion.div key={ev.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 + i * 0.04 }}>
+                  <Link to={`/events/${ev.id}`} className="block group">
+                    <div className="glass-card p-3.5 transition-all duration-200 group-hover:border-primary/15">
+                      <div className="flex items-center gap-3 relative z-10">
+                        <div className="w-10 h-10 rounded-xl flex flex-col items-center justify-center flex-shrink-0" style={{
+                          background: 'linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--primary) / 0.04))',
+                        }}>
+                          <span className="text-[8px] font-bold text-primary uppercase leading-none">{format(new Date(ev.starts_at), 'MMM')}</span>
+                          <span className="text-[15px] font-extrabold text-primary leading-none">{format(new Date(ev.starts_at), 'd')}</span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-bold text-[13px] truncate tracking-tight">{ev.title}</h3>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-primary/70 font-semibold flex items-center gap-1">
+                              <Clock className="w-2.5 h-2.5" /> {getLabel(ev.starts_at)} · {format(new Date(ev.starts_at), 'h:mm a')}
+                            </span>
+                            {ev.location && (
+                              <span className="text-[10px] text-muted-foreground/50 flex items-center gap-1">
+                                <MapPin className="w-2.5 h-2.5" /> {ev.location}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/15 flex-shrink-0" />
+                      </div>
+                    </div>
+                  </Link>
+                </motion.div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
+
       {pools.length > 0 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
           <div className="section-divider mb-3">
