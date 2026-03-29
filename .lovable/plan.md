@@ -1,37 +1,72 @@
 
 
-# Light/Dark Mode Toggle — Plan
+# Rebrand to "DH" with Bold Monogram Logo & Green+Charcoal Palette
 
-## What needs to happen
+## Overview
+Rename from "DH Club" / "DH Bracket Club" to just **"DH"** everywhere. Generate a new bold monogram logo using AI image generation. Shift the entire color palette from electric blue to **emerald green + charcoal**.
 
-1. **Fix the build error** in `ChatPage.tsx` (line ~370 has a dangling `await` outside an `async` function — the `loadPinnedMessages` function declaration is missing its `const ... = async () => {` wrapper)
+---
 
-2. **Add `next-themes` ThemeProvider** to `App.tsx` — the package is already installed but no provider wraps the app, so `useTheme()` in `sonner.tsx` returns a default
+## Phase 1: Generate New Logo
 
-3. **Create a theme toggle component** — a clean Sun/Moon icon button that calls `setTheme()` from `next-themes`
+Use the AI image generation skill to create a bold "DH" monogram:
+- Prompt: Clean, bold typographic "DH" monogram, geometric and minimal, emerald green on transparent/dark background, suitable for app icon
+- Generate at 512×512 for PWA icon and in-app use
+- Save to `src/assets/dh-monogram.png` (overwrite), `public/pwa-icon-512.png`, `public/favicon.png`
 
-4. **Add the toggle to the Profile page** — alongside the existing sound toggle, add a "Dark Mode" / "Light Mode" switch row
+## Phase 2: Color Palette — Green + Charcoal
 
-5. **Add the toggle to AppLayout header** — a small icon button in the top-right area for quick access from any page
+Update all three theme blocks (`:root`, `.dark`, `.light`) in `src/index.css`:
 
-6. **Update `index.html`** — add `class="dark"` to `<html>` so `next-themes` initializes correctly with dark as default (matching current design)
+| Token | Old (blue) | New (green) |
+|-------|-----------|-------------|
+| `--primary` | `217 91% 60%` | `152 72% 46%` |
+| `--primary-glow` | `217 100% 72%` | `152 80% 56%` |
+| `--ring` | `217 91% 60%` | `152 72% 46%` |
+| `--background` | `225 28% 4%` | `160 10% 5%` |
+| `--card` | `225 20% 8%` | `160 8% 8%` |
+| `--secondary` | `225 16% 12%` | `160 8% 12%` |
+| `--muted` | `225 16% 14%` | `160 8% 14%` |
+| `--border` | `225 14% 13%` | `160 8% 13%` |
+| `--input` | `225 16% 11%` | `160 8% 11%` |
+| `--surface*` | `225 xx% xx%` | `160 xx% xx%` |
 
-7. **Verify light mode CSS** — the `.light` class already exists in `index.css` with a full set of light-mode variables. Just need to confirm the `dark` class maps to `:root` values (or duplicate them under `.dark`).
+Update all gradient tokens, shadow-glow references, and sidebar tokens to use green hues (152°) instead of blue (217°). Update `.light` mode equivalents similarly.
 
-## Files to change
+Update `index.html` and `vite.config.ts` theme_color to new charcoal hex value (~`#0D100E`).
 
-- `src/pages/ChatPage.tsx` — fix the broken `async` function wrapper (~line 370)
-- `src/App.tsx` — wrap with `ThemeProvider` from `next-themes` (defaultTheme="dark", attribute="class")
-- `src/components/ThemeToggle.tsx` — new component with Sun/Moon icon
-- `src/components/AppLayout.tsx` — add ThemeToggle to header
-- `src/pages/ProfilePage.tsx` — add theme toggle row in settings section
-- `index.html` — add `class="dark"` to `<html>`
-- `src/index.css` — add `.dark` class mirroring current `:root` values so both dark and light themes work with the class-based system
+## Phase 3: Rename All Text References
 
-## Technical approach
+Across ~12 files, replace:
 
-- `next-themes` with `attribute="class"` and `defaultTheme="dark"` handles persistence (localStorage) and SSR automatically
-- Tailwind's `darkMode: ["class"]` is already configured
-- The existing `.light` CSS block has all needed light-mode variables
-- Add a `.dark` block that duplicates `:root` dark values so the toggle works bidirectionally
+| Old | New |
+|-----|-----|
+| `DH Bracket Club` | `DH` |
+| `DH Club` | `DH` |
+| `<span>DH</span><span> Club</span>` | `DH` (single element) |
+| `Private Social Hub` | `Compete With Your Crew` |
+| `DH Club Member` | `DH Member` |
+| `Manage your DH Club account` | `Manage your DH account` |
+
+**Files to update:**
+- `src/pages/LandingPage.tsx` — header, hero brand text
+- `src/pages/AuthPage.tsx` — logo alt text, title
+- `src/pages/ResetPasswordPage.tsx` — logo alt, title
+- `src/pages/DashboardPage.tsx` — hero logo, welcome text
+- `src/pages/ProfilePage.tsx` — subtitle, footer branding
+- `src/pages/NotFound.tsx` — alt text
+- `src/components/AppLayout.tsx` — sidebar branding (line 116-120)
+- `index.html` — `<title>`, OG/Twitter meta tags
+- `vite.config.ts` — PWA manifest `name`, `short_name`, `description`
+- `supabase/functions/suggest-items/index.ts` — system prompt reference
+
+## Phase 4: Landing Page Glow Updates
+
+Update inline `style` gradients in `LandingPage.tsx` and `AuthPage.tsx` from blue (`217`) to green (`152`) hue values to match the new palette.
+
+## Technical Notes
+- All CSS variable changes cascade automatically through `hsl(var(--primary))` usage in Tailwind
+- No database, backend, or structural changes needed
+- The import name `dhMonogram` stays the same (just the file content changes)
+- Logo generation uses `google/gemini-3.1-flash-image-preview` via the AI gateway skill
 
