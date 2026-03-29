@@ -37,6 +37,7 @@ interface RankingItem {
 export default function RankingDetailPage() {
   const { rankingId } = useParams<{ rankingId: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [ranking, setRanking] = useState<any>(null);
   const [items, setItems] = useState<RankingItem[]>([]);
   const [myOrder, setMyOrder] = useState<RankingItem[]>([]);
@@ -46,6 +47,11 @@ export default function RankingDetailPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editTopic, setEditTopic] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const itemIds = items.map(i => i.id);
   const { enrichments, loading: enrichmentsLoading, fetchEnrichments } = useItemEnrichments(itemIds);
