@@ -1,0 +1,204 @@
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
+import {
+  Trophy, BarChart3, MessageCircle, Bookmark, CalendarDays, FileText,
+  Zap, Users, Pin, ChevronRight, Plus
+} from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { useActivityFeedUpdates } from '@/hooks/useRealtimeSubscription';
+
+const FEED_ICONS: Record<string, { icon: any; color: string }> = {
+  ranking_created: { icon: BarChart3, color: 'accent' },
+  ranking_submitted: { icon: BarChart3, color: 'accent' },
+  poll_created: { icon: MessageCircle, color: 'warning' },
+  poll_voted: { icon: MessageCircle, color: 'warning' },
+  draft_created: { icon: Bookmark, color: 'gold' },
+  draft_completed: { icon: Bookmark, color: 'gold' },
+  bracket_submitted: { icon: Trophy, color: 'primary' },
+  event_created: { icon: CalendarDays, color: 'success' },
+  post_created: { icon: FileText, color: 'primary' },
+};
+
+const FEED_LABELS: Record<string, string> = {
+  ranking_created: 'created a ranking',
+  ranking_submitted: 'submitted a ranking',
+  poll_created: 'created a poll',
+  poll_voted: 'voted on a poll',
+  draft_created: 'created a draft',
+  draft_completed: 'completed a draft',
+  bracket_submitted: 'submitted a bracket',
+  event_created: 'created an event',
+  post_created: 'started a discussion',
+};
+
+type Post = {
+  id: string;
+  title: string;
+  content: string;
+  is_pinned: boolean;
+  comments_count: number;
+  created_at: string;
+  profiles?: { display_name: string };
+};
+
+export default function FeedPage() {
+  const { user } = useAuth();
+  const [activity, setActivity] = useState<any[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = async () => {
+    const [{ data: actData }, { data: postData }] = await Promise.all([
+      supabase.from('activity_feed').select('*, profiles:actor_user_id(display_name)').order('created_at', { ascending: false }).limit(30),
+      supabase.from('posts').select('*, profiles:user_id(display_name)').order('is_pinned', { ascending: false }).order('created_at', { ascending: false }).limit(20),
+    ]);
+
+    if (actData) setActivity(actData);
+    if (postData) {
+      const postIds = postData.map(p => p.id);
+      let countMap = new Map<string, number>();
+      if (postIds.length > 0) {
+        const { data: comments } = await supabase.from('post_comments').select('post_id').in('post_id', postIds);
+        if (comments) comments.forEach(c => countMap.set(c.post_id, (countMap.get(c.post_id) || 0) + 1));
+      }
+      setPosts(postData.map(p => ({ ...p, comments_count: countMap.get(p.id) || 0 })));
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchData(); }, []);
+
+  useActivityFeedUpdates(() => { fetchData(); });
+
+  const getLink = (item: any) => {
+    if (!item.target_id) return null;
+    const type = item.target_type;
+    if (type === 'ranking') return `/rankings/${item.target_id}`;
+    if (type === 'poll') return `/polls/${item.target_id}`;
+    if (type === 'draft') return `/drafts/${item.target_id}`;
+    if (type === 'bracket') return `/brackets`;
+    if (type === 'event') return `/events/${item.target_id}`;
+    if (type === 'post') return `/posts/${item.target_id}`;
+    return null;
+  };
+
+  // Pinned posts
+  const pinnedPosts = posts.filter(p => p.is_pinned);
+
+  return (
+    <div className="pb-6">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-xl font-extrabold tracking-tight">Feed</h1>
+          <Link to="/posts/create">
+            <Button size="sm" className="h-8 gap-1.5 text-xs font-bold rounded-xl">
+              <Plus className="w-3.5 h-3.5" /> Post
+            </Button>
+          </Link>
+        </div>
+
+        {/* Pinned posts */}
+        {pinnedPosts.length > 0 && (
+          <div className="mb-6">
+            {pinnedPosts.map(post => (
+              <Link key={post.id} to={`/posts/${post.id}`} className="block mb-2">
+                <div className="glass-card p-3.5 border-premium-warm/10 transition-all hover:border-premium-warm/20">
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-1 text-[9px] font-bold mb-1" style={{ color: 'hsl(var(--premium-warm))' }}>
+                      <Pin className="w-2.5 h-2.5" /> Pinned
+                    </div>
+                    <h3 className="font-bold text-[13px] tracking-tight">{post.title}</h3>
+                    <p className="text-[11px] text-muted-foreground/40 mt-0.5 line-clamp-1">{post.content}</p>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {/* Recent discussions */}
+        {posts.filter(p => !p.is_pinned).length > 0 && (
+          <div className="mb-6">
+            <h2 className="section-header mb-3">
+              <FileText className="w-3.5 h-3.5 inline-block mr-1.5 text-primary/60" />
+              Discussions
+            </h2>
+            <div className="space-y-2">
+              {posts.filter(p => !p.is_pinned).slice(0, 5).map((post, i) => (
+                <motion.div key={post.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
+                  <Link to={`/posts/${post.id}`} className="block group">
+                    <div className="glass-card p-3.5 transition-all duration-200 group-hover:border-primary/15">
+                      <div className="relative z-10">
+                        <h3 className="font-bold text-[13px] tracking-tight mb-0.5">{post.title}</h3>
+                        <p className="text-[11px] text-foreground/40 line-clamp-1 mb-1.5">{post.content}</p>
+                        <div className="flex items-center justify-between text-[10px] text-muted-foreground/30">
+                          <span>{post.profiles?.display_name} · {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}</span>
+                          <span className="flex items-center gap-1"><MessageCircle className="w-2.5 h-2.5" /> {post.comments_count}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Activity stream */}
+        <div>
+          <h2 className="section-header mb-3">
+            <Zap className="w-3.5 h-3.5 inline-block mr-1.5 text-primary/60" />
+            Activity
+          </h2>
+          <div className="space-y-1">
+            {activity.map((item, i) => {
+              const iconConfig = FEED_ICONS[item.event_type] || { icon: Zap, color: 'primary' };
+              const Icon = iconConfig.icon;
+              const label = FEED_LABELS[item.event_type] || item.event_type;
+              const link = getLink(item);
+              const meta = typeof item.metadata === 'object' ? item.metadata : {};
+              const title = meta?.title || meta?.topic || meta?.question || '';
+
+              const content = (
+                <div className="flex items-center gap-2.5 px-2 py-2.5 -mx-2 rounded-lg hover:bg-muted/15 transition-colors group">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{
+                    background: `linear-gradient(135deg, hsl(var(--${iconConfig.color}) / 0.15), hsl(var(--${iconConfig.color}) / 0.04))`,
+                  }}>
+                    <Icon className="w-3.5 h-3.5" style={{ color: `hsl(var(--${iconConfig.color}))` }} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[12px] leading-tight">
+                      <span className="font-bold text-foreground/80">{item.profiles?.display_name}</span>{' '}
+                      <span className="text-foreground/50">{label}</span>
+                      {title && <span className="text-foreground/70 font-semibold"> — {title}</span>}
+                    </p>
+                    <p className="text-[9px] text-muted-foreground/30 mt-0.5">{formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}</p>
+                  </div>
+                  {link && <ChevronRight className="w-3 h-3 text-muted-foreground/10 group-hover:text-muted-foreground/30 transition-colors flex-shrink-0" />}
+                </div>
+              );
+
+              return (
+                <motion.div key={item.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}>
+                  {link ? <Link to={link} className="block">{content}</Link> : content}
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {activity.length === 0 && !loading && (
+            <div className="text-center py-12">
+              <Zap className="w-8 h-8 mx-auto text-muted-foreground/15 mb-2" />
+              <p className="text-xs text-muted-foreground/40">No activity yet</p>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
