@@ -3,6 +3,7 @@ import { useLocation, Link } from 'react-router-dom';
 import { LayoutDashboard, MessageSquareText, CalendarDays, Swords, Newspaper, User, Trophy, BarChart3, MessageCircle, Bookmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import dhMonogram from '@/assets/dh-monogram.png';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { supabase } from '@/integrations/supabase/client';
