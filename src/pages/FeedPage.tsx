@@ -189,6 +189,7 @@ export default function FeedPage() {
         )}
 
         {/* Activity stream */}
+        {!loading && (
         <div>
           <h2 className="section-header mb-3">
             <Zap className="w-3.5 h-3.5 inline-block mr-1.5 text-primary/60" />
