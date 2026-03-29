@@ -274,6 +274,177 @@ async function enrichFromiTunes(
   }
 }
 
+// ─── Deezer API (Music) — free, no API key ───
+async function enrichFromDeezer(
+  name: string,
+  enrichment: EnrichmentResult
+): Promise<EnrichmentResult> {
+  try {
+    const query = encodeURIComponent(enrichment.normalized_name || name);
+    const res = await fetch(`https://api.deezer.com/search/album?q=${query}&limit=3`);
+    if (!res.ok) return enrichment;
+    const data = await res.json();
+    const album = data.data?.[0];
+    if (!album) return enrichment;
+
+    if (album.cover_xl || album.cover_big) {
+      enrichment.image_url = album.cover_xl || album.cover_big;
+      enrichment.thumbnail_url = album.cover_medium || album.cover_small || enrichment.image_url;
+      enrichment.source_provider = "deezer";
+      enrichment.confidence = Math.max(enrichment.confidence, 0.85);
+      enrichment.status = "matched";
+    }
+    enrichment.matched_name = album.title || enrichment.matched_name;
+    enrichment.metadata = {
+      ...enrichment.metadata,
+      artist: album.artist?.name || enrichment.metadata.artist,
+    };
+    return enrichment;
+  } catch (err) {
+    console.error("Deezer enrichment error:", err);
+    return enrichment;
+  }
+}
+
+// ─── MusicBrainz + Cover Art Archive (Music) — free, no API key ───
+async function enrichFromMusicBrainz(
+  name: string,
+  enrichment: EnrichmentResult
+): Promise<EnrichmentResult> {
+  try {
+    const query = encodeURIComponent(enrichment.normalized_name || name);
+    const res = await fetch(
+      `https://musicbrainz.org/ws/2/release-group/?query=${query}&limit=1&fmt=json`,
+      { headers: { "User-Agent": "LovableEnrichment/1.0 (contact@lovable.dev)" } }
+    );
+    if (!res.ok) return enrichment;
+    const data = await res.json();
+    const rg = data["release-groups"]?.[0];
+    if (!rg) return enrichment;
+
+    const caaRes = await fetch(`https://coverartarchive.org/release-group/${rg.id}`, {
+      redirect: "follow",
+    });
+    if (caaRes.ok) {
+      const caaData = await caaRes.json();
+      const front = caaData.images?.find((img: { front: boolean }) => img.front);
+      if (front) {
+        enrichment.image_url = front.image;
+        enrichment.thumbnail_url = front.thumbnails?.["500"] || front.thumbnails?.large || front.image;
+        enrichment.source_provider = "musicbrainz";
+        enrichment.confidence = Math.max(enrichment.confidence, 0.85);
+        enrichment.status = "matched";
+      }
+    }
+
+    enrichment.matched_name = rg.title || enrichment.matched_name;
+    enrichment.metadata = {
+      ...enrichment.metadata,
+      artist: rg["artist-credit"]?.[0]?.name || enrichment.metadata.artist,
+      year: rg["first-release-date"]?.substring(0, 4) || enrichment.metadata.year,
+      type: rg["primary-type"] || enrichment.metadata.type,
+    };
+    return enrichment;
+  } catch (err) {
+    console.error("MusicBrainz enrichment error:", err);
+    return enrichment;
+  }
+}
+
+// ─── TheMealDB (Food) — free, no API key (test key "1") ───
+async function enrichFromMealDB(
+  name: string,
+  enrichment: EnrichmentResult
+): Promise<EnrichmentResult> {
+  try {
+    const query = encodeURIComponent(enrichment.normalized_name || name);
+    const res = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${query}`);
+    if (!res.ok) return enrichment;
+    const data = await res.json();
+    const meal = data.meals?.[0];
+    if (!meal) return enrichment;
+
+    if (meal.strMealThumb) {
+      enrichment.image_url = meal.strMealThumb;
+      enrichment.thumbnail_url = `${meal.strMealThumb}/preview`;
+      enrichment.source_provider = "themealdb";
+      enrichment.confidence = Math.max(enrichment.confidence, 0.8);
+      enrichment.status = "matched";
+    }
+    enrichment.matched_name = meal.strMeal || enrichment.matched_name;
+    enrichment.metadata = {
+      ...enrichment.metadata,
+      cuisine: meal.strArea || enrichment.metadata.cuisine,
+      category: meal.strCategory || enrichment.metadata.category,
+    };
+    return enrichment;
+  } catch (err) {
+    console.error("TheMealDB enrichment error:", err);
+    return enrichment;
+  }
+}
+
+// ─── TheSportsDB (Sports) — free, no API key (test key "1") ───
+async function enrichFromSportsDB(
+  name: string,
+  enrichment: EnrichmentResult
+): Promise<EnrichmentResult> {
+  try {
+    const query = encodeURIComponent(enrichment.normalized_name || name);
+    const teamRes = await fetch(`https://www.thesportsdb.com/api/v1/json/1/searchteams.php?t=${query}`);
+    if (teamRes.ok) {
+      const teamData = await teamRes.json();
+      const team = teamData.teams?.[0];
+      if (team) {
+        const badge = team.strBadge || team.strLogo;
+        if (badge) {
+          enrichment.image_url = badge;
+          enrichment.thumbnail_url = badge + "/preview";
+          enrichment.source_provider = "thesportsdb";
+          enrichment.confidence = Math.max(enrichment.confidence, 0.85);
+          enrichment.status = "matched";
+        }
+        enrichment.matched_name = team.strTeam || enrichment.matched_name;
+        enrichment.metadata = {
+          ...enrichment.metadata,
+          sport: team.strSport,
+          league: team.strLeague,
+          stadium: team.strStadium,
+          country: team.strCountry,
+        };
+        return enrichment;
+      }
+    }
+    const playerRes = await fetch(`https://www.thesportsdb.com/api/v1/json/1/searchplayers.php?p=${query}`);
+    if (playerRes.ok) {
+      const playerData = await playerRes.json();
+      const player = playerData.player?.[0];
+      if (player) {
+        const thumb = player.strThumb || player.strCutout;
+        if (thumb) {
+          enrichment.image_url = thumb;
+          enrichment.thumbnail_url = thumb + "/preview";
+          enrichment.source_provider = "thesportsdb";
+          enrichment.confidence = Math.max(enrichment.confidence, 0.85);
+          enrichment.status = "matched";
+        }
+        enrichment.matched_name = player.strPlayer || enrichment.matched_name;
+        enrichment.metadata = {
+          ...enrichment.metadata,
+          sport: player.strSport,
+          team: player.strTeam,
+          position: player.strPosition,
+          nationality: player.strNationality,
+        };
+      }
+    }
+    return enrichment;
+  } catch (err) {
+    console.error("TheSportsDB enrichment error:", err);
+    return enrichment;
+  }
+}
+
 // ─── Wikipedia / Wikimedia (universal fallback for images) ───
 async function enrichFromWikipedia(
   name: string,
@@ -327,8 +498,18 @@ async function enrichItem(
       break;
     case "movie":
     case "tv":
+      result = await enrichFromiTunes(name, result, category);
+      break;
     case "music":
       result = await enrichFromiTunes(name, result, category);
+      if (!result.image_url) result = await enrichFromDeezer(name, result);
+      if (!result.image_url) result = await enrichFromMusicBrainz(name, result);
+      break;
+    case "food":
+      result = await enrichFromMealDB(name, result);
+      break;
+    case "sport":
+      result = await enrichFromSportsDB(name, result);
       break;
     default:
       break;
