@@ -1,15 +1,32 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { BarChart3, ArrowLeft, Send, Users, Trophy, ChevronDown, ChevronUp, RefreshCw, Sparkles } from 'lucide-react';
+import { BarChart3, ArrowLeft, Send, Users, Trophy, ChevronDown, ChevronUp, RefreshCw, Sparkles, MoreVertical, Pencil, Trash2, X, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRankingUpdates } from '@/hooks/useRealtimeSubscription';
 import { useItemEnrichments, useEnrichRanking } from '@/hooks/useItemEnrichments';
 import EnrichedItemCard, { EnrichedItemSkeleton } from '@/components/EnrichedItemCard';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface RankingItem {
   id: string;
@@ -20,6 +37,7 @@ interface RankingItem {
 export default function RankingDetailPage() {
   const { rankingId } = useParams<{ rankingId: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [ranking, setRanking] = useState<any>(null);
   const [items, setItems] = useState<RankingItem[]>([]);
   const [myOrder, setMyOrder] = useState<RankingItem[]>([]);
@@ -29,6 +47,11 @@ export default function RankingDetailPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editTopic, setEditTopic] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const itemIds = items.map(i => i.id);
   const { enrichments, loading: enrichmentsLoading, fetchEnrichments } = useItemEnrichments(itemIds);
@@ -44,7 +67,10 @@ export default function RankingDetailPage() {
       supabase.from('ranking_items').select('*').eq('ranking_id', rankingId).order('position'),
     ]);
 
-    if (rankData) setRanking(rankData);
+    if (rankData) {
+      setRanking(rankData);
+      setEditTopic(rankData.topic);
+    }
     if (itemData) {
       setItems(itemData);
       setMyOrder([...itemData]);
@@ -155,6 +181,64 @@ export default function RankingDetailPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!rankingId || !isCreator) return;
+    setDeleting(true);
+    try {
+      const subIds = submissions.map(s => s.id);
+      if (subIds.length > 0) {
+        await supabase.from('ranking_submission_entries').delete().in('submission_id', subIds);
+        await supabase.from('ranking_submissions').delete().eq('ranking_id', rankingId);
+      }
+      await supabase.from('item_enrichments').delete().in('item_id', items.map(i => i.id));
+      await supabase.from('ranking_items').delete().eq('ranking_id', rankingId);
+      const { error } = await supabase.from('rankings').delete().eq('id', rankingId);
+      if (error) throw error;
+      if (ranking?.competition_id) {
+        await supabase.from('competitions').delete().eq('id', ranking.competition_id);
+      }
+      toast.success('Ranking deleted');
+      navigate('/rankings');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete');
+    } finally {
+      setDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!rankingId || !editTopic.trim()) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase.from('rankings').update({ topic: editTopic.trim() }).eq('id', rankingId);
+      if (error) throw error;
+      if (ranking?.competition_id) {
+        await supabase.from('competitions').update({ title: editTopic.trim() }).eq('id', ranking.competition_id);
+      }
+      toast.success('Ranking updated');
+      setEditing(false);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleStatus = async () => {
+    if (!rankingId || !isCreator) return;
+    const newStatus = ranking.status === 'open' ? 'closed' : 'open';
+    try {
+      const { error } = await supabase.from('rankings').update({ status: newStatus }).eq('id', rankingId);
+      if (error) throw error;
+      toast.success(`Ranking ${newStatus === 'open' ? 'reopened' : 'closed'}`);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update status');
+    }
+  };
+
   if (loading) {
     return (
       <div className="loading-spinner">
@@ -179,9 +263,26 @@ export default function RankingDetailPage() {
 
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-[1.4rem] font-extrabold tracking-tight leading-tight">{ranking.topic}</h1>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            {editing ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={editTopic}
+                  onChange={(e) => setEditTopic(e.target.value)}
+                  className="form-input text-lg font-extrabold"
+                  autoFocus
+                />
+                <Button size="sm" onClick={handleSaveEdit} disabled={saving} className="shrink-0">
+                  {saving ? '…' : 'Save'}
+                </Button>
+                <button onClick={() => { setEditing(false); setEditTopic(ranking.topic); }} className="p-1.5 text-muted-foreground hover:text-foreground">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <h1 className="text-[1.4rem] font-extrabold tracking-tight leading-tight">{ranking.topic}</h1>
+            )}
             <p className="text-[11px] text-muted-foreground/60 font-medium mt-1">
               by {ranking.profiles?.display_name} • {items.length} items
               {ranking.category && (
@@ -192,7 +293,7 @@ export default function RankingDetailPage() {
               )}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             {isCreator && (
               <button
                 onClick={handleReEnrich}
@@ -206,6 +307,26 @@ export default function RankingDetailPage() {
             <span className={cn("status-pill", isOpen ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground')}>
               {isOpen ? 'Open' : 'Closed'}
             </span>
+            {isCreator && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-foreground transition-colors">
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setEditing(true)}>
+                    <Pencil className="w-3.5 h-3.5 mr-2" /> Edit Topic
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleToggleStatus}>
+                    <Clock className="w-3.5 h-3.5 mr-2" /> {isOpen ? 'Close Ranking' : 'Reopen Ranking'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowDeleteDialog(true)} className="text-destructive focus:text-destructive">
+                    <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete Ranking
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2 mt-3">
@@ -368,6 +489,24 @@ export default function RankingDetailPage() {
           )}
         </motion.div>
       )}
+
+      {/* Delete confirmation */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this ranking?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the ranking, all items, all submissions, and enrichment data. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

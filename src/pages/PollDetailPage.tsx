@@ -1,14 +1,31 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { MessageCircle, ArrowLeft, Users, Check, Clock, Wifi } from 'lucide-react';
+import { MessageCircle, ArrowLeft, Users, Check, Clock, Wifi, MoreVertical, Pencil, Trash2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { formatDistanceToNow } from 'date-fns';
 import { usePollVoteUpdates } from '@/hooks/useRealtimeSubscription';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface PollOption {
   id: string;
@@ -19,6 +36,7 @@ interface PollOption {
 export default function PollDetailPage() {
   const { pollId } = useParams<{ pollId: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [poll, setPoll] = useState<any>(null);
   const [options, setOptions] = useState<PollOption[]>([]);
   const [votes, setVotes] = useState<any[]>([]);
@@ -26,6 +44,13 @@ export default function PollDetailPage() {
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState(false);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editQuestion, setEditQuestion] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const isCreator = poll?.created_by === user?.id;
 
   const fetchData = useCallback(async () => {
     if (!pollId || !user) return;
@@ -36,7 +61,10 @@ export default function PollDetailPage() {
       supabase.from('poll_votes').select('*, profiles:user_id(display_name)').eq('poll_id', pollId),
     ]);
 
-    if (pollData) setPoll(pollData);
+    if (pollData) {
+      setPoll(pollData);
+      setEditQuestion(pollData.question);
+    }
     if (optData) setOptions(optData);
     if (voteData) {
       setVotes(voteData);
@@ -83,6 +111,62 @@ export default function PollDetailPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!pollId || !isCreator) return;
+    setDeleting(true);
+    try {
+      // Delete votes, options, then poll
+      await supabase.from('poll_votes').delete().eq('poll_id', pollId);
+      await supabase.from('poll_options').delete().eq('poll_id', pollId);
+      const { error } = await supabase.from('polls').delete().eq('id', pollId);
+      if (error) throw error;
+      // Delete competition
+      if (poll?.competition_id) {
+        await supabase.from('competitions').delete().eq('id', poll.competition_id);
+      }
+      toast.success('Poll deleted');
+      navigate('/polls');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete');
+    } finally {
+      setDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!pollId || !editQuestion.trim()) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase.from('polls').update({ question: editQuestion.trim() }).eq('id', pollId);
+      if (error) throw error;
+      // Update competition title too
+      if (poll?.competition_id) {
+        await supabase.from('competitions').update({ title: editQuestion.trim() }).eq('id', poll.competition_id);
+      }
+      toast.success('Poll updated');
+      setEditing(false);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleStatus = async () => {
+    if (!pollId || !isCreator) return;
+    const newStatus = poll.status === 'open' ? 'closed' : 'open';
+    try {
+      const { error } = await supabase.from('polls').update({ status: newStatus }).eq('id', pollId);
+      if (error) throw error;
+      toast.success(`Poll ${newStatus === 'open' ? 'reopened' : 'closed'}`);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update status');
+    }
+  };
+
   if (loading) {
     return (
       <div className="loading-spinner">
@@ -116,15 +200,54 @@ export default function PollDetailPage() {
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="text-[1.4rem] font-extrabold tracking-tight leading-tight">{poll.question}</h1>
+          <div className="min-w-0 flex-1">
+            {editing ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={editQuestion}
+                  onChange={(e) => setEditQuestion(e.target.value)}
+                  className="form-input text-lg font-extrabold"
+                  autoFocus
+                />
+                <Button size="sm" onClick={handleSaveEdit} disabled={saving} className="shrink-0">
+                  {saving ? '…' : 'Save'}
+                </Button>
+                <button onClick={() => { setEditing(false); setEditQuestion(poll.question); }} className="p-1.5 text-muted-foreground hover:text-foreground">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <h1 className="text-[1.4rem] font-extrabold tracking-tight leading-tight">{poll.question}</h1>
+            )}
             <p className="text-[11px] text-muted-foreground/60 font-medium mt-1">
               by {poll.profiles?.display_name} • {formatDistanceToNow(new Date(poll.created_at), { addSuffix: true })}
             </p>
           </div>
-          <span className={cn("status-pill flex-shrink-0", isOpen ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground')}>
-            {isOpen ? 'Open' : 'Closed'}
-          </span>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <span className={cn("status-pill", isOpen ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground')}>
+              {isOpen ? 'Open' : 'Closed'}
+            </span>
+            {isCreator && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-foreground transition-colors">
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setEditing(true)}>
+                    <Pencil className="w-3.5 h-3.5 mr-2" /> Edit Question
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleToggleStatus}>
+                    <Clock className="w-3.5 h-3.5 mr-2" /> {isOpen ? 'Close Poll' : 'Reopen Poll'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowDeleteDialog(true)} className="text-destructive focus:text-destructive">
+                    <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete Poll
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2 mt-3">
           <div className="stat-card py-2 flex-1">
@@ -261,6 +384,24 @@ export default function PollDetailPage() {
           </div>
         )}
       </motion.div>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this poll?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the poll, all options, and all votes. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

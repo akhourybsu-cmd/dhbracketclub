@@ -1,16 +1,32 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bookmark, ArrowLeft, Users, Play, Send, Trophy, RefreshCw, Sparkles } from 'lucide-react';
+import { Bookmark, ArrowLeft, Users, Play, Send, Trophy, RefreshCw, Sparkles, MoreVertical, Pencil, Trash2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDraftUpdates } from '@/hooks/useRealtimeSubscription';
 import { useItemEnrichments, useEnrichDraftPicks } from '@/hooks/useItemEnrichments';
 import EnrichedItemCard, { EnrichedItemSkeleton } from '@/components/EnrichedItemCard';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface Participant {
   id: string;
@@ -31,6 +47,7 @@ interface Pick {
 export default function DraftDetailPage() {
   const { draftId } = useParams<{ draftId: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [draft, setDraft] = useState<any>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [picks, setPicks] = useState<Pick[]>([]);
@@ -39,6 +56,11 @@ export default function DraftDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [starting, setStarting] = useState(false);
   const [enrichingPickIds, setEnrichingPickIds] = useState<Set<string>>(new Set());
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editTopic, setEditTopic] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const pickIds = picks.map(p => p.id);
   const { enrichments, loading: enrichmentsLoading, fetchEnrichments } = useItemEnrichments(pickIds, 'draft_pick');
@@ -53,7 +75,10 @@ export default function DraftDetailPage() {
       supabase.from('draft_picks').select('*, profiles:user_id(display_name)').eq('draft_id', draftId).order('pick_number'),
     ]);
 
-    if (draftData) setDraft(draftData);
+    if (draftData) {
+      setDraft(draftData);
+      setEditTopic(draftData.topic);
+    }
     if (partData) setParticipants(partData);
     if (pickData) setPicks(pickData);
     setLoading(false);
@@ -188,6 +213,50 @@ export default function DraftDetailPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!draftId || !isCreator) return;
+    setDeleting(true);
+    try {
+      const pIds = picks.map(p => p.id);
+      if (pIds.length > 0) {
+        await supabase.from('item_enrichments').delete().in('item_id', pIds);
+      }
+      await supabase.from('draft_picks').delete().eq('draft_id', draftId);
+      await supabase.from('draft_participants').delete().eq('draft_id', draftId);
+      const { error } = await supabase.from('drafts').delete().eq('id', draftId);
+      if (error) throw error;
+      if (draft?.competition_id) {
+        await supabase.from('competitions').delete().eq('id', draft.competition_id);
+      }
+      toast.success('Draft deleted');
+      navigate('/drafts');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete');
+    } finally {
+      setDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!draftId || !editTopic.trim()) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase.from('drafts').update({ topic: editTopic.trim() }).eq('id', draftId);
+      if (error) throw error;
+      if (draft?.competition_id) {
+        await supabase.from('competitions').update({ title: editTopic.trim() }).eq('id', draft.competition_id);
+      }
+      toast.success('Draft updated');
+      setEditing(false);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="loading-spinner">
@@ -218,8 +287,25 @@ export default function DraftDetailPage() {
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-[1.4rem] font-extrabold tracking-tight leading-tight">{draft.topic}</h1>
+          <div className="min-w-0 flex-1">
+            {editing ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={editTopic}
+                  onChange={(e) => setEditTopic(e.target.value)}
+                  className="form-input text-lg font-extrabold"
+                  autoFocus
+                />
+                <Button size="sm" onClick={handleSaveEdit} disabled={saving} className="shrink-0">
+                  {saving ? '…' : 'Save'}
+                </Button>
+                <button onClick={() => { setEditing(false); setEditTopic(draft.topic); }} className="p-1.5 text-muted-foreground hover:text-foreground">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <h1 className="text-[1.4rem] font-extrabold tracking-tight leading-tight">{draft.topic}</h1>
+            )}
             <p className="text-[11px] text-muted-foreground/60 font-medium mt-1">
               by {draft.profiles?.display_name} • {draft.num_rounds} rounds
               {draft.category && (
@@ -230,7 +316,7 @@ export default function DraftDetailPage() {
               )}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             {isCreator && picks.length > 0 && (
               <button
                 onClick={handleReEnrich}
@@ -249,6 +335,23 @@ export default function DraftDetailPage() {
             )}>
               {isSetup ? 'Setup' : isInProgress && !isDraftComplete ? 'Live' : 'Complete'}
             </span>
+            {isCreator && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-foreground transition-colors">
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setEditing(true)}>
+                    <Pencil className="w-3.5 h-3.5 mr-2" /> Edit Topic
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowDeleteDialog(true)} className="text-destructive focus:text-destructive">
+                    <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete Draft
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
 
@@ -482,6 +585,24 @@ export default function DraftDetailPage() {
           </div>
         </motion.div>
       )}
+
+      {/* Delete confirmation */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this draft?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the draft, all picks, participants, and enrichment data. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
