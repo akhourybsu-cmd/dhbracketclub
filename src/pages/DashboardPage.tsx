@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
   Plus, Users, ArrowRight, Trophy, BarChart3, Shield, Download, X,
-  MessageCircle, Bookmark, Zap
+  MessageCircle, Bookmark, Zap, CalendarDays, Clock, MapPin, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES } from '@/lib/bracketUtils';
