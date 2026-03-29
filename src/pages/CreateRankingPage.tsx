@@ -103,6 +103,8 @@ export default function CreateRankingPage() {
       });
 
       toast.success('Ranking created!');
+      // Trigger enrichment in background (fire-and-forget)
+      enrichRanking(ranking.id);
       navigate(`/rankings/${ranking.id}`);
     } catch (err: any) {
       toast.error(err.message || 'Failed to create ranking');
