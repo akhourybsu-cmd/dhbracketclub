@@ -352,7 +352,22 @@ export default function ChatPage() {
     await supabase.from('messages').delete().eq('id', msgId);
   };
 
-  const showPinnedMessages = async () => {
+  const startEditing = (msg: Message) => {
+    setEditingMessageId(msg.id);
+    setEditContent(msg.content);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingMessageId || !editContent.trim()) return;
+    play('tap');
+    await supabase.from('messages').update({ content: editContent.trim(), edited_at: new Date().toISOString() }).eq('id', editingMessageId);
+    setMessages(prev => prev.map(m => m.id === editingMessageId ? { ...m, content: editContent.trim(), edited_at: new Date().toISOString() } : m));
+    setEditingMessageId(null);
+    setEditContent('');
+    toast.success('Message edited');
+  };
+
+
     if (!selectedChannel) return;
     setShowPinned(true);
     setThreadParent(null);
