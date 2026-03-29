@@ -359,7 +359,7 @@ Deno.serve(async (req) => {
     const expiredEndpoints: string[] = [];
     let sent = 0;
 
-    for (const sub of subscriptions) {
+    for (const sub of filteredSubscriptions) {
       try {
         const result = await sendWebPush(
           sub as PushSubscription,
