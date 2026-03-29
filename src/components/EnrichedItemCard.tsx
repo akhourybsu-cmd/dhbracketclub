@@ -72,8 +72,11 @@ export default function EnrichedItemCard({
   return (
     <motion.div
       layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "flex items-center gap-3 px-3 py-2.5 group",
+        "flex items-center gap-3 px-3 py-2.5 group card-tilt rounded-xl",
+        "transition-colors duration-150",
         onClick && "cursor-pointer active:bg-primary/5",
         className
       )}
