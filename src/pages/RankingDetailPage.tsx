@@ -263,9 +263,26 @@ export default function RankingDetailPage() {
 
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-[1.4rem] font-extrabold tracking-tight leading-tight">{ranking.topic}</h1>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            {editing ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={editTopic}
+                  onChange={(e) => setEditTopic(e.target.value)}
+                  className="form-input text-lg font-extrabold"
+                  autoFocus
+                />
+                <Button size="sm" onClick={handleSaveEdit} disabled={saving} className="shrink-0">
+                  {saving ? '…' : 'Save'}
+                </Button>
+                <button onClick={() => { setEditing(false); setEditTopic(ranking.topic); }} className="p-1.5 text-muted-foreground hover:text-foreground">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <h1 className="text-[1.4rem] font-extrabold tracking-tight leading-tight">{ranking.topic}</h1>
+            )}
             <p className="text-[11px] text-muted-foreground/60 font-medium mt-1">
               by {ranking.profiles?.display_name} • {items.length} items
               {ranking.category && (
@@ -276,7 +293,7 @@ export default function RankingDetailPage() {
               )}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             {isCreator && (
               <button
                 onClick={handleReEnrich}
@@ -290,6 +307,26 @@ export default function RankingDetailPage() {
             <span className={cn("status-pill", isOpen ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground')}>
               {isOpen ? 'Open' : 'Closed'}
             </span>
+            {isCreator && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-foreground transition-colors">
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setEditing(true)}>
+                    <Pencil className="w-3.5 h-3.5 mr-2" /> Edit Topic
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleToggleStatus}>
+                    <Clock className="w-3.5 h-3.5 mr-2" /> {isOpen ? 'Close Ranking' : 'Reopen Ranking'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowDeleteDialog(true)} className="text-destructive focus:text-destructive">
+                    <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete Ranking
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2 mt-3">
@@ -452,6 +489,24 @@ export default function RankingDetailPage() {
           )}
         </motion.div>
       )}
+
+      {/* Delete confirmation */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this ranking?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the ranking, all items, all submissions, and enrichment data. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
