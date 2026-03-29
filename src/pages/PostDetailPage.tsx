@@ -1,0 +1,150 @@
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
+import { ArrowLeft, Send, Trash2, Pin } from 'lucide-react';
+import { format, formatDistanceToNow } from 'date-fns';
+import { useSoundEffect } from '@/hooks/useSoundEffect';
+import { toast } from 'sonner';
+
+type Comment = {
+  id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  parent_comment_id: string | null;
+  profiles?: { display_name: string };
+};
+
+export default function PostDetailPage() {
+  const { postId } = useParams<{ postId: string }>();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { play } = useSoundEffect();
+  const [post, setPost] = useState<any>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!postId) return;
+    const fetch = async () => {
+      const [{ data: p }, { data: c }] = await Promise.all([
+        supabase.from('posts').select('*, profiles:user_id(display_name)').eq('id', postId).single(),
+        supabase.from('post_comments').select('*, profiles:user_id(display_name)').eq('post_id', postId).order('created_at'),
+      ]);
+      if (p) setPost(p);
+      if (c) setComments(c as Comment[]);
+      setLoading(false);
+    };
+    fetch();
+  }, [postId]);
+
+  const handleComment = async () => {
+    if (!newComment.trim() || !user || !postId) return;
+    play('tap');
+    const content = newComment.trim();
+    setNewComment('');
+    await supabase.from('post_comments').insert({ post_id: postId, user_id: user.id, content });
+    const { data } = await supabase.from('post_comments').select('*, profiles:user_id(display_name)').eq('post_id', postId).order('created_at');
+    if (data) setComments(data as Comment[]);
+  };
+
+  const handleDelete = async () => {
+    if (!postId) return;
+    await supabase.from('post_comments').delete().eq('post_id', postId);
+    await supabase.from('posts').delete().eq('id', postId);
+    toast.success('Post deleted');
+    navigate('/feed');
+  };
+
+  const togglePin = async () => {
+    if (!postId || !post) return;
+    play('tap');
+    await supabase.from('posts').update({ is_pinned: !post.is_pinned }).eq('id', postId);
+    setPost({ ...post, is_pinned: !post.is_pinned });
+  };
+
+  if (loading) return <div className="py-16 text-center text-muted-foreground/40 text-sm">Loading...</div>;
+  if (!post) return <div className="py-16 text-center text-muted-foreground/40 text-sm">Post not found</div>;
+
+  const isAuthor = user?.id === post.user_id;
+
+  return (
+    <div className="pb-6">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <button onClick={() => navigate('/feed')} className="flex items-center gap-1 text-xs text-muted-foreground/50 hover:text-foreground mb-4 transition-colors">
+          <ArrowLeft className="w-3.5 h-3.5" /> Feed
+        </button>
+
+        {post.is_pinned && (
+          <div className="flex items-center gap-1 text-[9px] font-bold mb-2" style={{ color: 'hsl(var(--premium-warm))' }}>
+            <Pin className="w-2.5 h-2.5" /> Pinned
+          </div>
+        )}
+
+        <h1 className="text-xl font-extrabold tracking-tight mb-2">{post.title}</h1>
+        <div className="flex items-center gap-2 text-[11px] text-muted-foreground/40 mb-4">
+          <span className="font-semibold text-foreground/60">{post.profiles?.display_name}</span>
+          <span>·</span>
+          <span>{formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}</span>
+        </div>
+
+        <div className="text-[13px] text-foreground/80 leading-relaxed whitespace-pre-wrap mb-6">{post.content}</div>
+
+        {isAuthor && (
+          <div className="flex gap-2 mb-6">
+            <Button variant="ghost" size="sm" onClick={togglePin} className="text-xs h-7 text-muted-foreground/50">
+              <Pin className="w-3 h-3 mr-1" /> {post.is_pinned ? 'Unpin' : 'Pin'}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleDelete} className="text-xs h-7 text-destructive/60 hover:text-destructive">
+              <Trash2 className="w-3 h-3 mr-1" /> Delete
+            </Button>
+          </div>
+        )}
+
+        {/* Comments */}
+        <div className="border-t border-border/10 pt-4">
+          <h3 className="text-[13px] font-bold mb-3">
+            Comments {comments.length > 0 && `(${comments.length})`}
+          </h3>
+          <div className="space-y-3 mb-4">
+            {comments.map(c => (
+              <div key={c.id} className="flex gap-2.5">
+                <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0 mt-0.5" style={{
+                  background: `linear-gradient(135deg, hsl(${c.user_id.charCodeAt(0) % 360} 60% 45%), hsl(${c.user_id.charCodeAt(1) % 360} 50% 35%))`,
+                }}>
+                  {(c.profiles?.display_name || '?')[0].toUpperCase()}
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-foreground/80">{c.profiles?.display_name}</span>
+                    <span className="text-[9px] text-muted-foreground/30">{formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}</span>
+                  </div>
+                  <p className="text-[12px] text-foreground/70 leading-relaxed">{c.content}</p>
+                </div>
+              </div>
+            ))}
+            {comments.length === 0 && <p className="text-xs text-muted-foreground/30">No comments yet</p>}
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              value={newComment}
+              onChange={e => setNewComment(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleComment()}
+              placeholder="Add a comment..."
+              className="flex-1 h-9 text-xs bg-muted/30 border-border/10"
+            />
+            <Button size="sm" onClick={handleComment} disabled={!newComment.trim()} className="h-9 w-9 p-0 rounded-xl">
+              <Send className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
