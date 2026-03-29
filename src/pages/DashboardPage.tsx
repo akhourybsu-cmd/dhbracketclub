@@ -12,7 +12,7 @@ import { getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES } from '@/lib/brack
 import { cn } from '@/lib/utils';
 import { usePwaInstall } from '@/hooks/usePwaInstall';
 import dhMonogram from '@/assets/dh-monogram.png';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format, isPast, isToday, isTomorrow, isThisWeek } from 'date-fns';
 import { useActivityFeedUpdates } from '@/hooks/useRealtimeSubscription';
 
 const MODULE_ICONS: Record<string, any> = {
@@ -63,6 +63,7 @@ export default function DashboardPage() {
   const [memberCounts, setMemberCounts] = useState<Map<string, number>>(new Map());
   const [dismissedInstall, setDismissedInstall] = useState(false);
   const [activity, setActivity] = useState<any[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -120,17 +121,19 @@ export default function DashboardPage() {
       }
 
       // Rankings, Polls, Drafts — fetch active ones
-      const [{ data: rankData }, { data: pollData }, { data: draftData }, { data: activityData }] = await Promise.all([
+      const [{ data: rankData }, { data: pollData }, { data: draftData }, { data: activityData }, { data: eventsData }] = await Promise.all([
         supabase.from('rankings').select('*, competitions(title, status)').eq('status', 'open').order('created_at', { ascending: false }).limit(5),
         supabase.from('polls').select('*, competitions(title, status)').eq('status', 'open').order('created_at', { ascending: false }).limit(5),
         supabase.from('drafts').select('*, competitions(title, status)').neq('status', 'complete').order('created_at', { ascending: false }).limit(5),
         supabase.from('activity_feed').select('*, profiles:actor_user_id(display_name)').order('created_at', { ascending: false }).limit(10),
+        supabase.from('events').select('*, profiles:created_by(display_name)').gte('starts_at', new Date().toISOString()).order('starts_at', { ascending: true }).limit(3),
       ]);
 
       if (rankData) setRankings(rankData);
       if (pollData) setPolls(pollData);
       if (draftData) setDrafts(draftData);
       if (activityData) setActivity(activityData);
+      if (eventsData) setUpcomingEvents(eventsData);
 
       setLoading(false);
     };
