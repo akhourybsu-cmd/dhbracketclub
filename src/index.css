@@ -262,6 +262,21 @@
 }
 
 @layer components {
+  /* ═══ Light mode contrast boosters ═══ */
+  .light .glass-card {
+    border-color: hsl(var(--border) / 0.7);
+    box-shadow: var(--shadow-card), 0 0 0 1px hsl(var(--border) / 0.12);
+  }
+  .light .glass-card::after {
+    background: linear-gradient(90deg, transparent 10%, hsl(var(--foreground) / 0.03) 50%, transparent 90%);
+  }
+  .light .section-header {
+    color: hsl(var(--muted-foreground));
+  }
+  .light .matchup-card {
+    border-color: hsl(var(--border) / 0.7);
+  }
+
   /* ═══════════════════════════════════════════════════
      CARDS — Layered depth system
      ═══════════════════════════════════════════════════ */
