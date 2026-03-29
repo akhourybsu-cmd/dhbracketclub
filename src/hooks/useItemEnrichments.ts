@@ -74,3 +74,26 @@ export function useEnrichRanking() {
 
   return { enriching, enrichRanking };
 }
+
+export function useEnrichDraftPicks() {
+  const [enriching, setEnriching] = useState(false);
+
+  const enrichDraftPicks = useCallback(async (draftId: string, pickIds?: string[]) => {
+    setEnriching(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('enrich-draft-picks', {
+        body: { draft_id: draftId, pick_ids: pickIds },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    } catch (err: any) {
+      console.error('Draft enrichment failed:', err);
+      return null;
+    } finally {
+      setEnriching(false);
+    }
+  }, []);
+
+  return { enriching, enrichDraftPicks };
+}
