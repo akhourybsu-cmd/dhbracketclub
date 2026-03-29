@@ -1011,6 +1011,39 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          chat_messages: boolean
+          created_at: string
+          drafts: boolean
+          events: boolean
+          id: string
+          polls: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chat_messages?: boolean
+          created_at?: string
+          drafts?: boolean
+          events?: boolean
+          id?: string
+          polls?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chat_messages?: boolean
+          created_at?: string
+          drafts?: boolean
+          events?: boolean
+          id?: string
+          polls?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       poll_options: {
         Row: {
           id: string
