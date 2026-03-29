@@ -80,7 +80,13 @@ export default function PostsPage() {
     <div className="pb-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-extrabold tracking-tight">Discussions</h1>
+          <div className="page-header mb-0">
+            <div className="page-header-icon"><FileText /></div>
+            <div>
+              <h1 className="page-header-title">Discussions</h1>
+              <p className="page-header-subtitle">Conversations & threads</p>
+            </div>
+          </div>
           <Button size="sm" onClick={() => setShowCreate(true)} className="h-8 gap-1.5 text-xs font-bold rounded-xl">
             <Plus className="w-3.5 h-3.5" /> New Post
           </Button>
