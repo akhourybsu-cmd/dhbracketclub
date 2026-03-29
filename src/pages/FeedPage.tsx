@@ -219,7 +219,7 @@ export default function FeedPage() {
                     </p>
                     <p className="text-[9px] text-muted-foreground/70 mt-0.5">{formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}</p>
                   </div>
-                  {link && <ChevronRight className="w-3 h-3 text-muted-foreground/10 group-hover:text-muted-foreground/70 transition-colors flex-shrink-0" />}
+                  {link && <ChevronRight className="w-3 h-3 text-muted-foreground/30 group-hover:text-muted-foreground/70 transition-colors flex-shrink-0" />}
                 </div>
               );
 
