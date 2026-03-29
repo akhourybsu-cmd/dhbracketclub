@@ -181,6 +181,64 @@ export default function RankingDetailPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!rankingId || !isCreator) return;
+    setDeleting(true);
+    try {
+      const subIds = submissions.map(s => s.id);
+      if (subIds.length > 0) {
+        await supabase.from('ranking_submission_entries').delete().in('submission_id', subIds);
+        await supabase.from('ranking_submissions').delete().eq('ranking_id', rankingId);
+      }
+      await supabase.from('item_enrichments').delete().in('item_id', items.map(i => i.id));
+      await supabase.from('ranking_items').delete().eq('ranking_id', rankingId);
+      const { error } = await supabase.from('rankings').delete().eq('id', rankingId);
+      if (error) throw error;
+      if (ranking?.competition_id) {
+        await supabase.from('competitions').delete().eq('id', ranking.competition_id);
+      }
+      toast.success('Ranking deleted');
+      navigate('/rankings');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete');
+    } finally {
+      setDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!rankingId || !editTopic.trim()) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase.from('rankings').update({ topic: editTopic.trim() }).eq('id', rankingId);
+      if (error) throw error;
+      if (ranking?.competition_id) {
+        await supabase.from('competitions').update({ title: editTopic.trim() }).eq('id', ranking.competition_id);
+      }
+      toast.success('Ranking updated');
+      setEditing(false);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleStatus = async () => {
+    if (!rankingId || !isCreator) return;
+    const newStatus = ranking.status === 'open' ? 'closed' : 'open';
+    try {
+      const { error } = await supabase.from('rankings').update({ status: newStatus }).eq('id', rankingId);
+      if (error) throw error;
+      toast.success(`Ranking ${newStatus === 'open' ? 'reopened' : 'closed'}`);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update status');
+    }
+  };
+
   if (loading) {
     return (
       <div className="loading-spinner">
