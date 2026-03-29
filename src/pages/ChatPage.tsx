@@ -165,7 +165,6 @@ export default function ChatPage() {
     }
     setHasMore(data.length === PAGE_SIZE);
 
-    // Mark channel as read (only on initial load)
     if (!before) {
       try {
         const sb = supabase as any;
@@ -194,7 +193,7 @@ export default function ChatPage() {
     fetchMessages(messages[0].created_at).finally(() => setLoadingMore(false));
   }, [loadingMore, hasMore, messages, fetchMessages]);
 
-  /* ═══ REALTIME (with granular reactions + UPDATE) ═══ */
+  /* ═══ REALTIME ═══ */
   useEffect(() => {
     if (!selectedChannel || !user) return;
 
@@ -205,13 +204,19 @@ export default function ChatPage() {
           const newMsg = payload.new as any;
           if (newMsg.parent_message_id) {
             if (threadParent && newMsg.parent_message_id === threadParent.id) {
+              // Replace optimistic thread reply or append
               const { data: profile } = await supabase.from('profiles').select('display_name, avatar_url').eq('id', newMsg.user_id).single();
-              setThreadMessages(prev => [...prev, { ...newMsg, profiles: profile }]);
+              setThreadMessages(prev => {
+                const hasOpt = prev.some(m => m._optimistic && m.content === newMsg.content && m.user_id === newMsg.user_id);
+                if (hasOpt) {
+                  return prev.map(m => m._optimistic && m.content === newMsg.content ? { ...newMsg, profiles: profile || m.profiles } : m);
+                }
+                return [...prev, { ...newMsg, profiles: profile }];
+              });
             }
             setMessages(prev => prev.map(m => m.id === newMsg.parent_message_id ? { ...m, reply_count: (m.reply_count || 0) + 1 } : m));
             return;
           }
-          // Skip if this is our own optimistic message
           if (newMsg.user_id === user.id) {
             setMessages(prev => {
               const hasOptimistic = prev.some(m => m._optimistic && m.content === newMsg.content);
@@ -240,7 +245,6 @@ export default function ChatPage() {
           setMessages(prev => prev.filter(m => m.id !== payload.old.id));
           setThreadMessages(prev => prev.filter(m => m.id !== payload.old.id));
         })
-      // Granular reaction handling
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'message_reactions' },
         (payload) => {
           const r = payload.new as any;
@@ -285,7 +289,6 @@ export default function ChatPage() {
     const content = newMessage.trim();
     setNewMessage('');
 
-    // Optimistic insert
     const optimisticMsg: Message = {
       id: `opt-${Date.now()}`,
       channel_id: selectedChannel.id,
@@ -326,10 +329,32 @@ export default function ChatPage() {
     play('tap');
     const content = threadReply.trim();
     setThreadReply('');
-    await supabase.from('messages').insert({
+
+    // Optimistic thread reply
+    const optimisticReply: Message = {
+      id: `opt-thread-${Date.now()}`,
+      channel_id: selectedChannel.id,
+      user_id: user.id,
+      content,
+      parent_message_id: threadParent.id,
+      is_pinned: false,
+      created_at: new Date().toISOString(),
+      edited_at: null,
+      profiles: { display_name: user.user_metadata?.display_name || user.email?.split('@')[0] || 'You', avatar_url: null },
+      reply_count: 0,
+      reactions: [],
+      _optimistic: true,
+    };
+    setThreadMessages(prev => [...prev, optimisticReply]);
+
+    const { error } = await supabase.from('messages').insert({
       channel_id: selectedChannel.id, user_id: user.id, content,
       parent_message_id: threadParent.id,
     });
+    if (error) {
+      setThreadMessages(prev => prev.filter(m => m.id !== optimisticReply.id));
+      toast.error('Failed to send reply');
+    }
   };
 
   const toggleReaction = async (messageId: string, emoji: string) => {
@@ -349,8 +374,17 @@ export default function ChatPage() {
   const togglePin = async (msg: Message) => {
     if (!user) return;
     play('tap');
-    await supabase.from('messages').update({ is_pinned: !msg.is_pinned }).eq('id', msg.id);
-    toast.success(msg.is_pinned ? 'Unpinned' : 'Pinned');
+    const wasPinned = msg.is_pinned;
+    await supabase.from('messages').update({ is_pinned: !wasPinned }).eq('id', msg.id);
+    toast.success(wasPinned ? 'Unpinned' : 'Pinned');
+    // Update pinned panel if open
+    if (showPinned) {
+      if (wasPinned) {
+        setPinnedMessages(prev => prev.filter(m => m.id !== msg.id));
+      } else {
+        setPinnedMessages(prev => [msg, ...prev]);
+      }
+    }
   };
 
   const deleteMessage = async (msgId: string) => {
@@ -425,138 +459,178 @@ export default function ChatPage() {
 
   const pinnedCount = messages.filter(m => m.is_pinned).length;
 
-  /* ═══ CHANNEL LIST VIEW ═══ */
+  /* ═══ Determine if on mobile or showing channel list ═══ */
+  const hasThread = !!threadParent;
+  const hasPinned = showPinned;
+  const showSidePanel = hasThread || hasPinned;
+
+  /* ═══ CHANNEL LIST VIEW (mobile only — desktop uses sidebar) ═══ */
   if (showChannelList) {
     return (
-      <ChannelList
-        channels={channels}
-        categories={categories}
-        channelMeta={channelMeta}
-        selectedChannel={selectedChannel}
-        loading={loading}
-        onSelectChannel={selectChannel}
-        onCreateChannel={handleCreateChannel}
-      />
+      <div className="flex -mx-4 sm:-mx-5 -mt-5 sm:-mt-6 lg:-mt-8" style={{ height: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom, 0px))', maxHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom, 0px))' }}>
+        {/* Desktop: always show sidebar + placeholder */}
+        <div className="w-full lg:w-[260px] lg:border-r lg:border-border/25 flex-shrink-0">
+          <ChannelList
+            channels={channels}
+            categories={categories}
+            channelMeta={channelMeta}
+            selectedChannel={selectedChannel}
+            loading={loading}
+            onSelectChannel={selectChannel}
+            onCreateChannel={handleCreateChannel}
+          />
+        </div>
+        <div className="hidden lg:flex flex-1 items-center justify-center text-muted-foreground/50 text-sm">
+          Select a channel to start chatting
+        </div>
+      </div>
     );
   }
 
   /* ═══ MESSAGE VIEW ═══ */
   return (
-    <div className="flex flex-col -mx-4 sm:-mx-5 -mt-5 sm:-mt-6 lg:-mt-8" style={{ height: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom, 0px))', maxHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom, 0px))' }}>
-      {/* Header */}
-      <div className="flex items-center gap-2.5 px-4 sm:px-5 py-3 border-b border-border/25 flex-shrink-0" style={{ background: 'hsl(var(--background) / 0.7)', backdropFilter: 'blur(12px)' }}>
-        <button onClick={() => { setShowChannelList(true); setThreadParent(null); setShowPinned(false); }} className="p-1.5 -ml-1 rounded-lg hover:bg-muted/50 transition-colors lg:hidden">
-          <ChevronLeft className="w-5 h-5 text-muted-foreground/60" />
-        </button>
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/10 text-sm">
-          {CHANNEL_EMOJI[selectedChannel?.name || ''] || <Hash className="w-3.5 h-3.5 text-primary/80" />}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="font-bold text-[14px] tracking-tight">{selectedChannel?.name}</h2>
-          {selectedChannel?.description && <p className="text-[9px] text-muted-foreground/70 truncate">{selectedChannel.description}</p>}
-        </div>
-        <button onClick={() => { setShowSearch(!showSearch); setSearchQuery(''); setSearchResults(null); }} className={cn("p-1.5 rounded-lg transition-colors", showSearch ? "bg-primary/15 text-primary" : "hover:bg-muted/50 text-muted-foreground/60")}>
-          <Search className="w-4 h-4" />
-        </button>
-        {pinnedCount > 0 && (
-          <button onClick={loadPinnedMessages} className={cn("p-1.5 rounded-lg transition-colors", showPinned ? "bg-premium-warm/15 text-premium-warm" : "hover:bg-muted/50 text-muted-foreground/60")}>
-            <Pin className="w-4 h-4" />
-          </button>
-        )}
+    <div className="flex -mx-4 sm:-mx-5 -mt-5 sm:-mt-6 lg:-mt-8" style={{ height: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom, 0px))', maxHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom, 0px))' }}>
+      {/* Desktop sidebar */}
+      <div className="hidden lg:block w-[260px] border-r border-border/25 flex-shrink-0 overflow-y-auto">
+        <ChannelList
+          channels={channels}
+          categories={categories}
+          channelMeta={channelMeta}
+          selectedChannel={selectedChannel}
+          loading={loading}
+          onSelectChannel={selectChannel}
+          onCreateChannel={handleCreateChannel}
+        />
       </div>
 
-      {/* Search bar */}
-      {showSearch && (
-        <div className="border-b border-border/5 flex-shrink-0 px-4 sm:px-5 py-2 space-y-1">
-          <Input
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search messages..."
-            className="h-8 text-xs bg-muted/20 border-border/25 rounded-lg"
-            autoFocus
-          />
-          {searchResults && searchResults.length > 0 && (
-            <p className="text-[10px] text-muted-foreground/60 font-medium px-1">{searchResults.length} result{searchResults.length !== 1 ? 's' : ''}</p>
-          )}
-        </div>
-      )}
-
-      <div className="flex flex-1 min-h-0">
-        <div className={cn("flex flex-col flex-1 min-w-0", (threadParent || showPinned) && "hidden lg:flex")}>
-          {showPinned && !threadParent ? (
-            <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold flex items-center gap-1.5">
-                  <Pin className="w-3.5 h-3.5" style={{ color: 'hsl(var(--premium-warm))' }} /> Pinned Messages
-                </h3>
-                <button onClick={() => setShowPinned(false)} className="p-1 rounded-lg hover:bg-muted/50 lg:hidden">
-                  <X className="w-4 h-4 text-muted-foreground/70" />
-                </button>
-              </div>
-              <div className="space-y-2">
-                {pinnedMessages.map(msg => (
-                  <div key={msg.id} className="glass-card p-3.5">
-                    <div className="flex items-center gap-2 mb-1.5 relative z-10">
-                      <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} size={24} />
-                      <span className="text-[11px] font-bold text-foreground/80">{msg.profiles?.display_name}</span>
-                      <span className="text-[9px] text-muted-foreground/70">{format(new Date(msg.created_at), 'MMM d, h:mm a')}</span>
-                    </div>
-                    <p className="text-[13px] text-foreground/80 leading-relaxed pl-8 relative z-10">{msg.content}</p>
-                  </div>
-                ))}
-                {pinnedMessages.length === 0 && <p className="text-xs text-muted-foreground/70 text-center py-8">No pinned messages</p>}
-              </div>
-            </div>
-          ) : (
-            <>
-              <MessageList
-                messages={searchResults || messages}
-                selectedChannel={selectedChannel}
-                userId={user?.id}
-                searchQuery={searchResults ? '' : ''}
-                onToggleReaction={toggleReaction}
-                onOpenThread={openThread}
-                onTogglePin={togglePin}
-                onStartEditing={startEditing}
-                onDeleteMessage={deleteMessage}
-                onSaveEdit={handleSaveEdit}
-                editingMessageId={editingMessageId}
-                editContent={editContent}
-                onEditContentChange={setEditContent}
-                onCancelEdit={() => { setEditingMessageId(null); setEditContent(''); }}
-                onLoadMore={searchResults ? undefined : loadOlderMessages}
-                hasMore={searchResults ? false : hasMore}
-                loadingMore={loadingMore}
-                isSearchActive={!!searchResults}
-              />
-              {!searchResults && (
-                <div className="flex-shrink-0 border-t border-border/5">
-                  <MessageComposer
-                    value={newMessage}
-                    onChange={setNewMessage}
-                    onSend={handleSend}
-                    disabled={sending}
-                    placeholder={`Message #${selectedChannel?.name || ''}`}
-                    autoFocus
-                  />
-                </div>
-              )}
-            </>
+      {/* Main content area */}
+      <div className="flex flex-col flex-1 min-w-0">
+        {/* Header */}
+        <div className="flex items-center gap-2.5 px-4 sm:px-5 py-3 border-b border-border/25 flex-shrink-0" style={{ background: 'hsl(var(--background) / 0.7)', backdropFilter: 'blur(12px)' }}>
+          <button onClick={() => { setShowChannelList(true); setThreadParent(null); setShowPinned(false); }} className="p-1.5 -ml-1 rounded-lg hover:bg-muted/50 transition-colors lg:hidden">
+            <ChevronLeft className="w-5 h-5 text-muted-foreground/60" />
+          </button>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/10 text-sm">
+            {CHANNEL_EMOJI[selectedChannel?.name || ''] || <Hash className="w-3.5 h-3.5 text-primary/80" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="font-bold text-[14px] tracking-tight">{selectedChannel?.name}</h2>
+            {selectedChannel?.description && <p className="text-[9px] text-muted-foreground/70 truncate">{selectedChannel.description}</p>}
+          </div>
+          <button onClick={() => { setShowSearch(!showSearch); setSearchQuery(''); setSearchResults(null); }} className={cn("p-1.5 rounded-lg transition-colors", showSearch ? "bg-primary/15 text-primary" : "hover:bg-muted/50 text-muted-foreground/60")}>
+            <Search className="w-4 h-4" />
+          </button>
+          {pinnedCount > 0 && (
+            <button onClick={loadPinnedMessages} className={cn("p-1.5 rounded-lg transition-colors", showPinned ? "bg-premium-warm/15 text-premium-warm" : "hover:bg-muted/50 text-muted-foreground/60")}>
+              <Pin className="w-4 h-4" />
+            </button>
           )}
         </div>
 
-        <AnimatePresence>
-          {threadParent && (
-            <ThreadPanel
-              parent={threadParent}
-              replies={threadMessages}
-              replyValue={threadReply}
-              onReplyChange={setThreadReply}
-              onSendReply={handleThreadReply}
-              onClose={() => setThreadParent(null)}
+        {/* Search bar */}
+        {showSearch && (
+          <div className="border-b border-border/5 flex-shrink-0 px-4 sm:px-5 py-2 space-y-1">
+            <Input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search messages..."
+              className="h-8 text-xs bg-muted/20 border-border/25 rounded-lg"
+              autoFocus
             />
-          )}
-        </AnimatePresence>
+            {searchResults && searchResults.length > 0 && (
+              <p className="text-[10px] text-muted-foreground/60 font-medium px-1">{searchResults.length} result{searchResults.length !== 1 ? 's' : ''}</p>
+            )}
+          </div>
+        )}
+
+        <div className="flex flex-1 min-h-0">
+          {/* Message area — hide on mobile when thread/pinned is open */}
+          <div className={cn("flex flex-col flex-1 min-w-0", showSidePanel && "hidden lg:flex")}>
+            {showPinned && !threadParent ? (
+              <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-bold flex items-center gap-1.5">
+                    <Pin className="w-3.5 h-3.5" style={{ color: 'hsl(var(--premium-warm))' }} /> Pinned Messages
+                  </h3>
+                  <button onClick={() => setShowPinned(false)} className="p-1 rounded-lg hover:bg-muted/50">
+                    <X className="w-4 h-4 text-muted-foreground/70" />
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {pinnedMessages.map(msg => (
+                    <div key={msg.id} className="glass-card p-3.5">
+                      <div className="flex items-center gap-2 mb-1.5 relative z-10">
+                        <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} size={24} />
+                        <span className="text-[11px] font-bold text-foreground/80">{msg.profiles?.display_name}</span>
+                        <span className="text-[9px] text-muted-foreground/70">{format(new Date(msg.created_at), 'MMM d, h:mm a')}</span>
+                        <button
+                          onClick={() => togglePin(msg)}
+                          className="ml-auto p-1 rounded-md hover:bg-muted/50 transition-colors"
+                          title="Unpin"
+                        >
+                          <Pin className="w-3 h-3 text-premium-warm" />
+                        </button>
+                      </div>
+                      <p className="text-[13px] text-foreground/80 leading-relaxed pl-8 relative z-10">{msg.content}</p>
+                    </div>
+                  ))}
+                  {pinnedMessages.length === 0 && <p className="text-xs text-muted-foreground/70 text-center py-8">No pinned messages</p>}
+                </div>
+              </div>
+            ) : (
+              <>
+                <MessageList
+                  messages={searchResults || messages}
+                  selectedChannel={selectedChannel}
+                  userId={user?.id}
+                  searchQuery={searchResults ? '' : ''}
+                  onToggleReaction={toggleReaction}
+                  onOpenThread={openThread}
+                  onTogglePin={togglePin}
+                  onStartEditing={startEditing}
+                  onDeleteMessage={deleteMessage}
+                  onSaveEdit={handleSaveEdit}
+                  editingMessageId={editingMessageId}
+                  editContent={editContent}
+                  onEditContentChange={setEditContent}
+                  onCancelEdit={() => { setEditingMessageId(null); setEditContent(''); }}
+                  onLoadMore={searchResults ? undefined : loadOlderMessages}
+                  hasMore={searchResults ? false : hasMore}
+                  loadingMore={loadingMore}
+                  isSearchActive={!!searchResults}
+                />
+                {!searchResults && (
+                  <div className="flex-shrink-0 border-t border-border/5">
+                    <MessageComposer
+                      value={newMessage}
+                      onChange={setNewMessage}
+                      onSend={handleSend}
+                      disabled={sending}
+                      placeholder={`Message #${selectedChannel?.name || ''}`}
+                      autoFocus
+                    />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Thread / pinned side panel — show full-screen on mobile */}
+          <AnimatePresence>
+            {threadParent && (
+              <div className={cn("flex flex-col min-h-0", "w-full lg:w-auto")}>
+                <ThreadPanel
+                  parent={threadParent}
+                  replies={threadMessages}
+                  replyValue={threadReply}
+                  onReplyChange={setThreadReply}
+                  onSendReply={handleThreadReply}
+                  onClose={() => setThreadParent(null)}
+                />
+              </div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );
