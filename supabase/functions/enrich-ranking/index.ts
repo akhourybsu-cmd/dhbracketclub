@@ -233,10 +233,74 @@ async function enrichFromOpenLibrary(
   }
 }
 
-// ─── TMDB (Movies/TV) via AI image search fallback ───
-// For MVP: We use Open Library for books and AI metadata for everything else.
-// TMDB integration can be added later with an API key.
-// For now, we generate a poster-style gradient placeholder for movies/TV.
+// ─── iTunes Search API (Movies, TV, Music) — free, no API key ───
+async function enrichFromiTunes(
+  name: string,
+  enrichment: EnrichmentResult,
+  category: Category
+): Promise<EnrichmentResult> {
+  try {
+    const mediaType = category === "movie" ? "movie" : category === "tv" ? "tvShow" : "music";
+    const entity = category === "movie" ? "movie" : category === "tv" ? "tvSeason" : "album";
+    const query = encodeURIComponent(enrichment.normalized_name || name);
+    const url = `https://itunes.apple.com/search?term=${query}&media=${mediaType}&entity=${entity}&limit=3`;
+
+    const res = await fetch(url);
+    if (!res.ok) return enrichment;
+    const data = await res.json();
+    const results = data.results;
+    if (!results?.length) return enrichment;
+
+    // Pick the best match (first result from iTunes is usually the best)
+    const match = results[0];
+
+    // iTunes provides artwork at 100x100 by default; we can upscale by replacing the size
+    const rawArtwork: string = match.artworkUrl100 || match.artworkUrl60 || "";
+    if (rawArtwork) {
+      enrichment.image_url = rawArtwork.replace("100x100bb", "600x600bb");
+      enrichment.thumbnail_url = rawArtwork.replace("100x100bb", "200x200bb");
+      enrichment.source_provider = "itunes";
+      enrichment.confidence = Math.max(enrichment.confidence, 0.85);
+      enrichment.status = "matched";
+    }
+
+    // Enrich metadata from iTunes response
+    if (category === "movie") {
+      enrichment.matched_name = match.trackName || enrichment.matched_name;
+      enrichment.metadata = {
+        ...enrichment.metadata,
+        year: match.releaseDate ? new Date(match.releaseDate).getFullYear() : enrichment.metadata.year,
+        director: match.artistName || enrichment.metadata.director,
+        genre: match.primaryGenreName || enrichment.metadata.genre,
+        content_rating: match.contentAdvisoryRating,
+        runtime_minutes: match.trackTimeMillis ? Math.round(match.trackTimeMillis / 60000) : undefined,
+      };
+    } else if (category === "tv") {
+      enrichment.matched_name = match.collectionName || enrichment.matched_name;
+      enrichment.metadata = {
+        ...enrichment.metadata,
+        year: match.releaseDate ? new Date(match.releaseDate).getFullYear() : enrichment.metadata.year,
+        network: match.artistName || enrichment.metadata.network,
+        genre: match.primaryGenreName || enrichment.metadata.genre,
+        content_rating: match.contentAdvisoryRating,
+      };
+    } else if (category === "music") {
+      enrichment.matched_name = match.collectionName || match.trackName || enrichment.matched_name;
+      enrichment.metadata = {
+        ...enrichment.metadata,
+        artist: match.artistName || enrichment.metadata.artist,
+        year: match.releaseDate ? new Date(match.releaseDate).getFullYear() : enrichment.metadata.year,
+        genre: match.primaryGenreName || enrichment.metadata.genre,
+        type: match.collectionType || match.wrapperType || enrichment.metadata.type,
+      };
+    }
+
+    return enrichment;
+  } catch (err) {
+    console.error("iTunes enrichment error:", err);
+    return enrichment;
+  }
+}
 
 // ─── Orchestrator ───
 async function enrichItem(
@@ -247,15 +311,14 @@ async function enrichItem(
 ): Promise<EnrichmentResult> {
   let result = { ...aiResult };
 
-  // Use source-specific adapters
   switch (category) {
     case "book":
       result = await enrichFromOpenLibrary(name, result);
       break;
     case "movie":
     case "tv":
-      // TMDB would go here with API key; for now AI metadata is stored
-      result.source_provider = "ai";
+    case "music":
+      result = await enrichFromiTunes(name, result, category);
       break;
     default:
       result.source_provider = "ai";

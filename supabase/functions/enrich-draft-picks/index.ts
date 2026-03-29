@@ -7,7 +7,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// ─── Shared classification + enrichment logic (same as enrich-ranking) ───
 const SUPPORTED_CATEGORIES = [
   "movie", "tv", "book", "music", "food", "brand", "place",
   "sport", "game", "person", "animal", "generic",
@@ -214,6 +213,71 @@ async function enrichFromOpenLibrary(
   }
 }
 
+// ─── iTunes Search API (Movies, TV, Music) — free, no API key ───
+async function enrichFromiTunes(
+  name: string,
+  enrichment: EnrichmentResult,
+  category: Category
+): Promise<EnrichmentResult> {
+  try {
+    const mediaType = category === "movie" ? "movie" : category === "tv" ? "tvShow" : "music";
+    const entity = category === "movie" ? "movie" : category === "tv" ? "tvSeason" : "album";
+    const query = encodeURIComponent(enrichment.normalized_name || name);
+    const url = `https://itunes.apple.com/search?term=${query}&media=${mediaType}&entity=${entity}&limit=3`;
+
+    const res = await fetch(url);
+    if (!res.ok) return enrichment;
+    const data = await res.json();
+    const results = data.results;
+    if (!results?.length) return enrichment;
+
+    const match = results[0];
+    const rawArtwork: string = match.artworkUrl100 || match.artworkUrl60 || "";
+    if (rawArtwork) {
+      enrichment.image_url = rawArtwork.replace("100x100bb", "600x600bb");
+      enrichment.thumbnail_url = rawArtwork.replace("100x100bb", "200x200bb");
+      enrichment.source_provider = "itunes";
+      enrichment.confidence = Math.max(enrichment.confidence, 0.85);
+      enrichment.status = "matched";
+    }
+
+    if (category === "movie") {
+      enrichment.matched_name = match.trackName || enrichment.matched_name;
+      enrichment.metadata = {
+        ...enrichment.metadata,
+        year: match.releaseDate ? new Date(match.releaseDate).getFullYear() : enrichment.metadata.year,
+        director: match.artistName || enrichment.metadata.director,
+        genre: match.primaryGenreName || enrichment.metadata.genre,
+        content_rating: match.contentAdvisoryRating,
+        runtime_minutes: match.trackTimeMillis ? Math.round(match.trackTimeMillis / 60000) : undefined,
+      };
+    } else if (category === "tv") {
+      enrichment.matched_name = match.collectionName || enrichment.matched_name;
+      enrichment.metadata = {
+        ...enrichment.metadata,
+        year: match.releaseDate ? new Date(match.releaseDate).getFullYear() : enrichment.metadata.year,
+        network: match.artistName || enrichment.metadata.network,
+        genre: match.primaryGenreName || enrichment.metadata.genre,
+        content_rating: match.contentAdvisoryRating,
+      };
+    } else if (category === "music") {
+      enrichment.matched_name = match.collectionName || match.trackName || enrichment.matched_name;
+      enrichment.metadata = {
+        ...enrichment.metadata,
+        artist: match.artistName || enrichment.metadata.artist,
+        year: match.releaseDate ? new Date(match.releaseDate).getFullYear() : enrichment.metadata.year,
+        genre: match.primaryGenreName || enrichment.metadata.genre,
+        type: match.collectionType || match.wrapperType || enrichment.metadata.type,
+      };
+    }
+
+    return enrichment;
+  } catch (err) {
+    console.error("iTunes enrichment error:", err);
+    return enrichment;
+  }
+}
+
 // ─── Source-specific enrichment ───
 async function enrichItem(
   category: Category,
@@ -224,6 +288,11 @@ async function enrichItem(
   switch (category) {
     case "book":
       result = await enrichFromOpenLibrary(name, result);
+      break;
+    case "movie":
+    case "tv":
+    case "music":
+      result = await enrichFromiTunes(name, result, category);
       break;
     default:
       result.source_provider = "ai";
