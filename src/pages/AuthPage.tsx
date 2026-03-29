@@ -16,9 +16,23 @@ export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
 
   if (user) return <Navigate to="/dashboard" replace />;
+
+  const validateInviteCode = async (code: string): Promise<boolean> => {
+    const { data, error } = await supabase
+      .from('invite_codes')
+      .select('id, is_active, used_by')
+      .eq('code', code.trim().toUpperCase())
+      .maybeSingle();
+
+    if (error || !data) return false;
+    if (!data.is_active) return false;
+    // Allow reusable codes (used_by is null means unclaimed, but we allow reuse)
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +40,20 @@ export default function AuthPage() {
 
     try {
       if (isSignUp) {
+        // Validate invite code first
+        if (!inviteCode.trim()) {
+          toast.error('Invite code required');
+          setLoading(false);
+          return;
+        }
+
+        const validCode = await validateInviteCode(inviteCode);
+        if (!validCode) {
+          toast.error('Invalid or expired invite code');
+          setLoading(false);
+          return;
+        }
+
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -35,7 +63,7 @@ export default function AuthPage() {
           },
         });
         if (error) throw error;
-        toast.success('Account created! Check your email to verify.');
+        toast.success('You\'re in. Check your email to verify.');
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -63,31 +91,41 @@ export default function AuthPage() {
           <motion.img
             src={dhMonogram}
             alt="DH"
-            className="w-24 h-24 object-contain mx-auto mb-5"
+            className="w-20 h-20 object-contain mx-auto mb-5"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4, type: 'spring', damping: 18 }}
             style={{ filter: 'drop-shadow(0 0 16px hsl(var(--primary) / 0.2))' }}
           />
-          <h1 className="text-xl font-extrabold tracking-tight">
-            <span className="gradient-text">DH</span>
-          </h1>
           <p className="text-xs text-muted-foreground mt-2 font-semibold">
-            {isSignUp ? 'Create your account' : 'Welcome back'}
+            {isSignUp ? 'Request access' : 'Welcome back'}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="glass-card p-6 space-y-4">
           {isSignUp && (
-            <div>
-              <label className="form-label">Display Name</label>
-              <Input
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Your name"
-                className="form-input"
-              />
-            </div>
+            <>
+              <div>
+                <label className="form-label">Invite Code</label>
+                <Input
+                  required
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                  placeholder="Enter your code"
+                  className="form-input font-mono tracking-widest text-center"
+                  autoComplete="off"
+                />
+              </div>
+              <div>
+                <label className="form-label">Display Name</label>
+                <Input
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Your name"
+                  className="form-input"
+                />
+              </div>
+            </>
           )}
           <div>
             <label className="form-label">Email</label>
@@ -113,7 +151,7 @@ export default function AuthPage() {
             />
           </div>
           <Button type="submit" className="w-full h-11 font-bold rounded-xl btn-press" disabled={loading}>
-            {loading ? 'Loading...' : isSignUp ? 'Create Account' : 'Sign In'}
+            {loading ? 'Loading...' : isSignUp ? 'Request Access' : 'Sign In'}
           </Button>
         </form>
 
@@ -136,7 +174,7 @@ export default function AuthPage() {
         )}
 
         <p className="text-center text-xs text-muted-foreground mt-4">
-          {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
+          {isSignUp ? 'Already have an account?' : 'Got an invite code?'}{' '}
           <button
             onClick={() => setIsSignUp(!isSignUp)}
             className="text-primary hover:underline font-bold"
