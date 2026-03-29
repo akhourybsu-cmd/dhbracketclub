@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Hash, Send, Plus, ChevronLeft, Pin, MessageSquare, Reply,
-  X, SmilePlus, Trash2
+  X, SmilePlus, Trash2, Pencil, Search, Check
 } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
