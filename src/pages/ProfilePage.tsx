@@ -12,6 +12,7 @@ import dhMonogram from '@/assets/dh-monogram.png';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { formatDistanceToNow } from 'date-fns';
+import NotificationPreferencesSection from '@/components/profile/NotificationPreferences';
 
 export default function ProfilePage() {
   const { theme, setTheme } = useTheme();
@@ -260,6 +261,9 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
+
+      {/* Notification Preferences */}
+      <NotificationPreferencesSection />
 
       {/* DH branding */}
       <div className="flex items-center justify-center gap-2 py-4 mb-2">

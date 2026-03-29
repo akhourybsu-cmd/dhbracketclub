@@ -326,6 +326,29 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Check notification preferences - filter out users who disabled chat_messages
+    const userIds = [...new Set(subscriptions.map((s: any) => s.user_id))];
+    const { data: prefRows } = await supabase
+      .from("notification_preferences")
+      .select("user_id, chat_messages")
+      .in("user_id", userIds);
+
+    const disabledUsers = new Set(
+      (prefRows || [])
+        .filter((p: any) => p.chat_messages === false)
+        .map((p: any) => p.user_id)
+    );
+
+    const filteredSubscriptions = subscriptions.filter(
+      (s: any) => !disabledUsers.has(s.user_id)
+    );
+
+    if (filteredSubscriptions.length === 0) {
+      return new Response(JSON.stringify({ sent: 0, filtered: subscriptions.length }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const notificationPayload = JSON.stringify({
       title: `${senderName} in #${channelName}`,
       body: preview,
