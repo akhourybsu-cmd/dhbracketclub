@@ -71,7 +71,7 @@ export function MessageList({
     ? messages.filter(m => m.content.toLowerCase().includes(searchQuery.toLowerCase()))
     : messages;
 
-  const { format } = require('date-fns');
+  
 
   return (
     <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 sm:px-5">
