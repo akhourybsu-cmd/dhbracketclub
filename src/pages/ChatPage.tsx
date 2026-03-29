@@ -607,7 +607,6 @@ export default function ChatPage() {
                       onSend={handleSend}
                       disabled={sending}
                       placeholder={`Message #${selectedChannel?.name || ''}`}
-                      autoFocus
                     />
                   </div>
                 )}
