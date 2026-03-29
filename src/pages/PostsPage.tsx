@@ -138,10 +138,13 @@ export default function PostsPage() {
         </div>
 
         {posts.length === 0 && !loading && (
-          <div className="text-center py-16">
-            <FileText className="w-10 h-10 mx-auto text-muted-foreground/60 mb-3" />
-            <p className="text-sm text-muted-foreground/70 font-medium">No discussions yet</p>
-            <p className="text-xs text-muted-foreground/70 mt-1">Start a conversation</p>
+          <div className="empty-state">
+            <div className="empty-state-icon"><FileText /></div>
+            <p className="empty-state-title">No discussions yet</p>
+            <p className="empty-state-desc mb-4">Start a conversation with your crew.</p>
+            <Button size="sm" onClick={() => setShowCreate(true)} className="gap-1.5 font-bold rounded-xl">
+              <Plus className="w-3.5 h-3.5" /> New Post
+            </Button>
           </div>
         )}
       </motion.div>

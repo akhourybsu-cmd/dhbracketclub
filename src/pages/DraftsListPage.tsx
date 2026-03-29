@@ -51,7 +51,7 @@ export default function DraftsListPage() {
   };
 
   return (
-    <div>
+    <div className="pb-6">
       <div className="flex items-center justify-between mb-6">
         <div className="page-header mb-0">
           <div className="page-header-icon" style={{
