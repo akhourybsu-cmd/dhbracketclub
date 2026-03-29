@@ -17,6 +17,7 @@ import {
 } from 'date-fns';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { toast } from 'sonner';
+import { logActivity } from '@/lib/activityLogger';
 
 type Event = {
   id: string;
@@ -96,6 +97,7 @@ export default function EventsPage() {
     if (error) { toast.error('Failed to create event'); setCreating(false); return; }
     if (data) {
       await supabase.from('event_rsvps').insert({ event_id: data.id, user_id: user.id, status: 'going' });
+      await logActivity(user.id, { event_type: 'event_created', target_type: 'event', target_id: data.id, metadata: { title: data.title } });
       setShowCreate(false);
       setForm({ title: '', description: '', location: '', starts_at: '', ends_at: '' });
       setCreating(false);

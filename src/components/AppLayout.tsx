@@ -1,10 +1,12 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState, useCallback } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { LayoutDashboard, MessageSquareText, CalendarDays, Swords, Newspaper, User, Trophy, BarChart3, MessageCircle, Bookmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import dhMonogram from '@/assets/dh-monogram.png';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 const navItems = [
   { path: '/dashboard', label: 'Home', icon: LayoutDashboard },
@@ -29,13 +31,54 @@ const sidebarModules = [
 export function AppLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const { play } = useSoundEffect();
-  const [scrolled, setScrolled] = useState(false);
+  const { user } = useAuth();
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
 
+  // Fetch unread chat count
+  const fetchUnreadCount = useCallback(async () => {
+    if (!user) return;
+    try {
+      const [{ data: channels }, { data: readStates }] = await Promise.all([
+        supabase.from('channels').select('id'),
+        (supabase as any).from('channel_read_states').select('channel_id, last_read_at').eq('user_id', user.id),
+      ]);
+      if (!channels) return;
+      const readMap = new Map<string, string>();
+      if (readStates) (readStates as any[]).forEach((rs: any) => readMap.set(rs.channel_id, rs.last_read_at));
+
+      const chIds = channels.map((c: any) => c.id);
+      const { data: lastMsgs } = await supabase
+        .from('messages')
+        .select('channel_id, created_at')
+        .is('parent_message_id', null)
+        .in('channel_id', chIds)
+        .order('created_at', { ascending: false })
+        .limit(200);
+
+      if (!lastMsgs) return;
+      const latestPerChannel = new Map<string, string>();
+      lastMsgs.forEach((m: any) => {
+        if (!latestPerChannel.has(m.channel_id)) latestPerChannel.set(m.channel_id, m.created_at);
+      });
+
+      let count = 0;
+      latestPerChannel.forEach((latestAt, chId) => {
+        const lastRead = readMap.get(chId);
+        if (!lastRead || new Date(latestAt) > new Date(lastRead)) count++;
+      });
+      setUnreadChatCount(count);
+    } catch {}
+  }, [user]);
+
+  useEffect(() => { fetchUnreadCount(); }, [fetchUnreadCount]);
+
+  // Refresh unread count periodically and on route change
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 12);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [fetchUnreadCount]);
+
+  useEffect(() => { fetchUnreadCount(); }, [location.pathname, fetchUnreadCount]);
 
   const isNavActive = (path: string) => {
     if (path === '/brackets') {
@@ -90,14 +133,22 @@ export function AppLayout({ children }: { children: ReactNode }) {
             }
             const Icon = item.icon!;
             const active = isNavActive(item.path!);
+            const showBadge = item.path === '/chat' && unreadChatCount > 0;
             return (
               <Link
                 key={item.path}
                 to={item.path!}
                 onClick={() => play('tap')}
-                className={cn("nav-item", active ? "nav-item-active" : "nav-item-inactive")}
+                className={cn("nav-item relative", active ? "nav-item-active" : "nav-item-inactive")}
               >
-                <Icon className="w-[18px] h-[18px]" />
+                <div className="relative">
+                  <Icon className="w-[18px] h-[18px]" />
+                  {showBadge && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] rounded-full bg-primary text-[8px] font-bold text-primary-foreground flex items-center justify-center px-0.5">
+                      {unreadChatCount > 9 ? '9+' : unreadChatCount}
+                    </span>
+                  )}
+                </div>
                 {item.label}
               </Link>
             );
@@ -130,6 +181,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isNavActive(item.path);
+            const showBadge = item.path === '/chat' && unreadChatCount > 0;
             return (
               <Link
                 key={item.path}
@@ -141,7 +193,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   active ? "text-primary" : "text-muted-foreground/50 active:text-foreground"
                 )}
               >
-                <Icon className={cn("w-[18px] h-[18px] transition-all duration-200", active && "scale-105")} />
+                <div className="relative">
+                  <Icon className={cn("w-[18px] h-[18px] transition-all duration-200", active && "scale-105")} />
+                  {showBadge && (
+                    <span className="absolute -top-1.5 -right-2 min-w-[14px] h-[14px] rounded-full bg-primary text-[8px] font-bold text-primary-foreground flex items-center justify-center px-0.5">
+                      {unreadChatCount > 9 ? '9+' : unreadChatCount}
+                    </span>
+                  )}
+                </div>
                 <span className={cn(
                   "text-[8px] font-bold tracking-wide transition-colors duration-150",
                   active ? "text-primary" : "text-muted-foreground/40"

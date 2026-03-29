@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, Plus, MessageSquare, Pin, Heart, ChevronRight, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
+import { logActivity } from '@/lib/activityLogger';
 
 type Post = {
   id: string;
@@ -68,6 +69,7 @@ export default function PostsPage() {
     }).select().single();
 
     if (data) {
+      await logActivity(user.id, { event_type: 'post_created', target_type: 'post', target_id: data.id, metadata: { title: data.title } });
       setShowCreate(false);
       setForm({ title: '', content: '' });
       navigate(`/posts/${data.id}`);

@@ -22,6 +22,7 @@ const FEED_ICONS: Record<string, { icon: any; color: string }> = {
   bracket_submitted: { icon: Trophy, color: 'primary' },
   event_created: { icon: CalendarDays, color: 'success' },
   post_created: { icon: FileText, color: 'primary' },
+  event_rsvp: { icon: Users, color: 'success' },
 };
 
 const FEED_LABELS: Record<string, string> = {
@@ -34,6 +35,7 @@ const FEED_LABELS: Record<string, string> = {
   bracket_submitted: 'submitted a bracket',
   event_created: 'created an event',
   post_created: 'started a discussion',
+  event_rsvp: 'RSVPed to an event',
 };
 
 type Post = {

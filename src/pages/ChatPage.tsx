@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Hash, Send, Plus, ChevronLeft, Pin, MessageSquare, Reply,
-  X, SmilePlus, Trash2
+  X, SmilePlus, Trash2, Pencil, Search, Check
 } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
@@ -83,6 +83,14 @@ export default function ChatPage() {
 
   // Reaction picker
   const [reactionTarget, setReactionTarget] = useState<string | null>(null);
+
+  // Edit message
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
+
+  // Search
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
 
   // New channel
   const [showNewChannel, setShowNewChannel] = useState(false);
@@ -344,7 +352,22 @@ export default function ChatPage() {
     await supabase.from('messages').delete().eq('id', msgId);
   };
 
-  const showPinnedMessages = async () => {
+  const startEditing = (msg: Message) => {
+    setEditingMessageId(msg.id);
+    setEditContent(msg.content);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingMessageId || !editContent.trim()) return;
+    play('tap');
+    await supabase.from('messages').update({ content: editContent.trim(), edited_at: new Date().toISOString() }).eq('id', editingMessageId);
+    setMessages(prev => prev.map(m => m.id === editingMessageId ? { ...m, content: editContent.trim(), edited_at: new Date().toISOString() } : m));
+    setEditingMessageId(null);
+    setEditContent('');
+    toast.success('Message edited');
+  };
+
+
     if (!selectedChannel) return;
     setShowPinned(true);
     setThreadParent(null);
@@ -531,12 +554,32 @@ export default function ChatPage() {
             <p className="text-[9px] text-muted-foreground/30 truncate">{selectedChannel.description}</p>
           )}
         </div>
+        <button onClick={() => { setShowSearch(!showSearch); setSearchQuery(''); }} className={cn("p-1.5 rounded-lg transition-colors", showSearch ? "bg-primary/15 text-primary" : "hover:bg-muted/40 text-muted-foreground/40")}>
+          <Search className="w-4 h-4" />
+        </button>
         {pinnedCount > 0 && (
           <button onClick={showPinnedMessages} className={cn("p-1.5 rounded-lg transition-colors", showPinned ? "bg-premium-warm/15 text-premium-warm" : "hover:bg-muted/40 text-muted-foreground/40")}>
             <Pin className="w-4 h-4" />
           </button>
         )}
       </div>
+
+      {/* Search bar */}
+      <AnimatePresence>
+        {showSearch && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden border-b border-border/5 flex-shrink-0">
+            <div className="px-4 sm:px-5 py-2">
+              <Input
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search messages..."
+                className="h-8 text-xs bg-muted/20 border-border/8 rounded-lg"
+                autoFocus
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="flex flex-1 min-h-0">
         {/* Main messages or pinned view */}
@@ -582,8 +625,8 @@ export default function ChatPage() {
                       <p className="text-[11px] text-muted-foreground/25 mt-1">{selectedChannel?.description || 'Start the conversation'}</p>
                     </div>
                   )}
-                  {messages.map((msg, idx) => {
-                    const prevMsg = idx > 0 ? messages[idx - 1] : null;
+                  {(searchQuery ? messages.filter(m => m.content.toLowerCase().includes(searchQuery.toLowerCase())) : messages).map((msg, idx, filteredMsgs) => {
+                    const prevMsg = idx > 0 ? filteredMsgs[idx - 1] : null;
                     const showDate = !prevMsg || getDateLabel(msg.created_at) !== getDateLabel(prevMsg.created_at);
                     const sameAuthor = prevMsg && prevMsg.user_id === msg.user_id &&
                       new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() < 300000;
@@ -620,8 +663,28 @@ export default function ChatPage() {
                                 {format(new Date(msg.created_at), 'h:mm')}
                               </span>
                             )}
-
-                            <p className="text-[13px] leading-[1.55] text-foreground/85 break-words">{msg.content}</p>
+                            {editingMessageId === msg.id ? (
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  value={editContent}
+                                  onChange={e => setEditContent(e.target.value)}
+                                  onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(); if (e.key === 'Escape') { setEditingMessageId(null); setEditContent(''); } }}
+                                  className="h-8 text-[13px] bg-muted/20 border-border/8 rounded-lg flex-1"
+                                  autoFocus
+                                />
+                                <button onClick={handleSaveEdit} className="p-1.5 rounded-lg bg-primary/15 text-primary hover:bg-primary/25 transition-colors">
+                                  <Check className="w-3.5 h-3.5" />
+                                </button>
+                                <button onClick={() => { setEditingMessageId(null); setEditContent(''); }} className="p-1.5 rounded-lg hover:bg-muted/40 transition-colors">
+                                  <X className="w-3.5 h-3.5 text-muted-foreground/50" />
+                                </button>
+                              </div>
+                            ) : (
+                              <p className="text-[13px] leading-[1.55] text-foreground/85 break-words">
+                                {msg.content}
+                                {msg.edited_at && <span className="text-[9px] text-muted-foreground/25 ml-1.5">(edited)</span>}
+                              </p>
+                            )}
 
                             {/* Reactions row */}
                             {msg.reactions && msg.reactions.length > 0 && (
@@ -664,9 +727,14 @@ export default function ChatPage() {
                                 <Pin className={cn("w-3.5 h-3.5", msg.is_pinned ? "text-premium-warm" : "text-muted-foreground/40")} />
                               </button>
                               {isOwn && (
-                                <button onClick={() => deleteMessage(msg.id)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-destructive/10 transition-colors" title="Delete">
-                                  <Trash2 className="w-3.5 h-3.5 text-muted-foreground/30 hover:text-destructive" />
-                                </button>
+                                <>
+                                  <button onClick={() => startEditing(msg)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 transition-colors" title="Edit">
+                                    <Pencil className="w-3.5 h-3.5 text-muted-foreground/40" />
+                                  </button>
+                                  <button onClick={() => deleteMessage(msg.id)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-destructive/10 transition-colors" title="Delete">
+                                    <Trash2 className="w-3.5 h-3.5 text-muted-foreground/30 hover:text-destructive" />
+                                  </button>
+                                </>
                               )}
                             </div>
 
