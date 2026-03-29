@@ -213,6 +213,50 @@ export default function DraftDetailPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!draftId || !isCreator) return;
+    setDeleting(true);
+    try {
+      const pIds = picks.map(p => p.id);
+      if (pIds.length > 0) {
+        await supabase.from('item_enrichments').delete().in('item_id', pIds);
+      }
+      await supabase.from('draft_picks').delete().eq('draft_id', draftId);
+      await supabase.from('draft_participants').delete().eq('draft_id', draftId);
+      const { error } = await supabase.from('drafts').delete().eq('id', draftId);
+      if (error) throw error;
+      if (draft?.competition_id) {
+        await supabase.from('competitions').delete().eq('id', draft.competition_id);
+      }
+      toast.success('Draft deleted');
+      navigate('/drafts');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete');
+    } finally {
+      setDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!draftId || !editTopic.trim()) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase.from('drafts').update({ topic: editTopic.trim() }).eq('id', draftId);
+      if (error) throw error;
+      if (draft?.competition_id) {
+        await supabase.from('competitions').update({ title: editTopic.trim() }).eq('id', draft.competition_id);
+      }
+      toast.success('Draft updated');
+      setEditing(false);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="loading-spinner">
