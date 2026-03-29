@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { useDraftUpdates } from '@/hooks/useRealtimeSubscription';
 import { useItemEnrichments, useEnrichDraftPicks } from '@/hooks/useItemEnrichments';
 import EnrichedItemCard, { EnrichedItemSkeleton } from '@/components/EnrichedItemCard';
+import ShareButton from '@/components/ShareButton';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -316,7 +317,8 @@ export default function DraftDetailPage() {
               )}
             </p>
           </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <ShareButton contentType="draft" contentId={draftId!} title={draft.topic} />
             {isCreator && picks.length > 0 && (
               <button
                 onClick={handleReEnrich}

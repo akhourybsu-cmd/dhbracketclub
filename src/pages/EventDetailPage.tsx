@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Clock, MapPin, Send, Trash2, ArrowLeft, Pencil, Check, X, MoreVertical
 } from 'lucide-react';
+import ShareButton from '@/components/ShareButton';
 import { format, isPast } from 'date-fns';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { toast } from 'sonner';
@@ -129,27 +130,30 @@ export default function EventDetailPage() {
     <div className="pb-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         {/* Nav */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-1 justify-between mb-4">
           <button onClick={() => navigate('/events')} className="flex items-center gap-1 text-xs text-muted-foreground/70 hover:text-foreground transition-colors">
             <ArrowLeft className="w-3.5 h-3.5" /> Events
           </button>
-          {isCreator && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="p-1.5 rounded-lg hover:bg-muted/50 transition-colors">
-                  <MoreVertical className="w-4 h-4 text-muted-foreground/70" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-[140px]">
-                <DropdownMenuItem onClick={() => setEditing(true)} className="text-xs gap-2">
-                  <Pencil className="w-3.5 h-3.5" /> Edit Event
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setShowDeleteAlert(true)} className="text-xs gap-2 text-destructive focus:text-destructive">
-                  <Trash2 className="w-3.5 h-3.5" /> Delete Event
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          <div className="flex items-center gap-1">
+            <ShareButton contentType="event" contentId={eventId!} title={event.title} />
+            {isCreator && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="p-1.5 rounded-lg hover:bg-muted/50 transition-colors">
+                    <MoreVertical className="w-4 h-4 text-muted-foreground/70" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-[140px]">
+                  <DropdownMenuItem onClick={() => setEditing(true)} className="text-xs gap-2">
+                    <Pencil className="w-3.5 h-3.5" /> Edit Event
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowDeleteAlert(true)} className="text-xs gap-2 text-destructive focus:text-destructive">
+                    <Trash2 className="w-3.5 h-3.5" /> Delete Event
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
 
         {/* Edit mode */}

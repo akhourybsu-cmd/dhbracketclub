@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { useRankingUpdates } from '@/hooks/useRealtimeSubscription';
 import { useItemEnrichments, useEnrichRanking } from '@/hooks/useItemEnrichments';
 import EnrichedItemCard, { EnrichedItemSkeleton } from '@/components/EnrichedItemCard';
+import ShareButton from '@/components/ShareButton';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -293,7 +294,8 @@ export default function RankingDetailPage() {
               )}
             </p>
           </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <ShareButton contentType="ranking" contentId={rankingId!} title={ranking.topic} />
             {isCreator && (
               <button
                 onClick={handleReEnrich}

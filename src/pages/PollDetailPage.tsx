@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatDistanceToNow } from 'date-fns';
 import { usePollVoteUpdates } from '@/hooks/useRealtimeSubscription';
+import ShareButton from '@/components/ShareButton';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -223,7 +224,8 @@ export default function PollDetailPage() {
               by {poll.profiles?.display_name} • {formatDistanceToNow(new Date(poll.created_at), { addSuffix: true })}
             </p>
           </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <ShareButton contentType="poll" contentId={pollId!} title={poll.question} />
             <span className={cn("status-pill", isOpen ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground')}>
               {isOpen ? 'Open' : 'Closed'}
             </span>
