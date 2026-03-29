@@ -1,72 +1,60 @@
 
 
-# Rebrand to "DH" with Bold Monogram Logo & Green+Charcoal Palette
+# Chat Feature Optimization Plan
 
-## Overview
-Rename from "DH Club" / "DH Bracket Club" to just **"DH"** everywhere. Generate a new bold monogram logo using AI image generation. Shift the entire color palette from electric blue to **emerald green + charcoal**.
+## Current State
 
----
+The chat system is a **927-line monolith** (`ChatPage.tsx`) with channels, threading, reactions, pinning, search, editing, and unread tracking. It works, but has several performance, UX, and code quality issues worth addressing.
 
-## Phase 1: Generate New Logo
+## Key Issues Found
 
-Use the AI image generation skill to create a bold "DH" monogram:
-- Prompt: Clean, bold typographic "DH" monogram, geometric and minimal, emerald green on transparent/dark background, suitable for app icon
-- Generate at 512×512 for PWA icon and in-app use
-- Save to `src/assets/dh-monogram.png` (overwrite), `public/pwa-icon-512.png`, `public/favicon.png`
+1. **`channel_read_states` table is untyped** — the table exists in the database but is missing from the generated types, forcing `(supabase as any)` casts everywhere
+2. **Full message refetch on every reaction** — any reaction change triggers a complete `fetchMessages()` reload instead of updating locally
+3. **No message pagination** — hardcoded `.limit(200)`, no infinite scroll for older messages
+4. **Client-side-only search** — filters already-loaded messages rather than querying the database
+5. **Realtime misses edits from others** — only `INSERT` and `DELETE` events are handled; if another user edits a message, it won't update
+6. **No optimistic message sending** — the message doesn't appear until the database round-trip completes
+7. **927-line monolith** — channel list, message view, thread panel, and all logic live in one file
+8. **Mobile action UX** — the floating action bar uses `hover:` which doesn't work on mobile; the only mobile path is the reaction picker button
 
-## Phase 2: Color Palette — Green + Charcoal
+## Plan
 
-Update all three theme blocks (`:root`, `.dark`, `.light`) in `src/index.css`:
+### Step 1 — Fix `channel_read_states` typing
+Run a no-op migration or regenerate types so `channel_read_states` appears in the Supabase types. Remove all `as any` casts related to this table.
 
-| Token | Old (blue) | New (green) |
-|-------|-----------|-------------|
-| `--primary` | `217 91% 60%` | `152 72% 46%` |
-| `--primary-glow` | `217 100% 72%` | `152 80% 56%` |
-| `--ring` | `217 91% 60%` | `152 72% 46%` |
-| `--background` | `225 28% 4%` | `160 10% 5%` |
-| `--card` | `225 20% 8%` | `160 8% 8%` |
-| `--secondary` | `225 16% 12%` | `160 8% 12%` |
-| `--muted` | `225 16% 14%` | `160 8% 14%` |
-| `--border` | `225 14% 13%` | `160 8% 13%` |
-| `--input` | `225 16% 11%` | `160 8% 11%` |
-| `--surface*` | `225 xx% xx%` | `160 xx% xx%` |
+### Step 2 — Optimistic message sending
+When a user sends a message, immediately append it to the local `messages` array with a temporary ID and the user's profile. If the insert fails, remove it and show an error toast. This makes chat feel instant.
 
-Update all gradient tokens, shadow-glow references, and sidebar tokens to use green hues (152°) instead of blue (217°). Update `.light` mode equivalents similarly.
+### Step 3 — Granular reaction updates
+Replace the full `fetchMessages()` call on reaction events with a targeted local state update. When a reaction `INSERT`/`DELETE` event arrives, update only the affected message's reaction array in state.
 
-Update `index.html` and `vite.config.ts` theme_color to new charcoal hex value (~`#0D100E`).
+### Step 4 — Handle realtime `UPDATE` events
+Subscribe to `UPDATE` events on the messages table so edits from other users appear in real time without a page refresh.
 
-## Phase 3: Rename All Text References
+### Step 5 — Infinite scroll / pagination
+Load the most recent 50 messages initially. Add a "load older" trigger (scroll-to-top detection) that fetches the next batch. This improves initial load time for busy channels.
 
-Across ~12 files, replace:
+### Step 6 — Mobile long-press actions
+Add a long-press gesture on messages (mobile) that opens the action menu (react, reply, pin, edit, delete) since hover-based toolbars don't work on touch devices.
 
-| Old | New |
-|-----|-----|
-| `DH Bracket Club` | `DH` |
-| `DH Club` | `DH` |
-| `<span>DH</span><span> Club</span>` | `DH` (single element) |
-| `Private Social Hub` | `Compete With Your Crew` |
-| `DH Club Member` | `DH Member` |
-| `Manage your DH Club account` | `Manage your DH account` |
+### Step 7 — Component decomposition
+Split `ChatPage.tsx` into focused components:
+- `ChannelList.tsx` — channel sidebar/list with categories and unread badges
+- `MessageList.tsx` — scrollable message feed with date separators
+- `MessageBubble.tsx` — single message with reactions, actions, thread indicator
+- `MessageComposer.tsx` — input + send button
+- `ThreadPanel.tsx` — thread sidebar with replies
+- `ChatPage.tsx` — orchestrator that wires state and routing between components
 
-**Files to update:**
-- `src/pages/LandingPage.tsx` — header, hero brand text
-- `src/pages/AuthPage.tsx` — logo alt text, title
-- `src/pages/ResetPasswordPage.tsx` — logo alt, title
-- `src/pages/DashboardPage.tsx` — hero logo, welcome text
-- `src/pages/ProfilePage.tsx` — subtitle, footer branding
-- `src/pages/NotFound.tsx` — alt text
-- `src/components/AppLayout.tsx` — sidebar branding (line 116-120)
-- `index.html` — `<title>`, OG/Twitter meta tags
-- `vite.config.ts` — PWA manifest `name`, `short_name`, `description`
-- `supabase/functions/suggest-items/index.ts` — system prompt reference
+### Step 8 — Database-side search
+Replace client-side `filter()` with a Supabase query using `.ilike('content', '%query%')` so search works across all messages, not just the loaded 50.
 
-## Phase 4: Landing Page Glow Updates
+## What This Does NOT Change
+- No changes to navigation, routing, or business logic
+- No changes to the channel/category data model
+- No visual redesign — preserves the current DH premium look
+- No new database tables (except ensuring `channel_read_states` is properly typed)
 
-Update inline `style` gradients in `LandingPage.tsx` and `AuthPage.tsx` from blue (`217`) to green (`152`) hue values to match the new palette.
-
-## Technical Notes
-- All CSS variable changes cascade automatically through `hsl(var(--primary))` usage in Tailwind
-- No database, backend, or structural changes needed
-- The import name `dhMonogram` stays the same (just the file content changes)
-- Logo generation uses `google/gemini-3.1-flash-image-preview` via the AI gateway skill
+## Priority Order
+Steps 1-4 are high-impact, low-effort fixes. Steps 5-8 are larger improvements. I recommend implementing in the order listed.
 
