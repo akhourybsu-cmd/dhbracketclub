@@ -96,11 +96,13 @@ export function MessageBubble({
     <>
       <div
         className={cn(
-          "group relative px-2.5 py-1.5 -mx-2.5 rounded-xl transition-colors",
+          "group relative py-1.5 -mx-2.5 rounded-xl transition-colors",
           "hover:bg-muted/12",
           sameAuthor ? "mt-0" : "mt-3",
+          isOwn && "bg-primary/[0.04]",
           msg._optimistic && "opacity-70"
         )}
+        style={{ borderLeft: `3px solid ${getUserColor(msg.user_id)}`, paddingLeft: '10px', paddingRight: '10px' }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onTouchMove={handleTouchMove}
@@ -110,20 +112,23 @@ export function MessageBubble({
         {!sameAuthor && (
           <div className="flex items-center gap-2 mb-1">
             <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} size={30} />
-            <span className="text-[12px] font-bold text-foreground/90">{msg.profiles?.display_name || 'Unknown'}</span>
+            <span className="text-[12px] font-bold" style={{ color: getUserColor(msg.user_id) }}>{msg.profiles?.display_name || 'Unknown'}</span>
             <span className="text-[9px] text-muted-foreground/70 font-medium">{format(new Date(msg.created_at), 'h:mm a')}</span>
             {msg.is_pinned && <Pin className="w-2.5 h-2.5" style={{ color: 'hsl(var(--premium-warm) / 0.7)' }} />}
           </div>
         )}
 
-        <div className={cn("relative", !sameAuthor ? "pl-[38px]" : "pl-[38px]")}>
+        <div className={cn("relative", "pl-[38px]")}>
           {sameAuthor && (
-            <span className={cn(
-              "absolute left-0 top-0.5 text-[8px] font-mono transition-colors w-[34px] text-right pr-1",
-              showTimestamp ? "text-muted-foreground/70" : "text-muted-foreground/0 group-hover:text-muted-foreground/70"
-            )}>
-              {format(new Date(msg.created_at), 'h:mm')}
-            </span>
+            <div className="absolute left-0 top-0.5 flex items-center gap-1">
+              <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} size={18} />
+              <span className={cn(
+                "text-[8px] font-mono transition-colors",
+                showTimestamp ? "text-muted-foreground/70" : "text-muted-foreground/0 group-hover:text-muted-foreground/70"
+              )}>
+                {format(new Date(msg.created_at), 'h:mm')}
+              </span>
+            </div>
           )}
 
           {editingMessageId === msg.id ? (
