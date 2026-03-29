@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import {
   Pin, Reply, SmilePlus, Trash2, Pencil, Check, X, MessageSquare, Loader2,
 } from 'lucide-react';
-import { UserAvatar } from './UserAvatar';
+import { UserAvatar, getUserColor } from './UserAvatar';
 import type { Message } from './types';
 import { QUICK_EMOJIS } from './types';
 import {
