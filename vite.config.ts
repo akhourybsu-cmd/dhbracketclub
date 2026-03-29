@@ -24,6 +24,8 @@ export default defineConfig(({ mode }) => ({
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         importScripts: ["/sw-push.js"],
+        skipWaiting: true,
+        clientsClaim: true,
       },
       manifest: {
         name: "DH",

@@ -27,12 +27,20 @@ const CONTENT_CONFIG: Record<ShareableContentType, ShareContentConfig> = {
 };
 
 // ─── Link Generation ───
+const PUBLISHED_ORIGIN = 'https://dhbracketclub.lovable.app';
+
+function getShareOrigin(): string {
+  // Always use the published URL for share links so recipients
+  // never land on preview/dev domains or old cached versions
+  return PUBLISHED_ORIGIN;
+}
+
 export function generateShareLink(
   contentType: ShareableContentType,
   id: string,
   extra?: { poolId?: string }
 ): string {
-  const base = window.location.origin;
+  const base = getShareOrigin();
   if (contentType === 'bracket' && extra?.poolId) {
     return `${base}/pools/${extra.poolId}/bracket/${id}`;
   }
