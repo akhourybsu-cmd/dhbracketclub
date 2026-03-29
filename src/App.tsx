@@ -33,6 +33,13 @@ import PollDetailPage from "./pages/PollDetailPage";
 import DraftsListPage from "./pages/DraftsListPage";
 import CreateDraftPage from "./pages/CreateDraftPage";
 import DraftDetailPage from "./pages/DraftDetailPage";
+import ChatPage from "./pages/ChatPage";
+import EventsPage from "./pages/EventsPage";
+import EventDetailPage from "./pages/EventDetailPage";
+import CompetePage from "./pages/CompetePage";
+import FeedPage from "./pages/FeedPage";
+import PostsPage from "./pages/PostsPage";
+import PostDetailPage from "./pages/PostDetailPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -53,8 +60,24 @@ function AnimatedRoutes() {
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-        {/* Dashboard */}
+        {/* Dashboard / Home */}
         <Route path="/dashboard" element={<ProtectedPage><DashboardPage /></ProtectedPage>} />
+
+        {/* Chat */}
+        <Route path="/chat" element={<ProtectedPage><ChatPage /></ProtectedPage>} />
+
+        {/* Events */}
+        <Route path="/events" element={<ProtectedPage><EventsPage /></ProtectedPage>} />
+        <Route path="/events/:eventId" element={<ProtectedPage><EventDetailPage /></ProtectedPage>} />
+
+        {/* Compete hub */}
+        <Route path="/compete" element={<ProtectedPage><CompetePage /></ProtectedPage>} />
+
+        {/* Feed + Posts */}
+        <Route path="/feed" element={<ProtectedPage><FeedPage /></ProtectedPage>} />
+        <Route path="/posts" element={<ProtectedPage><PostsPage /></ProtectedPage>} />
+        <Route path="/posts/create" element={<ProtectedPage><PostsPage /></ProtectedPage>} />
+        <Route path="/posts/:postId" element={<ProtectedPage><PostDetailPage /></ProtectedPage>} />
 
         {/* Brackets module */}
         <Route path="/brackets" element={<ProtectedPage><PoolsListPage /></ProtectedPage>} />
