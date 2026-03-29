@@ -663,8 +663,28 @@ export default function ChatPage() {
                                 {format(new Date(msg.created_at), 'h:mm')}
                               </span>
                             )}
-
-                            <p className="text-[13px] leading-[1.55] text-foreground/85 break-words">{msg.content}</p>
+                            {editingMessageId === msg.id ? (
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  value={editContent}
+                                  onChange={e => setEditContent(e.target.value)}
+                                  onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(); if (e.key === 'Escape') { setEditingMessageId(null); setEditContent(''); } }}
+                                  className="h-8 text-[13px] bg-muted/20 border-border/8 rounded-lg flex-1"
+                                  autoFocus
+                                />
+                                <button onClick={handleSaveEdit} className="p-1.5 rounded-lg bg-primary/15 text-primary hover:bg-primary/25 transition-colors">
+                                  <Check className="w-3.5 h-3.5" />
+                                </button>
+                                <button onClick={() => { setEditingMessageId(null); setEditContent(''); }} className="p-1.5 rounded-lg hover:bg-muted/40 transition-colors">
+                                  <X className="w-3.5 h-3.5 text-muted-foreground/50" />
+                                </button>
+                              </div>
+                            ) : (
+                              <p className="text-[13px] leading-[1.55] text-foreground/85 break-words">
+                                {msg.content}
+                                {msg.edited_at && <span className="text-[9px] text-muted-foreground/25 ml-1.5">(edited)</span>}
+                              </p>
+                            )}
 
                             {/* Reactions row */}
                             {msg.reactions && msg.reactions.length > 0 && (
