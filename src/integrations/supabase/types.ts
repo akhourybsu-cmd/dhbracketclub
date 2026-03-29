@@ -603,6 +603,57 @@ export type Database = {
           },
         ]
       }
+      item_enrichments: {
+        Row: {
+          category: string | null
+          confidence: number | null
+          created_at: string
+          id: string
+          image_url: string | null
+          item_id: string
+          item_type: string
+          matched_name: string | null
+          metadata: Json | null
+          normalized_name: string | null
+          source_provider: string | null
+          status: string
+          thumbnail_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          item_id: string
+          item_type?: string
+          matched_name?: string | null
+          metadata?: Json | null
+          normalized_name?: string | null
+          source_provider?: string | null
+          status?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          item_id?: string
+          item_type?: string
+          matched_name?: string | null
+          metadata?: Json | null
+          normalized_name?: string | null
+          source_provider?: string | null
+          status?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       poll_options: {
         Row: {
           id: string
@@ -982,6 +1033,7 @@ export type Database = {
       }
       rankings: {
         Row: {
+          category: string | null
           competition_id: string
           created_at: string
           created_by: string
@@ -992,6 +1044,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          category?: string | null
           competition_id: string
           created_at?: string
           created_by: string
@@ -1002,6 +1055,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          category?: string | null
           competition_id?: string
           created_at?: string
           created_by?: string

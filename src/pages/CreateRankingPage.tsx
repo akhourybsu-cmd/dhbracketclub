@@ -10,6 +10,7 @@ import { BarChart3, Plus, X, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAISuggestions } from '@/hooks/useAISuggestions';
 import AISuggestions from '@/components/AISuggestions';
+import { useEnrichRanking } from '@/hooks/useItemEnrichments';
 
 export default function CreateRankingPage() {
   const { user } = useAuth();
@@ -19,6 +20,7 @@ export default function CreateRankingPage() {
   const [items, setItems] = useState<string[]>(['', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const { suggestions, loading: aiLoading, fetchSuggestions, removeSuggestion } = useAISuggestions();
+  const { enrichRanking } = useEnrichRanking();
 
   const handleAddSuggestion = (text: string) => {
     removeSuggestion(text);
@@ -101,6 +103,8 @@ export default function CreateRankingPage() {
       });
 
       toast.success('Ranking created!');
+      // Trigger enrichment in background (fire-and-forget)
+      enrichRanking(ranking.id);
       navigate(`/rankings/${ranking.id}`);
     } catch (err: any) {
       toast.error(err.message || 'Failed to create ranking');

@@ -5,9 +5,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { BarChart3, ArrowLeft, Send, Users, Trophy, ChevronDown, ChevronUp, Wifi } from 'lucide-react';
+import { BarChart3, ArrowLeft, Send, Users, Trophy, ChevronDown, ChevronUp, RefreshCw, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRankingUpdates } from '@/hooks/useRealtimeSubscription';
+import { useItemEnrichments, useEnrichRanking } from '@/hooks/useItemEnrichments';
+import EnrichedItemCard, { EnrichedItemSkeleton } from '@/components/EnrichedItemCard';
 
 interface RankingItem {
   id: string;
@@ -28,6 +30,12 @@ export default function RankingDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showResults, setShowResults] = useState(false);
 
+  const itemIds = items.map(i => i.id);
+  const { enrichments, loading: enrichmentsLoading, fetchEnrichments } = useItemEnrichments(itemIds);
+  const { enriching, enrichRanking } = useEnrichRanking();
+
+  const isCreator = ranking?.created_by === user?.id;
+
   const fetchData = useCallback(async () => {
     if (!rankingId || !user) return;
 
@@ -42,7 +50,6 @@ export default function RankingDetailPage() {
       setMyOrder([...itemData]);
     }
 
-    // Fetch all submissions with entries
     const { data: subs } = await supabase
       .from('ranking_submissions')
       .select('*, profiles:user_id(display_name)')
@@ -56,7 +63,6 @@ export default function RankingDetailPage() {
         setShowResults(true);
       }
 
-      // Fetch all entries for these submissions
       const subIds = subs.map(s => s.id);
       const { data: entries } = await supabase
         .from('ranking_submission_entries')
@@ -64,7 +70,6 @@ export default function RankingDetailPage() {
         .in('submission_id', subIds);
 
       if (entries && itemData) {
-        // Calculate average rank per item
         const rankSums = new Map<string, { total: number; count: number }>();
         entries.forEach(e => {
           const existing = rankSums.get(e.item_id) || { total: 0, count: 0 };
@@ -78,7 +83,6 @@ export default function RankingDetailPage() {
 
         setAggregated(agg);
 
-        // If user has submitted, load their order
         if (mine) {
           const myEntries = entries.filter(e => e.submission_id === mine.id).sort((a, b) => a.rank - b.rank);
           const ordered = myEntries.map(e => itemData.find(i => i.id === e.item_id)).filter(Boolean) as RankingItem[];
@@ -91,12 +95,12 @@ export default function RankingDetailPage() {
   }, [rankingId, user]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { if (items.length) fetchEnrichments(); }, [items.length, fetchEnrichments]);
 
-  // Realtime: auto-refresh when someone submits a ranking
   useRankingUpdates(rankingId, fetchData);
 
   const moveItem = (fromIdx: number, direction: 'up' | 'down') => {
-    if (mySubmission) return; // Already submitted
+    if (mySubmission) return;
     const toIdx = direction === 'up' ? fromIdx - 1 : fromIdx + 1;
     if (toIdx < 0 || toIdx >= myOrder.length) return;
     const newOrder = [...myOrder];
@@ -142,6 +146,15 @@ export default function RankingDetailPage() {
     }
   };
 
+  const handleReEnrich = async () => {
+    if (!rankingId) return;
+    const result = await enrichRanking(rankingId);
+    if (result) {
+      toast.success(`Enriched ${result.enriched_count} items`);
+      fetchEnrichments();
+    }
+  };
+
   if (loading) {
     return (
       <div className="loading-spinner">
@@ -156,6 +169,7 @@ export default function RankingDetailPage() {
   }
 
   const isOpen = ranking.status === 'open';
+  const hasEnrichments = enrichments.size > 0;
 
   return (
     <div className="max-w-md mx-auto">
@@ -170,11 +184,29 @@ export default function RankingDetailPage() {
             <h1 className="text-[1.4rem] font-extrabold tracking-tight leading-tight">{ranking.topic}</h1>
             <p className="text-[11px] text-muted-foreground/60 font-medium mt-1">
               by {ranking.profiles?.display_name} • {items.length} items
+              {ranking.category && (
+                <span className="ml-1.5 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider"
+                  style={{ background: 'hsl(var(--primary) / 0.1)', color: 'hsl(var(--primary))' }}>
+                  <Sparkles className="w-2.5 h-2.5" />{ranking.category}
+                </span>
+              )}
             </p>
           </div>
-          <span className={cn("status-pill", isOpen ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground')}>
-            {isOpen ? 'Open' : 'Closed'}
-          </span>
+          <div className="flex items-center gap-2">
+            {isCreator && (
+              <button
+                onClick={handleReEnrich}
+                disabled={enriching}
+                className="p-2 rounded-lg text-muted-foreground/40 hover:text-primary transition-colors disabled:opacity-40"
+                title="Re-enrich items"
+              >
+                <RefreshCw className={cn("w-4 h-4", enriching && "animate-spin")} />
+              </button>
+            )}
+            <span className={cn("status-pill", isOpen ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground')}>
+              {isOpen ? 'Open' : 'Closed'}
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-2 mt-3">
           <div className="stat-card py-2 flex-1">
@@ -190,7 +222,20 @@ export default function RankingDetailPage() {
         </div>
       </motion.div>
 
-      {/* Tab toggle: My Ranking / Group Results */}
+      {/* Enrichment loading state */}
+      {enriching && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="mb-4 flex items-center gap-2 px-4 py-3 rounded-xl"
+          style={{ background: 'hsl(var(--primary) / 0.08)', border: '1px solid hsl(var(--primary) / 0.15)' }}
+        >
+          <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+          <span className="text-[11px] font-semibold text-primary">Enriching items with AI…</span>
+        </motion.div>
+      )}
+
+      {/* Tab toggle */}
       {submissions.length > 0 && (
         <div className="flex gap-1.5 mb-5 p-1 bg-muted/30 rounded-xl">
           <button
@@ -220,54 +265,45 @@ export default function RankingDetailPage() {
           <div className="glass-card overflow-hidden mb-5">
             <div className="px-4 py-3 border-b border-border/10">
               <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-wider">
-                {mySubmission ? 'Your submitted ranking' : 'Drag to reorder, then submit'}
+                {mySubmission ? 'Your submitted ranking' : 'Reorder items, then submit'}
               </p>
             </div>
             <div className="divide-y divide-border/10">
-              {myOrder.map((item, idx) => (
-                <motion.div
-                  key={item.id}
-                  layout
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-3",
-                    !mySubmission && "active:bg-primary/5"
-                  )}
-                >
-                  {/* Rank number */}
-                  <div className={cn(
-                    "w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-extrabold flex-shrink-0",
-                    idx === 0 && "bg-gold/15 text-gold",
-                    idx === 1 && "bg-silver/15 text-silver",
-                    idx === 2 && "bg-bronze/15 text-bronze",
-                    idx > 2 && "bg-muted/50 text-muted-foreground"
-                  )}>
-                    {idx + 1}
-                  </div>
-
-                  {/* Label */}
-                  <span className="flex-1 text-[13px] font-semibold truncate">{item.label}</span>
-
-                  {/* Reorder buttons */}
-                  {!mySubmission && isOpen && (
-                    <div className="flex flex-col gap-0.5 flex-shrink-0">
-                      <button
-                        onClick={() => moveItem(idx, 'up')}
-                        disabled={idx === 0}
-                        className="p-1 rounded text-muted-foreground/40 hover:text-foreground disabled:opacity-20 transition-colors"
-                      >
-                        <ChevronUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => moveItem(idx, 'down')}
-                        disabled={idx === myOrder.length - 1}
-                        className="p-1 rounded text-muted-foreground/40 hover:text-foreground disabled:opacity-20 transition-colors"
-                      >
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
-                </motion.div>
-              ))}
+              {enrichmentsLoading && !hasEnrichments ? (
+                Array.from({ length: Math.min(items.length, 5) }).map((_, i) => (
+                  <EnrichedItemSkeleton key={i} compact />
+                ))
+              ) : (
+                myOrder.map((item, idx) => (
+                  <EnrichedItemCard
+                    key={item.id}
+                    label={item.label}
+                    rank={idx + 1}
+                    enrichment={enrichments.get(item.id)}
+                    compact={!hasEnrichments}
+                    actions={
+                      !mySubmission && isOpen ? (
+                        <div className="flex flex-col gap-0.5 flex-shrink-0">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); moveItem(idx, 'up'); }}
+                            disabled={idx === 0}
+                            className="p-1 rounded text-muted-foreground/40 hover:text-foreground disabled:opacity-20 transition-colors"
+                          >
+                            <ChevronUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); moveItem(idx, 'down'); }}
+                            disabled={idx === myOrder.length - 1}
+                            className="p-1 rounded text-muted-foreground/40 hover:text-foreground disabled:opacity-20 transition-colors"
+                          >
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : undefined
+                    }
+                  />
+                ))
+              )}
             </div>
           </div>
 
@@ -297,33 +333,17 @@ export default function RankingDetailPage() {
             </div>
             <div className="divide-y divide-border/10 relative z-10">
               {aggregated.map((entry, idx) => (
-                <motion.div
+                <EnrichedItemCard
                   key={entry.item.id}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.03 }}
-                  className="flex items-center gap-3 px-4 py-3"
-                >
-                  <div className={cn(
-                    "w-8 h-8 rounded-lg flex items-center justify-center text-[12px] font-extrabold flex-shrink-0",
-                    idx === 0 && "bg-gold/15 text-gold",
-                    idx === 1 && "bg-silver/15 text-silver",
-                    idx === 2 && "bg-bronze/15 text-bronze",
-                    idx > 2 && "bg-muted/50 text-muted-foreground"
-                  )}>
-                    {idx === 0 && <Trophy className="w-4 h-4" />}
-                    {idx > 0 && (idx + 1)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className={cn(
-                      "text-[13px] font-semibold truncate block",
-                      idx === 0 && "text-gold"
-                    )}>{entry.item.label}</span>
-                  </div>
-                  <span className="text-[10px] font-mono text-muted-foreground/50 flex-shrink-0">
-                    avg {entry.avgRank.toFixed(1)}
-                  </span>
-                </motion.div>
+                  label={entry.item.label}
+                  rank={idx + 1}
+                  enrichment={enrichments.get(entry.item.id)}
+                  actions={
+                    <span className="text-[10px] font-mono text-muted-foreground/50 flex-shrink-0">
+                      avg {entry.avgRank.toFixed(1)}
+                    </span>
+                  }
+                />
               ))}
             </div>
           </div>
