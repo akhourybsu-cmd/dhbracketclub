@@ -56,12 +56,12 @@ export default function CompetePage() {
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-muted-foreground/50">{mod.description}</p>
+                        <p className="text-[11px] text-muted-foreground/70">{mod.description}</p>
                       </div>
                     </div>
                     <div className="flex gap-2">
                       <Link to={mod.path} className="flex-1">
-                        <button className="w-full h-8 rounded-lg bg-muted/30 text-[11px] font-bold text-foreground/70 hover:bg-muted/50 transition-colors flex items-center justify-center gap-1.5">
+                        <button className="w-full h-8 rounded-lg bg-muted/50 text-[11px] font-bold text-foreground/80 hover:bg-muted/50 transition-colors flex items-center justify-center gap-1.5">
                           View All <ChevronRight className="w-3 h-3" />
                         </button>
                       </Link>

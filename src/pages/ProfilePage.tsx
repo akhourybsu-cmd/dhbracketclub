@@ -122,7 +122,7 @@ export default function ProfilePage() {
 
       {/* Stats */}
       <div className="glass-card p-5 mb-4">
-        <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 mb-3">Your Stats</h3>
+        <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">Your Stats</h3>
         <div className="grid grid-cols-3 gap-3">
           {[
             { label: 'Polls Voted', value: stats.polls, icon: MessageCircle, color: 'warning' },
@@ -136,7 +136,7 @@ export default function ProfilePage() {
                 <stat.icon className="w-4 h-4" style={{ color: `hsl(var(--${stat.color}))` }} />
               </div>
               <p className="text-lg font-extrabold leading-none">{stat.value}</p>
-              <p className="text-[9px] text-muted-foreground/40 font-medium mt-0.5">{stat.label}</p>
+              <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">{stat.label}</p>
             </div>
           ))}
         </div>
@@ -145,7 +145,7 @@ export default function ProfilePage() {
       {/* Recent Activity */}
       {recentActivity.length > 0 && (
         <div className="glass-card p-5 mb-4">
-          <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 mb-3">Recent Activity</h3>
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">Recent Activity</h3>
           <div className="space-y-2.5">
             {recentActivity.map(a => {
               const config = ACTIVITY_ICONS[a.event_type] || { icon: Zap, color: 'primary' };
@@ -160,11 +160,11 @@ export default function ProfilePage() {
                     <Icon className="w-3 h-3" style={{ color: `hsl(var(--${config.color}))` }} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[11px] text-foreground/70 truncate">
+                    <p className="text-[11px] text-foreground/80 truncate">
                       {a.event_type.replace(/_/g, ' ')}
                       {title && <span className="font-semibold"> — {title}</span>}
                     </p>
-                    <p className="text-[9px] text-muted-foreground/30">{formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}</p>
+                    <p className="text-[9px] text-muted-foreground/70">{formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}</p>
                   </div>
                 </div>
               );
@@ -175,7 +175,7 @@ export default function ProfilePage() {
 
       {/* Settings */}
       <div className="glass-card p-5 mb-4 space-y-4">
-        <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 mb-3">Settings</h3>
+        <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">Settings</h3>
 
         {/* Theme toggle */}
         <div className="flex items-center justify-between">
@@ -225,7 +225,7 @@ export default function ProfilePage() {
       {/* DH branding */}
       <div className="flex items-center justify-center gap-2 py-4 mb-2">
         <img src={dhMonogram} alt="DH" className="w-5 h-5 object-contain opacity-30" />
-        <span className="text-[9px] text-muted-foreground/30 font-bold uppercase tracking-[0.15em]">DH Member</span>
+        <span className="text-[9px] text-muted-foreground/70 font-bold uppercase tracking-[0.15em]">DH Member</span>
       </div>
 
       {/* Sign out */}

@@ -171,7 +171,7 @@ export default function CreateRankingPage() {
           <div className="space-y-2">
             {items.map((item, idx) => (
               <div key={idx} className="flex items-center gap-2">
-                <span className="text-[10px] font-mono font-bold text-muted-foreground/50 w-5 text-right flex-shrink-0">{idx + 1}</span>
+                <span className="text-[10px] font-mono font-bold text-muted-foreground/70 w-5 text-right flex-shrink-0">{idx + 1}</span>
                 <Input
                   value={item}
                   onChange={e => updateItem(idx, e.target.value)}
@@ -180,7 +180,7 @@ export default function CreateRankingPage() {
                   className="form-input flex-1"
                 />
                 {items.length > 2 && (
-                  <button type="button" onClick={() => removeItem(idx)} className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-destructive transition-colors">
+                  <button type="button" onClick={() => removeItem(idx)} className="p-1.5 rounded-lg text-muted-foreground/60 hover:text-destructive transition-colors">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}

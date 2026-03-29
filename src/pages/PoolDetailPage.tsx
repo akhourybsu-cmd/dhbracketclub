@@ -164,7 +164,7 @@ export default function PoolDetailPage() {
             {isLocked ? 'Locked' : 'Open'}
           </span>
         </div>
-        {pool.description && <p className="text-[11px] text-muted-foreground/50 mt-2 leading-relaxed relative z-10">{pool.description}</p>}
+        {pool.description && <p className="text-[11px] text-muted-foreground/70 mt-2 leading-relaxed relative z-10">{pool.description}</p>}
       </div>
 
       {/* Info Cards */}
@@ -284,7 +284,7 @@ export default function PoolDetailPage() {
       <div className="section-divider mb-2.5">
         <h2 className="section-header mb-0">Members</h2>
       </div>
-      <div className="glass-card divide-y divide-border/10 overflow-hidden">
+      <div className="glass-card divide-y divide-border/20 overflow-hidden">
         {members.map((m: any, i: number) => {
           const mb = memberBrackets.get(m.user_id);
           const memberStatus = getBracketDisplayStatus(mb?.status || null, pool.lock_time, 0, TOTAL_GAMES);
@@ -309,7 +309,7 @@ export default function PoolDetailPage() {
                 </div>
                 <div className="min-w-0">
                   <span className="text-[13px] font-semibold block truncate">{m.profiles?.display_name || 'Unknown'}</span>
-                  {m.role === 'admin' && <span className="text-[8px] text-primary/60 font-bold uppercase tracking-[0.15em]">Admin</span>}
+                  {m.role === 'admin' && <span className="text-[8px] text-primary/80 font-bold uppercase tracking-[0.15em]">Admin</span>}
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -330,7 +330,7 @@ export default function PoolDetailPage() {
 
       {/* Delete Pool (Admin only) */}
       {isAdmin && (
-        <div className="mt-8 pt-5 border-t border-border/10">
+        <div className="mt-8 pt-5 border-t border-border/25">
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="outline" className="w-full gap-2 text-destructive/60 border-destructive/15 hover:bg-destructive/8 font-bold rounded-xl text-[13px]">

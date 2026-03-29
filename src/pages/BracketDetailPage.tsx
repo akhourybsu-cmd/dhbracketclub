@@ -430,7 +430,7 @@ function DetailRow({ team, isPicked, winner, isChampGame }: {
           {/* Name */}
           <span className={cn(
             "text-sm flex-1 truncate transition-colors",
-            isPicked ? "font-bold" : "font-medium text-foreground/70",
+            isPicked ? "font-bold" : "font-medium text-foreground/80",
           )} style={{
             ...(isPicked && isChampGame && isCorrect === null ? { color: 'hsl(var(--gold))' } : {}),
           }}>
@@ -473,7 +473,7 @@ function DetailRow({ team, isPicked, winner, isChampGame }: {
       ) : (
         <>
           <div className="w-7 h-7 rounded-lg" style={{ background: 'hsl(var(--surface))', border: '1px solid hsl(var(--border) / 0.15)' }} />
-          <span className="text-xs text-muted-foreground/40 italic font-medium">TBD</span>
+          <span className="text-xs text-muted-foreground/60 italic font-medium">TBD</span>
         </>
       )}
     </div>

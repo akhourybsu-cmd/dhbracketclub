@@ -177,7 +177,7 @@ export default function BracketComparePage() {
                           {pickA ? (
                             <span className="text-sm font-medium">{teams.get(pickA.picked_team_id)?.short_name || '?'}</span>
                           ) : (
-                            <span className="text-xs text-muted-foreground/50 italic">—</span>
+                            <span className="text-xs text-muted-foreground/70 italic">—</span>
                           )}
                         </div>
                         <div className="flex items-center justify-center">
@@ -191,7 +191,7 @@ export default function BracketComparePage() {
                           {pickB ? (
                             <span className="text-sm font-medium">{teams.get(pickB.picked_team_id)?.short_name || '?'}</span>
                           ) : (
-                            <span className="text-xs text-muted-foreground/50 italic">—</span>
+                            <span className="text-xs text-muted-foreground/70 italic">—</span>
                           )}
                         </div>
                       </div>

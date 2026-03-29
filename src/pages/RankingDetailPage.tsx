@@ -298,7 +298,7 @@ export default function RankingDetailPage() {
               <button
                 onClick={handleReEnrich}
                 disabled={enriching}
-                className="p-2 rounded-lg text-muted-foreground/40 hover:text-primary transition-colors disabled:opacity-40"
+                className="p-2 rounded-lg text-muted-foreground/60 hover:text-primary transition-colors disabled:opacity-40"
                 title="Re-enrich items"
               >
                 <RefreshCw className={cn("w-4 h-4", enriching && "animate-spin")} />
@@ -310,7 +310,7 @@ export default function RankingDetailPage() {
             {isCreator && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-foreground transition-colors">
+                  <button className="p-1.5 rounded-lg text-muted-foreground/60 hover:text-foreground transition-colors">
                     <MoreVertical className="w-4 h-4" />
                   </button>
                 </DropdownMenuTrigger>
@@ -358,7 +358,7 @@ export default function RankingDetailPage() {
 
       {/* Tab toggle */}
       {submissions.length > 0 && (
-        <div className="flex gap-1.5 mb-5 p-1 bg-muted/30 rounded-xl">
+        <div className="flex gap-1.5 mb-5 p-1 bg-muted/50 rounded-xl">
           <button
             onClick={() => setShowResults(false)}
             className={cn(
@@ -384,12 +384,12 @@ export default function RankingDetailPage() {
       {!showResults && (
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
           <div className="glass-card overflow-hidden mb-5">
-            <div className="px-4 py-3 border-b border-border/10">
+            <div className="px-4 py-3 border-b border-border/25">
               <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-wider">
                 {mySubmission ? 'Your submitted ranking' : 'Reorder items, then submit'}
               </p>
             </div>
-            <div className="divide-y divide-border/10">
+            <div className="divide-y divide-border/20">
               {enrichmentsLoading && !hasEnrichments ? (
                 Array.from({ length: Math.min(items.length, 5) }).map((_, i) => (
                   <EnrichedItemSkeleton key={i} compact />
@@ -408,14 +408,14 @@ export default function RankingDetailPage() {
                           <button
                             onClick={(e) => { e.stopPropagation(); moveItem(idx, 'up'); }}
                             disabled={idx === 0}
-                            className="p-1 rounded text-muted-foreground/40 hover:text-foreground disabled:opacity-20 transition-colors"
+                            className="p-1 rounded text-muted-foreground/60 hover:text-foreground disabled:opacity-20 transition-colors"
                           >
                             <ChevronUp className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); moveItem(idx, 'down'); }}
                             disabled={idx === myOrder.length - 1}
-                            className="p-1 rounded text-muted-foreground/40 hover:text-foreground disabled:opacity-20 transition-colors"
+                            className="p-1 rounded text-muted-foreground/60 hover:text-foreground disabled:opacity-20 transition-colors"
                           >
                             <ChevronDown className="w-3.5 h-3.5" />
                           </button>
@@ -447,12 +447,12 @@ export default function RankingDetailPage() {
       {showResults && (
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
           <div className="glass-card arena-edge overflow-hidden mb-5">
-            <div className="px-4 py-3 border-b border-border/10 relative z-10">
+            <div className="px-4 py-3 border-b border-border/25 relative z-10">
               <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-wider">
                 Group consensus • {submissions.length} submission{submissions.length !== 1 ? 's' : ''}
               </p>
             </div>
-            <div className="divide-y divide-border/10 relative z-10">
+            <div className="divide-y divide-border/20 relative z-10">
               {aggregated.map((entry, idx) => (
                 <EnrichedItemCard
                   key={entry.item.id}
@@ -460,7 +460,7 @@ export default function RankingDetailPage() {
                   rank={idx + 1}
                   enrichment={enrichments.get(entry.item.id)}
                   actions={
-                    <span className="text-[10px] font-mono text-muted-foreground/50 flex-shrink-0">
+                    <span className="text-[10px] font-mono text-muted-foreground/70 flex-shrink-0">
                       avg {entry.avgRank.toFixed(1)}
                     </span>
                   }
@@ -479,7 +479,7 @@ export default function RankingDetailPage() {
                 {submissions.map((sub: any) => (
                   <div key={sub.id} className="glass-card p-4">
                     <p className="text-[12px] font-bold mb-2">{sub.profiles?.display_name || 'Unknown'}</p>
-                    <p className="text-[10px] text-muted-foreground/50">
+                    <p className="text-[10px] text-muted-foreground/70">
                       Submitted {new Date(sub.submitted_at).toLocaleDateString()}
                     </p>
                   </div>

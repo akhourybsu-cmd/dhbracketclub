@@ -103,9 +103,9 @@ export default function RankingsListPage() {
                         <div className="min-w-0">
                           <h3 className="font-bold text-sm truncate">{r.topic}</h3>
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-[10px] text-muted-foreground/50 font-medium">{r.item_count} items</span>
+                            <span className="text-[10px] text-muted-foreground/70 font-medium">{r.item_count} items</span>
                             <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/15" />
-                            <span className="text-[10px] text-muted-foreground/50 flex items-center gap-0.5 font-medium">
+                            <span className="text-[10px] text-muted-foreground/70 flex items-center gap-0.5 font-medium">
                               <Users className="w-2.5 h-2.5" /> {count} ranked
                             </span>
                           </div>
@@ -119,7 +119,7 @@ export default function RankingsListPage() {
                             {r.status === 'open' ? 'Open' : 'Closed'}
                           </span>
                         )}
-                        <ArrowRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-all" />
+                        <ArrowRight className="w-4 h-4 text-muted-foreground/60 group-hover:text-muted-foreground transition-all" />
                       </div>
                     </div>
                   </div>

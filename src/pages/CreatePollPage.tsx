@@ -170,7 +170,7 @@ export default function CreatePollPage() {
                   className="form-input flex-1"
                 />
                 {options.length > 2 && (
-                  <button type="button" onClick={() => removeOption(idx)} className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-destructive transition-colors">
+                  <button type="button" onClick={() => removeOption(idx)} className="p-1.5 rounded-lg text-muted-foreground/60 hover:text-destructive transition-colors">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}

@@ -123,7 +123,7 @@ export default function PoolsListPage() {
                         </div>
                         <div className="min-w-0">
                           <h3 className="font-bold text-sm truncate">{pool.name}</h3>
-                          <p className="text-[10px] text-muted-foreground/50 font-medium">{pool.tournaments?.name} {pool.tournaments?.season_year}</p>
+                          <p className="text-[10px] text-muted-foreground/70 font-medium">{pool.tournaments?.name} {pool.tournaments?.season_year}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -133,7 +133,7 @@ export default function PoolsListPage() {
                         )}>
                           {locked ? 'Locked' : 'Open'}
                         </span>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all" />
+                        <ArrowRight className="w-4 h-4 text-muted-foreground/60 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all" />
                       </div>
                     </div>
                   </div>

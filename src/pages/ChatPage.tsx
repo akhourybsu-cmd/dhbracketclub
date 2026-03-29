@@ -426,7 +426,7 @@ export default function ChatPage() {
           <div className="flex items-center justify-between mb-5">
             <div>
               <h1 className="text-xl font-extrabold tracking-tight">Chat</h1>
-              <p className="text-[10px] text-muted-foreground/40 font-medium mt-0.5">DH conversations</p>
+              <p className="text-[10px] text-muted-foreground/60 font-medium mt-0.5">DH conversations</p>
             </div>
             <Button size="sm" variant="ghost" onClick={() => setShowNewChannel(true)} className="h-8 w-8 p-0 rounded-xl">
               <Plus className="w-4 h-4" />
@@ -457,7 +457,7 @@ export default function ChatPage() {
             {groupedChannels.map(group => (
               group.channels.length > 0 && (
                 <div key={group.id}>
-                  <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/30 mb-1.5 px-1">{group.name}</p>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70 mb-1.5 px-1">{group.name}</p>
                   <div className="space-y-0.5">
                     {group.channels.map((ch, i) => {
                       const meta = channelMeta.get(ch.id);
@@ -471,22 +471,22 @@ export default function ChatPage() {
                           onClick={() => selectChannel(ch)}
                           className={cn(
                             "w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all duration-150",
-                            "hover:bg-muted/40 active:bg-muted/60 active:scale-[0.99]",
+                            "hover:bg-muted/50 active:bg-muted/60 active:scale-[0.99]",
                             selectedChannel?.id === ch.id && "bg-primary/8",
-                            meta?.unread && "bg-muted/15"
+                            meta?.unread && "bg-muted/25"
                           )}
                         >
                           <div className={cn(
                             "w-9 h-9 rounded-xl flex items-center justify-center text-base flex-shrink-0 transition-colors",
-                            meta?.unread ? "bg-primary/12" : "bg-muted/30"
+                            meta?.unread ? "bg-primary/12" : "bg-muted/50"
                           )}>
-                            {typeof emoji === 'string' && emoji !== '#' ? emoji : <Hash className="w-4 h-4 text-muted-foreground/40" />}
+                            {typeof emoji === 'string' && emoji !== '#' ? emoji : <Hash className="w-4 h-4 text-muted-foreground/60" />}
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
                               <span className={cn(
                                 "text-[13px] tracking-tight truncate",
-                                meta?.unread ? "font-bold text-foreground" : "font-semibold text-foreground/70"
+                                meta?.unread ? "font-bold text-foreground" : "font-semibold text-foreground/80"
                               )}>
                                 {ch.name}
                               </span>
@@ -497,17 +497,17 @@ export default function ChatPage() {
                             {meta?.lastMessage ? (
                               <p className={cn(
                                 "text-[11px] truncate mt-0.5",
-                                meta.unread ? "text-foreground/50 font-medium" : "text-muted-foreground/35"
+                                meta.unread ? "text-foreground/65 font-medium" : "text-muted-foreground/70"
                               )}>
                                 {meta.lastAuthor && <span className="font-semibold">{meta.lastAuthor}: </span>}
                                 {meta.lastMessage}
                               </p>
                             ) : (
-                              <p className="text-[10px] text-muted-foreground/25 mt-0.5 italic">{ch.description || 'No messages yet'}</p>
+                              <p className="text-[10px] text-muted-foreground/70 mt-0.5 italic">{ch.description || 'No messages yet'}</p>
                             )}
                           </div>
                           {meta?.lastMessageAt && (
-                            <span className="text-[9px] text-muted-foreground/25 font-medium flex-shrink-0 self-start mt-1">
+                            <span className="text-[9px] text-muted-foreground/70 font-medium flex-shrink-0 self-start mt-1">
                               {isToday(new Date(meta.lastMessageAt)) ? format(new Date(meta.lastMessageAt), 'h:mm a') : format(new Date(meta.lastMessageAt), 'MMM d')}
                             </span>
                           )}
@@ -523,7 +523,7 @@ export default function ChatPage() {
           {/* Skeleton loading */}
           {loading && channels.length === 0 && (
             <div className="space-y-0.5">
-              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/30 mb-1.5 px-1">
+              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70 mb-1.5 px-1">
                 <span className="inline-block h-2 w-16 rounded skeleton-shimmer" />
               </p>
               {[1, 2, 3, 4, 5].map(i => (
@@ -537,7 +537,7 @@ export default function ChatPage() {
                 </div>
               ))}
               <div className="mt-5">
-                <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/30 mb-1.5 px-1">
+                <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70 mb-1.5 px-1">
                   <span className="inline-block h-2 w-12 rounded skeleton-shimmer" />
                 </p>
                 {[1, 2].map(i => (
@@ -558,8 +558,8 @@ export default function ChatPage() {
               <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--primary) / 0.03))' }}>
                 <Hash className="w-7 h-7 text-primary/40" />
               </div>
-              <p className="text-sm text-muted-foreground/50 font-semibold">No channels yet</p>
-              <p className="text-xs text-muted-foreground/30 mt-1">Create one to start chatting with the crew</p>
+              <p className="text-sm text-muted-foreground/70 font-semibold">No channels yet</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">Create one to start chatting with the crew</p>
             </div>
           )}
         </motion.div>
@@ -573,24 +573,24 @@ export default function ChatPage() {
   return (
     <div className="flex flex-col -mx-4 sm:-mx-5 -mt-5 sm:-mt-6 lg:-mt-8" style={{ height: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom, 0px))', maxHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom, 0px))' }}>
       {/* Channel header */}
-      <div className="flex items-center gap-2.5 px-4 sm:px-5 py-3 border-b border-border/8 flex-shrink-0" style={{ background: 'hsl(var(--background) / 0.7)', backdropFilter: 'blur(12px)' }}>
-        <button onClick={() => { setShowChannelList(true); setThreadParent(null); setShowPinned(false); }} className="p-1.5 -ml-1 rounded-lg hover:bg-muted/40 transition-colors lg:hidden">
+      <div className="flex items-center gap-2.5 px-4 sm:px-5 py-3 border-b border-border/25 flex-shrink-0" style={{ background: 'hsl(var(--background) / 0.7)', backdropFilter: 'blur(12px)' }}>
+        <button onClick={() => { setShowChannelList(true); setThreadParent(null); setShowPinned(false); }} className="p-1.5 -ml-1 rounded-lg hover:bg-muted/50 transition-colors lg:hidden">
           <ChevronLeft className="w-5 h-5 text-muted-foreground/60" />
         </button>
         <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/10 text-sm">
-          {CHANNEL_EMOJI[selectedChannel?.name || ''] || <Hash className="w-3.5 h-3.5 text-primary/60" />}
+          {CHANNEL_EMOJI[selectedChannel?.name || ''] || <Hash className="w-3.5 h-3.5 text-primary/80" />}
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="font-bold text-[14px] tracking-tight">{selectedChannel?.name}</h2>
           {selectedChannel?.description && (
-            <p className="text-[9px] text-muted-foreground/30 truncate">{selectedChannel.description}</p>
+            <p className="text-[9px] text-muted-foreground/70 truncate">{selectedChannel.description}</p>
           )}
         </div>
-        <button onClick={() => { setShowSearch(!showSearch); setSearchQuery(''); }} className={cn("p-1.5 rounded-lg transition-colors", showSearch ? "bg-primary/15 text-primary" : "hover:bg-muted/40 text-muted-foreground/40")}>
+        <button onClick={() => { setShowSearch(!showSearch); setSearchQuery(''); }} className={cn("p-1.5 rounded-lg transition-colors", showSearch ? "bg-primary/15 text-primary" : "hover:bg-muted/50 text-muted-foreground/60")}>
           <Search className="w-4 h-4" />
         </button>
         {pinnedCount > 0 && (
-          <button onClick={loadPinnedMessages} className={cn("p-1.5 rounded-lg transition-colors", showPinned ? "bg-premium-warm/15 text-premium-warm" : "hover:bg-muted/40 text-muted-foreground/40")}>
+          <button onClick={loadPinnedMessages} className={cn("p-1.5 rounded-lg transition-colors", showPinned ? "bg-premium-warm/15 text-premium-warm" : "hover:bg-muted/50 text-muted-foreground/60")}>
             <Pin className="w-4 h-4" />
           </button>
         )}
@@ -605,7 +605,7 @@ export default function ChatPage() {
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search messages..."
-                className="h-8 text-xs bg-muted/20 border-border/8 rounded-lg"
+                className="h-8 text-xs bg-muted/20 border-border/25 rounded-lg"
                 autoFocus
               />
             </div>
@@ -623,8 +623,8 @@ export default function ChatPage() {
                 <h3 className="text-sm font-bold flex items-center gap-1.5">
                   <Pin className="w-3.5 h-3.5" style={{ color: 'hsl(var(--premium-warm))' }} /> Pinned Messages
                 </h3>
-                <button onClick={() => setShowPinned(false)} className="p-1 rounded-lg hover:bg-muted/40 lg:hidden">
-                  <X className="w-4 h-4 text-muted-foreground/50" />
+                <button onClick={() => setShowPinned(false)} className="p-1 rounded-lg hover:bg-muted/50 lg:hidden">
+                  <X className="w-4 h-4 text-muted-foreground/70" />
                 </button>
               </div>
               <div className="space-y-2">
@@ -633,13 +633,13 @@ export default function ChatPage() {
                     <div className="flex items-center gap-2 mb-1.5 relative z-10">
                       <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} size={24} />
                       <span className="text-[11px] font-bold text-foreground/80">{msg.profiles?.display_name}</span>
-                      <span className="text-[9px] text-muted-foreground/25">{format(new Date(msg.created_at), 'MMM d, h:mm a')}</span>
+                      <span className="text-[9px] text-muted-foreground/70">{format(new Date(msg.created_at), 'MMM d, h:mm a')}</span>
                     </div>
                     <p className="text-[13px] text-foreground/80 leading-relaxed pl-8 relative z-10">{msg.content}</p>
                   </div>
                 ))}
                 {pinnedMessages.length === 0 && (
-                  <p className="text-xs text-muted-foreground/30 text-center py-8">No pinned messages</p>
+                  <p className="text-xs text-muted-foreground/70 text-center py-8">No pinned messages</p>
                 )}
               </div>
             </div>
@@ -651,10 +651,10 @@ export default function ChatPage() {
                   {messages.length === 0 && (
                     <div className="text-center py-20">
                       <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, hsl(var(--muted) / 0.4), hsl(var(--muted) / 0.15))' }}>
-                        <MessageSquare className="w-6 h-6 text-muted-foreground/20" />
+                        <MessageSquare className="w-6 h-6 text-muted-foreground/65" />
                       </div>
-                      <p className="text-sm text-muted-foreground/40 font-medium">Welcome to #{selectedChannel?.name}</p>
-                      <p className="text-[11px] text-muted-foreground/25 mt-1">{selectedChannel?.description || 'Start the conversation'}</p>
+                      <p className="text-sm text-muted-foreground/60 font-medium">Welcome to #{selectedChannel?.name}</p>
+                      <p className="text-[11px] text-muted-foreground/70 mt-1">{selectedChannel?.description || 'Start the conversation'}</p>
                     </div>
                   )}
                   {(searchQuery ? messages.filter(m => m.content.toLowerCase().includes(searchQuery.toLowerCase())) : messages).map((msg, idx, filteredMsgs) => {
@@ -669,7 +669,7 @@ export default function ChatPage() {
                         {showDate && (
                           <div className="flex items-center gap-3 py-4">
                             <div className="flex-1 h-px bg-border/8" />
-                            <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground/25 px-2">{getDateLabel(msg.created_at)}</span>
+                            <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground/70 px-2">{getDateLabel(msg.created_at)}</span>
                             <div className="flex-1 h-px bg-border/8" />
                           </div>
                         )}
@@ -683,7 +683,7 @@ export default function ChatPage() {
                             <div className="flex items-center gap-2 mb-1">
                               <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} size={30} />
                               <span className="text-[12px] font-bold text-foreground/90">{msg.profiles?.display_name || 'Unknown'}</span>
-                              <span className="text-[9px] text-muted-foreground/25 font-medium">{format(new Date(msg.created_at), 'h:mm a')}</span>
+                              <span className="text-[9px] text-muted-foreground/70 font-medium">{format(new Date(msg.created_at), 'h:mm a')}</span>
                               {msg.is_pinned && <Pin className="w-2.5 h-2.5" style={{ color: 'hsl(var(--premium-warm) / 0.7)' }} />}
                             </div>
                           )}
@@ -691,7 +691,7 @@ export default function ChatPage() {
                           <div className={cn("relative", !sameAuthor && "pl-[38px]")}>
                             {/* Timestamp on same-author messages (shown on hover) */}
                             {sameAuthor && (
-                              <span className="absolute -left-0.5 top-0.5 text-[8px] text-muted-foreground/0 group-hover:text-muted-foreground/25 transition-colors font-mono">
+                              <span className="absolute -left-0.5 top-0.5 text-[8px] text-muted-foreground/0 group-hover:text-muted-foreground/70 transition-colors font-mono">
                                 {format(new Date(msg.created_at), 'h:mm')}
                               </span>
                             )}
@@ -701,20 +701,20 @@ export default function ChatPage() {
                                   value={editContent}
                                   onChange={e => setEditContent(e.target.value)}
                                   onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(); if (e.key === 'Escape') { setEditingMessageId(null); setEditContent(''); } }}
-                                  className="h-8 text-[13px] bg-muted/20 border-border/8 rounded-lg flex-1"
+                                  className="h-8 text-[13px] bg-muted/20 border-border/25 rounded-lg flex-1"
                                   autoFocus
                                 />
                                 <button onClick={handleSaveEdit} className="p-1.5 rounded-lg bg-primary/15 text-primary hover:bg-primary/25 transition-colors">
                                   <Check className="w-3.5 h-3.5" />
                                 </button>
-                                <button onClick={() => { setEditingMessageId(null); setEditContent(''); }} className="p-1.5 rounded-lg hover:bg-muted/40 transition-colors">
-                                  <X className="w-3.5 h-3.5 text-muted-foreground/50" />
+                                <button onClick={() => { setEditingMessageId(null); setEditContent(''); }} className="p-1.5 rounded-lg hover:bg-muted/50 transition-colors">
+                                  <X className="w-3.5 h-3.5 text-muted-foreground/70" />
                                 </button>
                               </div>
                             ) : (
                               <p className="text-[13px] leading-[1.55] text-foreground/85 break-words">
                                 {msg.content}
-                                {msg.edited_at && <span className="text-[9px] text-muted-foreground/25 ml-1.5">(edited)</span>}
+                                {msg.edited_at && <span className="text-[9px] text-muted-foreground/70 ml-1.5">(edited)</span>}
                               </p>
                             )}
 
@@ -729,7 +729,7 @@ export default function ChatPage() {
                                       "inline-flex items-center gap-1 h-6 px-1.5 rounded-md text-[11px] border transition-all duration-150",
                                       r.user_reacted
                                         ? "border-primary/25 bg-primary/8 text-primary scale-[1.02]"
-                                        : "border-border/15 bg-muted/20 text-muted-foreground/50 hover:border-border/30 hover:bg-muted/35"
+                                        : "border-border/15 bg-muted/20 text-muted-foreground/70 hover:border-border/30 hover:bg-muted/35"
                                     )}
                                   >
                                     {r.emoji} <span className="font-bold text-[10px]">{r.count}</span>
@@ -737,9 +737,9 @@ export default function ChatPage() {
                                 ))}
                                 <button
                                   onClick={() => setReactionTarget(reactionTarget === msg.id ? null : msg.id)}
-                                  className="w-6 h-6 rounded-md border border-border/10 bg-muted/10 flex items-center justify-center hover:bg-muted/30 transition-colors"
+                                  className="w-6 h-6 rounded-md border border-border/25 bg-muted/10 flex items-center justify-center hover:bg-muted/50 transition-colors"
                                 >
-                                  <SmilePlus className="w-3 h-3 text-muted-foreground/30" />
+                                  <SmilePlus className="w-3 h-3 text-muted-foreground/70" />
                                 </button>
                               </div>
                             )}
@@ -753,18 +753,18 @@ export default function ChatPage() {
                               ))}
                               <div className="w-px h-4 bg-border/15 mx-0.5" />
                               <button onClick={() => openThread(msg)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 transition-colors" title="Reply in thread">
-                                <Reply className="w-3.5 h-3.5 text-muted-foreground/50" />
+                                <Reply className="w-3.5 h-3.5 text-muted-foreground/70" />
                               </button>
                               <button onClick={() => togglePin(msg)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 transition-colors" title={msg.is_pinned ? 'Unpin' : 'Pin'}>
-                                <Pin className={cn("w-3.5 h-3.5", msg.is_pinned ? "text-premium-warm" : "text-muted-foreground/40")} />
+                                <Pin className={cn("w-3.5 h-3.5", msg.is_pinned ? "text-premium-warm" : "text-muted-foreground/60")} />
                               </button>
                               {isOwn && (
                                 <>
                                   <button onClick={() => startEditing(msg)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 transition-colors" title="Edit">
-                                    <Pencil className="w-3.5 h-3.5 text-muted-foreground/40" />
+                                    <Pencil className="w-3.5 h-3.5 text-muted-foreground/60" />
                                   </button>
                                   <button onClick={() => deleteMessage(msg.id)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-destructive/10 transition-colors" title="Delete">
-                                    <Trash2 className="w-3.5 h-3.5 text-muted-foreground/30 hover:text-destructive" />
+                                    <Trash2 className="w-3.5 h-3.5 text-muted-foreground/70 hover:text-destructive" />
                                   </button>
                                 </>
                               )}
@@ -792,7 +792,7 @@ export default function ChatPage() {
                             {(msg.reply_count || 0) > 0 && (
                               <button
                                 onClick={() => openThread(msg)}
-                                className="flex items-center gap-1.5 mt-2 text-[11px] font-semibold text-primary/60 hover:text-primary transition-colors"
+                                className="flex items-center gap-1.5 mt-2 text-[11px] font-semibold text-primary/80 hover:text-primary transition-colors"
                               >
                                 <MessageSquare className="w-3 h-3" />
                                 {msg.reply_count} {msg.reply_count === 1 ? 'reply' : 'replies'}
@@ -817,7 +817,7 @@ export default function ChatPage() {
                       onChange={e => setNewMessage(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
                       placeholder={`Message #${selectedChannel?.name || ''}`}
-                      className="h-11 text-sm bg-muted/20 border-border/8 rounded-xl pl-4 pr-12 focus-visible:ring-primary/20 focus-visible:border-primary/20"
+                      className="h-11 text-sm bg-muted/20 border-border/25 rounded-xl pl-4 pr-12 focus-visible:ring-primary/20 focus-visible:border-primary/20"
                       autoComplete="off"
                     />
                     <Button
@@ -848,16 +848,16 @@ export default function ChatPage() {
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               className={cn(
                 "flex flex-col min-h-0 bg-background",
-                "w-full lg:w-[320px] lg:border-l lg:border-border/8"
+                "w-full lg:w-[320px] lg:border-l lg:border-border/25"
               )}
             >
               {/* Thread header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border/8 flex-shrink-0">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border/25 flex-shrink-0">
                 <h3 className="text-[13px] font-bold flex items-center gap-1.5">
-                  <MessageSquare className="w-3.5 h-3.5 text-primary/60" /> Thread
+                  <MessageSquare className="w-3.5 h-3.5 text-primary/80" /> Thread
                 </h3>
-                <button onClick={() => setThreadParent(null)} className="p-1.5 rounded-lg hover:bg-muted/40 transition-colors">
-                  <X className="w-4 h-4 text-muted-foreground/50" />
+                <button onClick={() => setThreadParent(null)} className="p-1.5 rounded-lg hover:bg-muted/50 transition-colors">
+                  <X className="w-4 h-4 text-muted-foreground/70" />
                 </button>
               </div>
 
@@ -866,7 +866,7 @@ export default function ChatPage() {
                 <div className="flex items-center gap-2 mb-1.5">
                   <UserAvatar userId={threadParent.user_id} name={threadParent.profiles?.display_name || '?'} size={26} />
                   <span className="text-[11px] font-bold text-foreground/80">{threadParent.profiles?.display_name}</span>
-                  <span className="text-[9px] text-muted-foreground/25">{format(new Date(threadParent.created_at), 'h:mm a')}</span>
+                  <span className="text-[9px] text-muted-foreground/70">{format(new Date(threadParent.created_at), 'h:mm a')}</span>
                 </div>
                 <p className="text-[13px] text-foreground/75 leading-relaxed pl-[34px]">{threadParent.content}</p>
               </div>
@@ -875,7 +875,7 @@ export default function ChatPage() {
               <div className="flex-1 overflow-y-auto px-4">
                 <div className="py-3 space-y-3">
                   {threadMessages.length === 0 && (
-                    <p className="text-xs text-muted-foreground/25 text-center py-8">No replies yet</p>
+                    <p className="text-xs text-muted-foreground/70 text-center py-8">No replies yet</p>
                   )}
                   {threadMessages.map(msg => (
                     <div key={msg.id} className="flex gap-2.5">
@@ -883,7 +883,7 @@ export default function ChatPage() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 mb-0.5">
                           <span className="text-[11px] font-bold text-foreground/80">{msg.profiles?.display_name}</span>
-                          <span className="text-[9px] text-muted-foreground/20">{format(new Date(msg.created_at), 'h:mm a')}</span>
+                          <span className="text-[9px] text-muted-foreground/65">{format(new Date(msg.created_at), 'h:mm a')}</span>
                         </div>
                         <p className="text-[12px] text-foreground/75 leading-relaxed break-words">{msg.content}</p>
                       </div>
@@ -902,7 +902,7 @@ export default function ChatPage() {
                       onChange={e => setThreadReply(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleThreadReply()}
                       placeholder="Reply in thread..."
-                      className="h-10 text-xs bg-muted/20 border-border/8 rounded-xl pl-3.5 pr-11 focus-visible:ring-primary/20"
+                      className="h-10 text-xs bg-muted/20 border-border/25 rounded-xl pl-3.5 pr-11 focus-visible:ring-primary/20"
                     />
                     <Button
                       size="sm"
