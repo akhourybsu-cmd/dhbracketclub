@@ -1,15 +1,32 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { BarChart3, ArrowLeft, Send, Users, Trophy, ChevronDown, ChevronUp, RefreshCw, Sparkles } from 'lucide-react';
+import { BarChart3, ArrowLeft, Send, Users, Trophy, ChevronDown, ChevronUp, RefreshCw, Sparkles, MoreVertical, Pencil, Trash2, X, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRankingUpdates } from '@/hooks/useRealtimeSubscription';
 import { useItemEnrichments, useEnrichRanking } from '@/hooks/useItemEnrichments';
 import EnrichedItemCard, { EnrichedItemSkeleton } from '@/components/EnrichedItemCard';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface RankingItem {
   id: string;
