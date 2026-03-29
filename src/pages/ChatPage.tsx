@@ -421,7 +421,7 @@ export default function ChatPage() {
   /* ═══════════════════════════════════ */
   if (showChannelList) {
     return (
-      <div className="pb-4">
+      <div className="pb-2">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
           <div className="flex items-center justify-between mb-5">
             <div>
@@ -571,7 +571,7 @@ export default function ChatPage() {
   /* ═══ RENDER: MESSAGE VIEW ═════════ */
   /* ═══════════════════════════════════ */
   return (
-    <div className="flex flex-col -mx-4 sm:-mx-5 -mt-5 sm:-mt-6 lg:-mt-8" style={{ height: 'calc(100vh - 4.5rem)', maxHeight: 'calc(100dvh - 4.5rem)' }}>
+    <div className="flex flex-col -mx-4 sm:-mx-5 -mt-5 sm:-mt-6 lg:-mt-8" style={{ height: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom, 0px))', maxHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-bottom, 0px))' }}>
       {/* Channel header */}
       <div className="flex items-center gap-2.5 px-4 sm:px-5 py-3 border-b border-border/8 flex-shrink-0" style={{ background: 'hsl(var(--background) / 0.7)', backdropFilter: 'blur(12px)' }}>
         <button onClick={() => { setShowChannelList(true); setThreadParent(null); setShowPinned(false); }} className="p-1.5 -ml-1 rounded-lg hover:bg-muted/40 transition-colors lg:hidden">
