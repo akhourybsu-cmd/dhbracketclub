@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import {
-  Trophy, BarChart3, MessageCircle, Bookmark, CalendarDays, FileText,
+  Trophy, BarChart3, MessageCircle, Bookmark, CalendarDays, FileText, Newspaper,
   Zap, Users, Pin, ChevronRight, Plus
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -96,7 +96,13 @@ export default function FeedPage() {
     <div className="pb-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-extrabold tracking-tight">Feed</h1>
+          <div className="page-header mb-0">
+            <div className="page-header-icon"><Newspaper /></div>
+            <div>
+              <h1 className="page-header-title">Feed</h1>
+              <p className="page-header-subtitle">Activity & discussions</p>
+            </div>
+          </div>
           <Link to="/posts/create">
             <Button size="sm" className="h-8 gap-1.5 text-xs font-bold rounded-xl">
               <Plus className="w-3.5 h-3.5" /> Post
