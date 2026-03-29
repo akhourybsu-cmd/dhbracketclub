@@ -318,6 +318,7 @@ export type Database = {
       }
       drafts: {
         Row: {
+          category: string | null
           competition_id: string
           created_at: string
           created_by: string
@@ -332,6 +333,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          category?: string | null
           competition_id: string
           created_at?: string
           created_by: string
@@ -346,6 +348,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          category?: string | null
           competition_id?: string
           created_at?: string
           created_by?: string
