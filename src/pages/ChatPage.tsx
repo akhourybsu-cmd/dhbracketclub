@@ -527,6 +527,7 @@ export default function ChatPage() {
                 onLoadMore={searchResults ? undefined : loadOlderMessages}
                 hasMore={searchResults ? false : hasMore}
                 loadingMore={loadingMore}
+                isSearchActive={!!searchResults}
               />
               {!searchResults && (
                 <div className="flex-shrink-0 border-t border-border/5">
@@ -536,6 +537,7 @@ export default function ChatPage() {
                     onSend={handleSend}
                     disabled={sending}
                     placeholder={`Message #${selectedChannel?.name || ''}`}
+                    autoFocus
                   />
                 </div>
               )}
