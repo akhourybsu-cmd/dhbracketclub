@@ -96,7 +96,7 @@ export function MessageBubble({
     <>
       <div
         className={cn(
-          "group relative py-1.5 -mx-2.5 rounded-xl transition-colors",
+          "group relative py-1.5 rounded-xl transition-colors",
           "hover:bg-muted/12",
           sameAuthor ? "mt-0" : "mt-3",
           isOwn && "bg-primary/[0.04]",
@@ -118,7 +118,7 @@ export function MessageBubble({
           </div>
         )}
 
-        <div className={cn("relative", "pl-[38px]")}>
+        <div className={cn("relative overflow-hidden", "pl-[38px]")}>
           {sameAuthor && (
             <div className="absolute left-0 top-0.5 flex items-center gap-1">
               <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} size={18} />
@@ -194,7 +194,7 @@ export function MessageBubble({
           )}
 
           {/* Floating action bar (desktop hover) */}
-          <div className="absolute -top-4 right-0 hidden group-hover:flex items-center gap-0.5 bg-surface-elevated/95 border border-border/15 rounded-lg px-0.5 py-0.5 shadow-xl backdrop-blur-sm z-10">
+          <div className="absolute -top-4 right-2 hidden group-hover:flex items-center gap-0.5 bg-surface-elevated/95 border border-border/15 rounded-lg px-0.5 py-0.5 shadow-xl backdrop-blur-sm z-10">
             {QUICK_EMOJIS.slice(0, 4).map(emoji => (
               <button key={emoji} onClick={(e) => { e.stopPropagation(); onToggleReaction(msg.id, emoji); }} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 text-sm transition-colors">
                 {emoji}
