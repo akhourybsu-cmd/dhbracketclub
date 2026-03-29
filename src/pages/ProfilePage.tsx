@@ -5,23 +5,41 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { LogOut, User, Volume2, VolumeX } from 'lucide-react';
+import { LogOut, User, Volume2, VolumeX, BarChart3, MessageCircle, CalendarDays, MessageSquareText, Trophy, Bookmark, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import dhMonogram from '@/assets/dh-monogram.png';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
+import { formatDistanceToNow } from 'date-fns';
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
   const { play, soundEnabled, toggleSound } = useSoundEffect();
+  const [stats, setStats] = useState({ polls: 0, rankings: 0, events: 0, messages: 0, drafts: 0 });
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
-    supabase.from('profiles').select('display_name').eq('id', user.id).single()
-      .then(({ data }) => {
-        if (data) setDisplayName(data.display_name);
+    const fetchProfile = async () => {
+      const [{ data: profile }, { data: pollVotes }, { data: rankSubs }, { data: rsvps }, { data: activity }] = await Promise.all([
+        supabase.from('profiles').select('display_name').eq('id', user.id).single(),
+        supabase.from('poll_votes').select('id').eq('user_id', user.id),
+        supabase.from('ranking_submissions').select('id').eq('user_id', user.id),
+        supabase.from('event_rsvps').select('id').eq('user_id', user.id).eq('status', 'going'),
+        supabase.from('activity_feed').select('*, profiles:actor_user_id(display_name)').eq('actor_user_id', user.id).order('created_at', { ascending: false }).limit(5),
+      ]);
+      if (profile) setDisplayName(profile.display_name);
+      setStats({
+        polls: pollVotes?.length || 0,
+        rankings: rankSubs?.length || 0,
+        events: rsvps?.length || 0,
+        messages: 0,
+        drafts: 0,
       });
+      if (activity) setRecentActivity(activity);
+    };
+    fetchProfile();
   }, [user]);
 
   const handleSave = async () => {
@@ -40,6 +58,18 @@ export default function ProfilePage() {
       play('success');
     }
     setLoading(false);
+  };
+
+  const ACTIVITY_ICONS: Record<string, { icon: any; color: string }> = {
+    ranking_created: { icon: BarChart3, color: 'accent' },
+    ranking_submitted: { icon: BarChart3, color: 'accent' },
+    poll_created: { icon: MessageCircle, color: 'warning' },
+    poll_voted: { icon: MessageCircle, color: 'warning' },
+    draft_created: { icon: Bookmark, color: 'gold' },
+    draft_completed: { icon: Bookmark, color: 'gold' },
+    bracket_submitted: { icon: Trophy, color: 'primary' },
+    event_created: { icon: CalendarDays, color: 'success' },
+    post_created: { icon: MessageSquareText, color: 'primary' },
   };
 
   return (
@@ -87,6 +117,59 @@ export default function ProfilePage() {
           </Button>
         </div>
       </div>
+
+      {/* Stats */}
+      <div className="glass-card p-5 mb-4">
+        <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 mb-3">Your Stats</h3>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: 'Polls Voted', value: stats.polls, icon: MessageCircle, color: 'warning' },
+            { label: 'Rankings', value: stats.rankings, icon: BarChart3, color: 'accent' },
+            { label: 'Events', value: stats.events, icon: CalendarDays, color: 'success' },
+          ].map(stat => (
+            <div key={stat.label} className="text-center">
+              <div className="w-9 h-9 rounded-xl mx-auto mb-1.5 flex items-center justify-center" style={{
+                background: `linear-gradient(135deg, hsl(var(--${stat.color}) / 0.12), hsl(var(--${stat.color}) / 0.04))`,
+              }}>
+                <stat.icon className="w-4 h-4" style={{ color: `hsl(var(--${stat.color}))` }} />
+              </div>
+              <p className="text-lg font-extrabold leading-none">{stat.value}</p>
+              <p className="text-[9px] text-muted-foreground/40 font-medium mt-0.5">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      {recentActivity.length > 0 && (
+        <div className="glass-card p-5 mb-4">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 mb-3">Recent Activity</h3>
+          <div className="space-y-2.5">
+            {recentActivity.map(a => {
+              const config = ACTIVITY_ICONS[a.event_type] || { icon: Zap, color: 'primary' };
+              const Icon = config.icon;
+              const meta = typeof a.metadata === 'object' ? a.metadata : {};
+              const title = meta?.title || meta?.topic || meta?.question || '';
+              return (
+                <div key={a.id} className="flex items-center gap-2.5">
+                  <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{
+                    background: `linear-gradient(135deg, hsl(var(--${config.color}) / 0.12), hsl(var(--${config.color}) / 0.04))`,
+                  }}>
+                    <Icon className="w-3 h-3" style={{ color: `hsl(var(--${config.color}))` }} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] text-foreground/70 truncate">
+                      {a.event_type.replace(/_/g, ' ')}
+                      {title && <span className="font-semibold"> — {title}</span>}
+                    </p>
+                    <p className="text-[9px] text-muted-foreground/30">{formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Sound & Haptics settings */}
       <div className="glass-card p-5 mb-4">
