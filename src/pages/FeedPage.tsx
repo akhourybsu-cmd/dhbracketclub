@@ -161,7 +161,7 @@ export default function FeedPage() {
         )}
 
         {/* Recent discussions */}
-        {posts.filter(p => !p.is_pinned).length > 0 && (
+        {!loading && posts.filter(p => !p.is_pinned).length > 0 && (
           <div className="mb-6">
             <h2 className="section-header mb-3">
               <FileText className="w-3.5 h-3.5 inline-block mr-1.5 text-primary/60" />
