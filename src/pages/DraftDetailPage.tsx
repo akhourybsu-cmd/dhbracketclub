@@ -287,8 +287,25 @@ export default function DraftDetailPage() {
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-[1.4rem] font-extrabold tracking-tight leading-tight">{draft.topic}</h1>
+          <div className="min-w-0 flex-1">
+            {editing ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={editTopic}
+                  onChange={(e) => setEditTopic(e.target.value)}
+                  className="form-input text-lg font-extrabold"
+                  autoFocus
+                />
+                <Button size="sm" onClick={handleSaveEdit} disabled={saving} className="shrink-0">
+                  {saving ? '…' : 'Save'}
+                </Button>
+                <button onClick={() => { setEditing(false); setEditTopic(draft.topic); }} className="p-1.5 text-muted-foreground hover:text-foreground">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <h1 className="text-[1.4rem] font-extrabold tracking-tight leading-tight">{draft.topic}</h1>
+            )}
             <p className="text-[11px] text-muted-foreground/60 font-medium mt-1">
               by {draft.profiles?.display_name} • {draft.num_rounds} rounds
               {draft.category && (
@@ -299,7 +316,7 @@ export default function DraftDetailPage() {
               )}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             {isCreator && picks.length > 0 && (
               <button
                 onClick={handleReEnrich}
@@ -318,6 +335,23 @@ export default function DraftDetailPage() {
             )}>
               {isSetup ? 'Setup' : isInProgress && !isDraftComplete ? 'Live' : 'Complete'}
             </span>
+            {isCreator && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-foreground transition-colors">
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setEditing(true)}>
+                    <Pencil className="w-3.5 h-3.5 mr-2" /> Edit Topic
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowDeleteDialog(true)} className="text-destructive focus:text-destructive">
+                    <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete Draft
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
 
@@ -551,6 +585,24 @@ export default function DraftDetailPage() {
           </div>
         </motion.div>
       )}
+
+      {/* Delete confirmation */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this draft?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the draft, all picks, participants, and enrichment data. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
