@@ -7,7 +7,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// ─── Shared classification + enrichment logic (same as enrich-ranking) ───
 const SUPPORTED_CATEGORIES = [
   "movie", "tv", "book", "music", "food", "brand", "place",
   "sport", "game", "person", "animal", "generic",
@@ -214,6 +213,107 @@ async function enrichFromOpenLibrary(
   }
 }
 
+// ─── iTunes Search API (Movies, TV, Music) — free, no API key ───
+async function enrichFromiTunes(
+  name: string,
+  enrichment: EnrichmentResult,
+  category: Category
+): Promise<EnrichmentResult> {
+  try {
+    const mediaType = category === "movie" ? "movie" : category === "tv" ? "tvShow" : "music";
+    const entity = category === "movie" ? "movie" : category === "tv" ? "tvSeason" : "album";
+    const query = encodeURIComponent(enrichment.normalized_name || name);
+    const url = `https://itunes.apple.com/search?term=${query}&media=${mediaType}&entity=${entity}&limit=3`;
+
+    const res = await fetch(url);
+    if (!res.ok) return enrichment;
+    const data = await res.json();
+    const results = data.results;
+    if (!results?.length) return enrichment;
+
+    const match = results[0];
+    const rawArtwork: string = match.artworkUrl100 || match.artworkUrl60 || "";
+    if (rawArtwork) {
+      enrichment.image_url = rawArtwork.replace("100x100bb", "600x600bb");
+      enrichment.thumbnail_url = rawArtwork.replace("100x100bb", "200x200bb");
+      enrichment.source_provider = "itunes";
+      enrichment.confidence = Math.max(enrichment.confidence, 0.85);
+      enrichment.status = "matched";
+    }
+
+    if (category === "movie") {
+      enrichment.matched_name = match.trackName || enrichment.matched_name;
+      enrichment.metadata = {
+        ...enrichment.metadata,
+        year: match.releaseDate ? new Date(match.releaseDate).getFullYear() : enrichment.metadata.year,
+        director: match.artistName || enrichment.metadata.director,
+        genre: match.primaryGenreName || enrichment.metadata.genre,
+      };
+    } else if (category === "tv") {
+      enrichment.matched_name = match.collectionName || enrichment.matched_name;
+      enrichment.metadata = {
+        ...enrichment.metadata,
+        year: match.releaseDate ? new Date(match.releaseDate).getFullYear() : enrichment.metadata.year,
+        network: match.artistName || enrichment.metadata.network,
+        genre: match.primaryGenreName || enrichment.metadata.genre,
+      };
+    } else if (category === "music") {
+      enrichment.matched_name = match.collectionName || match.trackName || enrichment.matched_name;
+      enrichment.metadata = {
+        ...enrichment.metadata,
+        artist: match.artistName || enrichment.metadata.artist,
+        year: match.releaseDate ? new Date(match.releaseDate).getFullYear() : enrichment.metadata.year,
+        genre: match.primaryGenreName || enrichment.metadata.genre,
+      };
+    }
+
+    return enrichment;
+  } catch (err) {
+    console.error("iTunes enrichment error:", err);
+    return enrichment;
+  }
+}
+
+// ─── Wikipedia / Wikimedia (universal fallback for images) ───
+async function enrichFromWikipedia(
+  name: string,
+  enrichment: EnrichmentResult,
+  category: Category
+): Promise<EnrichmentResult> {
+  try {
+    const categoryHint = category === "movie" ? " film" : category === "tv" ? " TV series" : category === "game" ? " video game" : "";
+    const searchQuery = encodeURIComponent((enrichment.normalized_name || name) + categoryHint);
+
+    const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${searchQuery}&format=json&srlimit=1`;
+    const searchRes = await fetch(searchUrl);
+    if (!searchRes.ok) return enrichment;
+    const searchData = await searchRes.json();
+    const pageTitle = searchData?.query?.search?.[0]?.title;
+    if (!pageTitle) return enrichment;
+
+    const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle)}`;
+    const summaryRes = await fetch(summaryUrl);
+    if (!summaryRes.ok) return enrichment;
+    const summary = await summaryRes.json();
+
+    const thumb = summary.thumbnail?.source;
+    const original = summary.originalimage?.source;
+
+    if (thumb || original) {
+      enrichment.image_url = original || thumb;
+      enrichment.thumbnail_url = thumb || original;
+      enrichment.source_provider = "wikipedia";
+      enrichment.confidence = Math.max(enrichment.confidence, 0.8);
+      enrichment.status = "matched";
+    }
+
+    return enrichment;
+  } catch (err) {
+    console.error("Wikipedia enrichment error:", err);
+    return enrichment;
+  }
+}
+
 // ─── Source-specific enrichment ───
 async function enrichItem(
   category: Category,
@@ -225,10 +325,20 @@ async function enrichItem(
     case "book":
       result = await enrichFromOpenLibrary(name, result);
       break;
+    case "movie":
+    case "tv":
+    case "music":
+      result = await enrichFromiTunes(name, result, category);
+      break;
     default:
-      result.source_provider = "ai";
       break;
   }
+
+  // Wikipedia fallback: if no image was found from the primary source, try Wikipedia
+  if (!result.image_url) {
+    result = await enrichFromWikipedia(name, result, category);
+  }
+
   return result;
 }
 
