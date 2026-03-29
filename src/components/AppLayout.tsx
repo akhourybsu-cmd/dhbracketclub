@@ -105,7 +105,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </main>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 flex-col z-40 bg-sidebar-background border-r border-border/25" style={{
+      <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 flex-col z-40 bg-sidebar-background border-r border-border/50" style={{
         backdropFilter: 'blur(24px) saturate(180%)',
         boxShadow: 'inset -1px 0 0 hsl(var(--foreground) / 0.02)',
       }}>
