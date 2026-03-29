@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Send, Trash2, Pin } from 'lucide-react';
+import ShareButton from '@/components/ShareButton';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { toast } from 'sonner';
@@ -92,7 +93,10 @@ export default function PostDetailPage() {
           </div>
         )}
 
-        <h1 className="text-xl font-extrabold tracking-tight mb-2">{post.title}</h1>
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <h1 className="text-xl font-extrabold tracking-tight">{post.title}</h1>
+          <ShareButton contentType="post" contentId={postId!} title={post.title} />
+        </div>
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground/60 mb-4">
           <span className="font-semibold text-foreground/60">{post.profiles?.display_name}</span>
           <span>·</span>

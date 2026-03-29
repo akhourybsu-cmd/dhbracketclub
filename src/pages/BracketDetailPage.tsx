@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { ChevronLeft, ChevronRight, ArrowLeft, Check, X, Eye, Trophy, Crown } from 'lucide-react';
+import ShareButton from '@/components/ShareButton';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Team, Game, Pick, ROUND_NAMES, ROUND_SHORT,
@@ -145,6 +146,7 @@ export default function BracketDetailPage() {
               <span className={cn("status-pill mt-1", statusCfg.className)}>{statusCfg.label}</span>
             </div>
           </div>
+          <ShareButton contentType="bracket" contentId={bracketId!} title={`${owner}'s Bracket`} poolId={poolId} />
         </div>
       </motion.div>
 
