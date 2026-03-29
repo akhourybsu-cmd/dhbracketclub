@@ -248,8 +248,6 @@ async function enrichFromiTunes(
         year: match.releaseDate ? new Date(match.releaseDate).getFullYear() : enrichment.metadata.year,
         director: match.artistName || enrichment.metadata.director,
         genre: match.primaryGenreName || enrichment.metadata.genre,
-        content_rating: match.contentAdvisoryRating,
-        runtime_minutes: match.trackTimeMillis ? Math.round(match.trackTimeMillis / 60000) : undefined,
       };
     } else if (category === "tv") {
       enrichment.matched_name = match.collectionName || enrichment.matched_name;
@@ -258,7 +256,6 @@ async function enrichFromiTunes(
         year: match.releaseDate ? new Date(match.releaseDate).getFullYear() : enrichment.metadata.year,
         network: match.artistName || enrichment.metadata.network,
         genre: match.primaryGenreName || enrichment.metadata.genre,
-        content_rating: match.contentAdvisoryRating,
       };
     } else if (category === "music") {
       enrichment.matched_name = match.collectionName || match.trackName || enrichment.matched_name;
@@ -267,13 +264,52 @@ async function enrichFromiTunes(
         artist: match.artistName || enrichment.metadata.artist,
         year: match.releaseDate ? new Date(match.releaseDate).getFullYear() : enrichment.metadata.year,
         genre: match.primaryGenreName || enrichment.metadata.genre,
-        type: match.collectionType || match.wrapperType || enrichment.metadata.type,
       };
     }
 
     return enrichment;
   } catch (err) {
     console.error("iTunes enrichment error:", err);
+    return enrichment;
+  }
+}
+
+// ─── Wikipedia / Wikimedia (universal fallback for images) ───
+async function enrichFromWikipedia(
+  name: string,
+  enrichment: EnrichmentResult,
+  category: Category
+): Promise<EnrichmentResult> {
+  try {
+    const categoryHint = category === "movie" ? " film" : category === "tv" ? " TV series" : category === "game" ? " video game" : "";
+    const searchQuery = encodeURIComponent((enrichment.normalized_name || name) + categoryHint);
+
+    const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${searchQuery}&format=json&srlimit=1`;
+    const searchRes = await fetch(searchUrl);
+    if (!searchRes.ok) return enrichment;
+    const searchData = await searchRes.json();
+    const pageTitle = searchData?.query?.search?.[0]?.title;
+    if (!pageTitle) return enrichment;
+
+    const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle)}`;
+    const summaryRes = await fetch(summaryUrl);
+    if (!summaryRes.ok) return enrichment;
+    const summary = await summaryRes.json();
+
+    const thumb = summary.thumbnail?.source;
+    const original = summary.originalimage?.source;
+
+    if (thumb || original) {
+      enrichment.image_url = original || thumb;
+      enrichment.thumbnail_url = thumb || original;
+      enrichment.source_provider = "wikipedia";
+      enrichment.confidence = Math.max(enrichment.confidence, 0.8);
+      enrichment.status = "matched";
+    }
+
+    return enrichment;
+  } catch (err) {
+    console.error("Wikipedia enrichment error:", err);
     return enrichment;
   }
 }
@@ -295,9 +331,14 @@ async function enrichItem(
       result = await enrichFromiTunes(name, result, category);
       break;
     default:
-      result.source_provider = "ai";
       break;
   }
+
+  // Wikipedia fallback: if no image was found from the primary source, try Wikipedia
+  if (!result.image_url) {
+    result = await enrichFromWikipedia(name, result, category);
+  }
+
   return result;
 }
 
