@@ -106,23 +106,22 @@ export default function ChatPage() {
 
       // Fetch last message per channel + read states
       const chIds = chs.map((c: any) => c.id);
-      const [{ data: lastMsgs }, { data: readStates }] = await Promise.all([
-        supabase
-          .from('messages')
-          .select('channel_id, content, created_at, user_id, profiles:user_id(display_name)')
-          .is('parent_message_id', null)
-          .in('channel_id', chIds)
-          .order('created_at', { ascending: false })
-          .limit(200),
-        supabase
-          .from('channel_read_states')
-          .select('*')
-          .eq('user_id', user.id)
-          .in('channel_id', chIds),
-      ]);
+      const { data: lastMsgs } = await supabase
+        .from('messages')
+        .select('channel_id, content, created_at, user_id, profiles:user_id(display_name)')
+        .is('parent_message_id', null)
+        .in('channel_id', chIds)
+        .order('created_at', { ascending: false })
+        .limit(200);
+
+      // Read states via raw rpc-style query
+      let readStatesMap = new Map<string, string>();
+      try {
+        const { data: rsData } = await (supabase as any).from('channel_read_states').select('channel_id, last_read_at').eq('user_id', user.id).in('channel_id', chIds);
+        if (rsData) (rsData as any[]).forEach((rs: any) => readStatesMap.set(rs.channel_id, rs.last_read_at));
+      } catch {}
 
       const meta = new Map<string, ChannelMeta>();
-      // Group last message by channel (first occurrence = latest)
       const seenChannels = new Set<string>();
       if (lastMsgs) {
         lastMsgs.forEach((m: any) => {
