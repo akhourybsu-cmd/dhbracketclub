@@ -84,6 +84,14 @@ export default function ChatPage() {
   // Reaction picker
   const [reactionTarget, setReactionTarget] = useState<string | null>(null);
 
+  // Edit message
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
+
+  // Search
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+
   // New channel
   const [showNewChannel, setShowNewChannel] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
