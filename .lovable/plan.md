@@ -1,52 +1,57 @@
 
 
-# Chat Optimization Plan
+# Chat Refinements — Hard Pass
 
 ## Issues Found
 
-1. **Header not sticky** — The channel header (title, search, pin buttons) scrolls with content instead of staying fixed at the top
-2. **No scroll-to-bottom button** — When scrolled up reading history, no way to jump back to latest messages
-3. **Composer input is basic** — Single-line `<input>` with no multi-line support; long messages get clipped
-4. **No empty-state for search results** — Searching with no matches shows a blank area with no feedback
-5. **Mobile action sheet positioning** — Long-press menu renders below the message with `translate-y-full`, which can overflow off-screen for messages near the bottom
-6. **Channel list has no pull-to-refresh or visual loading indicator on re-entry** — Feels static when returning to the channel list
-7. **Thread panel has no reactions or actions** — Thread replies are plain text with no ability to react, edit, or delete
-8. **Timestamp visibility on grouped messages** — Hover-only timestamp (`group-hover:text-muted-foreground/70`) is invisible on mobile for grouped messages — no way to see when a message was sent
-9. **No typing/sending indicator** — No visual feedback that a message is being sent (the optimistic message just appears at 60% opacity with no label)
-10. **Keyboard doesn't auto-focus composer** — Entering a channel on mobile doesn't focus the input, requiring an extra tap
+1. **Delete has no confirmation** — Tapping delete immediately removes the message with no undo or confirm dialog. Accidental deletes are permanent.
+
+2. **Thread reply has no optimistic update** — Thread replies wait for the DB round-trip before appearing, unlike main messages which have optimistic inserts.
+
+3. **Search input doesn't clear on close** — Closing search via the X button clears state but reopening shows stale results briefly due to the 300ms debounce race.
+
+4. **Channel header back button misaligned on desktop** — The `lg:hidden` back chevron disappears on desktop but there's no way to switch channels from the message view on large screens (no sidebar).
+
+5. **Grouped message timestamp has no left padding** — When `sameAuthor` is true, the message content has no `pl-[38px]` indent to align with the avatar above, making grouped messages look flush left while first messages are indented.
+
+6. **Edit mode uses single-line Input** — Editing a multi-line message forces it into a single-line `<Input>`, losing content visibility. Should use the same auto-growing textarea pattern as the composer.
+
+7. **No haptic feedback on long-press** — Mobile long-press opens the bottom sheet but doesn't trigger device vibration, making it feel less native.
+
+8. **Pinned messages panel has no unpin action** — The pinned messages view shows messages but offers no way to unpin them directly; user must find them in the feed.
+
+9. **Thread panel doesn't show on mobile when opening** — On mobile (`hidden lg:flex` logic on line 485), opening a thread hides the message list but the thread panel itself needs explicit mobile visibility handling.
+
+10. **No message link/URL detection** — Plain URLs in messages are rendered as text with no clickable links.
 
 ## Plan
 
-### 1. Sticky channel header
-Move the header `div` (lines 447-466) outside the scrollable area and ensure it uses `sticky top-0 z-20` positioning so the channel name, search, and pin buttons stay locked to the top during scroll.
+### 1. Delete confirmation dialog
+Add a confirmation step before deleting a message. Use a simple `AlertDialog` that asks "Delete this message?" with Cancel/Delete buttons. Apply to both desktop hover actions and mobile bottom sheet.
 
-### 2. Scroll-to-bottom FAB
-Add a floating "jump to bottom" button in `MessageList` that appears when `autoScroll` is false (user has scrolled up). Clicking it scrolls to `messagesEndRef` and hides the button. Show an unread count badge on it if new messages arrived while scrolled up.
+### 2. Edit with auto-growing textarea
+Replace the `<Input>` in the edit mode section of `MessageBubble.tsx` with a `<textarea>` using the same auto-resize pattern from `MessageComposer`. This preserves multi-line content during editing.
 
-### 3. Multi-line composer
-Replace the `<Input>` in `MessageComposer` with a `<textarea>` that auto-grows (1-4 lines). Send on Enter, newline on Shift+Enter. This allows longer messages without horizontal clipping.
+### 3. Optimistic thread replies
+Mirror the main chat optimistic pattern: immediately append a local reply with `_optimistic: true` to `threadMessages`, then replace it when the realtime event arrives.
 
-### 4. Search empty state
-In `MessageList`, when `searchResults` is an array with 0 items, show a "No messages found" empty state instead of blank space.
+### 4. URL auto-linking in messages
+Parse message content for URLs (http/https) and render them as clickable `<a>` tags with `target="_blank"`. Use a simple regex replacement, styled with `text-primary underline`.
 
-### 5. Mobile action sheet — render as bottom sheet
-Instead of positioning the action menu relative to the message (which overflows), render it as a fixed bottom sheet (`fixed bottom-0 inset-x-0`) with a backdrop overlay. This is the standard mobile pattern and avoids clipping.
+### 5. Haptic feedback on long-press
+Add `navigator.vibrate?.(10)` when the long-press timer fires, giving a subtle tactile cue on supported devices.
 
-### 6. Tap-to-show timestamp on mobile
-For grouped messages (same author), make the hidden timestamp visible on tap (not just hover). Add an `onClick` toggle so mobile users can tap a message to briefly reveal its timestamp.
+### 6. Unpin from pinned panel
+Add a small unpin button to each pinned message card in the pinned messages view, calling the existing `togglePin` function.
 
-### 7. Search results count indicator
-When search is active and results are loaded, show a small pill like "3 results" below the search input to give feedback.
+### 7. Desktop channel sidebar
+On `lg:` breakpoints, show the channel list as a persistent left sidebar alongside the message view, instead of hiding it entirely. This gives desktop users quick channel switching without the back button.
 
-### 8. Optimistic message indicator
-Replace the plain `opacity-60` on optimistic messages with a subtle "Sending..." label or a small spinner next to the message, so users know it's in-flight.
-
-### 9. Auto-focus composer on channel entry
-In `MessageComposer`, add an `autoFocus` prop and set it when the channel view mounts, so the keyboard is ready for input immediately.
+### 8. Mobile thread panel visibility
+Fix the `hidden lg:flex` conditional so that when `threadParent` is set on mobile, the thread panel is shown full-screen (hiding the message list), matching how pinned messages already work.
 
 ## Files to modify
-- `src/pages/ChatPage.tsx` — sticky header structure, search empty state handling, auto-focus prop
-- `src/components/chat/MessageList.tsx` — scroll-to-bottom FAB, search empty state UI
-- `src/components/chat/MessageComposer.tsx` — textarea replacement, auto-grow, autoFocus
-- `src/components/chat/MessageBubble.tsx` — bottom sheet action menu, tap-to-show timestamp, optimistic indicator
+- `src/components/chat/MessageBubble.tsx` — delete confirmation, edit textarea, URL linking, haptic feedback
+- `src/pages/ChatPage.tsx` — optimistic thread replies, unpin from pinned panel, desktop sidebar layout, mobile thread fix
+- `src/components/chat/ThreadPanel.tsx` — minor adjustment for mobile full-screen display
 
