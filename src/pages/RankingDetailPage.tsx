@@ -67,7 +67,10 @@ export default function RankingDetailPage() {
       supabase.from('ranking_items').select('*').eq('ranking_id', rankingId).order('position'),
     ]);
 
-    if (rankData) setRanking(rankData);
+    if (rankData) {
+      setRanking(rankData);
+      setEditTopic(rankData.topic);
+    }
     if (itemData) {
       setItems(itemData);
       setMyOrder([...itemData]);
