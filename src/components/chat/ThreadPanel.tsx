@@ -54,7 +54,7 @@ export function ThreadPanel({ parent, replies, replyValue, onReplyChange, onSend
 
       <div className="px-4 py-3 border-b border-border/5 flex-shrink-0">
         <div className="flex items-center gap-2 mb-1.5">
-          <UserAvatar userId={parent.user_id} name={parent.profiles?.display_name || '?'} size={26} />
+          <UserAvatar userId={parent.user_id} name={parent.profiles?.display_name || '?'} avatarUrl={parent.profiles?.avatar_url} size={26} />
           <span className="text-[11px] font-bold text-foreground/80">{parent.profiles?.display_name}</span>
           <span className="text-[9px] text-muted-foreground/70">{format(new Date(parent.created_at), 'h:mm a')}</span>
         </div>
@@ -66,7 +66,7 @@ export function ThreadPanel({ parent, replies, replyValue, onReplyChange, onSend
           {replies.length === 0 && <p className="text-xs text-muted-foreground/70 text-center py-8">No replies yet</p>}
           {replies.map(msg => (
             <div key={msg.id} className={cn("flex gap-2.5", msg._optimistic && "opacity-70")}>
-              <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} size={24} />
+              <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} avatarUrl={msg.profiles?.avatar_url} size={24} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 mb-0.5">
                   <span className="text-[11px] font-bold text-foreground/80">{msg.profiles?.display_name}</span>

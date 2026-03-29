@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { LogOut, User, Volume2, VolumeX, BarChart3, MessageCircle, CalendarDays, MessageSquareText, Trophy, Bookmark, Zap, Sun, Moon, Bell, BellOff } from 'lucide-react';
+import { LogOut, User, Volume2, VolumeX, BarChart3, MessageCircle, CalendarDays, MessageSquareText, Trophy, Bookmark, Zap, Sun, Moon, Bell, BellOff, Camera, Loader2 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { motion } from 'framer-motion';
 import dhMonogram from '@/assets/dh-monogram.png';
@@ -18,6 +18,9 @@ export default function ProfilePage() {
   const { theme, setTheme } = useTheme();
   const { user, signOut } = useAuth();
   const [displayName, setDisplayName] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const { play, soundEnabled, toggleSound } = useSoundEffect();
   const { isSupported: pushSupported, isSubscribed: pushSubscribed, loading: pushLoading, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe } = usePushNotifications();
@@ -28,13 +31,16 @@ export default function ProfilePage() {
     if (!user) return;
     const fetchProfile = async () => {
       const [{ data: profile }, { data: pollVotes }, { data: rankSubs }, { data: rsvps }, { data: activity }] = await Promise.all([
-        supabase.from('profiles').select('display_name').eq('id', user.id).single(),
+        supabase.from('profiles').select('display_name, avatar_url').eq('id', user.id).single(),
         supabase.from('poll_votes').select('id').eq('user_id', user.id),
         supabase.from('ranking_submissions').select('id').eq('user_id', user.id),
         supabase.from('event_rsvps').select('id').eq('user_id', user.id).eq('status', 'going'),
         supabase.from('activity_feed').select('*, profiles:actor_user_id(display_name)').eq('actor_user_id', user.id).order('created_at', { ascending: false }).limit(5),
       ]);
-      if (profile) setDisplayName(profile.display_name);
+      if (profile) {
+        setDisplayName(profile.display_name);
+        setAvatarUrl(profile.avatar_url);
+      }
       setStats({
         polls: pollVotes?.length || 0,
         rankings: rankSubs?.length || 0,
@@ -46,6 +52,56 @@ export default function ProfilePage() {
     };
     fetchProfile();
   }, [user]);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be under 5MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const filePath = `${user.id}/avatar.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // Add cache-busting param
+      const urlWithCacheBust = `${publicUrl}?t=${Date.now()}`;
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: urlWithCacheBust })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      setAvatarUrl(urlWithCacheBust);
+      toast.success('Avatar updated!');
+      play('success');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to upload avatar');
+      play('error');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const handleSave = async () => {
     if (!user) return;
@@ -98,16 +154,44 @@ export default function ProfilePage() {
       {/* Identity card */}
       <div className="glass-card arena-edge p-6 mb-4">
         <div className="flex items-center gap-4 mb-6 relative z-10">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-extrabold text-primary relative" style={{
-            background: 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.04))',
-            border: '1px solid hsl(var(--primary) / 0.1)',
-            boxShadow: '0 0 20px hsl(var(--primary) / 0.06)',
-          }}>
-            {displayName ? displayName[0].toUpperCase() : '?'}
-          </div>
+          {/* Avatar with upload */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="relative w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center text-2xl font-extrabold text-primary group btn-press"
+            style={{
+              background: avatarUrl
+                ? 'transparent'
+                : 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.04))',
+              border: '1px solid hsl(var(--primary) / 0.1)',
+              boxShadow: '0 0 20px hsl(var(--primary) / 0.06)',
+            }}
+          >
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              displayName ? displayName[0].toUpperCase() : '?'
+            )}
+            {/* Camera overlay */}
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              {uploading ? (
+                <Loader2 className="w-5 h-5 text-white animate-spin" />
+              ) : (
+                <Camera className="w-5 h-5 text-white" />
+              )}
+            </div>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleAvatarUpload}
+          />
           <div>
             <p className="font-bold text-lg leading-tight">{displayName}</p>
             <p className="text-[11px] text-muted-foreground/60 font-medium mt-0.5">{user?.email}</p>
+            <p className="text-[10px] text-primary/60 font-medium mt-0.5">Tap photo to change</p>
           </div>
         </div>
 

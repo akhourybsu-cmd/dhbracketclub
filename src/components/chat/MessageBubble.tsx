@@ -111,7 +111,7 @@ export function MessageBubble({
         {/* Author line */}
         {!sameAuthor && (
           <div className="flex items-center gap-2 mb-1">
-            <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} size={30} />
+            <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} avatarUrl={msg.profiles?.avatar_url} size={30} />
             <span className="text-[12px] font-bold" style={{ color: getUserColor(msg.user_id) }}>{msg.profiles?.display_name || 'Unknown'}</span>
             <span className="text-[9px] text-muted-foreground/70 font-medium">{format(new Date(msg.created_at), 'h:mm a')}</span>
             {msg.is_pinned && <Pin className="w-2.5 h-2.5" style={{ color: 'hsl(var(--premium-warm) / 0.7)' }} />}
@@ -121,7 +121,7 @@ export function MessageBubble({
         <div className={cn("relative overflow-hidden", "pl-[38px]")}>
           {sameAuthor && (
             <div className="absolute left-0 top-0.5 flex items-center gap-1">
-              <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} size={18} />
+              <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} avatarUrl={msg.profiles?.avatar_url} size={18} />
               <span className={cn(
                 "text-[8px] font-mono transition-colors",
                 showTimestamp ? "text-muted-foreground/70" : "text-muted-foreground/0 group-hover:text-muted-foreground/70"

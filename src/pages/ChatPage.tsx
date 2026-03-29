@@ -560,7 +560,7 @@ export default function ChatPage() {
                   {pinnedMessages.map(msg => (
                     <div key={msg.id} className="glass-card p-3.5">
                       <div className="flex items-center gap-2 mb-1.5 relative z-10">
-                        <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} size={24} />
+                        <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} avatarUrl={msg.profiles?.avatar_url} size={24} />
                         <span className="text-[11px] font-bold text-foreground/80">{msg.profiles?.display_name}</span>
                         <span className="text-[9px] text-muted-foreground/70">{format(new Date(msg.created_at), 'MMM d, h:mm a')}</span>
                         <button
