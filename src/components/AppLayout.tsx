@@ -191,7 +191,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 className={cn(
                   "flex flex-col items-center justify-center gap-0.5 py-2 px-2.5 rounded-xl min-w-[3.5rem] min-h-[2.75rem] btn-press relative",
                   "transition-colors duration-150",
-                  active ? "text-primary" : "text-muted-foreground/70 active:text-foreground"
+                  active ? "text-primary" : "text-muted-foreground active:text-foreground"
                 )}
               >
                 <div className="relative">
@@ -204,7 +204,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 </div>
                 <span className={cn(
                   "text-[8px] font-bold tracking-wide transition-colors duration-150",
-                  active ? "text-primary" : "text-muted-foreground/60"
+                  active ? "text-primary" : "text-muted-foreground"
                 )}>{item.label}</span>
                 {active && (
                   <motion.div
