@@ -20,6 +20,7 @@ export default function CreateRankingPage() {
   const [items, setItems] = useState<string[]>(['', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const { suggestions, loading: aiLoading, fetchSuggestions, removeSuggestion } = useAISuggestions();
+  const { enrichRanking } = useEnrichRanking();
 
   const handleAddSuggestion = (text: string) => {
     removeSuggestion(text);
