@@ -178,25 +178,41 @@ export default function DashboardPage() {
           background: 'radial-gradient(ellipse 90% 55% at 50% -15%, hsl(var(--primary) / 0.06), transparent)',
         }} />
         <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-3">
-            <motion.img
-              src={dhMonogram}
-              alt="DH Club"
-              className="w-9 h-9 object-contain"
-              initial={{ opacity: 0, scale: 0.7 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.05, type: 'spring', damping: 18 }}
-              style={{ filter: 'drop-shadow(0 0 10px hsl(var(--primary) / 0.18))' }}
-            />
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.08 }}
-              className="text-[9px] font-bold uppercase tracking-[0.25em]"
-              style={{ color: 'hsl(var(--primary) / 0.5)' }}
-            >
-              {getGreeting()}
-            </motion.p>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <motion.img
+                src={dhMonogram}
+                alt="DH Club"
+                className="w-9 h-9 object-contain"
+                initial={{ opacity: 0, scale: 0.7 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.05, type: 'spring', damping: 18 }}
+                style={{ filter: 'drop-shadow(0 0 10px hsl(var(--primary) / 0.18))' }}
+              />
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.08 }}
+                className="text-[9px] font-bold uppercase tracking-[0.25em]"
+                style={{ color: 'hsl(var(--primary) / 0.5)' }}
+              >
+                {getGreeting()}
+              </motion.p>
+            </div>
+            <Link to="/profile" className="lg:hidden">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.1, type: 'spring', damping: 18 }}
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-extrabold text-primary btn-press"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.04))',
+                  border: '1px solid hsl(var(--primary) / 0.1)',
+                }}
+              >
+                {displayName ? displayName[0].toUpperCase() : '?'}
+              </motion.div>
+            </Link>
           </div>
           <motion.h1
             initial={{ opacity: 0, y: 6 }}
