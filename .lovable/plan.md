@@ -1,48 +1,58 @@
 
 
-# Fix Chat Layout Overflow on Mobile
+# Profile Avatars — Custom Photo Upload
 
-## Problem
-The chat page is rendered inside `AppLayout`'s content wrapper which adds padding (`py-5`) and bottom padding for the nav bar (`pb-[calc(4.5rem+...)]`). The chat page tries to escape this with negative margins (`-mx-4 -mt-5`) and a hardcoded height of `calc(100dvh - 4.5rem - safe-area)`. This doesn't account for the wrapper padding correctly, causing content to overflow or get cut off on different phone sizes.
+## What we're building
+Users can upload a profile photo that appears as their avatar across the entire app — on their profile page, in chat messages, thread panels, pinned messages, and pool member lists. The profile page identity card gets a tappable avatar with camera overlay for uploading.
 
-## Solution
-Give the chat page a dedicated layout treatment so it fills the available viewport exactly, without fighting the generic content wrapper.
+## Changes
 
-### Changes
+### 1. Storage bucket (SQL migration)
+Create an `avatars` public storage bucket with RLS policies allowing authenticated users to upload/update/delete files in their own folder (`{user_id}/*`) and anyone to read.
 
-**1. AppLayout.tsx — detect chat route and skip content padding**
-When the current route is `/chat`, render `{children}` directly inside `<main>` without the `max-w-[640px] mx-auto px-4 py-5` wrapper. The chat page will manage its own full-bleed layout. The bottom padding for the nav bar still applies.
+```sql
+INSERT INTO storage.buckets (id, name, public) VALUES ('avatars', 'avatars', true);
 
-**2. ChatPage.tsx — remove negative margin hacks, use clean full-height layout**
-- Remove all `-mx-4 sm:-mx-5 -mt-5 sm:-mt-6 lg:-mt-8` negative margins from both the channel list view and message view containers.
-- Change height from the hardcoded `calc(100dvh - 4.5rem - ...)` to `100%` — since the parent `<main>` already accounts for the bottom nav via its padding-bottom, the chat container just needs to fill the remaining space.
-- Use `h-[calc(100dvh-4.5rem-env(safe-area-inset-bottom,0px))]` on the outermost chat div but without negative margins, since there's no wrapper padding to escape.
-
-**3. Result**
-The chat area will perfectly fill the space between the top of the screen and the bottom nav bar on any phone — iPhone SE, iPhone Pro Max, Pixel, Galaxy, etc. — because it no longer fights wrapper padding with fragile negative margins.
-
-### Technical Detail
-```
-Before (fragile):
-  <main pb=nav-height>
-    <div px-4 py-5 max-w-640>     ← generic wrapper
-      <div -mx-4 -mt-5 h=calc(100dvh-nav)>  ← chat fighting the wrapper
-        ...
-      </div>
-    </div>
-  </main>
-
-After (clean):
-  <main pb=nav-height>
-    <div h=full>                   ← chat route: no wrapper padding
-      <div h=calc(100dvh-nav)>     ← chat fills exactly
-        ...
-      </div>
-    </div>
-  </main>
+CREATE POLICY "Anyone can view avatars" ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
+CREATE POLICY "Users can upload own avatar" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
+CREATE POLICY "Users can update own avatar" ON storage.objects FOR UPDATE USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
+CREATE POLICY "Users can delete own avatar" ON storage.objects FOR DELETE USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
 ```
 
-Files to modify:
-- `src/components/AppLayout.tsx` — conditional wrapper for chat route
-- `src/pages/ChatPage.tsx` — remove negative margins from both views
+### 2. ProfilePage.tsx — avatar upload UI
+- Replace the static initial-letter square with a tappable circular avatar
+- If `avatar_url` exists, show the image; otherwise show the gradient initial
+- Overlay a small camera icon on hover/tap
+- Hidden `<input type="file" accept="image/*">` triggered on click
+- On file select: upload to `avatars/{user_id}/avatar.{ext}`, get public URL, update `profiles.avatar_url`
+- Show loading spinner during upload
+- Fetch `avatar_url` alongside `display_name` in the existing profile query
+
+### 3. UserAvatar component — support avatar images
+Add optional `avatarUrl` prop to `UserAvatar`. When provided and non-null, render an `<img>` instead of the gradient initial circle. Fall back to the existing initial if the image fails to load (onError handler).
+
+```
+UserAvatar({ userId, name, avatarUrl?, size })
+  → if avatarUrl: <img> with rounded-full, object-cover
+  → else: existing gradient initial
+```
+
+### 4. Pass avatar_url through the app
+All places that render `UserAvatar` already query `profiles(display_name, avatar_url)`. Just pass `msg.profiles?.avatar_url` as the new `avatarUrl` prop:
+- **MessageBubble.tsx** — two `UserAvatar` calls
+- **ThreadPanel.tsx** — parent message + reply avatars
+- **ChatPage.tsx** — pinned messages section
+- **PoolDetailPage.tsx** — member list (already fetches `avatar_url`)
+
+### 5. Dashboard profile shortcut
+The dashboard hero has a profile avatar shortcut — update it to show the user's avatar image if available.
+
+## Files to modify
+- **Migration**: new SQL for `avatars` storage bucket + policies
+- `src/components/chat/UserAvatar.tsx` — add `avatarUrl` prop with image rendering
+- `src/pages/ProfilePage.tsx` — avatar upload UI, fetch/save `avatar_url`
+- `src/components/chat/MessageBubble.tsx` — pass `avatarUrl` prop
+- `src/components/chat/ThreadPanel.tsx` — pass `avatarUrl` prop  
+- `src/pages/ChatPage.tsx` — pass `avatarUrl` to pinned message avatars
+- `src/pages/DashboardPage.tsx` — show avatar in profile shortcut
 
