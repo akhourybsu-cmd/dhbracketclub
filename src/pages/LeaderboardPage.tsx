@@ -549,7 +549,7 @@ export default function LeaderboardPage() {
                           {s.champion_team.short_name}
                         </span>
                       ) : (
-                        <span className="text-muted-foreground/45 text-xs">—</span>
+                        <span className="text-muted-foreground/65 text-xs">—</span>
                       )}
                     </div>
 

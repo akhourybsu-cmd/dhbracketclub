@@ -497,7 +497,7 @@ export default function ChatPage() {
                             {meta?.lastMessage ? (
                               <p className={cn(
                                 "text-[11px] truncate mt-0.5",
-                                meta.unread ? "text-foreground/65 font-medium" : "text-muted-foreground/55"
+                                meta.unread ? "text-foreground/65 font-medium" : "text-muted-foreground/70"
                               )}>
                                 {meta.lastAuthor && <span className="font-semibold">{meta.lastAuthor}: </span>}
                                 {meta.lastMessage}
@@ -651,7 +651,7 @@ export default function ChatPage() {
                   {messages.length === 0 && (
                     <div className="text-center py-20">
                       <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, hsl(var(--muted) / 0.4), hsl(var(--muted) / 0.15))' }}>
-                        <MessageSquare className="w-6 h-6 text-muted-foreground/45" />
+                        <MessageSquare className="w-6 h-6 text-muted-foreground/65" />
                       </div>
                       <p className="text-sm text-muted-foreground/60 font-medium">Welcome to #{selectedChannel?.name}</p>
                       <p className="text-[11px] text-muted-foreground/70 mt-1">{selectedChannel?.description || 'Start the conversation'}</p>
@@ -883,7 +883,7 @@ export default function ChatPage() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 mb-0.5">
                           <span className="text-[11px] font-bold text-foreground/80">{msg.profiles?.display_name}</span>
-                          <span className="text-[9px] text-muted-foreground/45">{format(new Date(msg.created_at), 'h:mm a')}</span>
+                          <span className="text-[9px] text-muted-foreground/65">{format(new Date(msg.created_at), 'h:mm a')}</span>
                         </div>
                         <p className="text-[12px] text-foreground/75 leading-relaxed break-words">{msg.content}</p>
                       </div>
