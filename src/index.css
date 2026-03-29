@@ -91,6 +91,55 @@
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   }
 
+  /* Dark mode (mirrors :root for class-based toggling) */
+  .dark {
+    --background: 225 28% 4%;
+    --foreground: 210 25% 97%;
+    --card: 225 20% 8%;
+    --card-foreground: 210 25% 97%;
+    --popover: 225 20% 9%;
+    --popover-foreground: 210 25% 97%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 217 100% 72%;
+    --secondary: 225 16% 12%;
+    --secondary-foreground: 215 12% 68%;
+    --muted: 225 16% 14%;
+    --muted-foreground: 215 12% 46%;
+    --accent: 172 66% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 225 14% 13%;
+    --input: 225 16% 11%;
+    --ring: 217 91% 60%;
+    --sidebar-background: 225 28% 5%;
+    --sidebar-foreground: 215 12% 50%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 225 16% 10%;
+    --sidebar-accent-foreground: 210 12% 82%;
+    --sidebar-border: 225 14% 11%;
+    --sidebar-ring: 217 91% 60%;
+    --surface: 225 24% 6%;
+    --surface-elevated: 225 18% 10%;
+    --surface-overlay: 225 20% 12%;
+    --success: 152 60% 48%;
+    --warning: 38 92% 50%;
+    --correct: 152 60% 48%;
+    --incorrect: 0 72% 55%;
+    --gold: 45 93% 52%;
+    --silver: 220 10% 68%;
+    --bronze: 30 55% 48%;
+    --live: 0 75% 58%;
+    --shadow-card: 0 1px 2px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.18);
+    --shadow-elevated: 0 8px 32px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.3);
+    --shadow-glow: 0 0 20px hsl(217 91% 60% / 0.2), 0 0 40px hsl(217 91% 60% / 0.05);
+    --shadow-glow-sm: 0 0 12px hsl(217 91% 60% / 0.15);
+    --shadow-inner: inset 0 1px 2px rgba(0,0,0,0.2);
+    --shadow-gold: 0 0 16px hsl(45 93% 52% / 0.15);
+  }
+
   /* Light mode */
   .light {
     --background: 210 25% 97%;
