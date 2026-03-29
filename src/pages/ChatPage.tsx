@@ -366,8 +366,7 @@ export default function ChatPage() {
     setEditContent('');
     toast.success('Message edited');
   };
-
-
+  const loadPinnedMessages = async () => {
     if (!selectedChannel) return;
     setShowPinned(true);
     setThreadParent(null);
@@ -558,7 +557,7 @@ export default function ChatPage() {
           <Search className="w-4 h-4" />
         </button>
         {pinnedCount > 0 && (
-          <button onClick={showPinnedMessages} className={cn("p-1.5 rounded-lg transition-colors", showPinned ? "bg-premium-warm/15 text-premium-warm" : "hover:bg-muted/40 text-muted-foreground/40")}>
+          <button onClick={loadPinnedMessages} className={cn("p-1.5 rounded-lg transition-colors", showPinned ? "bg-premium-warm/15 text-premium-warm" : "hover:bg-muted/40 text-muted-foreground/40")}>
             <Pin className="w-4 h-4" />
           </button>
         )}

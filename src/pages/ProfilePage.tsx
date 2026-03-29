@@ -5,13 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { LogOut, User, Volume2, VolumeX, BarChart3, MessageCircle, CalendarDays, MessageSquareText, Trophy, Bookmark, Zap } from 'lucide-react';
+import { LogOut, User, Volume2, VolumeX, BarChart3, MessageCircle, CalendarDays, MessageSquareText, Trophy, Bookmark, Zap, Sun, Moon } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { motion } from 'framer-motion';
 import dhMonogram from '@/assets/dh-monogram.png';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function ProfilePage() {
+  const { theme, setTheme } = useTheme();
   const { user, signOut } = useAuth();
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -171,8 +173,33 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Sound & Haptics settings */}
-      <div className="glass-card p-5 mb-4">
+      {/* Settings */}
+      <div className="glass-card p-5 mb-4 space-y-4">
+        <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 mb-3">Settings</h3>
+
+        {/* Theme toggle */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {theme === 'dark' ? (
+              <Moon className="w-4 h-4 text-primary" />
+            ) : (
+              <Sun className="w-4 h-4 text-primary" />
+            )}
+            <div>
+              <p className="text-[13px] font-semibold">Dark Mode</p>
+              <p className="text-[10px] text-muted-foreground">Switch between light and dark themes</p>
+            </div>
+          </div>
+          <Switch
+            checked={theme === 'dark'}
+            onCheckedChange={(checked) => {
+              setTheme(checked ? 'dark' : 'light');
+              play('tap');
+            }}
+          />
+        </div>
+
+        {/* Sound toggle */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {soundEnabled ? (

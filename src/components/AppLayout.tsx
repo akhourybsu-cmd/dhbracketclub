@@ -3,6 +3,7 @@ import { useLocation, Link } from 'react-router-dom';
 import { LayoutDashboard, MessageSquareText, CalendarDays, Swords, Newspaper, User, Trophy, BarChart3, MessageCircle, Bookmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import dhMonogram from '@/assets/dh-monogram.png';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { supabase } from '@/integrations/supabase/client';
@@ -154,7 +155,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        <div className="px-3 pb-3">
+        <div className="px-3 pb-3 space-y-0.5">
+          <div className="flex items-center justify-between px-3 py-2">
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/30">Theme</span>
+            <ThemeToggle />
+          </div>
           <Link
             to="/profile"
             onClick={() => play('tap')}
