@@ -8,6 +8,7 @@ import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import dhMonogram from '@/assets/dh-monogram.png';
+import { getAndClearIntendedDestination } from '@/lib/share';
 
 export default function AuthPage() {
   const { user } = useAuth();
@@ -19,7 +20,10 @@ export default function AuthPage() {
   const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
 
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (user) {
+    const redirect = getAndClearIntendedDestination();
+    return <Navigate to={redirect || '/dashboard'} replace />;
+  }
 
   const validateInviteCode = async (code: string): Promise<boolean> => {
     const { data, error } = await supabase
@@ -67,7 +71,8 @@ export default function AuthPage() {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        navigate('/dashboard');
+        const redirect = getAndClearIntendedDestination();
+        navigate(redirect || '/dashboard');
       }
     } catch (err: any) {
       toast.error(err.message);
