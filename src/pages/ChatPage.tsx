@@ -345,9 +345,9 @@ export default function ChatPage() {
     const content = threadReply.trim();
     setThreadReply('');
 
-    // Optimistic thread reply
+    const optimisticId = `opt-thread-${Date.now()}`;
     const optimisticReply: Message = {
-      id: `opt-thread-${Date.now()}`,
+      id: optimisticId,
       channel_id: selectedChannel.id,
       user_id: user.id,
       content,
@@ -362,13 +362,16 @@ export default function ChatPage() {
     };
     setThreadMessages(prev => [...prev, optimisticReply]);
 
-    const { error } = await supabase.from('messages').insert({
+    const { data: inserted, error } = await supabase.from('messages').insert({
       channel_id: selectedChannel.id, user_id: user.id, content,
       parent_message_id: threadParent.id,
-    });
-    if (error) {
-      setThreadMessages(prev => prev.filter(m => m.id !== optimisticReply.id));
+    }).select('*, profiles:user_id(display_name, avatar_url)').single();
+
+    if (error || !inserted) {
+      setThreadMessages(prev => prev.filter(m => m.id !== optimisticId));
       toast.error('Failed to send reply');
+    } else {
+      setThreadMessages(prev => prev.map(m => m.id === optimisticId ? { ...inserted } : m));
     }
   };
 
