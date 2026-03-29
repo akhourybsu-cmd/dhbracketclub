@@ -47,6 +47,7 @@ interface Pick {
 export default function DraftDetailPage() {
   const { draftId } = useParams<{ draftId: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [draft, setDraft] = useState<any>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [picks, setPicks] = useState<Pick[]>([]);
@@ -55,6 +56,11 @@ export default function DraftDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [starting, setStarting] = useState(false);
   const [enrichingPickIds, setEnrichingPickIds] = useState<Set<string>>(new Set());
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editTopic, setEditTopic] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const pickIds = picks.map(p => p.id);
   const { enrichments, loading: enrichmentsLoading, fetchEnrichments } = useItemEnrichments(pickIds, 'draft_pick');
