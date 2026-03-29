@@ -625,8 +625,8 @@ export default function ChatPage() {
                       <p className="text-[11px] text-muted-foreground/25 mt-1">{selectedChannel?.description || 'Start the conversation'}</p>
                     </div>
                   )}
-                  {messages.map((msg, idx) => {
-                    const prevMsg = idx > 0 ? messages[idx - 1] : null;
+                  {(searchQuery ? messages.filter(m => m.content.toLowerCase().includes(searchQuery.toLowerCase())) : messages).map((msg, idx, filteredMsgs) => {
+                    const prevMsg = idx > 0 ? filteredMsgs[idx - 1] : null;
                     const showDate = !prevMsg || getDateLabel(msg.created_at) !== getDateLabel(prevMsg.created_at);
                     const sameAuthor = prevMsg && prevMsg.user_id === msg.user_id &&
                       new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() < 300000;
