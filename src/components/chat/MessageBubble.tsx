@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import {
-  Pin, Reply, SmilePlus, Trash2, Pencil, Check, X, MessageSquare,
+  Pin, Reply, SmilePlus, Trash2, Pencil, Check, X, MessageSquare, Loader2,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from './UserAvatar';
@@ -35,6 +35,7 @@ export function MessageBubble({
   const [reactionOpen, setReactionOpen] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showMobileActions, setShowMobileActions] = useState(false);
+  const [showTimestamp, setShowTimestamp] = useState(false);
 
   const handleTouchStart = useCallback(() => {
     longPressTimer.current = setTimeout(() => {
@@ -50,17 +51,24 @@ export function MessageBubble({
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
   }, []);
 
+  const handleTapTimestamp = useCallback(() => {
+    if (sameAuthor) {
+      setShowTimestamp(prev => !prev);
+    }
+  }, [sameAuthor]);
+
   return (
     <div
       className={cn(
         "group relative px-2.5 py-1.5 -mx-2.5 rounded-xl transition-colors",
         "hover:bg-muted/12",
         sameAuthor ? "mt-0" : "mt-3",
-        msg._optimistic && "opacity-60"
+        msg._optimistic && "opacity-70"
       )}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onTouchMove={handleTouchMove}
+      onClick={handleTapTimestamp}
     >
       {/* Author line */}
       {!sameAuthor && (
@@ -74,7 +82,10 @@ export function MessageBubble({
 
       <div className={cn("relative", !sameAuthor && "pl-[38px]")}>
         {sameAuthor && (
-          <span className="absolute -left-0.5 top-0.5 text-[8px] text-muted-foreground/0 group-hover:text-muted-foreground/70 transition-colors font-mono">
+          <span className={cn(
+            "absolute -left-0.5 top-0.5 text-[8px] font-mono transition-colors",
+            showTimestamp ? "text-muted-foreground/70" : "text-muted-foreground/0 group-hover:text-muted-foreground/70"
+          )}>
             {format(new Date(msg.created_at), 'h:mm')}
           </span>
         )}
@@ -99,10 +110,18 @@ export function MessageBubble({
             </button>
           </div>
         ) : (
-          <p className="text-[13px] leading-[1.55] text-foreground/85 break-words">
-            {msg.content}
-            {msg.edited_at && <span className="text-[9px] text-muted-foreground/70 ml-1.5">(edited)</span>}
-          </p>
+          <div>
+            <p className="text-[13px] leading-[1.55] text-foreground/85 break-words whitespace-pre-wrap">
+              {msg.content}
+              {msg.edited_at && <span className="text-[9px] text-muted-foreground/70 ml-1.5">(edited)</span>}
+            </p>
+            {/* Optimistic sending indicator */}
+            {msg._optimistic && (
+              <span className="inline-flex items-center gap-1 mt-0.5 text-[9px] text-muted-foreground/50 font-medium">
+                <Loader2 className="w-2.5 h-2.5 animate-spin" /> Sending…
+              </span>
+            )}
+          </div>
         )}
 
         {/* Reactions row */}
@@ -111,7 +130,7 @@ export function MessageBubble({
             {msg.reactions.map(r => (
               <button
                 key={r.emoji}
-                onClick={() => onToggleReaction(msg.id, r.emoji)}
+                onClick={(e) => { e.stopPropagation(); onToggleReaction(msg.id, r.emoji); }}
                 className={cn(
                   "inline-flex items-center gap-1 h-6 px-1.5 rounded-md text-[11px] border transition-all duration-150",
                   r.user_reacted
@@ -123,7 +142,7 @@ export function MessageBubble({
               </button>
             ))}
             <button
-              onClick={() => setReactionOpen(!reactionOpen)}
+              onClick={(e) => { e.stopPropagation(); setReactionOpen(!reactionOpen); }}
               className="w-6 h-6 rounded-md border border-border/25 bg-muted/10 flex items-center justify-center hover:bg-muted/50 transition-colors"
             >
               <SmilePlus className="w-3 h-3 text-muted-foreground/70" />
@@ -134,65 +153,75 @@ export function MessageBubble({
         {/* Floating action bar (desktop hover) */}
         <div className="absolute -top-4 right-0 hidden group-hover:flex items-center gap-0.5 bg-surface-elevated/95 border border-border/15 rounded-lg px-0.5 py-0.5 shadow-xl backdrop-blur-sm z-10">
           {QUICK_EMOJIS.slice(0, 4).map(emoji => (
-            <button key={emoji} onClick={() => onToggleReaction(msg.id, emoji)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 text-sm transition-colors">
+            <button key={emoji} onClick={(e) => { e.stopPropagation(); onToggleReaction(msg.id, emoji); }} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 text-sm transition-colors">
               {emoji}
             </button>
           ))}
           <div className="w-px h-4 bg-border/15 mx-0.5" />
-          <button onClick={() => onOpenThread(msg)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 transition-colors" title="Reply in thread">
+          <button onClick={(e) => { e.stopPropagation(); onOpenThread(msg); }} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 transition-colors" title="Reply in thread">
             <Reply className="w-3.5 h-3.5 text-muted-foreground/70" />
           </button>
-          <button onClick={() => onTogglePin(msg)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 transition-colors" title={msg.is_pinned ? 'Unpin' : 'Pin'}>
+          <button onClick={(e) => { e.stopPropagation(); onTogglePin(msg); }} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 transition-colors" title={msg.is_pinned ? 'Unpin' : 'Pin'}>
             <Pin className={cn("w-3.5 h-3.5", msg.is_pinned ? "text-premium-warm" : "text-muted-foreground/60")} />
           </button>
           {isOwn && (
             <>
-              <button onClick={() => onStartEditing(msg)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 transition-colors" title="Edit">
+              <button onClick={(e) => { e.stopPropagation(); onStartEditing(msg); }} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 transition-colors" title="Edit">
                 <Pencil className="w-3.5 h-3.5 text-muted-foreground/60" />
               </button>
-              <button onClick={() => onDeleteMessage(msg.id)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-destructive/10 transition-colors" title="Delete">
+              <button onClick={(e) => { e.stopPropagation(); onDeleteMessage(msg.id); }} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-destructive/10 transition-colors" title="Delete">
                 <Trash2 className="w-3.5 h-3.5 text-muted-foreground/70 hover:text-destructive" />
               </button>
             </>
           )}
         </div>
 
-        {/* Mobile long-press action sheet */}
+        {/* Mobile long-press action sheet — fixed bottom sheet */}
         <AnimatePresence>
           {showMobileActions && (
             <>
-              <div className="fixed inset-0 z-40" onClick={() => setShowMobileActions(false)} />
               <motion.div
-                initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                className="absolute left-0 right-0 -bottom-2 translate-y-full bg-surface-elevated border border-border/15 rounded-xl p-2 shadow-xl z-50"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/30 z-40"
+                onClick={() => setShowMobileActions(false)}
+              />
+              <motion.div
+                initial={{ opacity: 0, y: 100 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 100 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="fixed bottom-0 left-0 right-0 bg-background border-t border-border/15 rounded-t-2xl p-4 shadow-2xl z-50"
+                style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
               >
-                <div className="flex items-center gap-0.5 mb-2 px-1">
+                {/* Drag handle */}
+                <div className="w-10 h-1 rounded-full bg-muted-foreground/20 mx-auto mb-3" />
+                <div className="flex items-center gap-1 mb-3 px-1 overflow-x-auto">
                   {QUICK_EMOJIS.map(emoji => (
                     <button
                       key={emoji}
                       onClick={() => { onToggleReaction(msg.id, emoji); setShowMobileActions(false); }}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 text-base transition-colors active:scale-90"
+                      className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-muted/50 text-lg transition-colors active:scale-90 flex-shrink-0"
                     >
                       {emoji}
                     </button>
                   ))}
                 </div>
                 <div className="space-y-0.5">
-                  <button onClick={() => { onOpenThread(msg); setShowMobileActions(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-muted/50 text-left text-xs font-medium text-foreground/80">
-                    <Reply className="w-3.5 h-3.5 text-muted-foreground/70" /> Reply in thread
+                  <button onClick={() => { onOpenThread(msg); setShowMobileActions(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-muted/50 text-left text-sm font-medium text-foreground/80 active:bg-muted/70">
+                    <Reply className="w-4 h-4 text-muted-foreground/70" /> Reply in thread
                   </button>
-                  <button onClick={() => { onTogglePin(msg); setShowMobileActions(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-muted/50 text-left text-xs font-medium text-foreground/80">
-                    <Pin className="w-3.5 h-3.5 text-muted-foreground/70" /> {msg.is_pinned ? 'Unpin' : 'Pin'}
+                  <button onClick={() => { onTogglePin(msg); setShowMobileActions(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-muted/50 text-left text-sm font-medium text-foreground/80 active:bg-muted/70">
+                    <Pin className="w-4 h-4 text-muted-foreground/70" /> {msg.is_pinned ? 'Unpin' : 'Pin'}
                   </button>
                   {isOwn && (
                     <>
-                      <button onClick={() => { onStartEditing(msg); setShowMobileActions(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-muted/50 text-left text-xs font-medium text-foreground/80">
-                        <Pencil className="w-3.5 h-3.5 text-muted-foreground/70" /> Edit
+                      <button onClick={() => { onStartEditing(msg); setShowMobileActions(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-muted/50 text-left text-sm font-medium text-foreground/80 active:bg-muted/70">
+                        <Pencil className="w-4 h-4 text-muted-foreground/70" /> Edit
                       </button>
-                      <button onClick={() => { onDeleteMessage(msg.id); setShowMobileActions(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-destructive/10 text-left text-xs font-medium text-destructive">
-                        <Trash2 className="w-3.5 h-3.5" /> Delete
+                      <button onClick={() => { onDeleteMessage(msg.id); setShowMobileActions(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-destructive/10 text-left text-sm font-medium text-destructive active:bg-destructive/20">
+                        <Trash2 className="w-4 h-4" /> Delete
                       </button>
                     </>
                   )}
@@ -212,7 +241,7 @@ export function MessageBubble({
               className="flex items-center gap-0.5 mt-2 bg-surface-elevated border border-border/15 rounded-xl px-1.5 py-1.5 shadow-xl w-fit"
             >
               {QUICK_EMOJIS.map(emoji => (
-                <button key={emoji} onClick={() => { onToggleReaction(msg.id, emoji); setReactionOpen(false); }} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 text-base transition-colors active:scale-90">
+                <button key={emoji} onClick={(e) => { e.stopPropagation(); onToggleReaction(msg.id, emoji); setReactionOpen(false); }} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 text-base transition-colors active:scale-90">
                   {emoji}
                 </button>
               ))}
@@ -223,7 +252,7 @@ export function MessageBubble({
         {/* Thread indicator */}
         {(msg.reply_count || 0) > 0 && (
           <button
-            onClick={() => onOpenThread(msg)}
+            onClick={(e) => { e.stopPropagation(); onOpenThread(msg); }}
             className="flex items-center gap-1.5 mt-2 text-[11px] font-semibold text-primary/80 hover:text-primary transition-colors"
           >
             <MessageSquare className="w-3 h-3" />

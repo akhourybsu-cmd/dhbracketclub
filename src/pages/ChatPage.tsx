@@ -467,7 +467,7 @@ export default function ChatPage() {
 
       {/* Search bar */}
       {showSearch && (
-        <div className="border-b border-border/5 flex-shrink-0 px-4 sm:px-5 py-2">
+        <div className="border-b border-border/5 flex-shrink-0 px-4 sm:px-5 py-2 space-y-1">
           <Input
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
@@ -475,6 +475,9 @@ export default function ChatPage() {
             className="h-8 text-xs bg-muted/20 border-border/25 rounded-lg"
             autoFocus
           />
+          {searchResults && searchResults.length > 0 && (
+            <p className="text-[10px] text-muted-foreground/60 font-medium px-1">{searchResults.length} result{searchResults.length !== 1 ? 's' : ''}</p>
+          )}
         </div>
       )}
 
@@ -524,6 +527,7 @@ export default function ChatPage() {
                 onLoadMore={searchResults ? undefined : loadOlderMessages}
                 hasMore={searchResults ? false : hasMore}
                 loadingMore={loadingMore}
+                isSearchActive={!!searchResults}
               />
               {!searchResults && (
                 <div className="flex-shrink-0 border-t border-border/5">
@@ -533,6 +537,7 @@ export default function ChatPage() {
                     onSend={handleSend}
                     disabled={sending}
                     placeholder={`Message #${selectedChannel?.name || ''}`}
+                    autoFocus
                   />
                 </div>
               )}
