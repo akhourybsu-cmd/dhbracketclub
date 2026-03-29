@@ -105,10 +105,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </main>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 flex-col z-40" style={{
-        background: 'linear-gradient(180deg, hsl(225 28% 6% / 0.92), hsl(225 28% 4% / 0.96))',
+      <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 flex-col z-40 bg-sidebar-background border-r border-border/20" style={{
         backdropFilter: 'blur(24px) saturate(180%)',
-        borderRight: '1px solid hsl(var(--border) / 0.2)',
         boxShadow: 'inset -1px 0 0 hsl(var(--foreground) / 0.02)',
       }}>
         <div className="px-6 pt-7 pb-8">
@@ -176,11 +174,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Mobile Bottom Nav */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 safe-area-inset-bottom" style={{
-        background: 'linear-gradient(180deg, hsl(225 20% 7% / 0.88), hsl(225 28% 4% / 0.95))',
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 safe-area-inset-bottom bg-background/95 border-t border-border/10" style={{
         backdropFilter: 'blur(28px) saturate(200%)',
-        borderTop: '1px solid hsl(var(--border) / 0.1)',
-        boxShadow: '0 -4px 24px rgba(0,0,0,0.3), inset 0 1px 0 hsl(var(--foreground) / 0.02)',
+        boxShadow: '0 -4px 24px rgba(0,0,0,0.15), inset 0 1px 0 hsl(var(--foreground) / 0.02)',
       }}>
         <div className="flex items-center justify-around h-[4rem] px-1">
           {navItems.map((item) => {
