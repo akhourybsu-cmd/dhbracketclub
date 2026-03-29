@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Clock, MapPin, Send, Trash2, ArrowLeft, Pencil, Check, X, MoreVertical
 } from 'lucide-react';
+import ShareButton from '@/components/ShareButton';
 import { format, isPast } from 'date-fns';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { toast } from 'sonner';
@@ -129,11 +130,12 @@ export default function EventDetailPage() {
     <div className="pb-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         {/* Nav */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-1 justify-between mb-4">
           <button onClick={() => navigate('/events')} className="flex items-center gap-1 text-xs text-muted-foreground/70 hover:text-foreground transition-colors">
             <ArrowLeft className="w-3.5 h-3.5" /> Events
           </button>
-          {isCreator && (
+          <div className="flex items-center gap-1">
+            <ShareButton contentType="event" contentId={eventId!} title={event.title} />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="p-1.5 rounded-lg hover:bg-muted/50 transition-colors">
