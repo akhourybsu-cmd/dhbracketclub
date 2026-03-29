@@ -727,9 +727,14 @@ export default function ChatPage() {
                                 <Pin className={cn("w-3.5 h-3.5", msg.is_pinned ? "text-premium-warm" : "text-muted-foreground/40")} />
                               </button>
                               {isOwn && (
-                                <button onClick={() => deleteMessage(msg.id)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-destructive/10 transition-colors" title="Delete">
-                                  <Trash2 className="w-3.5 h-3.5 text-muted-foreground/30 hover:text-destructive" />
-                                </button>
+                                <>
+                                  <button onClick={() => startEditing(msg)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 transition-colors" title="Edit">
+                                    <Pencil className="w-3.5 h-3.5 text-muted-foreground/40" />
+                                  </button>
+                                  <button onClick={() => deleteMessage(msg.id)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-destructive/10 transition-colors" title="Delete">
+                                    <Trash2 className="w-3.5 h-3.5 text-muted-foreground/30 hover:text-destructive" />
+                                  </button>
+                                </>
                               )}
                             </div>
 
