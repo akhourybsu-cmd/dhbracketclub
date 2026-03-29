@@ -10,6 +10,10 @@ import { ArrowLeft, Send, Trash2, Pin } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { toast } from 'sonner';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 type Comment = {
   id: string;
@@ -29,6 +33,7 @@ export default function PostDetailPage() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
 
   useEffect(() => {
     if (!postId) return;
@@ -101,7 +106,7 @@ export default function PostDetailPage() {
             <Button variant="ghost" size="sm" onClick={togglePin} className="text-xs h-7 text-muted-foreground/50">
               <Pin className="w-3 h-3 mr-1" /> {post.is_pinned ? 'Unpin' : 'Pin'}
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleDelete} className="text-xs h-7 text-destructive/60 hover:text-destructive">
+            <Button variant="ghost" size="sm" onClick={() => setShowDeleteAlert(true)} className="text-xs h-7 text-destructive/60 hover:text-destructive">
               <Trash2 className="w-3 h-3 mr-1" /> Delete
             </Button>
           </div>
@@ -145,6 +150,23 @@ export default function PostDetailPage() {
           </div>
         </div>
       </motion.div>
+
+      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Post</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete "{post?.title}" and all its comments. This can't be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

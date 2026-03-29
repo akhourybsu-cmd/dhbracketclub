@@ -182,12 +182,25 @@
     --silver: 220 8% 58%;
     --bronze: 30 50% 42%;
     --live: 0 70% 52%;
+    --premium-warm: 28 75% 50%;
     --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 2px 12px rgba(0,0,0,0.04);
     --shadow-elevated: 0 8px 32px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.05);
     --shadow-glow: 0 0 24px hsl(217 85% 52% / 0.12);
     --shadow-glow-sm: 0 0 12px hsl(217 85% 52% / 0.08);
+    --shadow-glow-hover: 0 4px 16px rgba(0,0,0,0.08), 0 0 12px hsl(217 85% 52% / 0.06);
     --shadow-inner: inset 0 1px 2px rgba(0,0,0,0.05);
     --shadow-gold: 0 0 16px hsl(45 90% 48% / 0.1);
+    --shadow-premium: 0 2px 8px rgba(0,0,0,0.08), 0 0 1px rgba(0,0,0,0.04);
+    --gradient-primary: linear-gradient(135deg, hsl(217 85% 48%), hsl(217 90% 60%));
+    --gradient-accent: linear-gradient(135deg, hsl(172 60% 36%), hsl(172 70% 46%));
+    --gradient-surface: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 20% 97%));
+    --gradient-hero: radial-gradient(ellipse 80% 50% at 50% -20%, hsl(217 85% 52% / 0.06), transparent);
+    --gradient-hero-accent: radial-gradient(ellipse 60% 40% at 80% 10%, hsl(172 60% 38% / 0.04), transparent);
+    --gradient-hero-warm: radial-gradient(ellipse 50% 30% at 20% 20%, hsl(28 75% 50% / 0.03), transparent);
+    --gradient-card-shine: linear-gradient(135deg, hsl(0 0% 100% / 0.7) 0%, transparent 40%);
+    --gradient-card-shine-alt: linear-gradient(315deg, hsl(217 85% 52% / 0.02) 0%, transparent 50%);
+    --gradient-arena-edge: linear-gradient(180deg, hsl(217 85% 52% / 0.04) 0%, transparent 40%);
+    --gradient-arena-floor: linear-gradient(180deg, transparent 60%, hsl(210 20% 95% / 0.4) 100%);
   }
 
   * {
@@ -201,8 +214,8 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* ═══ Noise grain overlay ═══ */
-  body::before {
+  /* ═══ Noise grain overlay (dark mode only) ═══ */
+  .dark body::before {
     content: '';
     position: fixed;
     inset: 0;

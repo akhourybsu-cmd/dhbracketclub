@@ -38,6 +38,9 @@ const ACTIVITY_LABELS: Record<string, string> = {
   draft_created: 'created a draft',
   draft_completed: 'completed a draft',
   bracket_submitted: 'submitted a bracket',
+  event_created: 'created an event',
+  post_created: 'started a discussion',
+  event_rsvp: 'RSVPed to an event',
 };
 
 const ACTIVITY_ICONS: Record<string, { icon: any; color: string }> = {
@@ -48,6 +51,9 @@ const ACTIVITY_ICONS: Record<string, { icon: any; color: string }> = {
   draft_created: { icon: Bookmark, color: 'gold' },
   draft_completed: { icon: Bookmark, color: 'gold' },
   bracket_submitted: { icon: Trophy, color: 'primary' },
+  event_created: { icon: CalendarDays, color: 'success' },
+  post_created: { icon: MessageCircle, color: 'primary' },
+  event_rsvp: { icon: CalendarDays, color: 'success' },
 };
 
 export default function DashboardPage() {
@@ -557,6 +563,8 @@ export default function DashboardPage() {
                   : a.target_type === 'poll' ? `/polls/${a.target_id}`
                   : a.target_type === 'draft' ? `/drafts/${a.target_id}`
                   : a.target_type === 'bracket' ? `/pools/${a.target_id}`
+                  : a.target_type === 'event' ? `/events/${a.target_id}`
+                  : a.target_type === 'post' ? `/posts/${a.target_id}`
                   : null
                 : null;
 
