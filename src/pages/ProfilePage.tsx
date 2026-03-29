@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { LogOut, User, Volume2, VolumeX, BarChart3, MessageCircle, CalendarDays, MessageSquareText, Trophy, Bookmark, Zap, Sun, Moon } from 'lucide-react';
+import { LogOut, User, Volume2, VolumeX, BarChart3, MessageCircle, CalendarDays, MessageSquareText, Trophy, Bookmark, Zap, Sun, Moon, Bell, BellOff } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { motion } from 'framer-motion';
 import dhMonogram from '@/assets/dh-monogram.png';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function ProfilePage() {
@@ -18,6 +19,7 @@ export default function ProfilePage() {
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
   const { play, soundEnabled, toggleSound } = useSoundEffect();
+  const { isSupported: pushSupported, isSubscribed: pushSubscribed, loading: pushLoading, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe } = usePushNotifications();
   const [stats, setStats] = useState({ polls: 0, rankings: 0, events: 0, messages: 0, drafts: 0 });
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
@@ -220,6 +222,43 @@ export default function ProfilePage() {
             }}
           />
         </div>
+
+        {/* Push notifications toggle */}
+        {pushSupported && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {pushSubscribed ? (
+                <Bell className="w-4 h-4 text-primary" />
+              ) : (
+                <BellOff className="w-4 h-4 text-muted-foreground" />
+              )}
+              <div>
+                <p className="text-[13px] font-semibold">Push Notifications</p>
+                <p className="text-[10px] text-muted-foreground">Get alerts for new chat messages</p>
+              </div>
+            </div>
+            <Switch
+              checked={pushSubscribed}
+              disabled={pushLoading}
+              onCheckedChange={async (checked) => {
+                if (checked) {
+                  const ok = await pushSubscribe();
+                  if (ok) {
+                    toast.success('Push notifications enabled!');
+                    play('success');
+                  } else {
+                    toast.error('Could not enable notifications. Check browser permissions.');
+                    play('error');
+                  }
+                } else {
+                  await pushUnsubscribe();
+                  toast.success('Push notifications disabled');
+                  play('tap');
+                }
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* DH branding */}
