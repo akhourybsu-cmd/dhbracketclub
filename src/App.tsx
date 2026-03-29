@@ -8,6 +8,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { AnimatePresence } from "framer-motion";
 import { ThemeProvider } from "next-themes";
+import { useAppUpdate } from "@/hooks/useAppUpdate";
 
 import LandingPage from "./pages/LandingPage";
 import AuthPage from "./pages/AuthPage";
@@ -116,6 +117,11 @@ function AnimatedRoutes() {
   );
 }
 
+function AppWithUpdate() {
+  useAppUpdate();
+  return <AnimatedRoutes />;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
@@ -123,7 +129,7 @@ const App = () => (
         <TooltipProvider>
           <Sonner />
           <BrowserRouter>
-            <AnimatedRoutes />
+            <AppWithUpdate />
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>
