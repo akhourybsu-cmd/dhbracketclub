@@ -12,6 +12,9 @@ import {
 } from 'lucide-react';
 import ShareButton from '@/components/ShareButton';
 import { format, isPast } from 'date-fns';
+import { UserAvatar } from '@/components/chat/UserAvatar';
+import ShareButton from '@/components/ShareButton';
+import { format, isPast } from 'date-fns';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { toast } from 'sonner';
 import {
@@ -117,8 +120,8 @@ export default function EventDetailPage() {
     navigate('/events');
   };
 
-  if (loading) return <div className="py-16 text-center text-muted-foreground/60 text-sm">Loading...</div>;
-  if (!event) return <div className="py-16 text-center text-muted-foreground/60 text-sm">Event not found</div>;
+  if (loading) return <div className="loading-spinner"><div className="loading-spinner-ring" /><p className="loading-spinner-text">Loading…</p></div>;
+  if (!event) return <div className="text-center py-16 text-muted-foreground font-medium text-sm">Event not found</div>;
 
   const userRsvp = rsvps.find(r => r.user_id === user?.id)?.status;
   const isCreator = user?.id === event.created_by;
@@ -292,11 +295,8 @@ export default function EventDetailPage() {
           <div className="space-y-3 mb-4">
             {comments.map(c => (
               <div key={c.id} className="flex gap-2.5">
-                <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5" style={{
-                  background: `linear-gradient(135deg, hsl(${c.user_id.charCodeAt(0) % 360} 60% 45%), hsl(${c.user_id.charCodeAt(1) % 360} 50% 35%))`,
-                  color: 'white',
-                }}>
-                  {(c.profiles?.display_name || '?')[0].toUpperCase()}
+                <div className="flex-shrink-0 mt-0.5">
+                  <UserAvatar userId={c.user_id} name={c.profiles?.display_name || '?'} size={28} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
