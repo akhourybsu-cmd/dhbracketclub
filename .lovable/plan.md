@@ -1,106 +1,146 @@
 
 
-# Premium Visual Overhaul Plan — DH Club
+# DH Club — Refinement & Enhancement Plan
 
-## Overview
-Elevate DH Club from "polished dark app" to "luxury sports arena experience" across five dimensions: color refinement, motion design, micro-interactions, sound design, and visual texture. The goal is a feel comparable to premium apps like Apple Fitness+, Nike SNKRS, or ESPN's dark mode.
+## Current State Assessment
 
----
-
-## 1. Color & Gradient Refinement
-
-**What changes:**
-- Introduce richer ambient glows with multi-color layering (primary blue + accent teal blended radials behind hero sections)
-- Add a subtle warm highlight color (`--premium-warm: 28 80% 58%`) for gold accents on achievements and winners
-- Upgrade card backgrounds with a faint noise/grain texture overlay for depth (CSS-only, no images)
-- Refine the glass-card system: add a second inner highlight edge (bottom-left to top-right diagonal shine)
-- Add animated gradient borders on focused/active cards using `conic-gradient` rotation
-
-**Files:** `src/index.css`, `tailwind.config.ts`
+The app has a solid foundation with 5-tab navigation (Home, Chat, Compete, Events, Feed), working competition modules (Brackets, Rankings, Polls, Drafts), a real-time chat system, events with RSVP, posts/discussions, and an activity feed. There are some console warnings (forwardRef issues) and areas needing polish.
 
 ---
 
-## 2. Motion & Animation System Upgrade
+## Phase 1: Bug Fixes & Stability
 
-**What changes:**
-- **Page transitions**: Add route-level `AnimatePresence` with shared layout animations via Framer Motion so pages slide/fade between each other
-- **Staggered list reveals**: All list sections (dashboard cards, ranking items, draft picks) animate in with cascading delays and spring physics
-- **Card interactions**: Cards scale slightly on press (already have `btn-press`), add a subtle parallax tilt on hover (desktop) using CSS `perspective` + `rotateX/rotateY`
-- **Number counting**: Stat values (leaderboard scores, pick counts) animate up from 0 using a counting animation
-- **Confetti/particle burst**: On bracket submission, ranking submission, or draft completion — trigger a brief celebratory particle effect
-- **Skeleton loading upgrade**: Replace flat shimmer with a wave-style shimmer that sweeps more dramatically
+**Fix console warnings and runtime issues**
+- Fix `forwardRef` warning in `AppLayout` and `DashboardPage` — `AnimatePresence` children need proper refs
+- Fix `PageTransition` component to use `forwardRef` correctly
+- Audit all pages for missing error boundaries and loading states
 
-**Files:** `src/App.tsx` (route wrapper), `src/index.css`, `tailwind.config.ts`, `src/components/EnrichedItemCard.tsx`, new `src/components/PageTransition.tsx`, new `src/components/Confetti.tsx`
+**Files:** `src/components/PageTransition.tsx`, `src/components/AppLayout.tsx`, `src/pages/DashboardPage.tsx`
 
 ---
 
-## 3. Sound Design System
+## Phase 2: Data Integrity & Missing Connections
 
-**What changes:**
-- Create a lightweight `useSoundEffect` hook that plays short audio cues using the Web Audio API (no external libraries needed)
-- Sound events:
-  - **Tap/select**: Soft click (bracket pick, poll vote, nav tap)
-  - **Success**: Bright chime (bracket submitted, ranking saved, draft pick confirmed)
-  - **Error**: Low thud (validation error)
-  - **Achievement**: Ascending tone (completing a bracket, winning position)
-  - **Draft turn notification**: Subtle alert ping when it's your turn
-- All sounds generated programmatically via `OscillatorNode` + `GainNode` — no audio files needed
-- Add a sound toggle in Profile settings (persisted to localStorage), defaulting to ON
-- Respect `prefers-reduced-motion` — disable sounds when reduced motion is preferred
+**Wire up activity feed properly across all modules**
+- Ensure creating/completing events, posts, and chat milestones insert into `activity_feed`
+- Add activity feed entries for RSVP changes and post comments
+- Verify the Feed page displays all event types correctly with proper linking
 
-**Files:** New `src/hooks/useSoundEffect.ts`, `src/pages/ProfilePage.tsx` (settings toggle), integration points in `BracketEntryPage`, `DraftDetailPage`, `RankingDetailPage`, `PollDetailPage`, `AppLayout` (nav)
+**Add missing cascade behaviors**
+- Verify deleting a channel cleans up messages, reactions, and read states
+- Verify deleting an event cleans up RSVPs and comments
+- Verify deleting a post cleans up comments
+
+**Files:** `src/pages/EventsPage.tsx`, `src/pages/PostsPage.tsx`, `src/pages/ChatPage.tsx`, `src/pages/FeedPage.tsx`
 
 ---
 
-## 4. Premium Visual Textures & Polish
+## Phase 3: UX Polish Pass
 
-**What changes:**
-- **Noise grain overlay**: Add a full-viewport CSS noise texture (tiny SVG data URI filter) at ~2% opacity for that premium matte feel
-- **Frosted glass nav**: Upgrade mobile bottom nav and desktop sidebar with stronger glassmorphism (backdrop blur + saturation + subtle inner border glow)
-- **Glowing active states**: Active nav items get a soft underglow animation, not just color change
-- **Premium badge treatments**: Gold/Silver/Bronze rank badges get metallic gradient fills instead of flat semi-transparent backgrounds
-- **Card hover lift**: Enhance existing `hover-lift` with a subtle ambient shadow color shift (blue-tinted shadow on hover)
-- **Input focus glow**: Form inputs get a smooth primary-colored ring glow on focus
-- **Championship mode glow**: Enhance the final round bracket with animated gold edge borders
+**Navigation & routing refinements**
+- Add Profile access from mobile bottom nav (currently desktop-only via sidebar)
+- Add a "Posts" / "Discussions" entry in the Feed tab or as a sub-section — currently the route exists but is not easily discoverable from nav
+- Add breadcrumb-style back navigation on detail pages (Event Detail, Post Detail)
 
-**Files:** `src/index.css`, `src/components/AppLayout.tsx`, `src/components/EnrichedItemCard.tsx`
+**Empty states**
+- Add premium empty states for Chat (no messages), Events (no events), Feed (no activity), Posts (no discussions)
+- Each empty state should have a clear CTA (e.g., "Create the first event")
 
----
+**Loading states**
+- Add skeleton loading to Chat channel list, Events list, Feed page
+- Replace raw `loading` booleans with shimmer skeletons matching card layouts
 
-## 5. Micro-Interaction Details
-
-**What changes:**
-- **Pull-to-refresh feel**: Add a subtle scale bounce when data refreshes
-- **Haptic-style feedback**: On mobile, use `navigator.vibrate` for short pulses on key actions (pick selection, submission) — with sound toggle controlling this too
-- **Badge/pill animations**: Status pills animate in with a pop-scale when they change state
-- **Scroll-linked effects**: Page header shrinks slightly and gains a border-bottom blur as user scrolls down
-- **Toast upgrades**: Custom-styled sonner toasts with module-specific accent colors and icons (green for success, gold for achievements)
-
-**Files:** `src/components/AppLayout.tsx`, `src/hooks/useSoundEffect.ts`, `src/components/ui/sonner.tsx`, integration across action pages
+**Files:** `src/components/AppLayout.tsx`, all detail/list pages
 
 ---
 
-## Technical Approach
+## Phase 4: Chat System Refinement
 
-| Area | Method | Dependencies |
-|------|--------|-------------|
-| Page transitions | Framer Motion `AnimatePresence` + `motion.div` wrapper around `<Routes>` | Already installed |
-| Sound effects | Web Audio API (`AudioContext`, `OscillatorNode`) | None — browser native |
-| Noise texture | Inline SVG `<filter>` as CSS `background-image` data URI | None |
-| Confetti | Lightweight canvas-based particle system (~50 lines) | None |
-| Haptic feedback | `navigator.vibrate()` API | None — browser native |
-| Animated gradients | CSS `@property` + `conic-gradient` | None |
-| Number counting | Framer Motion `useMotionValue` + `useTransform` | Already installed |
+**Unread count badges on nav**
+- Show total unread count as a badge on the Chat nav icon (both mobile and desktop)
 
-No new npm packages required. Everything builds on existing Framer Motion + CSS capabilities.
+**Message editing**
+- Allow users to edit their own messages (the DB policy exists but UI doesn't support it)
+
+**Channel management**
+- Add ability to create new channels from the chat UI
+- Add channel description visible in the channel header
+
+**Search**
+- Add basic message search within a channel (filter messages by text content)
+
+**Files:** `src/pages/ChatPage.tsx`, `src/components/AppLayout.tsx`
 
 ---
 
-## Implementation Order
+## Phase 5: Events Refinement
 
-1. Color & texture foundation (CSS variables, noise overlay, gradient upgrades)
-2. Card & component visual polish (glass effects, metallic badges, input glows)
-3. Sound design system (hook + integration)
-4. Animation upgrades (page transitions, staggered reveals, confetti)
-5. Micro-interactions (haptics, scroll-linked headers, toast styling)
+**Attendee list improvements**
+- Show avatar + name for RSVPs on the event detail page
+- Group by status (Going / Maybe / Pass)
+
+**Linked polls**
+- Allow creating a poll directly from an event (e.g., "Where should we eat?")
+- Show linked poll inline on event detail
+
+**Files:** `src/pages/EventDetailPage.tsx`, `src/pages/EventsPage.tsx`
+
+---
+
+## Phase 6: Feed & Posts Enhancement
+
+**Feed improvements**
+- Add clickable links from feed items to the relevant detail pages
+- Add inline previews (e.g., show poll question, ranking topic)
+- Add "load more" pagination instead of fixed limit
+
+**Posts improvements**
+- Add reactions to posts (using existing `reactions` table)
+- Show comment previews on post cards
+- Add the ability to edit posts
+
+**Files:** `src/pages/FeedPage.tsx`, `src/pages/PostsPage.tsx`, `src/pages/PostDetailPage.tsx`
+
+---
+
+## Phase 7: Profile & Settings Enhancement
+
+**Richer profile page**
+- Show user's recent activity (last 5 feed items for current user)
+- Show stats: polls voted, rankings submitted, events attended, messages sent
+- Add avatar upload (using storage bucket)
+
+**Files:** `src/pages/ProfilePage.tsx`
+
+---
+
+## Phase 8: Cross-Feature Integration
+
+**Home dashboard refinements**
+- Add recent chat activity preview (latest message from a channel)
+- Add recent posts preview
+- Better section ordering: Events > Activity > Competitions
+
+**Compete page enrichment**
+- Show active counts per module (e.g., "3 open rankings")
+- Show recent winners or top participants
+
+**Files:** `src/pages/DashboardPage.tsx`, `src/pages/CompetePage.tsx`
+
+---
+
+## Recommended Implementation Order
+
+| Priority | Phase | Effort |
+|----------|-------|--------|
+| 1 | Bug fixes & stability | Small |
+| 2 | Empty & loading states | Small |
+| 3 | Chat refinement (unread badges, editing, search) | Medium |
+| 4 | Nav & routing polish (Profile on mobile, Posts discoverable) | Small |
+| 5 | Feed & Posts enhancement | Medium |
+| 6 | Events refinement (attendees, linked polls) | Medium |
+| 7 | Profile enhancement | Medium |
+| 8 | Cross-feature dashboard integration | Medium |
+
+Each phase is independent and can be implemented without breaking existing functionality.
 
