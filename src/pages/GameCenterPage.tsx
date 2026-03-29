@@ -472,7 +472,7 @@ function ScoreRow({ team, score, isWinner, isMyPick, isFinal, isLive, pickCount 
     return (
       <div className="flex items-center gap-2 px-4 py-4">
         <span className="w-7" />
-        <span className="text-xs text-muted-foreground/30 italic font-medium">TBD</span>
+        <span className="text-xs text-muted-foreground/50 italic font-medium">TBD</span>
       </div>
     );
   }

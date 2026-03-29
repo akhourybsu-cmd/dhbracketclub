@@ -130,7 +130,7 @@ export default function DraftsListPage() {
                           {d.status === 'in_progress' && <Play className="w-2.5 h-2.5 mr-0.5" />}
                           {sc.label}
                         </span>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-all" />
+                        <ArrowRight className="w-4 h-4 text-muted-foreground/60 group-hover:text-muted-foreground transition-all" />
                       </div>
                     </div>
                   </div>

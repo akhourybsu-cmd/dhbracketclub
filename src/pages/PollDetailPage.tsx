@@ -230,7 +230,7 @@ export default function PollDetailPage() {
             {isCreator && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-foreground transition-colors">
+                  <button className="p-1.5 rounded-lg text-muted-foreground/60 hover:text-foreground transition-colors">
                     <MoreVertical className="w-4 h-4" />
                   </button>
                 </DropdownMenuTrigger>
@@ -331,7 +331,7 @@ export default function PollDetailPage() {
                       )}>
                         {pct}%
                       </span>
-                      <span className="text-[10px] text-muted-foreground/40 font-mono">
+                      <span className="text-[10px] text-muted-foreground/60 font-mono">
                         {count}
                       </span>
                     </div>
@@ -369,7 +369,7 @@ export default function PollDetailPage() {
               <h3 className="section-header mb-0">Voters</h3>
             </div>
             <div className="glass-card overflow-hidden">
-              <div className="divide-y divide-border/10">
+              <div className="divide-y divide-border/20">
                 {votes.map((v: any) => {
                   const optLabel = options.find(o => o.id === v.option_id)?.label;
                   return (

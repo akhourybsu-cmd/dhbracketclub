@@ -411,7 +411,7 @@ export default function BracketEntryPage() {
                     {region}
                   </span>
                   <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, hsl(var(--border) / 0.4), transparent)' }} />
-                  <span className="text-[10px] text-muted-foreground/40 tabular-nums font-medium">
+                  <span className="text-[10px] text-muted-foreground/60 tabular-nums font-medium">
                     {regionGames.filter(g => picks.has(g.id)).length}/{regionGames.length}
                   </span>
                 </motion.div>
@@ -457,7 +457,7 @@ export default function BracketEntryPage() {
                             : 'hsl(var(--surface) / 0.4)',
                           borderBottom: '1px solid hsl(var(--border) / 0.15)',
                         }}>
-                          <span className="text-[10px] font-bold text-muted-foreground/40 tabular-nums">
+                          <span className="text-[10px] font-bold text-muted-foreground/60 tabular-nums">
                             Game {game.game_slot}
                           </span>
                           {isGameLocked ? (
@@ -716,7 +716,7 @@ function MatchupTeamRow({ team, isSelected, isOpponentSelected, onSelect, disabl
             background: 'hsl(var(--surface))',
             border: '1px solid hsl(var(--border) / 0.15)',
           }} />
-          <span className="text-xs text-muted-foreground/40 italic font-medium">
+          <span className="text-xs text-muted-foreground/60 italic font-medium">
             {isPlayInSlot ? 'TBD — First Four' : 'Waiting for earlier pick'}
           </span>
         </>

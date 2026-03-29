@@ -403,7 +403,7 @@ export default function AdminToolsPage() {
       </div>
 
       {/* Tab selector */}
-      <div className="flex gap-1.5 mb-5 p-1 bg-muted/30 rounded-xl">
+      <div className="flex gap-1.5 mb-5 p-1 bg-muted/50 rounded-xl">
         {([
           { key: 'games' as AdminTab, icon: Database, label: 'Games' },
           { key: 'sync' as AdminTab, icon: RefreshCw, label: 'Sync' },
@@ -517,7 +517,7 @@ export default function AdminToolsPage() {
                           {/* Team 1 */}
                           <button onClick={() => team1 && setWinner(game.id, team1.id)} disabled={!team1 || saving === game.id}
                             className={cn("w-full flex items-center gap-2 px-3.5 py-2.5 transition-colors text-left",
-                              game.winner_team_id === team1?.id ? "bg-success/5" : "hover:bg-muted/30", !team1 && "cursor-default")}>
+                              game.winner_team_id === team1?.id ? "bg-success/5" : "hover:bg-muted/50", !team1 && "cursor-default")}>
                             {team1 ? (<>
                               <span className="text-[11px] font-mono font-bold text-muted-foreground w-5 tabular-nums text-center">{team1.seed}</span>
                               <span className="text-sm font-medium flex-1 truncate">{team1.short_name}</span>
@@ -534,7 +534,7 @@ export default function AdminToolsPage() {
                           {/* Team 2 */}
                           <button onClick={() => team2 && setWinner(game.id, team2.id)} disabled={!team2 || saving === game.id}
                             className={cn("w-full flex items-center gap-2 px-3.5 py-2.5 transition-colors text-left",
-                              game.winner_team_id === team2?.id ? "bg-success/5" : "hover:bg-muted/30", !team2 && "cursor-default")}>
+                              game.winner_team_id === team2?.id ? "bg-success/5" : "hover:bg-muted/50", !team2 && "cursor-default")}>
                             {team2 ? (<>
                               <span className="text-[11px] font-mono font-bold text-muted-foreground w-5 tabular-nums text-center">{team2.seed}</span>
                               <span className="text-sm font-medium flex-1 truncate">{team2.short_name}</span>
@@ -547,7 +547,7 @@ export default function AdminToolsPage() {
                           </button>
 
                           {isFinal && (
-                            <div className="px-3.5 py-2 border-t border-border/20 bg-muted/10">
+                            <div className="px-3.5 py-2 border-t border-border/25 bg-muted/10">
                               <button onClick={() => resetGame(game.id)} disabled={saving === game.id}
                                 className="text-[10px] text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors font-medium">
                                 <RotateCcw className="w-3 h-3" /> Reset Result

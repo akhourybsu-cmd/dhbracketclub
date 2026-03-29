@@ -119,7 +119,7 @@ export default function RankingsListPage() {
                             {r.status === 'open' ? 'Open' : 'Closed'}
                           </span>
                         )}
-                        <ArrowRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-all" />
+                        <ArrowRight className="w-4 h-4 text-muted-foreground/60 group-hover:text-muted-foreground transition-all" />
                       </div>
                     </div>
                   </div>

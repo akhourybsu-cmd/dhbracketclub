@@ -116,8 +116,8 @@ export default function EventDetailPage() {
     navigate('/events');
   };
 
-  if (loading) return <div className="py-16 text-center text-muted-foreground/40 text-sm">Loading...</div>;
-  if (!event) return <div className="py-16 text-center text-muted-foreground/40 text-sm">Event not found</div>;
+  if (loading) return <div className="py-16 text-center text-muted-foreground/60 text-sm">Loading...</div>;
+  if (!event) return <div className="py-16 text-center text-muted-foreground/60 text-sm">Event not found</div>;
 
   const userRsvp = rsvps.find(r => r.user_id === user?.id)?.status;
   const isCreator = user?.id === event.created_by;
@@ -158,17 +158,17 @@ export default function EventDetailPage() {
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden mb-5">
               <div className="glass-card p-4 space-y-3">
                 <h3 className="text-sm font-bold">Edit Event</h3>
-                <Input value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))} className="h-9 text-sm font-semibold bg-muted/30 border-border/10" />
-                <Textarea value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} placeholder="Description" className="text-sm min-h-[60px] bg-muted/30 border-border/10" />
-                <Input value={editForm.location} onChange={e => setEditForm(f => ({ ...f, location: e.target.value }))} placeholder="Location" className="h-9 text-xs bg-muted/30 border-border/10" />
+                <Input value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))} className="h-9 text-sm font-semibold bg-muted/50 border-border/25" />
+                <Textarea value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} placeholder="Description" className="text-sm min-h-[60px] bg-muted/50 border-border/25" />
+                <Input value={editForm.location} onChange={e => setEditForm(f => ({ ...f, location: e.target.value }))} placeholder="Location" className="h-9 text-xs bg-muted/50 border-border/25" />
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider mb-1 block">When</label>
-                    <Input type="datetime-local" value={editForm.starts_at} onChange={e => setEditForm(f => ({ ...f, starts_at: e.target.value }))} className="h-9 text-xs bg-muted/30 border-border/10" />
+                    <Input type="datetime-local" value={editForm.starts_at} onChange={e => setEditForm(f => ({ ...f, starts_at: e.target.value }))} className="h-9 text-xs bg-muted/50 border-border/25" />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider mb-1 block">Until</label>
-                    <Input type="datetime-local" value={editForm.ends_at} onChange={e => setEditForm(f => ({ ...f, ends_at: e.target.value }))} className="h-9 text-xs bg-muted/30 border-border/10" />
+                    <Input type="datetime-local" value={editForm.ends_at} onChange={e => setEditForm(f => ({ ...f, ends_at: e.target.value }))} className="h-9 text-xs bg-muted/50 border-border/25" />
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -200,7 +200,7 @@ export default function EventDetailPage() {
               </div>
               <div className="min-w-0 flex-1">
                 <h1 className="text-xl font-extrabold tracking-tight leading-tight">{event.title}</h1>
-                <p className="text-[10px] text-muted-foreground/30 mt-0.5">by {event.profiles?.display_name}</p>
+                <p className="text-[10px] text-muted-foreground/50 mt-0.5">by {event.profiles?.display_name}</p>
               </div>
             </div>
 
@@ -216,7 +216,7 @@ export default function EventDetailPage() {
                 </div>
               )}
               {event.description && (
-                <p className="text-[13px] text-foreground/70 leading-relaxed mt-3">{event.description}</p>
+                <p className="text-[13px] text-foreground/80 leading-relaxed mt-3">{event.description}</p>
               )}
             </div>
           </>
@@ -237,7 +237,7 @@ export default function EventDetailPage() {
                     ? status === 'going' ? 'bg-success/20 text-success border border-success/30'
                       : status === 'maybe' ? 'bg-warning/20 text-warning border border-warning/30'
                       : 'bg-destructive/15 text-destructive border border-destructive/30'
-                    : 'bg-muted/30 text-muted-foreground/50 border border-transparent hover:bg-muted/50'
+                    : 'bg-muted/50 text-muted-foreground/50 border border-transparent hover:bg-muted/50'
                 )}
               >
                 {status === 'going' ? '✓ Going' : status === 'maybe' ? 'Maybe' : "Can't go"}
@@ -247,7 +247,7 @@ export default function EventDetailPage() {
         )}
 
         {eventPast && (
-          <div className="mb-6 px-3 py-2 rounded-xl bg-muted/30 border border-border/10">
+          <div className="mb-6 px-3 py-2 rounded-xl bg-muted/50 border border-border/25">
             <p className="text-[11px] text-muted-foreground/50 font-medium text-center">This event has passed</p>
           </div>
         )}
@@ -255,7 +255,7 @@ export default function EventDetailPage() {
         {/* Attendees */}
         {goingList.length > 0 && (
           <div className="mb-4">
-            <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 mb-2">
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-2">
               Going ({goingList.length})
             </h3>
             <div className="flex flex-wrap gap-1.5">
@@ -269,7 +269,7 @@ export default function EventDetailPage() {
         )}
         {maybeList.length > 0 && (
           <div className="mb-6">
-            <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 mb-2">
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-2">
               Maybe ({maybeList.length})
             </h3>
             <div className="flex flex-wrap gap-1.5">
@@ -283,7 +283,7 @@ export default function EventDetailPage() {
         )}
 
         {/* Discussion */}
-        <div className="border-t border-border/10 pt-4">
+        <div className="border-t border-border/25 pt-4">
           <h3 className="text-[13px] font-bold mb-3">Discussion</h3>
           <div className="space-y-3 mb-4">
             {comments.map(c => (
@@ -297,13 +297,13 @@ export default function EventDetailPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[11px] font-bold text-foreground/80">{c.profiles?.display_name}</span>
-                    <span className="text-[9px] text-muted-foreground/30">{format(new Date(c.created_at), 'MMM d · h:mm a')}</span>
+                    <span className="text-[9px] text-muted-foreground/50">{format(new Date(c.created_at), 'MMM d · h:mm a')}</span>
                   </div>
-                  <p className="text-[12px] text-foreground/70 leading-relaxed">{c.content}</p>
+                  <p className="text-[12px] text-foreground/80 leading-relaxed">{c.content}</p>
                 </div>
               </div>
             ))}
-            {comments.length === 0 && <p className="text-xs text-muted-foreground/30">No comments yet — start the conversation</p>}
+            {comments.length === 0 && <p className="text-xs text-muted-foreground/50">No comments yet — start the conversation</p>}
           </div>
           <div className="flex items-center gap-2">
             <Input
@@ -311,7 +311,7 @@ export default function EventDetailPage() {
               onChange={e => setNewComment(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleComment()}
               placeholder="Add a comment..."
-              className="flex-1 h-10 text-xs bg-muted/30 border-border/10"
+              className="flex-1 h-10 text-xs bg-muted/50 border-border/25"
             />
             <Button size="sm" onClick={handleComment} disabled={!newComment.trim()} className="h-10 w-10 p-0 rounded-xl">
               <Send className="w-3.5 h-3.5" />

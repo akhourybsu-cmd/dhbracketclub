@@ -321,7 +321,7 @@ export default function DraftDetailPage() {
               <button
                 onClick={handleReEnrich}
                 disabled={enriching}
-                className="p-2 rounded-lg text-muted-foreground/40 hover:text-primary transition-colors disabled:opacity-40"
+                className="p-2 rounded-lg text-muted-foreground/60 hover:text-primary transition-colors disabled:opacity-40"
                 title="Re-enrich picks"
               >
                 <RefreshCw className={cn("w-4 h-4", enriching && "animate-spin")} />
@@ -338,7 +338,7 @@ export default function DraftDetailPage() {
             {isCreator && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-foreground transition-colors">
+                  <button className="p-1.5 rounded-lg text-muted-foreground/60 hover:text-foreground transition-colors">
                     <MoreVertical className="w-4 h-4" />
                   </button>
                 </DropdownMenuTrigger>
@@ -395,7 +395,7 @@ export default function DraftDetailPage() {
             <div className="space-y-2">
               {participants.map((p, idx) => (
                 <div key={p.id} className="flex items-center gap-3 py-2">
-                  <span className="text-[11px] font-extrabold text-muted-foreground/40 w-5 text-right font-mono">{idx + 1}</span>
+                  <span className="text-[11px] font-extrabold text-muted-foreground/60 w-5 text-right font-mono">{idx + 1}</span>
                   <span className="text-[13px] font-semibold">{p.profiles?.display_name || 'Unknown'}</span>
                   {p.user_id === draft.created_by && (
                     <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-primary/10 text-primary">Host</span>
@@ -403,7 +403,7 @@ export default function DraftDetailPage() {
                 </div>
               ))}
             </div>
-            <p className="text-[10px] text-muted-foreground/40 mt-3">Share this draft link to invite others. Snake order follows the list above.</p>
+            <p className="text-[10px] text-muted-foreground/60 mt-3">Share this draft link to invite others. Snake order follows the list above.</p>
           </div>
 
           {!isParticipant && user && (
@@ -458,7 +458,7 @@ export default function DraftDetailPage() {
                 <>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 mb-1">Waiting for</p>
                   <p className="text-[13px] font-bold">{currentPicker?.profiles?.display_name || 'Unknown'}</p>
-                  <p className="text-[10px] text-muted-foreground/40 mt-0.5">Round {currentRound} • Pick #{picks.length + 1}</p>
+                  <p className="text-[10px] text-muted-foreground/60 mt-0.5">Round {currentRound} • Pick #{picks.length + 1}</p>
                 </>
               )}
             </div>
@@ -484,10 +484,10 @@ export default function DraftDetailPage() {
           {/* Pick history — enriched cards */}
           {picks.length > 0 && (
             <div className="glass-card overflow-hidden">
-              <div className="px-4 py-3 border-b border-border/10">
+              <div className="px-4 py-3 border-b border-border/25">
                 <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-wider">Pick History</p>
               </div>
-              <div className="divide-y divide-border/10 max-h-96 overflow-y-auto">
+              <div className="divide-y divide-border/20 max-h-96 overflow-y-auto">
                 <AnimatePresence initial={false}>
                   {[...picks].reverse().map((pick) => {
                     const isEnriching = enrichingPickIds.has(pick.id);
@@ -511,7 +511,7 @@ export default function DraftDetailPage() {
                             showRank
                             compact={!hasEnrichments}
                             actions={
-                              <span className="text-[10px] text-muted-foreground/40 flex-shrink-0 text-right">
+                              <span className="text-[10px] text-muted-foreground/60 flex-shrink-0 text-right">
                                 <span className="block font-medium">{pick.profiles?.display_name}</span>
                                 <span className="font-mono">Rd {pick.round}</span>
                               </span>
@@ -546,7 +546,7 @@ export default function DraftDetailPage() {
                   transition={{ delay: idx * 0.05 }}
                   className="glass-card overflow-hidden"
                 >
-                  <div className="px-4 py-3 border-b border-border/10 flex items-center gap-2 relative z-10">
+                  <div className="px-4 py-3 border-b border-border/25 flex items-center gap-2 relative z-10">
                     <div className={cn(
                       "w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-extrabold",
                       idx === 0 && "bg-gold/15 text-gold",
@@ -557,9 +557,9 @@ export default function DraftDetailPage() {
                       {idx + 1}
                     </div>
                     <span className="text-[13px] font-bold">{p.profiles?.display_name || 'Unknown'}</span>
-                    <span className="text-[10px] text-muted-foreground/40 ml-auto font-mono">{userPicks.length} picks</span>
+                    <span className="text-[10px] text-muted-foreground/60 ml-auto font-mono">{userPicks.length} picks</span>
                   </div>
-                  <div className="divide-y divide-border/5 relative z-10">
+                  <div className="divide-y divide-border/15 relative z-10">
                     {userPicks.sort((a, b) => a.round - b.round).map(pick => {
                       const enrichment = enrichments.get(pick.id);
                       return (
@@ -571,7 +571,7 @@ export default function DraftDetailPage() {
                           showRank
                           compact={!hasEnrichments}
                           actions={
-                            <span className="text-[10px] font-mono text-muted-foreground/30 flex-shrink-0">
+                            <span className="text-[10px] font-mono text-muted-foreground/50 flex-shrink-0">
                               Rd {pick.round}
                             </span>
                           }

@@ -105,7 +105,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </main>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 flex-col z-40 bg-sidebar-background border-r border-border/20" style={{
+      <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 flex-col z-40 bg-sidebar-background border-r border-border/25" style={{
         backdropFilter: 'blur(24px) saturate(180%)',
         boxShadow: 'inset -1px 0 0 hsl(var(--foreground) / 0.02)',
       }}>
@@ -125,7 +125,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             if ('type' in item && item.type === 'divider') {
               return (
                 <div key={idx} className="mt-4 mb-1.5 px-3">
-                  <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/30">{item.label}</p>
+                  <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">{item.label}</p>
                 </div>
               );
             }
@@ -154,7 +154,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </nav>
         <div className="px-3 pb-3 space-y-0.5">
           <div className="flex items-center justify-between px-3 py-2">
-            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/30">Theme</span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/50">Theme</span>
             <ThemeToggle />
           </div>
           <Link
@@ -168,12 +168,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </div>
         <div className="px-6 pb-6">
           <div className="h-px bg-border/20 mb-4" />
-          <p className="text-[9px] text-muted-foreground/40 font-semibold tracking-wide">DH — For fun, not funds.</p>
+          <p className="text-[9px] text-muted-foreground/60 font-semibold tracking-wide">DH — For fun, not funds.</p>
         </div>
       </aside>
 
       {/* Mobile Bottom Nav */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 border-t border-border/10" style={{
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 border-t border-border/25" style={{
         backdropFilter: 'blur(28px) saturate(200%)',
         boxShadow: '0 -4px 24px rgba(0,0,0,0.15), inset 0 1px 0 hsl(var(--foreground) / 0.02)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
@@ -204,7 +204,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 </div>
                 <span className={cn(
                   "text-[8px] font-bold tracking-wide transition-colors duration-150",
-                  active ? "text-primary" : "text-muted-foreground/40"
+                  active ? "text-primary" : "text-muted-foreground/60"
                 )}>{item.label}</span>
                 {active && (
                   <motion.div

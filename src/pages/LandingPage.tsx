@@ -103,7 +103,7 @@ export default function LandingPage() {
       </main>
 
       <footer className="relative z-10 text-center py-6">
-        <p className="text-[9px] text-muted-foreground/30 font-semibold uppercase tracking-[0.15em]">
+        <p className="text-[9px] text-muted-foreground/50 font-semibold uppercase tracking-[0.15em]">
           For fun, not funds.
         </p>
       </footer>

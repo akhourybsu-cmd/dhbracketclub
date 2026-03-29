@@ -116,18 +116,18 @@ export default function PostsPage() {
                       </div>
                     )}
                     <h3 className="font-bold text-[14px] tracking-tight mb-1">{post.title}</h3>
-                    <p className="text-[12px] text-foreground/50 line-clamp-2 leading-relaxed mb-2">{post.content}</p>
+                    <p className="text-[12px] text-foreground/65 line-clamp-2 leading-relaxed mb-2">{post.content}</p>
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground/40">
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60">
                         <span className="font-semibold">{post.profiles?.display_name}</span>
                         <span>·</span>
                         <span>{formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="flex items-center gap-1 text-[10px] text-muted-foreground/40">
+                        <span className="flex items-center gap-1 text-[10px] text-muted-foreground/60">
                           <MessageSquare className="w-3 h-3" /> {post.comments_count}
                         </span>
-                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/15" />
+                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60" />
                       </div>
                     </div>
                   </div>
@@ -139,9 +139,9 @@ export default function PostsPage() {
 
         {posts.length === 0 && !loading && (
           <div className="text-center py-16">
-            <FileText className="w-10 h-10 mx-auto text-muted-foreground/15 mb-3" />
+            <FileText className="w-10 h-10 mx-auto text-muted-foreground/60 mb-3" />
             <p className="text-sm text-muted-foreground/50 font-medium">No discussions yet</p>
-            <p className="text-xs text-muted-foreground/30 mt-1">Start a conversation</p>
+            <p className="text-xs text-muted-foreground/50 mt-1">Start a conversation</p>
           </div>
         )}
       </motion.div>

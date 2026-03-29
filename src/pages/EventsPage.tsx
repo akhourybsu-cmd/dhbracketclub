@@ -159,13 +159,13 @@ export default function EventsPage() {
             <div className="flex rounded-xl overflow-hidden border border-border/30">
               <button
                 onClick={() => setView('list')}
-                className={cn("p-1.5 transition-colors", view === 'list' ? 'bg-primary/15 text-primary' : 'text-muted-foreground/40 hover:text-muted-foreground')}
+                className={cn("p-1.5 transition-colors", view === 'list' ? 'bg-primary/15 text-primary' : 'text-muted-foreground/60 hover:text-muted-foreground')}
               >
                 <List className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => setView('calendar')}
-                className={cn("p-1.5 transition-colors", view === 'calendar' ? 'bg-primary/15 text-primary' : 'text-muted-foreground/40 hover:text-muted-foreground')}
+                className={cn("p-1.5 transition-colors", view === 'calendar' ? 'bg-primary/15 text-primary' : 'text-muted-foreground/60 hover:text-muted-foreground')}
               >
                 <Grid3X3 className="w-3.5 h-3.5" />
               </button>
@@ -189,14 +189,14 @@ export default function EventsPage() {
                   placeholder="What's the plan?"
                   value={form.title}
                   onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                  className="h-10 text-sm font-semibold bg-muted/30 border-border/10"
+                  className="h-10 text-sm font-semibold bg-muted/50 border-border/25"
                   autoFocus
                 />
                 <Textarea
                   placeholder="Add some details (optional)"
                   value={form.description}
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                  className="text-sm min-h-[60px] bg-muted/30 border-border/10"
+                  className="text-sm min-h-[60px] bg-muted/50 border-border/25"
                 />
                 <div className="flex gap-2">
                   <div className="flex-1">
@@ -204,18 +204,18 @@ export default function EventsPage() {
                       placeholder="Location"
                       value={form.location}
                       onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
-                      className="h-9 text-xs bg-muted/30 border-border/10"
+                      className="h-9 text-xs bg-muted/50 border-border/25"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider mb-1 block">When</label>
-                    <Input type="datetime-local" value={form.starts_at} onChange={e => setForm(f => ({ ...f, starts_at: e.target.value }))} className="h-9 text-xs bg-muted/30 border-border/10" />
+                    <Input type="datetime-local" value={form.starts_at} onChange={e => setForm(f => ({ ...f, starts_at: e.target.value }))} className="h-9 text-xs bg-muted/50 border-border/25" />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider mb-1 block">Until (opt.)</label>
-                    <Input type="datetime-local" value={form.ends_at} onChange={e => setForm(f => ({ ...f, ends_at: e.target.value }))} className="h-9 text-xs bg-muted/30 border-border/10" />
+                    <Input type="datetime-local" value={form.ends_at} onChange={e => setForm(f => ({ ...f, ends_at: e.target.value }))} className="h-9 text-xs bg-muted/50 border-border/25" />
                   </div>
                 </div>
                 <Button onClick={handleCreate} disabled={!form.title.trim() || !form.starts_at || creating} className="w-full h-10 text-xs font-bold rounded-xl">
@@ -241,7 +241,7 @@ export default function EventsPage() {
             {/* Day headers */}
             <div className="grid grid-cols-7 gap-px mb-1">
               {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                <div key={i} className="text-center text-[9px] font-bold text-muted-foreground/30 py-1">{d}</div>
+                <div key={i} className="text-center text-[9px] font-bold text-muted-foreground/50 py-1">{d}</div>
               ))}
             </div>
             {/* Day cells */}
@@ -258,7 +258,7 @@ export default function EventsPage() {
                     key={day.toISOString()}
                     className={cn(
                       "aspect-square rounded-lg flex flex-col items-center justify-center relative cursor-pointer transition-colors",
-                      today ? 'bg-primary/15' : 'hover:bg-muted/40',
+                      today ? 'bg-primary/15' : 'hover:bg-muted/50',
                       !isCurrentMonth && 'opacity-30'
                     )}
                     onClick={() => {
@@ -284,7 +284,7 @@ export default function EventsPage() {
               if (monthEvents.length === 0) return null;
               return (
                 <div className="mt-4 space-y-1.5">
-                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 mb-2">This Month</h3>
+                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-2">This Month</h3>
                   {monthEvents.map(event => (
                     <Link key={event.id} to={`/events/${event.id}`} className="block">
                       <div className="glass-card p-3 flex items-center gap-3 transition-all hover:border-primary/15">
@@ -298,7 +298,7 @@ export default function EventsPage() {
                           <h4 className="font-bold text-[13px] truncate">{event.title}</h4>
                           <p className="text-[10px] text-muted-foreground/50">{format(new Date(event.starts_at), 'h:mm a')}{event.location ? ` · ${event.location}` : ''}</p>
                         </div>
-                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/15 flex-shrink-0" />
+                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
                       </div>
                     </Link>
                   ))}
@@ -349,10 +349,10 @@ export default function EventsPage() {
                                   </div>
                                 </div>
                               </div>
-                              <ChevronRight className="w-4 h-4 text-muted-foreground/15 flex-shrink-0 mt-1" />
+                              <ChevronRight className="w-4 h-4 text-muted-foreground/60 flex-shrink-0 mt-1" />
                             </div>
                             <div className="flex items-center justify-between mt-2 pl-14">
-                              <span className="text-[10px] text-muted-foreground/40 font-medium flex items-center gap-1">
+                              <span className="text-[10px] text-muted-foreground/60 font-medium flex items-center gap-1">
                                 <Users className="w-3 h-3" /> {event.rsvp_count} going
                               </span>
                               <div className="flex gap-1">
@@ -364,7 +364,7 @@ export default function EventsPage() {
                                       "px-2.5 py-1 rounded-lg text-[10px] font-bold capitalize transition-colors",
                                       event.user_rsvp === status
                                         ? status === 'going' ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'
-                                        : 'bg-muted/30 text-muted-foreground/50 hover:bg-muted/50'
+                                        : 'bg-muted/50 text-muted-foreground/50 hover:bg-muted/50'
                                     )}
                                   >
                                     {status === 'going' ? '✓ Going' : 'Maybe'}
@@ -384,15 +384,15 @@ export default function EventsPage() {
             {/* Past */}
             {past.length > 0 && (
               <div>
-                <h2 className="section-header mb-3 text-muted-foreground/40">Past</h2>
+                <h2 className="section-header mb-3 text-muted-foreground/60">Past</h2>
                 <div className="space-y-1.5 opacity-50">
                   {past.slice(0, 5).map(event => (
                     <Link key={event.id} to={`/events/${event.id}`} className="block">
-                      <div className="glass-card p-3 transition-all duration-200 hover:border-border/20">
+                      <div className="glass-card p-3 transition-all duration-200 hover:border-border/25">
                         <div className="flex items-center gap-3 relative z-10">
                           <div className="min-w-0 flex-1">
                             <h3 className="font-semibold text-[13px] truncate">{event.title}</h3>
-                            <p className="text-[10px] text-muted-foreground/40">{format(new Date(event.starts_at), 'MMM d, yyyy · h:mm a')}</p>
+                            <p className="text-[10px] text-muted-foreground/60">{format(new Date(event.starts_at), 'MMM d, yyyy · h:mm a')}</p>
                           </div>
                         </div>
                       </div>
@@ -406,9 +406,9 @@ export default function EventsPage() {
 
         {events.length === 0 && !loading && (
           <div className="text-center py-16">
-            <CalendarDays className="w-10 h-10 mx-auto text-muted-foreground/15 mb-3" />
+            <CalendarDays className="w-10 h-10 mx-auto text-muted-foreground/60 mb-3" />
             <p className="text-sm text-muted-foreground/50 font-medium">No events yet</p>
-            <p className="text-xs text-muted-foreground/30 mt-1">Plan something with the crew</p>
+            <p className="text-xs text-muted-foreground/50 mt-1">Plan something with the crew</p>
             <Button size="sm" variant="outline" onClick={() => setShowCreate(true)} className="mt-4 gap-1.5 text-xs rounded-xl">
               <Plus className="w-3.5 h-3.5" /> Create Event
             </Button>

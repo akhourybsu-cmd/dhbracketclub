@@ -284,7 +284,7 @@ export default function PoolDetailPage() {
       <div className="section-divider mb-2.5">
         <h2 className="section-header mb-0">Members</h2>
       </div>
-      <div className="glass-card divide-y divide-border/10 overflow-hidden">
+      <div className="glass-card divide-y divide-border/20 overflow-hidden">
         {members.map((m: any, i: number) => {
           const mb = memberBrackets.get(m.user_id);
           const memberStatus = getBracketDisplayStatus(mb?.status || null, pool.lock_time, 0, TOTAL_GAMES);
@@ -330,7 +330,7 @@ export default function PoolDetailPage() {
 
       {/* Delete Pool (Admin only) */}
       {isAdmin && (
-        <div className="mt-8 pt-5 border-t border-border/10">
+        <div className="mt-8 pt-5 border-t border-border/25">
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="outline" className="w-full gap-2 text-destructive/60 border-destructive/15 hover:bg-destructive/8 font-bold rounded-xl text-[13px]">

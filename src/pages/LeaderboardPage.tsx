@@ -468,7 +468,7 @@ export default function LeaderboardPage() {
                     className={cn(
                       "grid grid-cols-[2rem_1fr_4.5rem_3.5rem_2.5rem] gap-1.5 px-4 items-center relative z-10 group transition-colors duration-200",
                       isMe ? "py-3.5" : "py-3",
-                      i < standings.length - 1 && "border-b border-border/8",
+                      i < standings.length - 1 && "border-b border-border/25",
                     )}
                     style={{
                       ...(isMe ? {
@@ -489,7 +489,7 @@ export default function LeaderboardPage() {
                           {s.rank}
                         </div>
                       ) : (
-                        <span className="text-[13px] font-mono font-bold tabular-nums text-muted-foreground/40">{s.rank}</span>
+                        <span className="text-[13px] font-mono font-bold tabular-nums text-muted-foreground/60">{s.rank}</span>
                       )}
                     </div>
 
@@ -549,7 +549,7 @@ export default function LeaderboardPage() {
                           {s.champion_team.short_name}
                         </span>
                       ) : (
-                        <span className="text-muted-foreground/20 text-xs">—</span>
+                        <span className="text-muted-foreground/45 text-xs">—</span>
                       )}
                     </div>
 
@@ -569,7 +569,7 @@ export default function LeaderboardPage() {
                     </div>
 
                     {/* Correct picks */}
-                    <span className="text-[11px] tabular-nums text-right text-muted-foreground/40 font-mono font-medium">{s.correct_picks}</span>
+                    <span className="text-[11px] tabular-nums text-right text-muted-foreground/60 font-mono font-medium">{s.correct_picks}</span>
                   </motion.div>
                 );
               })}
@@ -578,11 +578,11 @@ export default function LeaderboardPage() {
 
           {/* Member count — minimal */}
           <div className="flex items-center justify-between mt-4 px-1">
-            <span className="text-[9px] text-muted-foreground/30 font-medium">
+            <span className="text-[9px] text-muted-foreground/50 font-medium">
               {standings.length} {standings.length === 1 ? 'member' : 'members'}
             </span>
             {lastSyncedAt && (
-              <span className="text-[9px] text-muted-foreground/25 tabular-nums">
+              <span className="text-[9px] text-muted-foreground/50 tabular-nums">
                 Synced {new Date(lastSyncedAt).toLocaleDateString()}
               </span>
             )}

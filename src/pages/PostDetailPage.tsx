@@ -74,8 +74,8 @@ export default function PostDetailPage() {
     setPost({ ...post, is_pinned: !post.is_pinned });
   };
 
-  if (loading) return <div className="py-16 text-center text-muted-foreground/40 text-sm">Loading...</div>;
-  if (!post) return <div className="py-16 text-center text-muted-foreground/40 text-sm">Post not found</div>;
+  if (loading) return <div className="py-16 text-center text-muted-foreground/60 text-sm">Loading...</div>;
+  if (!post) return <div className="py-16 text-center text-muted-foreground/60 text-sm">Post not found</div>;
 
   const isAuthor = user?.id === post.user_id;
 
@@ -93,7 +93,7 @@ export default function PostDetailPage() {
         )}
 
         <h1 className="text-xl font-extrabold tracking-tight mb-2">{post.title}</h1>
-        <div className="flex items-center gap-2 text-[11px] text-muted-foreground/40 mb-4">
+        <div className="flex items-center gap-2 text-[11px] text-muted-foreground/60 mb-4">
           <span className="font-semibold text-foreground/60">{post.profiles?.display_name}</span>
           <span>·</span>
           <span>{formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}</span>
@@ -113,7 +113,7 @@ export default function PostDetailPage() {
         )}
 
         {/* Comments */}
-        <div className="border-t border-border/10 pt-4">
+        <div className="border-t border-border/25 pt-4">
           <h3 className="text-[13px] font-bold mb-3">
             Comments {comments.length > 0 && `(${comments.length})`}
           </h3>
@@ -128,13 +128,13 @@ export default function PostDetailPage() {
                 <div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-[11px] font-bold text-foreground/80">{c.profiles?.display_name}</span>
-                    <span className="text-[9px] text-muted-foreground/30">{formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}</span>
+                    <span className="text-[9px] text-muted-foreground/50">{formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}</span>
                   </div>
-                  <p className="text-[12px] text-foreground/70 leading-relaxed">{c.content}</p>
+                  <p className="text-[12px] text-foreground/80 leading-relaxed">{c.content}</p>
                 </div>
               </div>
             ))}
-            {comments.length === 0 && <p className="text-xs text-muted-foreground/30">No comments yet</p>}
+            {comments.length === 0 && <p className="text-xs text-muted-foreground/50">No comments yet</p>}
           </div>
           <div className="flex items-center gap-2">
             <Input
@@ -142,7 +142,7 @@ export default function PostDetailPage() {
               onChange={e => setNewComment(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleComment()}
               placeholder="Add a comment..."
-              className="flex-1 h-9 text-xs bg-muted/30 border-border/10"
+              className="flex-1 h-9 text-xs bg-muted/50 border-border/25"
             />
             <Button size="sm" onClick={handleComment} disabled={!newComment.trim()} className="h-9 w-9 p-0 rounded-xl">
               <Send className="w-3.5 h-3.5" />

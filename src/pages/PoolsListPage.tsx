@@ -133,7 +133,7 @@ export default function PoolsListPage() {
                         )}>
                           {locked ? 'Locked' : 'Open'}
                         </span>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all" />
+                        <ArrowRight className="w-4 h-4 text-muted-foreground/60 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all" />
                       </div>
                     </div>
                   </div>
