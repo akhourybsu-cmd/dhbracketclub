@@ -154,7 +154,13 @@ export default function EventsPage() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
-          <h1 className="text-xl font-extrabold tracking-tight">Events</h1>
+          <div className="page-header mb-0">
+            <div className="page-header-icon"><CalendarDays /></div>
+            <div>
+              <h1 className="page-header-title">Events</h1>
+              <p className="page-header-subtitle">Hang outs & plans</p>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             <div className="flex rounded-xl overflow-hidden border border-border/30">
               <button

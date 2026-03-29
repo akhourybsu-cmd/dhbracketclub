@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Send, Trash2, Pin } from 'lucide-react';
 import ShareButton from '@/components/ShareButton';
 import { format, formatDistanceToNow } from 'date-fns';
+import { UserAvatar } from '@/components/chat/UserAvatar';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { toast } from 'sonner';
 import {
@@ -75,8 +76,8 @@ export default function PostDetailPage() {
     setPost({ ...post, is_pinned: !post.is_pinned });
   };
 
-  if (loading) return <div className="py-16 text-center text-muted-foreground/60 text-sm">Loading...</div>;
-  if (!post) return <div className="py-16 text-center text-muted-foreground/60 text-sm">Post not found</div>;
+  if (loading) return <div className="loading-spinner"><div className="loading-spinner-ring" /><p className="loading-spinner-text">Loading…</p></div>;
+  if (!post) return <div className="text-center py-16 text-muted-foreground font-medium text-sm">Post not found</div>;
 
   const isAuthor = user?.id === post.user_id;
 
@@ -124,10 +125,8 @@ export default function PostDetailPage() {
           <div className="space-y-3 mb-4">
             {comments.map(c => (
               <div key={c.id} className="flex gap-2.5">
-                <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0 mt-0.5" style={{
-                  background: `linear-gradient(135deg, hsl(${c.user_id.charCodeAt(0) % 360} 60% 45%), hsl(${c.user_id.charCodeAt(1) % 360} 50% 35%))`,
-                }}>
-                  {(c.profiles?.display_name || '?')[0].toUpperCase()}
+                <div className="flex-shrink-0 mt-0.5">
+                  <UserAvatar userId={c.user_id} name={c.profiles?.display_name || '?'} size={24} />
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">

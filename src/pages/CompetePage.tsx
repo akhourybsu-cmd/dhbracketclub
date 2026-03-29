@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, BarChart3, MessageCircle, Bookmark, ChevronRight, Plus } from 'lucide-react';
+import { Trophy, BarChart3, MessageCircle, Bookmark, ChevronRight, Plus, Swords } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const modules = [
@@ -29,7 +29,13 @@ export default function CompetePage() {
   return (
     <div className="pb-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-xl font-extrabold tracking-tight mb-6">Compete</h1>
+        <div className="page-header">
+          <div className="page-header-icon"><Swords /></div>
+          <div>
+            <h1 className="page-header-title">Compete</h1>
+            <p className="page-header-subtitle">Brackets, rankings, polls & drafts</p>
+          </div>
+        </div>
 
         <div className="space-y-3">
           {modules.map((mod, i) => {
