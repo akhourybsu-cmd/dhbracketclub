@@ -70,7 +70,7 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 relative overflow-hidden">
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[350px] rounded-full blur-[120px] pointer-events-none" style={{ background: 'radial-gradient(circle, hsl(217, 91%, 60%, 0.06), transparent)' }} />
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[350px] rounded-full blur-[120px] pointer-events-none" style={{ background: 'radial-gradient(circle, hsl(152, 72%, 46%, 0.06), transparent)' }} />
 
       <motion.div
         initial={{ opacity: 0, y: 16 }}
@@ -81,7 +81,7 @@ export default function ResetPasswordPage() {
         <div className="text-center mb-8">
           <motion.img
             src={dhMonogram}
-            alt="DH Club"
+            alt="DH"
             className="w-24 h-24 object-contain mx-auto mb-5"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}

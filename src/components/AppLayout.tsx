@@ -115,9 +115,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <div>
               <h1 className="text-base font-extrabold tracking-tight leading-none">
                 <span className="gradient-text">DH</span>
-                <span className="text-foreground"> Club</span>
               </h1>
-              <p className="text-[8px] text-muted-foreground/50 font-bold uppercase tracking-[0.2em] mt-0.5">Private Social Hub</p>
+              <p className="text-[8px] text-muted-foreground/50 font-bold uppercase tracking-[0.2em] mt-0.5">Compete With Your Crew</p>
             </div>
           </div>
         </div>
@@ -169,7 +168,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </div>
         <div className="px-6 pb-6">
           <div className="h-px bg-border/20 mb-4" />
-          <p className="text-[9px] text-muted-foreground/40 font-semibold tracking-wide">DH Club — For fun, not funds.</p>
+          <p className="text-[9px] text-muted-foreground/40 font-semibold tracking-wide">DH — For fun, not funds.</p>
         </div>
       </aside>
 

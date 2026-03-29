@@ -88,7 +88,7 @@ export default function ProfilePage() {
         </div>
         <div>
           <h1 className="page-header-title">Profile</h1>
-          <p className="page-header-subtitle">Manage your DH Club account</p>
+          <p className="page-header-subtitle">Manage your DH account</p>
         </div>
       </div>
 
@@ -222,10 +222,10 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* DH Club branding */}
+      {/* DH branding */}
       <div className="flex items-center justify-center gap-2 py-4 mb-2">
-        <img src={dhMonogram} alt="DH Club" className="w-5 h-5 object-contain opacity-30" />
-        <span className="text-[9px] text-muted-foreground/30 font-bold uppercase tracking-[0.15em]">DH Club Member</span>
+        <img src={dhMonogram} alt="DH" className="w-5 h-5 object-contain opacity-30" />
+        <span className="text-[9px] text-muted-foreground/30 font-bold uppercase tracking-[0.15em]">DH Member</span>
       </div>
 
       {/* Sign out */}

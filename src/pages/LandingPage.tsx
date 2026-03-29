@@ -14,16 +14,13 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
       {/* Background glow */}
-      <div className="absolute top-[30%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] rounded-full blur-[160px] pointer-events-none" style={{ background: 'radial-gradient(circle, hsl(217, 91%, 60%, 0.07), transparent)' }} />
+      <div className="absolute top-[30%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] rounded-full blur-[160px] pointer-events-none" style={{ background: 'radial-gradient(circle, hsl(152, 72%, 46%, 0.07), transparent)' }} />
 
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between px-5 py-4">
         <div className="flex items-center gap-2">
           <img src={dhMonogram} alt="DH" className="w-7 h-7 object-contain" style={{ filter: 'drop-shadow(0 0 6px hsl(var(--primary) / 0.2))' }} />
-          <span className="text-[13px] font-extrabold tracking-tight">
-            <span className="text-foreground">DH</span>
-            <span className="text-muted-foreground/70"> Club</span>
-          </span>
+          <span className="text-[13px] font-extrabold tracking-tight text-foreground">DH</span>
         </div>
         <Link to="/auth">
           <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground font-semibold text-[13px] h-9 px-3">
@@ -43,7 +40,7 @@ export default function LandingPage() {
           {/* Hero brand moment */}
           <motion.img
             src={dhMonogram}
-            alt="DH Club"
+            alt="DH"
             className="w-40 h-40 sm:w-52 sm:h-52 object-contain mx-auto mb-5"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
