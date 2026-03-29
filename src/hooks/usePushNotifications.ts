@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-// VAPID public key - this is safe to embed client-side
+// VAPID public key - safe to embed client-side
 const VAPID_PUBLIC_KEY = 'BK65iZjfs07Tc1aTr4os8pQ3NlQ-tgteaFbFcVbIOh8t9HLLanvoCUp_AfYwjfoauiJ4mKIebV1inCpQu-aqdmc';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -14,6 +14,15 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
     outputArray[i] = rawData.charCodeAt(i);
   }
   return outputArray;
+}
+
+function arrayBufferToBase64Url(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 export function usePushNotifications() {
@@ -40,8 +49,7 @@ export function usePushNotifications() {
         const registration = await navigator.serviceWorker.ready;
         const subscription = await registration.pushManager.getSubscription();
         if (subscription) {
-          // Verify it exists in DB
-          const { data } = await supabase
+          const { data } = await (supabase as any)
             .from('push_subscriptions')
             .select('id')
             .eq('endpoint', subscription.endpoint)
@@ -80,13 +88,10 @@ export function usePushNotifications() {
       const auth = subscription.getKey('auth');
       if (!key || !auth) throw new Error('Missing subscription keys');
 
-      const p256dh = btoa(String.fromCharCode(...new Uint8Array(key)))
-        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-      const authStr = btoa(String.fromCharCode(...new Uint8Array(auth)))
-        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const p256dh = arrayBufferToBase64Url(key);
+      const authStr = arrayBufferToBase64Url(auth);
 
-      // Upsert subscription
-      const { error } = await supabase.from('push_subscriptions').upsert(
+      const { error } = await (supabase as any).from('push_subscriptions').upsert(
         {
           user_id: user.id,
           endpoint: subscription.endpoint,
@@ -114,7 +119,7 @@ export function usePushNotifications() {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
-        await supabase
+        await (supabase as any)
           .from('push_subscriptions')
           .delete()
           .eq('endpoint', subscription.endpoint);
