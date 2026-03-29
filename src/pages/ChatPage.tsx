@@ -305,8 +305,10 @@ export default function ChatPage() {
     };
     setMessages(prev => [...prev, optimisticMsg]);
 
-    const { error } = await supabase.from('messages').insert({ channel_id: selectedChannel.id, user_id: user.id, content });
+    const { error, data: insertData } = await supabase.from('messages').insert({ channel_id: selectedChannel.id, user_id: user.id, content }).select();
+    console.log('[ChatPage] insert result:', { error, insertData });
     if (error) {
+      console.error('[ChatPage] Message insert error:', JSON.stringify(error, null, 2));
       setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
       toast.error('Failed to send message');
     }
