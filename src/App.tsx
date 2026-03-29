@@ -7,6 +7,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/AppLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { AnimatePresence } from "framer-motion";
+import { ThemeProvider } from "next-themes";
 
 import LandingPage from "./pages/LandingPage";
 import AuthPage from "./pages/AuthPage";

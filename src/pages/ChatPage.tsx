@@ -366,8 +366,7 @@ export default function ChatPage() {
     setEditContent('');
     toast.success('Message edited');
   };
-
-
+  const loadPinnedMessages = async () => {
     if (!selectedChannel) return;
     setShowPinned(true);
     setThreadParent(null);
