@@ -34,6 +34,8 @@ interface MessageBubbleProps {
   msg: Message;
   isOwn: boolean;
   sameAuthor: boolean;
+  /** True when the NEXT message is also by the same author (hides avatar on middle messages) */
+  nextSameAuthor?: boolean;
   onToggleReaction: (messageId: string, emoji: string) => void;
   onOpenThread: (msg: Message) => void;
   onTogglePin: (msg: Message) => void;
@@ -47,7 +49,7 @@ interface MessageBubbleProps {
 }
 
 export function MessageBubble({
-  msg, isOwn, sameAuthor,
+  msg, isOwn, sameAuthor, nextSameAuthor,
   onToggleReaction, onOpenThread, onTogglePin,
   onStartEditing, onDeleteMessage, onSaveEdit,
   editingMessageId, editContent, onEditContentChange, onCancelEdit,
@@ -58,6 +60,7 @@ export function MessageBubble({
   const [showTimestamp, setShowTimestamp] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const editRef = useRef<HTMLTextAreaElement>(null);
+  const reactionRef = useRef<HTMLDivElement>(null);
 
   // Auto-resize edit textarea
   useEffect(() => {
@@ -66,6 +69,25 @@ export function MessageBubble({
     el.style.height = 'auto';
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   }, [editContent, editingMessageId, msg.id]);
+
+  // Close reaction picker on outside click / Escape
+  useEffect(() => {
+    if (!reactionOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (reactionRef.current && !reactionRef.current.contains(e.target as Node)) {
+        setReactionOpen(false);
+      }
+    };
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setReactionOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEsc);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEsc);
+    };
+  }, [reactionOpen]);
 
   const handleTouchStart = useCallback(() => {
     longPressTimer.current = setTimeout(() => {
@@ -86,11 +108,22 @@ export function MessageBubble({
     if (sameAuthor) setShowTimestamp(prev => !prev);
   }, [sameAuthor]);
 
+  const handleReaction = useCallback((emoji: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    onToggleReaction(msg.id, emoji);
+    setReactionOpen(false);
+    setShowMobileActions(false);
+  }, [msg.id, onToggleReaction]);
+
   const confirmDelete = () => {
     onDeleteMessage(msg.id);
     setShowDeleteConfirm(false);
     setShowMobileActions(false);
   };
+
+  // For consecutive same-author messages, only show the small avatar on the LAST
+  // message in the group (i.e. when nextSameAuthor is false).
+  const showGroupedAvatar = sameAuthor && !nextSameAuthor;
 
   return (
     <>
@@ -118,10 +151,15 @@ export function MessageBubble({
           </div>
         )}
 
-        <div className={cn("relative overflow-hidden", "pl-[38px]")}>
+        {/* Content area — NO overflow-hidden so action bar & reaction picker aren't clipped */}
+        <div className="relative pl-[38px]">
           {sameAuthor && (
             <div className="absolute left-0 top-0.5 flex items-center gap-1">
-              <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} avatarUrl={msg.profiles?.avatar_url} size={18} />
+              {showGroupedAvatar ? (
+                <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} avatarUrl={msg.profiles?.avatar_url} size={18} />
+              ) : (
+                <div className="w-[18px]" />
+              )}
               <span className={cn(
                 "text-[8px] font-mono transition-colors",
                 showTimestamp ? "text-muted-foreground/70" : "text-muted-foreground/0 group-hover:text-muted-foreground/70"
@@ -173,7 +211,7 @@ export function MessageBubble({
               {msg.reactions.map(r => (
                 <button
                   key={r.emoji}
-                  onClick={(e) => { e.stopPropagation(); onToggleReaction(msg.id, r.emoji); }}
+                  onClick={(e) => { e.stopPropagation(); handleReaction(r.emoji); }}
                   className={cn(
                     "inline-flex items-center gap-1 h-6 px-1.5 rounded-md text-[11px] border transition-all duration-150",
                     r.user_reacted
@@ -193,10 +231,10 @@ export function MessageBubble({
             </div>
           )}
 
-          {/* Floating action bar (desktop hover) */}
-          <div className="absolute -top-4 right-2 hidden group-hover:flex items-center gap-0.5 bg-surface-elevated/95 border border-border/15 rounded-lg px-0.5 py-0.5 shadow-xl backdrop-blur-sm z-10">
+          {/* Floating action bar (desktop hover) — positioned outside overflow-hidden */}
+          <div className="absolute -top-4 right-2 hidden group-hover:flex items-center gap-0.5 bg-surface-elevated/95 border border-border/15 rounded-lg px-0.5 py-0.5 shadow-xl backdrop-blur-sm z-30">
             {QUICK_EMOJIS.slice(0, 4).map(emoji => (
-              <button key={emoji} onClick={(e) => { e.stopPropagation(); onToggleReaction(msg.id, emoji); }} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 text-sm transition-colors">
+              <button key={emoji} onClick={(e) => handleReaction(emoji, e)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 text-sm transition-colors">
                 {emoji}
               </button>
             ))}
@@ -243,7 +281,7 @@ export function MessageBubble({
                     {QUICK_EMOJIS.map(emoji => (
                       <button
                         key={emoji}
-                        onClick={() => { onToggleReaction(msg.id, emoji); setShowMobileActions(false); }}
+                        onClick={() => handleReaction(emoji)}
                         className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-muted/50 text-lg transition-colors active:scale-90 flex-shrink-0"
                       >
                         {emoji}
@@ -277,13 +315,15 @@ export function MessageBubble({
           <AnimatePresence>
             {reactionOpen && (
               <motion.div
+                ref={reactionRef}
                 initial={{ opacity: 0, y: 4, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 4, scale: 0.95 }}
-                className="flex items-center gap-0.5 mt-2 bg-surface-elevated border border-border/15 rounded-xl px-1.5 py-1.5 shadow-xl w-fit"
+                transition={{ duration: 0.12 }}
+                className="flex items-center gap-0.5 mt-2 bg-surface-elevated border border-border/15 rounded-xl px-1.5 py-1.5 shadow-xl w-fit z-30 relative"
               >
                 {QUICK_EMOJIS.map(emoji => (
-                  <button key={emoji} onClick={(e) => { e.stopPropagation(); onToggleReaction(msg.id, emoji); setReactionOpen(false); }} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 text-base transition-colors active:scale-90">
+                  <button key={emoji} onClick={(e) => handleReaction(emoji, e)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 text-base transition-colors active:scale-90">
                     {emoji}
                   </button>
                 ))}
