@@ -75,7 +75,10 @@ export default function DraftDetailPage() {
       supabase.from('draft_picks').select('*, profiles:user_id(display_name)').eq('draft_id', draftId).order('pick_number'),
     ]);
 
-    if (draftData) setDraft(draftData);
+    if (draftData) {
+      setDraft(draftData);
+      setEditTopic(draftData.topic);
+    }
     if (partData) setParticipants(partData);
     if (pickData) setPicks(pickData);
     setLoading(false);
