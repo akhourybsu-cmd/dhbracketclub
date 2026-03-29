@@ -520,6 +520,39 @@ export default function ChatPage() {
             ))}
           </div>
 
+          {/* Skeleton loading */}
+          {loading && channels.length === 0 && (
+            <div className="space-y-0.5">
+              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/30 mb-1.5 px-1">
+                <span className="inline-block h-2 w-16 rounded skeleton-shimmer" />
+              </p>
+              {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="flex items-center gap-3 px-3 py-3 rounded-xl">
+                  <div className="w-9 h-9 rounded-xl skeleton-shimmer flex-shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3 rounded-md w-24 skeleton-shimmer" />
+                    <div className="h-2.5 rounded-md w-40 skeleton-shimmer" />
+                  </div>
+                  <div className="h-2 w-10 rounded skeleton-shimmer" />
+                </div>
+              ))}
+              <div className="mt-5">
+                <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/30 mb-1.5 px-1">
+                  <span className="inline-block h-2 w-12 rounded skeleton-shimmer" />
+                </p>
+                {[1, 2].map(i => (
+                  <div key={i} className="flex items-center gap-3 px-3 py-3 rounded-xl">
+                    <div className="w-9 h-9 rounded-xl skeleton-shimmer flex-shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-3 rounded-md w-20 skeleton-shimmer" />
+                      <div className="h-2.5 rounded-md w-32 skeleton-shimmer" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {channels.length === 0 && !loading && (
             <div className="text-center py-20">
               <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--primary) / 0.03))' }}>

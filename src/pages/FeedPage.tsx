@@ -104,8 +104,45 @@ export default function FeedPage() {
           </Link>
         </div>
 
+        {/* Skeleton loading */}
+        {loading && (
+          <div className="space-y-6">
+            {/* Discussion skeletons */}
+            <div>
+              <div className="h-3 w-24 rounded skeleton-shimmer mb-3" />
+              <div className="space-y-2">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="glass-card p-3.5">
+                    <div className="h-3.5 rounded-md w-3/4 skeleton-shimmer mb-2" />
+                    <div className="h-2.5 rounded-md w-full skeleton-shimmer mb-2.5" />
+                    <div className="flex justify-between">
+                      <div className="h-2 rounded w-28 skeleton-shimmer" />
+                      <div className="h-2 rounded w-8 skeleton-shimmer" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Activity skeletons */}
+            <div>
+              <div className="h-3 w-16 rounded skeleton-shimmer mb-3" />
+              <div className="space-y-1">
+                {[1, 2, 3, 4, 5].map(i => (
+                  <div key={i} className="flex items-center gap-2.5 px-2 py-2.5">
+                    <div className="w-7 h-7 rounded-lg skeleton-shimmer flex-shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-2.5 rounded-md w-3/4 skeleton-shimmer" />
+                      <div className="h-2 rounded-md w-16 skeleton-shimmer" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Pinned posts */}
-        {pinnedPosts.length > 0 && (
+        {!loading && pinnedPosts.length > 0 && (
           <div className="mb-6">
             {pinnedPosts.map(post => (
               <Link key={post.id} to={`/posts/${post.id}`} className="block mb-2">
@@ -124,7 +161,7 @@ export default function FeedPage() {
         )}
 
         {/* Recent discussions */}
-        {posts.filter(p => !p.is_pinned).length > 0 && (
+        {!loading && posts.filter(p => !p.is_pinned).length > 0 && (
           <div className="mb-6">
             <h2 className="section-header mb-3">
               <FileText className="w-3.5 h-3.5 inline-block mr-1.5 text-primary/60" />
@@ -152,6 +189,7 @@ export default function FeedPage() {
         )}
 
         {/* Activity stream */}
+        {!loading && (
         <div>
           <h2 className="section-header mb-3">
             <Zap className="w-3.5 h-3.5 inline-block mr-1.5 text-primary/60" />
@@ -200,6 +238,7 @@ export default function FeedPage() {
             </div>
           )}
         </div>
+        )}
       </motion.div>
     </div>
   );
