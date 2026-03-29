@@ -564,6 +564,23 @@ export default function ChatPage() {
         )}
       </div>
 
+      {/* Search bar */}
+      <AnimatePresence>
+        {showSearch && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden border-b border-border/5 flex-shrink-0">
+            <div className="px-4 sm:px-5 py-2">
+              <Input
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search messages..."
+                className="h-8 text-xs bg-muted/20 border-border/8 rounded-lg"
+                autoFocus
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="flex flex-1 min-h-0">
         {/* Main messages or pinned view */}
         <div className={cn("flex flex-col flex-1 min-w-0", (threadParent || showPinned) && "hidden lg:flex")}>
