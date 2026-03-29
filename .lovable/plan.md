@@ -1,60 +1,52 @@
 
 
-# Chat Feature Optimization Plan
+# Chat Optimization Plan
 
-## Current State
+## Issues Found
 
-The chat system is a **927-line monolith** (`ChatPage.tsx`) with channels, threading, reactions, pinning, search, editing, and unread tracking. It works, but has several performance, UX, and code quality issues worth addressing.
-
-## Key Issues Found
-
-1. **`channel_read_states` table is untyped** — the table exists in the database but is missing from the generated types, forcing `(supabase as any)` casts everywhere
-2. **Full message refetch on every reaction** — any reaction change triggers a complete `fetchMessages()` reload instead of updating locally
-3. **No message pagination** — hardcoded `.limit(200)`, no infinite scroll for older messages
-4. **Client-side-only search** — filters already-loaded messages rather than querying the database
-5. **Realtime misses edits from others** — only `INSERT` and `DELETE` events are handled; if another user edits a message, it won't update
-6. **No optimistic message sending** — the message doesn't appear until the database round-trip completes
-7. **927-line monolith** — channel list, message view, thread panel, and all logic live in one file
-8. **Mobile action UX** — the floating action bar uses `hover:` which doesn't work on mobile; the only mobile path is the reaction picker button
+1. **Header not sticky** — The channel header (title, search, pin buttons) scrolls with content instead of staying fixed at the top
+2. **No scroll-to-bottom button** — When scrolled up reading history, no way to jump back to latest messages
+3. **Composer input is basic** — Single-line `<input>` with no multi-line support; long messages get clipped
+4. **No empty-state for search results** — Searching with no matches shows a blank area with no feedback
+5. **Mobile action sheet positioning** — Long-press menu renders below the message with `translate-y-full`, which can overflow off-screen for messages near the bottom
+6. **Channel list has no pull-to-refresh or visual loading indicator on re-entry** — Feels static when returning to the channel list
+7. **Thread panel has no reactions or actions** — Thread replies are plain text with no ability to react, edit, or delete
+8. **Timestamp visibility on grouped messages** — Hover-only timestamp (`group-hover:text-muted-foreground/70`) is invisible on mobile for grouped messages — no way to see when a message was sent
+9. **No typing/sending indicator** — No visual feedback that a message is being sent (the optimistic message just appears at 60% opacity with no label)
+10. **Keyboard doesn't auto-focus composer** — Entering a channel on mobile doesn't focus the input, requiring an extra tap
 
 ## Plan
 
-### Step 1 — Fix `channel_read_states` typing
-Run a no-op migration or regenerate types so `channel_read_states` appears in the Supabase types. Remove all `as any` casts related to this table.
+### 1. Sticky channel header
+Move the header `div` (lines 447-466) outside the scrollable area and ensure it uses `sticky top-0 z-20` positioning so the channel name, search, and pin buttons stay locked to the top during scroll.
 
-### Step 2 — Optimistic message sending
-When a user sends a message, immediately append it to the local `messages` array with a temporary ID and the user's profile. If the insert fails, remove it and show an error toast. This makes chat feel instant.
+### 2. Scroll-to-bottom FAB
+Add a floating "jump to bottom" button in `MessageList` that appears when `autoScroll` is false (user has scrolled up). Clicking it scrolls to `messagesEndRef` and hides the button. Show an unread count badge on it if new messages arrived while scrolled up.
 
-### Step 3 — Granular reaction updates
-Replace the full `fetchMessages()` call on reaction events with a targeted local state update. When a reaction `INSERT`/`DELETE` event arrives, update only the affected message's reaction array in state.
+### 3. Multi-line composer
+Replace the `<Input>` in `MessageComposer` with a `<textarea>` that auto-grows (1-4 lines). Send on Enter, newline on Shift+Enter. This allows longer messages without horizontal clipping.
 
-### Step 4 — Handle realtime `UPDATE` events
-Subscribe to `UPDATE` events on the messages table so edits from other users appear in real time without a page refresh.
+### 4. Search empty state
+In `MessageList`, when `searchResults` is an array with 0 items, show a "No messages found" empty state instead of blank space.
 
-### Step 5 — Infinite scroll / pagination
-Load the most recent 50 messages initially. Add a "load older" trigger (scroll-to-top detection) that fetches the next batch. This improves initial load time for busy channels.
+### 5. Mobile action sheet — render as bottom sheet
+Instead of positioning the action menu relative to the message (which overflows), render it as a fixed bottom sheet (`fixed bottom-0 inset-x-0`) with a backdrop overlay. This is the standard mobile pattern and avoids clipping.
 
-### Step 6 — Mobile long-press actions
-Add a long-press gesture on messages (mobile) that opens the action menu (react, reply, pin, edit, delete) since hover-based toolbars don't work on touch devices.
+### 6. Tap-to-show timestamp on mobile
+For grouped messages (same author), make the hidden timestamp visible on tap (not just hover). Add an `onClick` toggle so mobile users can tap a message to briefly reveal its timestamp.
 
-### Step 7 — Component decomposition
-Split `ChatPage.tsx` into focused components:
-- `ChannelList.tsx` — channel sidebar/list with categories and unread badges
-- `MessageList.tsx` — scrollable message feed with date separators
-- `MessageBubble.tsx` — single message with reactions, actions, thread indicator
-- `MessageComposer.tsx` — input + send button
-- `ThreadPanel.tsx` — thread sidebar with replies
-- `ChatPage.tsx` — orchestrator that wires state and routing between components
+### 7. Search results count indicator
+When search is active and results are loaded, show a small pill like "3 results" below the search input to give feedback.
 
-### Step 8 — Database-side search
-Replace client-side `filter()` with a Supabase query using `.ilike('content', '%query%')` so search works across all messages, not just the loaded 50.
+### 8. Optimistic message indicator
+Replace the plain `opacity-60` on optimistic messages with a subtle "Sending..." label or a small spinner next to the message, so users know it's in-flight.
 
-## What This Does NOT Change
-- No changes to navigation, routing, or business logic
-- No changes to the channel/category data model
-- No visual redesign — preserves the current DH premium look
-- No new database tables (except ensuring `channel_read_states` is properly typed)
+### 9. Auto-focus composer on channel entry
+In `MessageComposer`, add an `autoFocus` prop and set it when the channel view mounts, so the keyboard is ready for input immediately.
 
-## Priority Order
-Steps 1-4 are high-impact, low-effort fixes. Steps 5-8 are larger improvements. I recommend implementing in the order listed.
+## Files to modify
+- `src/pages/ChatPage.tsx` — sticky header structure, search empty state handling, auto-focus prop
+- `src/components/chat/MessageList.tsx` — scroll-to-bottom FAB, search empty state UI
+- `src/components/chat/MessageComposer.tsx` — textarea replacement, auto-grow, autoFocus
+- `src/components/chat/MessageBubble.tsx` — bottom sheet action menu, tap-to-show timestamp, optimistic indicator
 
