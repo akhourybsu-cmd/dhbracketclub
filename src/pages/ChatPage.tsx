@@ -127,8 +127,8 @@ export default function ChatPage() {
         lastMsgs.forEach((m: any) => {
           if (!seenChannels.has(m.channel_id)) {
             seenChannels.add(m.channel_id);
-            const readState = readStates?.find(rs => rs.channel_id === m.channel_id);
-            const isUnread = readState ? new Date(m.created_at) > new Date(readState.last_read_at) : !!m.created_at;
+            const lastRead = readStatesMap.get(m.channel_id);
+            const isUnread = lastRead ? new Date(m.created_at) > new Date(lastRead) : !!m.created_at;
             meta.set(m.channel_id, {
               lastMessage: m.content,
               lastMessageAt: m.created_at,
@@ -206,18 +206,15 @@ export default function ChatPage() {
     }
 
     // Mark channel as read
-    const { data: existing } = await supabase
-      .from('channel_read_states')
-      .select('id')
-      .eq('channel_id', selectedChannel.id)
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (existing) {
-      await supabase.from('channel_read_states').update({ last_read_at: new Date().toISOString() }).eq('id', existing.id);
-    } else {
-      await supabase.from('channel_read_states').insert({ channel_id: selectedChannel.id, user_id: user.id });
-    }
+    try {
+      const sb = supabase as any;
+      const { data: existing } = await sb.from('channel_read_states').select('id').eq('channel_id', selectedChannel.id).eq('user_id', user.id).maybeSingle();
+      if (existing) {
+        await sb.from('channel_read_states').update({ last_read_at: new Date().toISOString() }).eq('id', existing.id);
+      } else {
+        await sb.from('channel_read_states').insert({ channel_id: selectedChannel.id, user_id: user.id });
+      }
+    } catch {}
 
     // Update local unread state
     setChannelMeta(prev => {
