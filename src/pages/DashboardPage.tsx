@@ -65,6 +65,7 @@ export default function DashboardPage() {
   const [drafts, setDrafts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [displayName, setDisplayName] = useState('');
+  const [dashAvatarUrl, setDashAvatarUrl] = useState<string | null>(null);
   const [bracketStatuses, setBracketStatuses] = useState<Map<string, string>>(new Map());
   const [memberCounts, setMemberCounts] = useState<Map<string, number>>(new Map());
   const [dismissedInstall, setDismissedInstall] = useState(false);
@@ -76,8 +77,11 @@ export default function DashboardPage() {
 
     const fetchData = async () => {
       // Profile
-      const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', user.id).single();
-      if (profile) setDisplayName(profile.display_name);
+      const { data: profile } = await supabase.from('profiles').select('display_name, avatar_url').eq('id', user.id).single();
+      if (profile) {
+        setDisplayName(profile.display_name);
+        setDashAvatarUrl(profile.avatar_url);
+      }
 
       // Bracket pools
       const { data: memberships } = await supabase.from('pool_members').select('pool_id').eq('user_id', user.id);
@@ -204,13 +208,17 @@ export default function DashboardPage() {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.1, type: 'spring', damping: 18 }}
-                className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-extrabold text-primary btn-press"
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-extrabold text-primary btn-press overflow-hidden"
                 style={{
-                  background: 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.04))',
+                  background: dashAvatarUrl ? 'transparent' : 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.04))',
                   border: '1px solid hsl(var(--primary) / 0.1)',
                 }}
               >
-                {displayName ? displayName[0].toUpperCase() : '?'}
+                {dashAvatarUrl ? (
+                  <img src={dashAvatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  displayName ? displayName[0].toUpperCase() : '?'
+                )}
               </motion.div>
             </Link>
           </div>
