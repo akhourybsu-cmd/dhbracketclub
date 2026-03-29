@@ -118,9 +118,13 @@ export function MessageList({
 
         {filtered.map((msg, idx) => {
           const prevMsg = idx > 0 ? filtered[idx - 1] : null;
+          const nextMsg = idx < filtered.length - 1 ? filtered[idx + 1] : null;
           const showDate = !prevMsg || getDateLabel(msg.created_at) !== getDateLabel(prevMsg.created_at);
           const sameAuthor = !!prevMsg && prevMsg.user_id === msg.user_id &&
             new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() < 300000;
+          const nextSameAuthor = !!nextMsg && nextMsg.user_id === msg.user_id &&
+            new Date(nextMsg.created_at).getTime() - new Date(msg.created_at).getTime() < 300000 &&
+            getDateLabel(msg.created_at) === getDateLabel(nextMsg.created_at);
 
           return (
             <div key={msg.id}>
@@ -135,6 +139,7 @@ export function MessageList({
                 msg={msg}
                 isOwn={msg.user_id === userId}
                 sameAuthor={sameAuthor}
+                nextSameAuthor={nextSameAuthor}
                 onToggleReaction={onToggleReaction}
                 onOpenThread={onOpenThread}
                 onTogglePin={onTogglePin}
