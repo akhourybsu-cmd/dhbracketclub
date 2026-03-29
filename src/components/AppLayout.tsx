@@ -155,7 +155,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        <div className="px-3 pb-3">
+        <div className="px-3 pb-3 space-y-0.5">
+          <div className="flex items-center justify-between px-3 py-2">
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/30">Theme</span>
+            <ThemeToggle />
+          </div>
           <Link
             to="/profile"
             onClick={() => play('tap')}
