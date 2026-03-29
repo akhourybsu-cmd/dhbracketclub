@@ -554,6 +554,9 @@ export default function ChatPage() {
             <p className="text-[9px] text-muted-foreground/30 truncate">{selectedChannel.description}</p>
           )}
         </div>
+        <button onClick={() => { setShowSearch(!showSearch); setSearchQuery(''); }} className={cn("p-1.5 rounded-lg transition-colors", showSearch ? "bg-primary/15 text-primary" : "hover:bg-muted/40 text-muted-foreground/40")}>
+          <Search className="w-4 h-4" />
+        </button>
         {pinnedCount > 0 && (
           <button onClick={showPinnedMessages} className={cn("p-1.5 rounded-lg transition-colors", showPinned ? "bg-premium-warm/15 text-premium-warm" : "hover:bg-muted/40 text-muted-foreground/40")}>
             <Pin className="w-4 h-4" />
