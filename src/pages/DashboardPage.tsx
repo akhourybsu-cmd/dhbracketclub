@@ -182,7 +182,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3">
               <motion.img
                 src={dhMonogram}
-                alt="DH Club"
+                alt="DH"
                 className="w-9 h-9 object-contain"
                 initial={{ opacity: 0, scale: 0.7 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -284,7 +284,7 @@ export default function DashboardPage() {
                 <Download className="w-5 h-5 text-primary" />
               </div>
               <div className="flex-1 min-w-0 relative z-10">
-                <p className="text-[13px] font-bold">Install DH Club</p>
+                <p className="text-[13px] font-bold">Install DH</p>
                 <p className="text-[10px] text-muted-foreground">Best experience on home screen</p>
               </div>
               <button onClick={install} className="rounded-xl font-bold text-xs h-8 px-3.5 flex-shrink-0 relative z-10 btn-premium">
@@ -527,9 +527,9 @@ export default function DashboardPage() {
           className="glass-card arena-edge p-10 text-center"
         >
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 relative z-10">
-            <img src={dhMonogram} alt="DH Club" className="w-10 h-10 object-contain opacity-50" />
+            <img src={dhMonogram} alt="DH" className="w-10 h-10 object-contain opacity-50" />
           </div>
-          <p className="text-sm font-bold relative z-10 mb-1">Welcome to DH Club</p>
+          <p className="text-sm font-bold relative z-10 mb-1">Welcome to DH</p>
           <p className="text-xs text-muted-foreground leading-relaxed relative z-10 mb-5">Start a competition with your crew — brackets, rankings, polls, or drafts.</p>
           <div className="flex flex-wrap gap-2 justify-center relative z-10">
             <Link to="/polls/create">

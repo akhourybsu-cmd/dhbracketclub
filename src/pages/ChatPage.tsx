@@ -426,7 +426,7 @@ export default function ChatPage() {
           <div className="flex items-center justify-between mb-5">
             <div>
               <h1 className="text-xl font-extrabold tracking-tight">Chat</h1>
-              <p className="text-[10px] text-muted-foreground/40 font-medium mt-0.5">DH Club conversations</p>
+              <p className="text-[10px] text-muted-foreground/40 font-medium mt-0.5">DH conversations</p>
             </div>
             <Button size="sm" variant="ghost" onClick={() => setShowNewChannel(true)} className="h-8 w-8 p-0 rounded-xl">
               <Plus className="w-4 h-4" />
