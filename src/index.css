@@ -207,11 +207,24 @@
     @apply border-border;
   }
 
+  html {
+    /* Prevent iOS bounce/overscroll on the viewport level */
+    height: 100%;
+    overflow: hidden;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    height: 100%;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #root {
+    min-height: 100%;
   }
 
   /* ═══ Noise grain overlay (dark mode only) ═══ */

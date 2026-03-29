@@ -96,9 +96,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-[100dvh] bg-background flex flex-col">
       {/* Main Content */}
-      <main className="flex-1 pb-[4.5rem] lg:pb-0 lg:pl-64">
+      <main className="flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] lg:pb-0 lg:pl-64">
         <div className="max-w-[640px] mx-auto px-4 sm:px-5 py-5 sm:py-6 lg:py-8">
           {children}
         </div>
@@ -174,9 +174,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Mobile Bottom Nav */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 safe-area-inset-bottom bg-background/95 border-t border-border/10" style={{
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 border-t border-border/10" style={{
         backdropFilter: 'blur(28px) saturate(200%)',
         boxShadow: '0 -4px 24px rgba(0,0,0,0.15), inset 0 1px 0 hsl(var(--foreground) / 0.02)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}>
         <div className="flex items-center justify-around h-[4rem] px-1">
           {navItems.map((item) => {
