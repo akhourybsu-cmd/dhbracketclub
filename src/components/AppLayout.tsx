@@ -167,7 +167,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </Link>
         </div>
         <div className="px-6 pb-6">
-          <div className="h-px bg-border/20 mb-4" />
+          <div className="h-px bg-border/40 mb-4" />
           <p className="text-[9px] text-muted-foreground/60 font-semibold tracking-wide">DH — For fun, not funds.</p>
         </div>
       </aside>
