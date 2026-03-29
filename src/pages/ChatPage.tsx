@@ -218,7 +218,10 @@ export default function ChatPage() {
             return;
           }
           if (newMsg.user_id === user.id) {
+            // Already replaced optimistic message on insert response — just deduplicate
             setMessages(prev => {
+              if (prev.some(m => m.id === newMsg.id)) return prev;
+              // Fallback: replace any lingering optimistic message with matching content
               const hasOptimistic = prev.some(m => m._optimistic && m.content === newMsg.content);
               if (hasOptimistic) {
                 return prev.map(m => m._optimistic && m.content === newMsg.content ? { ...newMsg, profiles: m.profiles, reply_count: 0, reactions: [] } : m);
