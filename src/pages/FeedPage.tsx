@@ -238,6 +238,7 @@ export default function FeedPage() {
             </div>
           )}
         </div>
+        )}
       </motion.div>
     </div>
   );
