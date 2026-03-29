@@ -5,10 +5,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
-import { Bookmark, ArrowLeft, Users, Play, Send, Trophy, Clock, Wifi } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Bookmark, ArrowLeft, Users, Play, Send, Trophy, RefreshCw, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDraftUpdates } from '@/hooks/useRealtimeSubscription';
+import { useItemEnrichments, useEnrichDraftPicks } from '@/hooks/useItemEnrichments';
+import EnrichedItemCard, { EnrichedItemSkeleton } from '@/components/EnrichedItemCard';
 
 interface Participant {
   id: string;
@@ -36,6 +38,11 @@ export default function DraftDetailPage() {
   const [pickText, setPickText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [enrichingPickIds, setEnrichingPickIds] = useState<Set<string>>(new Set());
+
+  const pickIds = picks.map(p => p.id);
+  const { enrichments, loading: enrichmentsLoading, fetchEnrichments } = useItemEnrichments(pickIds, 'draft_pick');
+  const { enriching, enrichDraftPicks } = useEnrichDraftPicks();
 
   const fetchData = useCallback(async () => {
     if (!draftId || !user) return;
@@ -53,6 +60,7 @@ export default function DraftDetailPage() {
   }, [draftId, user]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { if (picks.length) fetchEnrichments(); }, [picks.length, fetchEnrichments]);
 
   // Realtime: auto-refresh on picks, participants, or draft status changes
   const { status: realtimeStatus } = useDraftUpdates(draftId, fetchData);
@@ -70,7 +78,6 @@ export default function DraftDetailPage() {
     const round = Math.floor(totalPicks / numParticipants);
     const posInRound = totalPicks % numParticipants;
 
-    // Snake: even rounds go forward, odd rounds go backward
     const orderIdx = round % 2 === 0 ? posInRound : numParticipants - 1 - posInRound;
     const sorted = [...participants].sort((a, b) => a.pick_order - b.pick_order);
     return sorted[orderIdx] || null;
@@ -82,6 +89,7 @@ export default function DraftDetailPage() {
   const isDraftComplete = draft?.status === 'complete' || (draft && participants.length > 0 && currentRound > draft.num_rounds);
   const isInProgress = draft?.status === 'in_progress';
   const isSetup = draft?.status === 'setup';
+  const hasEnrichments = enrichments.size > 0;
 
   const handleStartDraft = async () => {
     if (!draftId || !isCreator) return;
@@ -113,20 +121,19 @@ export default function DraftDetailPage() {
     setSubmitting(true);
     try {
       const pickNumber = picks.length + 1;
-      const { error } = await supabase.from('draft_picks').insert({
+      const { data: newPick, error } = await supabase.from('draft_picks').insert({
         draft_id: draftId,
         user_id: user.id,
         pick_text: pickText.trim(),
         pick_number: pickNumber,
         round: currentRound,
-      });
+      }).select().single();
       if (error) throw error;
 
       // Check if draft is complete after this pick
       const totalExpected = participants.length * draft.num_rounds;
       if (pickNumber >= totalExpected) {
         await supabase.from('drafts').update({ status: 'complete' }).eq('id', draftId);
-
         await supabase.from('activity_feed').insert({
           actor_user_id: user.id,
           event_type: 'draft_completed',
@@ -135,8 +142,6 @@ export default function DraftDetailPage() {
           metadata: { topic: draft?.topic },
         });
       } else {
-        // Update current pick info
-        // Calculate next picker
         const nextTotal = pickNumber;
         const nextRound = Math.floor(nextTotal / participants.length);
         const nextPos = nextTotal % participants.length;
@@ -154,10 +159,32 @@ export default function DraftDetailPage() {
       setPickText('');
       toast.success('Pick made! 🔥');
       fetchData();
+
+      // Fire-and-forget enrichment for the new pick
+      if (newPick?.id) {
+        setEnrichingPickIds(prev => new Set(prev).add(newPick.id));
+        enrichDraftPicks(draftId, [newPick.id]).then(() => {
+          setEnrichingPickIds(prev => {
+            const next = new Set(prev);
+            next.delete(newPick.id);
+            return next;
+          });
+          fetchEnrichments();
+        });
+      }
     } catch (err: any) {
       toast.error(err.message || 'Failed to pick');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleReEnrich = async () => {
+    if (!draftId) return;
+    const result = await enrichDraftPicks(draftId);
+    if (result) {
+      toast.success(`Enriched ${result.enriched_count} picks`);
+      fetchEnrichments();
     }
   };
 
@@ -195,16 +222,34 @@ export default function DraftDetailPage() {
             <h1 className="text-[1.4rem] font-extrabold tracking-tight leading-tight">{draft.topic}</h1>
             <p className="text-[11px] text-muted-foreground/60 font-medium mt-1">
               by {draft.profiles?.display_name} • {draft.num_rounds} rounds
+              {draft.category && (
+                <span className="ml-1.5 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider"
+                  style={{ background: 'hsl(var(--primary) / 0.1)', color: 'hsl(var(--primary))' }}>
+                  <Sparkles className="w-2.5 h-2.5" />{draft.category}
+                </span>
+              )}
             </p>
           </div>
-          <span className={cn(
-            "status-pill flex-shrink-0",
-            isSetup && 'bg-muted text-muted-foreground',
-            isInProgress && 'bg-success/10 text-success',
-            isDraftComplete && 'bg-primary/10 text-primary',
-          )}>
-            {isSetup ? 'Setup' : isInProgress && !isDraftComplete ? 'Live' : 'Complete'}
-          </span>
+          <div className="flex items-center gap-2">
+            {isCreator && picks.length > 0 && (
+              <button
+                onClick={handleReEnrich}
+                disabled={enriching}
+                className="p-2 rounded-lg text-muted-foreground/40 hover:text-primary transition-colors disabled:opacity-40"
+                title="Re-enrich picks"
+              >
+                <RefreshCw className={cn("w-4 h-4", enriching && "animate-spin")} />
+              </button>
+            )}
+            <span className={cn(
+              "status-pill flex-shrink-0",
+              isSetup && 'bg-muted text-muted-foreground',
+              isInProgress && 'bg-success/10 text-success',
+              isDraftComplete && 'bg-primary/10 text-primary',
+            )}>
+              {isSetup ? 'Setup' : isInProgress && !isDraftComplete ? 'Live' : 'Complete'}
+            </span>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 mt-3">
@@ -226,6 +271,19 @@ export default function DraftDetailPage() {
         </div>
       </motion.div>
 
+      {/* Enrichment loading state */}
+      {enriching && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="mb-4 flex items-center gap-2 px-4 py-3 rounded-xl"
+          style={{ background: 'hsl(var(--primary) / 0.08)', border: '1px solid hsl(var(--primary) / 0.15)' }}
+        >
+          <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+          <span className="text-[11px] font-semibold text-primary">Enriching picks with AI…</span>
+        </motion.div>
+      )}
+
       {/* ═══ Setup Phase ═══ */}
       {isSetup && (
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
@@ -245,7 +303,6 @@ export default function DraftDetailPage() {
             <p className="text-[10px] text-muted-foreground/40 mt-3">Share this draft link to invite others. Snake order follows the list above.</p>
           </div>
 
-          {/* Join button for non-participants */}
           {!isParticipant && user && (
             <Button
               onClick={async () => {
@@ -321,30 +378,47 @@ export default function DraftDetailPage() {
             </div>
           )}
 
-          {/* Pick history */}
+          {/* Pick history — enriched cards */}
           {picks.length > 0 && (
             <div className="glass-card overflow-hidden">
               <div className="px-4 py-3 border-b border-border/10">
                 <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-wider">Pick History</p>
               </div>
-              <div className="divide-y divide-border/10 max-h-80 overflow-y-auto">
-                {[...picks].reverse().map((pick, idx) => (
-                  <motion.div
-                    key={pick.id}
-                    initial={{ opacity: 0, x: -6 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.02 }}
-                    className="flex items-center gap-3 px-4 py-2.5 relative z-10"
-                  >
-                    <span className="text-[10px] font-extrabold text-muted-foreground/30 w-6 text-right font-mono flex-shrink-0">
-                      #{pick.pick_number}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <span className="text-[12px] font-semibold block truncate">{pick.pick_text}</span>
-                      <span className="text-[10px] text-muted-foreground/40">{pick.profiles?.display_name} • Rd {pick.round}</span>
-                    </div>
-                  </motion.div>
-                ))}
+              <div className="divide-y divide-border/10 max-h-96 overflow-y-auto">
+                <AnimatePresence initial={false}>
+                  {[...picks].reverse().map((pick) => {
+                    const isEnriching = enrichingPickIds.has(pick.id);
+                    const enrichment = enrichments.get(pick.id);
+
+                    return (
+                      <motion.div
+                        key={pick.id}
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        layout
+                      >
+                        {isEnriching && !enrichment ? (
+                          <EnrichedItemSkeleton compact />
+                        ) : (
+                          <EnrichedItemCard
+                            label={pick.pick_text}
+                            rank={pick.pick_number}
+                            enrichment={enrichment}
+                            showRank
+                            compact={!hasEnrichments}
+                            actions={
+                              <span className="text-[10px] text-muted-foreground/40 flex-shrink-0 text-right">
+                                <span className="block font-medium">{pick.profiles?.display_name}</span>
+                                <span className="font-mono">Rd {pick.round}</span>
+                              </span>
+                            }
+                          />
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
               </div>
             </div>
           )}
@@ -382,13 +456,25 @@ export default function DraftDetailPage() {
                     <span className="text-[13px] font-bold">{p.profiles?.display_name || 'Unknown'}</span>
                     <span className="text-[10px] text-muted-foreground/40 ml-auto font-mono">{userPicks.length} picks</span>
                   </div>
-                  <div className="px-4 py-2 relative z-10">
-                    {userPicks.sort((a, b) => a.round - b.round).map(pick => (
-                      <div key={pick.id} className="flex items-center gap-2 py-1.5">
-                        <span className="text-[10px] font-mono text-muted-foreground/30 w-8 flex-shrink-0">Rd {pick.round}</span>
-                        <span className="text-[12px] font-medium">{pick.pick_text}</span>
-                      </div>
-                    ))}
+                  <div className="divide-y divide-border/5 relative z-10">
+                    {userPicks.sort((a, b) => a.round - b.round).map(pick => {
+                      const enrichment = enrichments.get(pick.id);
+                      return (
+                        <EnrichedItemCard
+                          key={pick.id}
+                          label={pick.pick_text}
+                          rank={pick.round}
+                          enrichment={enrichment}
+                          showRank
+                          compact={!hasEnrichments}
+                          actions={
+                            <span className="text-[10px] font-mono text-muted-foreground/30 flex-shrink-0">
+                              Rd {pick.round}
+                            </span>
+                          }
+                        />
+                      );
+                    })}
                   </div>
                 </motion.div>
               );
