@@ -289,8 +289,9 @@ export default function ChatPage() {
     const content = newMessage.trim();
     setNewMessage('');
 
+    const optimisticId = `opt-${Date.now()}`;
     const optimisticMsg: Message = {
-      id: `opt-${Date.now()}`,
+      id: optimisticId,
       channel_id: selectedChannel.id,
       user_id: user.id,
       content,
@@ -305,10 +306,21 @@ export default function ChatPage() {
     };
     setMessages(prev => [...prev, optimisticMsg]);
 
-    const { error } = await supabase.from('messages').insert({ channel_id: selectedChannel.id, user_id: user.id, content });
-    if (error) {
-      setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
+    const { data: inserted, error } = await supabase
+      .from('messages')
+      .insert({ channel_id: selectedChannel.id, user_id: user.id, content })
+      .select('*, profiles:user_id(display_name, avatar_url)')
+      .single();
+
+    if (error || !inserted) {
+      setMessages(prev => prev.filter(m => m.id !== optimisticId));
       toast.error('Failed to send message');
+    } else {
+      // Immediately replace optimistic message with the real one
+      setMessages(prev => prev.map(m => m.id === optimisticId
+        ? { ...inserted, reply_count: 0, reactions: [] }
+        : m
+      ));
     }
     setSending(false);
   };
