@@ -504,7 +504,10 @@ export default function ChatPage() {
     setShowChannelList(false);
     setThreadParent(null);
     setShowPinned(false);
+    setLastReadAt(null);
     play('tap');
+    // Focus composer after channel switch
+    setTimeout(() => composerRef.current?.focus(), 200);
   };
 
   /* ═══ DB-SIDE SEARCH ═══ */
