@@ -1015,7 +1015,8 @@ export type Database = {
           created_at: string
           id: string
           is_cracked: boolean
-          maze_id: number
+          maze_grid: Json | null
+          maze_id: number | null
           number_code: string
           user_id: string
           week_id: string
@@ -1025,7 +1026,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_cracked?: boolean
-          maze_id: number
+          maze_grid?: Json | null
+          maze_id?: number | null
           number_code: string
           user_id: string
           week_id: string
@@ -1035,7 +1037,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_cracked?: boolean
-          maze_id?: number
+          maze_grid?: Json | null
+          maze_id?: number | null
           number_code?: string
           user_id?: string
           week_id?: string
