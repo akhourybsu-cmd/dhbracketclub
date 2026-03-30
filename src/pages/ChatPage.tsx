@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 
 import { ChannelList } from '@/components/chat/ChannelList';
 import { MessageList } from '@/components/chat/MessageList';
-import { MessageComposer, type MessageComposerHandle } from '@/components/chat/MessageComposer';
+import { MessageComposer, type MessageComposerHandle, type MentionMember } from '@/components/chat/MessageComposer';
 import { ThreadPanel } from '@/components/chat/ThreadPanel';
 import { UserAvatar } from '@/components/chat/UserAvatar';
 import { CHANNEL_EMOJI } from '@/components/chat/types';
@@ -61,6 +61,10 @@ export default function ChatPage() {
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTypingBroadcast = useRef(0);
+
+  // Members for @mention autocomplete
+  const [members, setMembers] = useState<MentionMember[]>([]);
+  const [currentDisplayName, setCurrentDisplayName] = useState<string>('');
 
   // Last read timestamp for unread divider
   const [lastReadAt, setLastReadAt] = useState<string | null>(null);
