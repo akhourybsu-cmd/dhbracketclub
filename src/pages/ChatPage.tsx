@@ -523,6 +523,36 @@ export default function ChatPage() {
     fetchChannels();
   };
 
+  const handleEditChannel = async (channelId: string, newName: string) => {
+    if (!user) return;
+    const { error } = await supabase.from('channels').update({ name: newName }).eq('id', channelId);
+    if (error) {
+      toast.error('Failed to rename channel');
+    } else {
+      play('success');
+      toast.success('Channel renamed');
+      setChannels(prev => prev.map(ch => ch.id === channelId ? { ...ch, name: newName } : ch));
+      if (selectedChannel?.id === channelId) {
+        setSelectedChannel(prev => prev ? { ...prev, name: newName } : prev);
+      }
+    }
+  };
+
+  const handleReorderChannels = async (categoryId: string, reordered: Channel[]) => {
+    // Optimistic local update
+    setChannels(prev => {
+      const others = prev.filter(ch => ch.category_id !== categoryId);
+      const updated = reordered.map((ch, i) => ({ ...ch, position: i }));
+      return [...others, ...updated].sort((a, b) => a.position - b.position);
+    });
+    // Persist to DB
+    await Promise.all(
+      reordered.map((ch, i) =>
+        supabase.from('channels').update({ position: i }).eq('id', ch.id)
+      )
+    );
+  };
+
   const selectChannel = (ch: Channel) => {
     setSelectedChannel(ch);
     setShowChannelList(false);
@@ -577,6 +607,8 @@ export default function ChatPage() {
             loading={loading}
             onSelectChannel={selectChannel}
             onCreateChannel={handleCreateChannel}
+            onEditChannel={handleEditChannel}
+            onReorderChannels={handleReorderChannels}
           />
         </div>
         <div className="hidden lg:flex flex-1 items-center justify-center text-muted-foreground/50 text-sm">
@@ -599,6 +631,8 @@ export default function ChatPage() {
           loading={loading}
           onSelectChannel={selectChannel}
           onCreateChannel={handleCreateChannel}
+          onEditChannel={handleEditChannel}
+          onReorderChannels={handleReorderChannels}
         />
       </div>
 
