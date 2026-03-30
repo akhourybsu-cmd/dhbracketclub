@@ -86,27 +86,18 @@ export function usePushNotifications() {
 
       const registration = await navigator.serviceWorker.ready;
       const desiredKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
-      const desiredKeyBase64 = uint8ArrayToBase64Url(desiredKey);
 
+      // Always nuke any existing browser subscription and DB records to start clean
       let subscription = await registration.pushManager.getSubscription();
-
       if (subscription) {
-        const existingServerKey = subscription.options.applicationServerKey;
-        const existingKeyBase64 = existingServerKey
-          ? arrayBufferToBase64Url(existingServerKey)
-          : null;
-
-        if (existingKeyBase64 !== desiredKeyBase64) {
-          await supabase
-            .from('push_subscriptions')
-            .delete()
-            .eq('endpoint', subscription.endpoint)
-            .eq('user_id', user.id);
-
-          await subscription.unsubscribe();
-          subscription = null;
-        }
+        await subscription.unsubscribe();
+        subscription = null;
       }
+      // Clear ALL DB subscriptions for this user to remove stale entries
+      await supabase
+        .from('push_subscriptions')
+        .delete()
+        .eq('user_id', user.id);
 
       if (!subscription) {
         subscription = await registration.pushManager.subscribe({
