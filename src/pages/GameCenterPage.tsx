@@ -161,7 +161,7 @@ export default function GameCenterPage() {
           background: 'radial-gradient(ellipse 70% 60% at 50% 0%, hsl(var(--primary) / 0.06), transparent)',
         }} />
 
-        <div className="flex items-center justify-between relative z-10">
+        <div className="flex items-center justify-between relative z-10 gap-3">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{
               background: 'linear-gradient(135deg, hsl(var(--primary) / 0.2), hsl(var(--primary) / 0.06))',
