@@ -53,6 +53,13 @@ export function MessageList({
   const [newMsgCount, setNewMsgCount] = useState(0);
   const prevMsgCount = useRef(messages.length);
 
+  // Reset auto-scroll when channel changes so we always land at the bottom
+  useEffect(() => {
+    setAutoScroll(true);
+    setNewMsgCount(0);
+    messagesEndRef.current?.scrollIntoView();
+  }, [selectedChannel?.id]);
+
   // Scroll preservation on load-more (prepend)
   const prevScrollHeight = useRef<number | null>(null);
 
