@@ -1,12 +1,12 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Lock, Unlock, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, Trophy, Swords, Shield } from 'lucide-react';
+import { ArrowLeft, Lock, Unlock, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, Trophy, Swords, Shield, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubmitGuess, useAttemptGuesses } from '@/hooks/useLockbox';
-import { LOCKBOX_COLORS, LOCKBOX_DIGITS, PRESET_MAZES } from '@/lib/lockboxMazes';
+import { LOCKBOX_COLORS, LOCKBOX_DIGITS, CellType, getAttackerView, findCell } from '@/lib/lockboxMazes';
 import { logActivity } from '@/lib/activityLogger';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -109,13 +109,10 @@ function NumberPhase({ onSubmit, guesses, isPending }: { onSubmit: (g: number[])
       <div className="glass-card p-5">
         <div className="flex items-center justify-between mb-1">
           <h3 className="font-black text-sm">Crack the Number Code</h3>
-          <span className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
-            PHASE 1
-          </span>
+          <span className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">PHASE 1</span>
         </div>
         <p className="text-[10px] text-muted-foreground mb-4">Pick 3 unique digits (0–5). Order matters.</p>
 
-        {/* Input slots */}
         <div className="flex gap-2.5 mb-4 justify-center">
           {selected.map((d, i) => (
             <motion.div key={i} initial={{ scale: 0.5 }} animate={{ scale: 1 }}
@@ -130,7 +127,6 @@ function NumberPhase({ onSubmit, guesses, isPending }: { onSubmit: (g: number[])
           ))}
         </div>
 
-        {/* Digit buttons */}
         <div className="grid grid-cols-6 gap-2 mb-4">
           {LOCKBOX_DIGITS.map(d => (
             <button key={d} onClick={() => toggle(d)}
@@ -149,7 +145,6 @@ function NumberPhase({ onSubmit, guesses, isPending }: { onSubmit: (g: number[])
         </Button>
       </div>
 
-      {/* History */}
       {guesses.length > 0 && (
         <div className="glass-card p-4">
           <div className="flex items-center justify-between mb-2">
@@ -184,13 +179,10 @@ function ColorPhase({ onSubmit, guesses, isPending }: { onSubmit: (g: string[]) 
       <div className="glass-card p-5">
         <div className="flex items-center justify-between mb-1">
           <h3 className="font-black text-sm">Crack the Color Code</h3>
-          <span className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
-            PHASE 2
-          </span>
+          <span className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">PHASE 2</span>
         </div>
         <p className="text-[10px] text-muted-foreground mb-4">Pick 3 unique colors. Order matters.</p>
 
-        {/* Selected slots */}
         <div className="flex gap-2.5 mb-4 justify-center">
           {selected.map((c, i) => {
             const color = LOCKBOX_COLORS.find(lc => lc.name === c);
@@ -205,7 +197,6 @@ function ColorPhase({ onSubmit, guesses, isPending }: { onSubmit: (g: string[]) 
           ))}
         </div>
 
-        {/* Palette */}
         <div className="grid grid-cols-5 gap-2 mb-4">
           {LOCKBOX_COLORS.map(c => (
             <button key={c.name} onClick={() => toggle(c.name)}
@@ -243,21 +234,29 @@ function ColorPhase({ onSubmit, guesses, isPending }: { onSubmit: (g: string[]) 
   );
 }
 
-// ── Maze Phase ──
-function MazePhase({ maze, onSolve, onFail, isPending }: {
-  maze: typeof PRESET_MAZES[0];
+// ── Custom Maze Phase ──
+function MazePhase({ mazeGrid, onSolve, onFail, isPending, mazeAttempts }: {
+  mazeGrid: CellType[][];
   onSolve: () => void;
   onFail: () => void;
   isPending: boolean;
+  mazeAttempts: number;
 }) {
-  const [pos, setPos] = useState<[number, number]>([0, 0]);
-  const [path, setPath] = useState<[number, number][]>([[0, 0]]);
+  const attackerGrid = useMemo(() => getAttackerView(mazeGrid), [mazeGrid]);
+  const start = useMemo(() => findCell(mazeGrid, 3) || [0, 0] as [number, number], [mazeGrid]);
+  const goal = useMemo(() => findCell(mazeGrid, 4) || [4, 4] as [number, number], [mazeGrid]);
+
+  const [pos, setPos] = useState<[number, number]>(start);
+  const [path, setPath] = useState<[number, number][]>([start]);
+  const [hitMine, setHitMine] = useState(false);
   const [solved, setSolved] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const onSolveRef = useRef(onSolve);
   onSolveRef.current = onSolve;
 
-  // Responsive maze sizing
+  const mazeSize = mazeGrid.length;
+
+  // Responsive sizing
   const [containerWidth, setContainerWidth] = useState(300);
   useEffect(() => {
     const el = containerRef.current;
@@ -271,38 +270,56 @@ function MazePhase({ maze, onSolve, onFail, isPending }: {
     return () => ro.disconnect();
   }, []);
 
-  const cellPx = containerWidth / maze.size;
-  const svgSize = cellPx * maze.size;
+  const cellPx = containerWidth / mazeSize;
+  const svgSize = cellPx * mazeSize;
 
   const move = useCallback((dr: number, dc: number) => {
-    if (solved) return;
+    if (solved || hitMine) return;
     setPos(prev => {
       const nr = prev[0] + dr;
       const nc = prev[1] + dc;
-      if (nr < 0 || nr >= maze.size || nc < 0 || nc >= maze.size) return prev;
-      if (maze.grid[nr][nc] === 1) return prev;
+      if (nr < 0 || nr >= mazeSize || nc < 0 || nc >= mazeSize) return prev;
+      // Check wall in attacker view
+      if (attackerGrid[nr][nc] === 1) return prev;
+      // Check mine in real grid
+      if (mazeGrid[nr][nc] === 2) {
+        setHitMine(true);
+        setPath(p => [...p, [nr, nc]]);
+        return [nr, nc] as [number, number];
+      }
       const newPos: [number, number] = [nr, nc];
       setPath(p => [...p, newPos]);
-      if (nr === maze.size - 1 && nc === maze.size - 1) {
+      if (nr === goal[0] && nc === goal[1]) {
         setSolved(true);
         setTimeout(() => onSolveRef.current(), 400);
       }
       return newPos;
     });
-  }, [maze, solved]);
+  }, [mazeSize, attackerGrid, mazeGrid, solved, hitMine, goal]);
 
   const handleCellTap = useCallback((r: number, c: number) => {
-    if (maze.grid[r][c] === 1) return;
+    if (attackerGrid[r][c] === 1) return;
     const dr = r - pos[0];
     const dc = c - pos[1];
     if (Math.abs(dr) + Math.abs(dc) !== 1) return;
     move(dr, dc);
-  }, [pos, maze, move]);
+  }, [pos, attackerGrid, move]);
 
   const reset = () => {
     if (solved) return;
-    setPos([0, 0]);
-    setPath([[0, 0]]);
+    if (hitMine) {
+      // Mine hit — count as failed attempt, then reset
+      setHitMine(false);
+    }
+    setPos(start);
+    setPath([start]);
+  };
+
+  const handleMineFail = () => {
+    onFail();
+    setHitMine(false);
+    setPos(start);
+    setPath([start]);
   };
 
   return (
@@ -310,108 +327,144 @@ function MazePhase({ maze, onSolve, onFail, isPending }: {
       <div className="glass-card p-5" ref={containerRef}>
         <div className="flex items-center justify-between mb-1">
           <h3 className="font-black text-sm">Navigate the Maze</h3>
-          <span className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
-            FINAL PHASE
-          </span>
+          <span className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">FINAL PHASE</span>
         </div>
-        <p className="text-[10px] text-muted-foreground mb-4">
-          Move the <span className="text-primary font-bold">green dot</span> to the <span className="text-amber-400 font-bold">gold goal</span>. Tap adjacent cells or use the D-pad.
+        <p className="text-[10px] text-muted-foreground mb-1">
+          Reach the <span className="text-amber-400 font-bold">🏁 Goal</span> from <span className="text-primary font-bold">🟢 Start</span>.
+        </p>
+        <p className="text-[10px] text-destructive/70 mb-4">
+          ⚠️ Hidden mines! Stepping on one fails this attempt.
         </p>
 
-        {/* Maze grid */}
-        <div className="flex justify-center mb-4">
-          <svg
-            width={svgSize}
-            height={svgSize}
-            viewBox={`0 0 ${maze.size} ${maze.size}`}
-            className="rounded-xl overflow-hidden border border-border/20"
-            style={{ touchAction: 'none' }}
-          >
-            <rect width={maze.size} height={maze.size} fill="hsl(var(--background))" />
+        {/* Mine hit overlay */}
+        <AnimatePresence>
+          {hitMine && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              className="mb-4 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-center"
+            >
+              <div className="text-2xl mb-1">💥💣</div>
+              <div className="text-sm font-bold text-destructive mb-1">Mine Hit!</div>
+              <div className="text-[10px] text-muted-foreground mb-3">This maze attempt failed. +1 try.</div>
+              <Button onClick={handleMineFail} disabled={isPending} variant="destructive" size="sm" className="h-9">
+                {isPending ? 'Recording…' : 'Try Again'}
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-            {maze.grid.map((row, r) =>
-              row.map((cell, c) => {
-                const isPath = cell === 0;
-                const isAdjacent = isPath && !solved && Math.abs(r - pos[0]) + Math.abs(c - pos[1]) === 1;
-                return (
+        {/* Maze grid */}
+        {!hitMine && (
+          <>
+            <div className="flex justify-center mb-4">
+              <svg
+                width={svgSize}
+                height={svgSize}
+                viewBox={`0 0 ${mazeSize} ${mazeSize}`}
+                className="rounded-xl overflow-hidden border border-border/20"
+                style={{ touchAction: 'none' }}
+              >
+                <rect width={mazeSize} height={mazeSize} fill="hsl(var(--background))" />
+
+                {attackerGrid.map((row, r) =>
+                  row.map((cell, c) => {
+                    const isPath = cell !== 1;
+                    const isAdjacent = isPath && !solved && Math.abs(r - pos[0]) + Math.abs(c - pos[1]) === 1;
+                    const isStart = mazeGrid[r][c] === 3;
+                    const isGoal = mazeGrid[r][c] === 4;
+                    return (
+                      <rect
+                        key={`${r}-${c}`}
+                        x={c + 0.04}
+                        y={r + 0.04}
+                        width={0.92}
+                        height={0.92}
+                        rx={0.12}
+                        fill={
+                          cell === 1
+                            ? 'hsl(var(--muted) / 0.5)'
+                            : isStart
+                            ? 'hsl(var(--primary) / 0.15)'
+                            : isGoal
+                            ? 'hsl(45 93% 52% / 0.15)'
+                            : isAdjacent
+                            ? 'hsl(var(--primary) / 0.1)'
+                            : 'hsl(var(--muted) / 0.08)'
+                        }
+                        stroke={isAdjacent ? 'hsl(var(--primary) / 0.25)' : 'transparent'}
+                        strokeWidth={0.03}
+                        onClick={() => handleCellTap(r, c)}
+                        style={{ cursor: isAdjacent ? 'pointer' : 'default' }}
+                      />
+                    );
+                  })
+                )}
+
+                {/* Trail */}
+                {path.map(([r, c], i) => (
                   <rect
-                    key={`${r}-${c}`}
-                    x={c + 0.04}
-                    y={r + 0.04}
-                    width={0.92}
-                    height={0.92}
-                    rx={0.12}
-                    fill={
-                      cell === 1
-                        ? 'hsl(var(--muted) / 0.5)'
-                        : isAdjacent
-                        ? 'hsl(var(--primary) / 0.1)'
-                        : 'hsl(var(--muted) / 0.08)'
-                    }
-                    stroke={isAdjacent ? 'hsl(var(--primary) / 0.25)' : 'transparent'}
-                    strokeWidth={0.03}
-                    onClick={() => handleCellTap(r, c)}
-                    style={{ cursor: isAdjacent ? 'pointer' : 'default' }}
+                    key={`trail-${i}`}
+                    x={c + 0.2}
+                    y={r + 0.2}
+                    width={0.6}
+                    height={0.6}
+                    rx={0.1}
+                    fill={solved ? 'hsl(var(--primary) / 0.35)' : 'hsl(var(--primary) / 0.18)'}
                   />
-                );
-              })
+                ))}
+
+                {/* Start label */}
+                <text x={start[1] + 0.5} y={start[0] + 0.15} textAnchor="middle" fill="hsl(var(--primary))" fontSize={0.2} fontWeight="bold">
+                  START
+                </text>
+
+                {/* Goal */}
+                <circle cx={goal[1] + 0.5} cy={goal[0] + 0.5} r={0.3} fill="hsl(45 93% 52%)" opacity={0.9} />
+                <circle cx={goal[1] + 0.5} cy={goal[0] + 0.5} r={0.16} fill="hsl(45 93% 62%)" />
+                <text x={goal[1] + 0.5} y={goal[0] - 0.05} textAnchor="middle" fill="hsl(45 93% 52%)" fontSize={0.2} fontWeight="bold">
+                  GOAL
+                </text>
+
+                {/* Player */}
+                <circle cx={pos[1] + 0.5} cy={pos[0] + 0.5} r={0.32} fill="hsl(var(--primary))" />
+                <circle cx={pos[1] + 0.5} cy={pos[0] + 0.5} r={0.18} fill="hsl(var(--primary-foreground))" opacity={0.9} />
+              </svg>
+            </div>
+
+            {/* D-pad controls */}
+            <div className="flex flex-col items-center gap-1.5 mb-4">
+              <Button variant="outline" size="icon" onClick={() => move(-1, 0)} disabled={solved} className="w-14 h-11 rounded-xl active:scale-90">
+                <ChevronUp className="w-5 h-5" />
+              </Button>
+              <div className="flex gap-1.5">
+                <Button variant="outline" size="icon" onClick={() => move(0, -1)} disabled={solved} className="w-14 h-11 rounded-xl active:scale-90">
+                  <ChevronLeft className="w-5 h-5" />
+                </Button>
+                <Button variant="outline" size="icon" onClick={reset} disabled={solved} className="w-14 h-11 rounded-xl active:scale-90 text-muted-foreground">
+                  <RotateCcw className="w-4 h-4" />
+                </Button>
+                <Button variant="outline" size="icon" onClick={() => move(0, 1)} disabled={solved} className="w-14 h-11 rounded-xl active:scale-90">
+                  <ChevronRight className="w-5 h-5" />
+                </Button>
+              </div>
+              <Button variant="outline" size="icon" onClick={() => move(1, 0)} disabled={solved} className="w-14 h-11 rounded-xl active:scale-90">
+                <ChevronDown className="w-5 h-5" />
+              </Button>
+            </div>
+
+            {mazeAttempts > 0 && (
+              <div className="text-center text-[10px] text-muted-foreground mb-2">
+                Failed maze attempts: <span className="font-bold text-destructive">{mazeAttempts}</span>
+              </div>
             )}
 
-            {/* Trail */}
-            {path.map(([r, c], i) => (
-              <rect
-                key={`trail-${i}`}
-                x={c + 0.2}
-                y={r + 0.2}
-                width={0.6}
-                height={0.6}
-                rx={0.1}
-                fill={solved ? 'hsl(var(--primary) / 0.35)' : 'hsl(var(--primary) / 0.18)'}
-              />
-            ))}
-
-            {/* Start label */}
-            <text x={0.5} y={0.15} textAnchor="middle" fill="hsl(var(--primary))" fontSize={0.22} fontWeight="bold">
-              START
-            </text>
-
-            {/* Goal */}
-            <circle cx={maze.size - 0.5} cy={maze.size - 0.5} r={0.3} fill="hsl(45 93% 52%)" opacity={0.9} />
-            <circle cx={maze.size - 0.5} cy={maze.size - 0.5} r={0.16} fill="hsl(45 93% 62%)" />
-            <text x={maze.size - 0.5} y={maze.size - 0.05} textAnchor="middle" fill="hsl(45 93% 52%)" fontSize={0.2} fontWeight="bold">
-              GOAL
-            </text>
-
-            {/* Player */}
-            <circle cx={pos[1] + 0.5} cy={pos[0] + 0.5} r={0.32} fill="hsl(var(--primary))" />
-            <circle cx={pos[1] + 0.5} cy={pos[0] + 0.5} r={0.18} fill="hsl(var(--primary-foreground))" opacity={0.9} />
-          </svg>
-        </div>
-
-        {/* D-pad controls */}
-        <div className="flex flex-col items-center gap-1.5 mb-4">
-          <Button variant="outline" size="icon" onClick={() => move(-1, 0)} disabled={solved} className="w-14 h-11 rounded-xl active:scale-90">
-            <ChevronUp className="w-5 h-5" />
-          </Button>
-          <div className="flex gap-1.5">
-            <Button variant="outline" size="icon" onClick={() => move(0, -1)} disabled={solved} className="w-14 h-11 rounded-xl active:scale-90">
-              <ChevronLeft className="w-5 h-5" />
+            <Button variant="ghost" onClick={() => { onFail(); reset(); }} disabled={isPending || solved} className="w-full text-xs text-muted-foreground">
+              Give Up This Attempt (+1 try)
             </Button>
-            <Button variant="outline" size="icon" onClick={reset} disabled={solved} className="w-14 h-11 rounded-xl active:scale-90 text-muted-foreground">
-              <RotateCcw className="w-4 h-4" />
-            </Button>
-            <Button variant="outline" size="icon" onClick={() => move(0, 1)} disabled={solved} className="w-14 h-11 rounded-xl active:scale-90">
-              <ChevronRight className="w-5 h-5" />
-            </Button>
-          </div>
-          <Button variant="outline" size="icon" onClick={() => move(1, 0)} disabled={solved} className="w-14 h-11 rounded-xl active:scale-90">
-            <ChevronDown className="w-5 h-5" />
-          </Button>
-        </div>
-
-        <Button variant="ghost" onClick={() => { onFail(); reset(); }} disabled={isPending || solved} className="w-full text-xs text-muted-foreground">
-          Give Up This Attempt (+1 try)
-        </Button>
+          </>
+        )}
       </div>
     </motion.div>
   );
@@ -503,10 +556,11 @@ export default function LockboxCrackPage() {
 
   const currentPhase = attempt?.phase || 'number';
   const isSolved = !!attempt?.is_solved;
-  const maze = lock ? PRESET_MAZES.find(m => m.id === lock.maze_id) : null;
+  const mazeGrid = lock?.maze_grid as CellType[][] | null;
 
   const numberGuesses = useMemo(() => (guesses || []).filter((g: any) => g.phase === 'number'), [guesses]);
   const colorGuesses = useMemo(() => (guesses || []).filter((g: any) => g.phase === 'color'), [guesses]);
+  const mazeFailedAttempts = useMemo(() => (guesses || []).filter((g: any) => g.phase === 'maze' && !g.is_correct).length, [guesses]);
 
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: ['lockbox-attempt', lockId] });
@@ -610,13 +664,9 @@ export default function LockboxCrackPage() {
     );
   }
 
-  // Guard: week ended and not solved — show read-only state
-  const isWeekExpired = lock.week_id ? false : false; // We check server-side now
-
   return (
     <div className="pb-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        {/* Header */}
         <div className="page-header">
           <button onClick={goBack} className="page-header-icon">
             <ArrowLeft className="w-5 h-5" />
@@ -648,8 +698,21 @@ export default function LockboxCrackPage() {
             <NumberPhase key="number" onSubmit={handleNumberSubmit} guesses={numberGuesses} isPending={submitGuess.isPending} />
           ) : currentPhase === 'color' ? (
             <ColorPhase key="color" onSubmit={handleColorSubmit} guesses={colorGuesses} isPending={submitGuess.isPending} />
-          ) : currentPhase === 'maze' && maze ? (
-            <MazePhase key="maze" maze={maze} onSolve={handleMazeSolve} onFail={handleMazeFail} isPending={submitGuess.isPending} />
+          ) : currentPhase === 'maze' && mazeGrid ? (
+            <MazePhase
+              key="maze"
+              mazeGrid={mazeGrid}
+              onSolve={handleMazeSolve}
+              onFail={handleMazeFail}
+              isPending={submitGuess.isPending}
+              mazeAttempts={mazeFailedAttempts}
+            />
+          ) : currentPhase === 'maze' && !mazeGrid ? (
+            <div className="glass-card p-6 text-center">
+              <AlertTriangle className="w-8 h-8 mx-auto mb-3 text-amber-400/40" />
+              <h3 className="font-bold text-sm mb-1">No Maze Data</h3>
+              <p className="text-[11px] text-muted-foreground">This lock was created before custom mazes. Contact the lock owner.</p>
+            </div>
           ) : null}
         </AnimatePresence>
       </motion.div>
