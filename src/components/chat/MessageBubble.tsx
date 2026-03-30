@@ -98,6 +98,7 @@ const SWIPE_THRESHOLD = 60;
 
 function MessageBubbleInner({
   msg, isOwn, sameAuthor, nextSameAuthor,
+  currentUserId, currentDisplayName,
   onToggleReaction, onOpenThread, onTogglePin,
   onStartEditing, onDeleteMessage, onSaveEdit,
   editingMessageId, editContent, onEditContentChange, onCancelEdit,
