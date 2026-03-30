@@ -673,13 +673,23 @@ export default function ChatPage() {
                   hasMore={searchResults ? false : hasMore}
                   loadingMore={loadingMore}
                   isSearchActive={!!searchResults}
+                  lastReadAt={lastReadAt}
                 />
                 {!searchResults && (
                   <div className="flex-shrink-0 border-t border-border/5">
+                    {typingUsers.length > 0 && (
+                      <div className="px-4 sm:px-5 py-1">
+                        <span className="text-[10px] text-muted-foreground/60 font-medium italic">
+                          {typingUsers.length === 1 ? `${typingUsers[0]} is typing…` : `${typingUsers.join(', ')} are typing…`}
+                        </span>
+                      </div>
+                    )}
                     <MessageComposer
+                      ref={composerRef}
                       value={newMessage}
                       onChange={setNewMessage}
                       onSend={handleSend}
+                      onTyping={broadcastTyping}
                       disabled={sending}
                       placeholder={`Message #${selectedChannel?.name || ''}`}
                     />
