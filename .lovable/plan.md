@@ -1,58 +1,72 @@
 
 
-# Profile Avatars — Custom Photo Upload
+# Chat Feature — Next-Level Polish & Optimization
 
-## What we're building
-Users can upload a profile photo that appears as their avatar across the entire app — on their profile page, in chat messages, thread panels, pinned messages, and pool member lists. The profile page identity card gets a tappable avatar with camera overlay for uploading.
+## Current State
+The chat is functional with channels, messages, threads, reactions, search, pins, optimistic sends, and realtime. The core architecture is solid. What follows are the targeted improvements to make it feel like iMessage/Discord-quality.
 
 ## Changes
 
-### 1. Storage bucket (SQL migration)
-Create an `avatars` public storage bucket with RLS policies allowing authenticated users to upload/update/delete files in their own folder (`{user_id}/*`) and anyone to read.
+### 1. Composer: iOS keyboard handling & visual polish
+**Problem**: On iOS, when the keyboard opens the composer can get pushed behind the bottom nav or the viewport doesn't resize correctly. The composer also lacks a typing-feel polish.
+**Fix**:
+- Add `visualViewport` resize listener in `MessageComposer` to ensure the composer stays visible above the keyboard on iOS
+- Use `position: sticky; bottom: 0` pattern instead of relying on flex-shrink
+- Add safe-area padding to the composer bottom
+- In `ChatPage.tsx`, add `pb-0` override and ensure the chat container uses `100dvh` minus header only (already mostly done, but verify no bottom-nav padding leaks in)
 
-```sql
-INSERT INTO storage.buckets (id, name, public) VALUES ('avatars', 'avatars', true);
+### 2. Scroll position preservation on older message load
+**Problem**: When loading older messages (`loadOlderMessages`), the scroll jumps because new content is prepended without preserving scroll position.
+**Fix**: In `MessageList`, before prepending older messages, capture `scrollHeight`. After state update, use a `useLayoutEffect` or `requestAnimationFrame` to set `scrollTop = newScrollHeight - oldScrollHeight`.
 
-CREATE POLICY "Anyone can view avatars" ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
-CREATE POLICY "Users can upload own avatar" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
-CREATE POLICY "Users can update own avatar" ON storage.objects FOR UPDATE USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
-CREATE POLICY "Users can delete own avatar" ON storage.objects FOR DELETE USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
-```
+### 3. Typing indicators (lightweight)
+**Problem**: No feedback when someone else is typing — a basic expectation of modern chat.
+**Fix**: Use Supabase Realtime `presence` on the channel to broadcast typing state. Show a subtle "User is typing..." indicator above the composer. Debounce typing broadcasts to every 2 seconds. Auto-clear after 3 seconds of inactivity.
 
-### 2. ProfilePage.tsx — avatar upload UI
-- Replace the static initial-letter square with a tappable circular avatar
-- If `avatar_url` exists, show the image; otherwise show the gradient initial
-- Overlay a small camera icon on hover/tap
-- Hidden `<input type="file" accept="image/*">` triggered on click
-- On file select: upload to `avatars/{user_id}/avatar.{ext}`, get public URL, update `profiles.avatar_url`
-- Show loading spinner during upload
-- Fetch `avatar_url` alongside `display_name` in the existing profile query
+### 4. Read receipts / "New messages" divider
+**Problem**: When entering a channel with unread messages, there's no visual indicator of where new messages start.
+**Fix**: When fetching messages, compare `last_read_at` timestamp. Insert a "New messages" divider line in `MessageList` between the last-read message and the first unread one.
 
-### 3. UserAvatar component — support avatar images
-Add optional `avatarUrl` prop to `UserAvatar`. When provided and non-null, render an `<img>` instead of the gradient initial circle. Fall back to the existing initial if the image fails to load (onError handler).
+### 5. Message grouping edge case — date boundary
+**Problem**: Already handled `nextSameAuthor` with date check, but the `sameAuthor` flag doesn't check date boundaries — consecutive messages from the same user spanning midnight will incorrectly group.
+**Fix**: Add date-label check to `sameAuthor` computation in `MessageList`.
 
-```
-UserAvatar({ userId, name, avatarUrl?, size })
-  → if avatarUrl: <img> with rounded-full, object-cover
-  → else: existing gradient initial
-```
+### 6. Swipe-to-reply (mobile)
+**Problem**: Long-press is the only way to reply on mobile. Most modern chat apps support swipe-right-to-reply for speed.
+**Fix**: Add a horizontal drag gesture on `MessageBubble` using Framer Motion's `drag="x"` with constraints. When dragged past a threshold (~60px), trigger `onOpenThread`. Show a reply icon emerging during the drag. Snap back on release.
 
-### 4. Pass avatar_url through the app
-All places that render `UserAvatar` already query `profiles(display_name, avatar_url)`. Just pass `msg.profiles?.avatar_url` as the new `avatarUrl` prop:
-- **MessageBubble.tsx** — two `UserAvatar` calls
-- **ThreadPanel.tsx** — parent message + reply avatars
-- **ChatPage.tsx** — pinned messages section
-- **PoolDetailPage.tsx** — member list (already fetches `avatar_url`)
+### 7. Image/media preview for URLs
+**Problem**: Pasted URLs render as plain text links. Modern chat apps show link previews.
+**Fix**: Detect URLs in message content. For known image extensions (.jpg, .png, .gif, .webp), render an inline `<img>` preview below the message text. This is a lightweight first step — full OpenGraph previews can come later.
 
-### 5. Dashboard profile shortcut
-The dashboard hero has a profile avatar shortcut — update it to show the user's avatar image if available.
+### 8. Composer focus management
+**Problem**: After sending a message, focus returns to the textarea, but after certain actions (closing thread, switching channels), focus isn't managed well.
+**Fix**: Auto-focus the composer when selecting a channel or closing a thread panel. Expose a `focusComposer` ref callback from `MessageComposer`.
+
+### 9. Empty channel list padding on desktop
+**Problem**: On desktop, the channel sidebar scrolls but has no bottom padding — last channel can sit tight against the edge.
+**Fix**: Add `pb-20` to the `ChannelList` container.
+
+### 10. Performance: memoize MessageBubble
+**Problem**: Every message re-renders when any state in the list changes (new message, reaction, etc.). With 50+ messages this causes noticeable lag.
+**Fix**: Wrap `MessageBubble` in `React.memo` with a custom comparator that checks `msg.id`, `msg.content`, `msg.edited_at`, `msg.reactions`, `msg.reply_count`, `msg.is_pinned`, `editingMessageId`, and `sameAuthor`/`nextSameAuthor`.
 
 ## Files to modify
-- **Migration**: new SQL for `avatars` storage bucket + policies
-- `src/components/chat/UserAvatar.tsx` — add `avatarUrl` prop with image rendering
-- `src/pages/ProfilePage.tsx` — avatar upload UI, fetch/save `avatar_url`
-- `src/components/chat/MessageBubble.tsx` — pass `avatarUrl` prop
-- `src/components/chat/ThreadPanel.tsx` — pass `avatarUrl` prop  
-- `src/pages/ChatPage.tsx` — pass `avatarUrl` to pinned message avatars
-- `src/pages/DashboardPage.tsx` — show avatar in profile shortcut
+- `src/components/chat/MessageComposer.tsx` — keyboard handling, ref forwarding, focus management
+- `src/components/chat/MessageList.tsx` — scroll preservation, new-messages divider, sameAuthor date fix
+- `src/components/chat/MessageBubble.tsx` — React.memo, swipe-to-reply, inline image previews
+- `src/components/chat/ChannelList.tsx` — bottom padding
+- `src/pages/ChatPage.tsx` — typing indicator presence, focus management, pass last_read_at
+- `src/components/chat/types.ts` — no changes needed
+
+## Priority order
+1. Scroll preservation on load-more (functional bug)
+2. React.memo on MessageBubble (performance)
+3. sameAuthor date boundary fix (visual bug)
+4. Composer keyboard/focus management (mobile UX)
+5. New messages divider (UX polish)
+6. Inline image previews (feature)
+7. Swipe-to-reply (feature)
+8. Typing indicators (feature)
+9. Channel list padding (minor polish)
 
