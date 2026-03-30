@@ -1,7 +1,12 @@
+import { useState } from 'react';
 import { Switch } from '@/components/ui/switch';
-import { MessageCircle, BarChart3, CalendarDays, Bookmark } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { MessageCircle, BarChart3, CalendarDays, Bookmark, Bell } from 'lucide-react';
 import { useNotificationPreferences, NotificationPreferences } from '@/hooks/useNotificationPreferences';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 const PREF_ITEMS: {
@@ -18,9 +23,43 @@ const PREF_ITEMS: {
 
 export default function NotificationPreferencesSection() {
   const { prefs, loading, update } = useNotificationPreferences();
+  const { isSupported, isSubscribed, subscribe } = usePushNotifications();
   const { play } = useSoundEffect();
+  const { user } = useAuth();
+  const [testingSend, setTestingSend] = useState(false);
 
   if (loading) return null;
+
+  const handleTestPush = async () => {
+    if (!user) return;
+    setTestingSend(true);
+    try {
+      // Ensure subscribed first
+      if (!isSubscribed) {
+        const ok = await subscribe();
+        if (!ok) {
+          toast.error('Please allow notification permissions first');
+          setTestingSend(false);
+          return;
+        }
+      }
+      const { data, error } = await supabase.functions.invoke('send-push-notification', {
+        body: { test: true, user_id: user.id },
+      });
+      if (error) throw error;
+      if (data?.sent > 0) {
+        toast.success('Test notification sent! Check your notifications.');
+      } else if (data?.error) {
+        toast.error(data.error);
+      } else {
+        toast.error('No subscriptions found. Try toggling notifications off and on.');
+      }
+    } catch (err: any) {
+      console.error('Test push error:', err);
+      toast.error('Failed to send test notification');
+    }
+    setTestingSend(false);
+  };
 
   return (
     <div className="glass-card p-5 mb-4 space-y-4">
@@ -46,6 +85,21 @@ export default function NotificationPreferencesSection() {
           />
         </div>
       ))}
+
+      {isSupported && (
+        <div className="pt-2 border-t border-border/40">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full gap-2 text-xs"
+            onClick={handleTestPush}
+            disabled={testingSend}
+          >
+            <Bell className="w-3.5 h-3.5" />
+            {testingSend ? 'Sending…' : 'Send Test Notification'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

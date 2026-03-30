@@ -378,6 +378,10 @@ export default function ChatPage() {
         ? { ...inserted, reply_count: 0, reactions: [] }
         : m
       ));
+      // Fire-and-forget push notification
+      supabase.functions.invoke('send-push-notification', {
+        body: { record: { id: inserted.id, channel_id: inserted.channel_id, user_id: inserted.user_id, content: inserted.content } },
+      }).catch(() => {});
     }
     setSending(false);
   };
