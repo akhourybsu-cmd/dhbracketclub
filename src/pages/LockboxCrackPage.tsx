@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubmitGuess, useAttemptGuesses } from '@/hooks/useLockbox';
 import { LOCKBOX_COLORS, LOCKBOX_DIGITS, PRESET_MAZES } from '@/lib/lockboxMazes';
+import { logActivity } from '@/lib/activityLogger';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -481,6 +482,13 @@ export default function LockboxCrackPage() {
     });
     invalidateAll();
     toast.success('Lock fully cracked! 🔓🎉');
+    // Log to activity feed
+    logActivity(user.id, {
+      event_type: 'lockbox_cracked',
+      target_type: 'lockbox_lock',
+      target_id: lock.id,
+      metadata: { lock_owner: lock.profiles?.display_name },
+    });
   };
 
   const handleMazeFail = async () => {
