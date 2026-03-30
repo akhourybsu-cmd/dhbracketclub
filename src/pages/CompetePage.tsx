@@ -1,14 +1,15 @@
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, BarChart3, MessageCircle, Bookmark, ChevronRight, Plus, Swords } from 'lucide-react';
+import { Trophy, BarChart3, MessageCircle, Bookmark, ChevronRight, Plus, Swords, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const modules = [
-  { path: '/brackets', label: 'Brackets', description: 'March Madness pools & bracket challenges', icon: Trophy, color: 'primary', create: '/pools/create', countTable: 'pools' },
-  { path: '/rankings', label: 'Rankings', description: 'Rank anything — movies, food, takes', icon: BarChart3, color: 'accent', create: '/rankings/create', countTable: 'rankings' },
-  { path: '/polls', label: 'Polls', description: 'Quick votes and group decisions', icon: MessageCircle, color: 'warning', create: '/polls/create', countTable: 'polls' },
-  { path: '/drafts', label: 'Drafts', description: 'Snake drafts on any topic', icon: Bookmark, color: 'gold', create: '/drafts/create', countTable: 'drafts' },
+  { path: '/lockbox', label: 'DH Lockbox', description: 'Weekly lock & crack challenges', icon: Lock, color: 'destructive', create: '/lockbox', countTable: 'lockbox_locks' as const },
+  { path: '/brackets', label: 'Brackets', description: 'March Madness pools & bracket challenges', icon: Trophy, color: 'primary', create: '/pools/create', countTable: 'pools' as const },
+  { path: '/rankings', label: 'Rankings', description: 'Rank anything — movies, food, takes', icon: BarChart3, color: 'accent', create: '/rankings/create', countTable: 'rankings' as const },
+  { path: '/polls', label: 'Polls', description: 'Quick votes and group decisions', icon: MessageCircle, color: 'warning', create: '/polls/create', countTable: 'polls' as const },
+  { path: '/drafts', label: 'Drafts', description: 'Snake drafts on any topic', icon: Bookmark, color: 'gold', create: '/drafts/create', countTable: 'drafts' as const },
 ];
 
 export default function CompetePage() {
@@ -33,7 +34,7 @@ export default function CompetePage() {
           <div className="page-header-icon"><Swords /></div>
           <div>
             <h1 className="page-header-title">Compete</h1>
-            <p className="page-header-subtitle">Brackets, rankings, polls & drafts</p>
+            <p className="page-header-subtitle">Lockbox, brackets, rankings, polls & drafts</p>
           </div>
         </div>
 
