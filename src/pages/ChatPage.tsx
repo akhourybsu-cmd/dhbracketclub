@@ -605,7 +605,7 @@ export default function ChatPage() {
       {/* Main content area */}
       <div className="flex flex-col flex-1 min-w-0">
         {/* Header */}
-        <div className="flex items-center gap-2.5 px-4 sm:px-5 py-3 border-b border-border/25 flex-shrink-0" style={{ background: 'hsl(var(--background) / 0.7)', backdropFilter: 'blur(12px)' }}>
+        <div className="flex items-center gap-2.5 px-4 sm:px-5 py-3 border-b border-border/20 flex-shrink-0" style={{ background: 'hsl(var(--background) / 0.8)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
           <button onClick={() => { setShowChannelList(true); setThreadParent(null); setShowPinned(false); }} className="p-1.5 -ml-1 rounded-lg hover:bg-muted/50 transition-colors lg:hidden">
             <ChevronLeft className="w-5 h-5 text-muted-foreground/60" />
           </button>

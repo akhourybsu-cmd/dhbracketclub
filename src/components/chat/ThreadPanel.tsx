@@ -85,7 +85,7 @@ export function ThreadPanel({ parent, replies, replyValue, onReplyChange, onSend
         </div>
       </div>
 
-      <div className="border-t border-border/5 flex-shrink-0">
+      <div className="border-t border-border/15 bg-background/80 backdrop-blur-sm flex-shrink-0">
         <MessageComposer
           value={replyValue}
           onChange={onReplyChange}
