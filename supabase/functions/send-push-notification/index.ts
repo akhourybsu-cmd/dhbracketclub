@@ -136,6 +136,29 @@ Deno.serve(async (req) => {
     const channelName = channel?.name || "chat";
     const preview = record.content.length > 80 ? record.content.slice(0, 80) + "…" : record.content;
 
+    // Parse @mentions from message content
+    const mentionRe = /@([\w\s]+?)(?=\s@|\s|$)/g;
+    const mentionedNames: string[] = [];
+    let mentionMatch: RegExpExecArray | null;
+    while ((mentionMatch = mentionRe.exec(record.content)) !== null) {
+      mentionedNames.push(mentionMatch[1].trim().toLowerCase());
+    }
+
+    // Resolve mentioned user IDs
+    let mentionedUserIds = new Set<string>();
+    if (mentionedNames.length > 0) {
+      const { data: mentionedProfiles } = await supabase
+        .from("profiles")
+        .select("id, display_name");
+      if (mentionedProfiles) {
+        for (const p of mentionedProfiles) {
+          if (mentionedNames.includes(p.display_name.toLowerCase())) {
+            mentionedUserIds.add(p.id);
+          }
+        }
+      }
+    }
+
     const { data: subscriptions } = await supabase
       .from("push_subscriptions")
       .select("endpoint, p256dh, auth, user_id")
@@ -157,8 +180,9 @@ Deno.serve(async (req) => {
         .map((p: any) => p.user_id),
     );
 
+    // Send to users who either have chat_messages enabled OR are mentioned
     const filteredSubscriptions = subscriptions.filter(
-      (s: any) => !disabledUsers.has(s.user_id),
+      (s: any) => !disabledUsers.has(s.user_id) || mentionedUserIds.has(s.user_id),
     );
 
     if (filteredSubscriptions.length === 0) {
