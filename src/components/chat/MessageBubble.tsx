@@ -217,12 +217,12 @@ function MessageBubbleInner({
         onTouchMove={handleTouchMove}
         onClick={handleTapTimestamp}
       >
-        {/* Swipe reply icon (behind the message) */}
+        {/* Swipe reply icon (inside the message, left edge) */}
         <motion.div
-          className="absolute left-[-32px] top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center pointer-events-none"
+          className="absolute left-0 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center pointer-events-none"
           style={{ opacity: replyIconOpacity, scale: replyIconScale }}
         >
-          <Reply className="w-3.5 h-3.5 text-primary" />
+          <Reply className="w-3 h-3 text-primary" />
         </motion.div>
 
         {/* Author line */}
@@ -332,7 +332,7 @@ function MessageBubbleInner({
           )}
 
           {/* Floating action bar (desktop hover) */}
-          <div className="absolute -top-4 right-2 hidden group-hover:flex items-center gap-0.5 bg-surface-elevated/95 border border-border/15 rounded-lg px-0.5 py-0.5 shadow-xl backdrop-blur-sm z-30">
+          <div className="absolute -top-3 right-2 hidden group-hover:flex items-center gap-0.5 bg-background/95 border border-border/20 rounded-lg px-0.5 py-0.5 shadow-lg backdrop-blur-md z-30">
             {QUICK_EMOJIS.slice(0, 4).map(emoji => (
               <button key={emoji} onClick={(e) => handleReaction(emoji, e)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 text-sm transition-colors">
                 {emoji}

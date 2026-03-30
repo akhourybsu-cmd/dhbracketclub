@@ -232,12 +232,12 @@ export function MessageList({
       {/* Scroll-to-bottom FAB */}
       <AnimatePresence>
         {!autoScroll && (
-          <motion.button
+           <motion.button
             initial={{ opacity: 0, scale: 0.8, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 10 }}
             onClick={scrollToBottom}
-            className="sticky bottom-4 left-1/2 -translate-x-1/2 mx-auto block w-10 h-10 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors z-20"
+            className="fixed bottom-24 right-6 w-10 h-10 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors z-20"
           >
             <ChevronDown className="w-5 h-5" />
             {newMsgCount > 0 && (
