@@ -296,6 +296,48 @@ export default function ChatPage() {
     return () => { supabase.removeChannel(channel); };
   }, [selectedChannel, user?.id, threadParent, play]);
 
+  /* ═══ TYPING PRESENCE ═══ */
+  useEffect(() => {
+    if (!selectedChannel || !user) return;
+
+    const presenceChannel = supabase.channel(`typing-${selectedChannel.id}`, {
+      config: { presence: { key: user.id } },
+    });
+
+    presenceChannel
+      .on('presence', { event: 'sync' }, () => {
+        const state = presenceChannel.presenceState();
+        const typing: string[] = [];
+        for (const [uid, presences] of Object.entries(state)) {
+          if (uid === user.id) continue;
+          const p = (presences as any[])?.[0];
+          if (p?.typing && p?.name) typing.push(p.name);
+        }
+        setTypingUsers(typing);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(presenceChannel); };
+  }, [selectedChannel?.id, user?.id]);
+
+  const broadcastTyping = useCallback(() => {
+    if (!selectedChannel || !user) return;
+    const now = Date.now();
+    if (now - lastTypingBroadcast.current < 2000) return;
+    lastTypingBroadcast.current = now;
+
+    const presenceChannel = supabase.channel(`typing-${selectedChannel.id}`);
+    presenceChannel.track({
+      typing: true,
+      name: user.user_metadata?.display_name || user.email?.split('@')[0] || 'Someone',
+    });
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      presenceChannel.track({ typing: false, name: '' });
+    }, 3000);
+  }, [selectedChannel, user]);
+
   /* ═══ ACTIONS ═══ */
   const handleSend = async () => {
     if (!newMessage.trim() || !selectedChannel || !user || sending) return;
