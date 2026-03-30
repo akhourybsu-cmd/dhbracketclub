@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useState, useLayoutEffect } from 'react';
 import { MessageSquare, ChevronDown, SearchX } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MessageBubble } from './MessageBubble';
@@ -24,6 +24,7 @@ interface MessageListProps {
   hasMore?: boolean;
   loadingMore?: boolean;
   isSearchActive?: boolean;
+  lastReadAt?: string | null;
 }
 
 function getDateLabel(dateStr: string) {
@@ -43,7 +44,7 @@ export function MessageList({
   onToggleReaction, onOpenThread, onTogglePin,
   onStartEditing, onDeleteMessage, onSaveEdit,
   editingMessageId, editContent, onEditContentChange, onCancelEdit,
-  onLoadMore, hasMore, loadingMore, isSearchActive,
+  onLoadMore, hasMore, loadingMore, isSearchActive, lastReadAt,
 }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -51,12 +52,35 @@ export function MessageList({
   const [newMsgCount, setNewMsgCount] = useState(0);
   const prevMsgCount = useRef(messages.length);
 
+  // Scroll preservation on load-more (prepend)
+  const prevScrollHeight = useRef<number | null>(null);
+
+  // Capture scroll height before DOM update when loading more
+  useEffect(() => {
+    if (loadingMore && scrollRef.current) {
+      prevScrollHeight.current = scrollRef.current.scrollHeight;
+    }
+  }, [loadingMore]);
+
+  // After messages prepend, restore scroll position
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el || prevScrollHeight.current === null) return;
+    if (!loadingMore && messages.length > prevMsgCount.current) {
+      const delta = el.scrollHeight - prevScrollHeight.current;
+      if (delta > 0) {
+        el.scrollTop += delta;
+      }
+      prevScrollHeight.current = null;
+    }
+  }, [messages, loadingMore]);
+
   // Auto scroll to bottom on new messages (only if user is near bottom)
   useEffect(() => {
     if (autoScroll) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       setNewMsgCount(0);
-    } else if (messages.length > prevMsgCount.current) {
+    } else if (messages.length > prevMsgCount.current && prevScrollHeight.current === null) {
       setNewMsgCount(prev => prev + (messages.length - prevMsgCount.current));
     }
     prevMsgCount.current = messages.length;
@@ -84,6 +108,16 @@ export function MessageList({
   const filtered = searchQuery
     ? messages.filter(m => m.content.toLowerCase().includes(searchQuery.toLowerCase()))
     : messages;
+
+  // Determine unread divider position
+  const unreadDividerAfterIdx = (() => {
+    if (!lastReadAt || isSearchActive) return -1;
+    for (let i = filtered.length - 1; i >= 0; i--) {
+      if (new Date(filtered[i].created_at) <= new Date(lastReadAt)) return i;
+    }
+    return -1;
+  })();
+  const hasUnreadDivider = unreadDividerAfterIdx >= 0 && unreadDividerAfterIdx < filtered.length - 1;
 
   return (
     <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-5 relative">
@@ -120,8 +154,10 @@ export function MessageList({
           const prevMsg = idx > 0 ? filtered[idx - 1] : null;
           const nextMsg = idx < filtered.length - 1 ? filtered[idx + 1] : null;
           const showDate = !prevMsg || getDateLabel(msg.created_at) !== getDateLabel(prevMsg.created_at);
+          // sameAuthor now also checks date boundary
           const sameAuthor = !!prevMsg && prevMsg.user_id === msg.user_id &&
-            new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() < 300000;
+            new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() < 300000 &&
+            getDateLabel(msg.created_at) === getDateLabel(prevMsg.created_at);
           const nextSameAuthor = !!nextMsg && nextMsg.user_id === msg.user_id &&
             new Date(nextMsg.created_at).getTime() - new Date(msg.created_at).getTime() < 300000 &&
             getDateLabel(msg.created_at) === getDateLabel(nextMsg.created_at);
@@ -133,6 +169,14 @@ export function MessageList({
                   <div className="flex-1 h-px bg-border/8" />
                   <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground/70 px-2">{getDateLabel(msg.created_at)}</span>
                   <div className="flex-1 h-px bg-border/8" />
+                </div>
+              )}
+              {/* New messages divider */}
+              {hasUnreadDivider && idx === unreadDividerAfterIdx + 1 && (
+                <div className="flex items-center gap-3 py-3">
+                  <div className="flex-1 h-px bg-destructive/30" />
+                  <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-destructive/70 px-2">New messages</span>
+                  <div className="flex-1 h-px bg-destructive/30" />
                 </div>
               )}
               <MessageBubble

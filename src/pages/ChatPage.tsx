@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 
 import { ChannelList } from '@/components/chat/ChannelList';
 import { MessageList } from '@/components/chat/MessageList';
-import { MessageComposer } from '@/components/chat/MessageComposer';
+import { MessageComposer, type MessageComposerHandle } from '@/components/chat/MessageComposer';
 import { ThreadPanel } from '@/components/chat/ThreadPanel';
 import { UserAvatar } from '@/components/chat/UserAvatar';
 import { CHANNEL_EMOJI } from '@/components/chat/types';
@@ -22,6 +22,7 @@ const PAGE_SIZE = 50;
 export default function ChatPage() {
   const { user } = useAuth();
   const { play } = useSoundEffect();
+  const composerRef = useRef<MessageComposerHandle>(null);
 
   const [channels, setChannels] = useState<Channel[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -55,6 +56,14 @@ export default function ChatPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [searchResults, setSearchResults] = useState<Message[] | null>(null);
+
+  // Typing indicators
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTypingBroadcast = useRef(0);
+
+  // Last read timestamp for unread divider
+  const [lastReadAt, setLastReadAt] = useState<string | null>(null);
 
   /* ═══ HELPERS ═══ */
   const enrichMessages = useCallback(async (rawMsgs: any[], userId: string): Promise<Message[]> => {
@@ -166,12 +175,15 @@ export default function ChatPage() {
     setHasMore(data.length === PAGE_SIZE);
 
     if (!before) {
+      // Capture lastReadAt BEFORE updating read state
       try {
         const sb = supabase as any;
-        const { data: existing } = await sb.from('channel_read_states').select('id').eq('channel_id', selectedChannel.id).eq('user_id', user.id).maybeSingle();
+        const { data: existing } = await sb.from('channel_read_states').select('id, last_read_at').eq('channel_id', selectedChannel.id).eq('user_id', user.id).maybeSingle();
         if (existing) {
+          setLastReadAt(existing.last_read_at);
           await sb.from('channel_read_states').update({ last_read_at: new Date().toISOString() }).eq('id', existing.id);
         } else {
+          setLastReadAt(null);
           await sb.from('channel_read_states').insert({ channel_id: selectedChannel.id, user_id: user.id });
         }
       } catch {}
@@ -283,6 +295,48 @@ export default function ChatPage() {
 
     return () => { supabase.removeChannel(channel); };
   }, [selectedChannel, user?.id, threadParent, play]);
+
+  /* ═══ TYPING PRESENCE ═══ */
+  useEffect(() => {
+    if (!selectedChannel || !user) return;
+
+    const presenceChannel = supabase.channel(`typing-${selectedChannel.id}`, {
+      config: { presence: { key: user.id } },
+    });
+
+    presenceChannel
+      .on('presence', { event: 'sync' }, () => {
+        const state = presenceChannel.presenceState();
+        const typing: string[] = [];
+        for (const [uid, presences] of Object.entries(state)) {
+          if (uid === user.id) continue;
+          const p = (presences as any[])?.[0];
+          if (p?.typing && p?.name) typing.push(p.name);
+        }
+        setTypingUsers(typing);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(presenceChannel); };
+  }, [selectedChannel?.id, user?.id]);
+
+  const broadcastTyping = useCallback(() => {
+    if (!selectedChannel || !user) return;
+    const now = Date.now();
+    if (now - lastTypingBroadcast.current < 2000) return;
+    lastTypingBroadcast.current = now;
+
+    const presenceChannel = supabase.channel(`typing-${selectedChannel.id}`);
+    presenceChannel.track({
+      typing: true,
+      name: user.user_metadata?.display_name || user.email?.split('@')[0] || 'Someone',
+    });
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      presenceChannel.track({ typing: false, name: '' });
+    }, 3000);
+  }, [selectedChannel, user]);
 
   /* ═══ ACTIONS ═══ */
   const handleSend = async () => {
@@ -450,7 +504,10 @@ export default function ChatPage() {
     setShowChannelList(false);
     setThreadParent(null);
     setShowPinned(false);
+    setLastReadAt(null);
     play('tap');
+    // Focus composer after channel switch
+    setTimeout(() => composerRef.current?.focus(), 200);
   };
 
   /* ═══ DB-SIDE SEARCH ═══ */
@@ -616,13 +673,23 @@ export default function ChatPage() {
                   hasMore={searchResults ? false : hasMore}
                   loadingMore={loadingMore}
                   isSearchActive={!!searchResults}
+                  lastReadAt={lastReadAt}
                 />
                 {!searchResults && (
                   <div className="flex-shrink-0 border-t border-border/5">
+                    {typingUsers.length > 0 && (
+                      <div className="px-4 sm:px-5 py-1">
+                        <span className="text-[10px] text-muted-foreground/60 font-medium italic">
+                          {typingUsers.length === 1 ? `${typingUsers[0]} is typing…` : `${typingUsers.join(', ')} are typing…`}
+                        </span>
+                      </div>
+                    )}
                     <MessageComposer
+                      ref={composerRef}
                       value={newMessage}
                       onChange={setNewMessage}
                       onSend={handleSend}
+                      onTyping={broadcastTyping}
                       disabled={sending}
                       placeholder={`Message #${selectedChannel?.name || ''}`}
                     />
@@ -642,7 +709,7 @@ export default function ChatPage() {
                   replyValue={threadReply}
                   onReplyChange={setThreadReply}
                   onSendReply={handleThreadReply}
-                  onClose={() => setThreadParent(null)}
+                  onClose={() => { setThreadParent(null); setTimeout(() => composerRef.current?.focus(), 100); }}
                 />
               </div>
             )}
