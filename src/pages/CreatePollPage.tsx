@@ -98,6 +98,17 @@ export default function CreatePollPage() {
         metadata: { question: question.trim() },
       });
 
+      // Fire-and-forget push notification
+      supabase.functions.invoke('send-push-notification', {
+        body: {
+          type: 'poll',
+          title: '📊 New Poll',
+          message: question.trim(),
+          url: `/polls/${poll.id}`,
+          sender_user_id: user.id,
+        },
+      }).catch(() => {});
+
       toast.success('Poll created!');
       navigate(`/polls/${poll.id}`);
     } catch (err: any) {

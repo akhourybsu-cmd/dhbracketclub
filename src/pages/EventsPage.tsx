@@ -98,6 +98,18 @@ export default function EventsPage() {
     if (data) {
       await supabase.from('event_rsvps').insert({ event_id: data.id, user_id: user.id, status: 'going' });
       await logActivity(user.id, { event_type: 'event_created', target_type: 'event', target_id: data.id, metadata: { title: data.title } });
+
+      // Fire-and-forget push notification
+      supabase.functions.invoke('send-push-notification', {
+        body: {
+          type: 'event',
+          title: '📅 New Event',
+          message: data.title,
+          url: `/events/${data.id}`,
+          sender_user_id: user.id,
+        },
+      }).catch(() => {});
+
       setShowCreate(false);
       setForm({ title: '', description: '', location: '', starts_at: '', ends_at: '' });
       setCreating(false);
