@@ -236,7 +236,7 @@ export default function LeaderboardPage() {
               <img src={dhMonogram} alt="DH" className="w-8 h-8 object-contain" style={{ filter: 'drop-shadow(0 0 6px hsl(var(--primary) / 0.2))' }} />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Leaderboard</h1>
+              <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight">Leaderboard</h1>
               <p className="text-sm text-muted-foreground font-medium mt-0.5">{pool?.name}</p>
             </div>
           </div>
