@@ -7,29 +7,57 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const jsonHeaders = {
+  ...corsHeaders,
+  "Content-Type": "application/json",
+};
+
+function jsonResponse(payload: unknown, status = 200) {
+  return new Response(JSON.stringify(payload), { status, headers: jsonHeaders });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY")!;
-    const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY")!;
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    let body: any = {};
+
+    if (req.method !== "GET") {
+      try {
+        body = await req.json();
+      } catch {
+        body = {};
+      }
+    }
+
+    const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
+
+    if (req.method === "GET" || body?.action === "get_vapid_public_key") {
+      if (!vapidPublicKey) {
+        return jsonResponse({ error: "VAPID public key is not configured" }, 500);
+      }
+
+      return jsonResponse({ vapidPublicKey });
+    }
+
+    const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!vapidPublicKey || !vapidPrivateKey || !supabaseUrl || !serviceRoleKey) {
+      return jsonResponse({ error: "Missing required push configuration" }, 500);
+    }
 
     webpush.setVapidDetails(
       "https://dhbracketclub.lovable.app",
       vapidPublicKey,
-      vapidPrivateKey
+      vapidPrivateKey,
     );
 
-    const body = await req.json();
-
-    // Support both { record } (client-side) and { type, table, record } (legacy trigger) formats
     const record = body.record;
 
-    // Test notification mode
     if (body.test && body.user_id) {
       const supabase = createClient(supabaseUrl, serviceRoleKey);
       const { data: subscriptions } = await supabase
@@ -38,9 +66,9 @@ Deno.serve(async (req) => {
         .eq("user_id", body.user_id);
 
       if (!subscriptions || subscriptions.length === 0) {
-        return new Response(
-          JSON.stringify({ error: "No push subscription found. Make sure notifications are enabled." }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        return jsonResponse(
+          { error: "No push subscription found. Make sure notifications are enabled." },
+          404,
         );
       }
 
@@ -59,14 +87,14 @@ Deno.serve(async (req) => {
         try {
           await webpush.sendNotification(
             { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-            testPayload
+            testPayload,
           );
           sent++;
         } catch (e: any) {
           const statusCode = typeof e?.statusCode === "number" ? e.statusCode : undefined;
-          const body = typeof e?.body === "string" ? e.body : undefined;
-          console.error("Test push error:", statusCode, body);
-          failedDeliveries.push({ statusCode, body });
+          const errorBody = typeof e?.body === "string" ? e.body : undefined;
+          console.error("Test push error:", statusCode, errorBody);
+          failedDeliveries.push({ statusCode, body: errorBody });
 
           if (statusCode === 410 || statusCode === 404) {
             expiredEndpoints.push(sub.endpoint);
@@ -80,36 +108,25 @@ Deno.serve(async (req) => {
 
       if (sent === 0 && failedDeliveries.length > 0) {
         const vapidMismatch = failedDeliveries.some((failure) => failure.statusCode === 403);
-        return new Response(
-          JSON.stringify({
-            sent,
-            expired: expiredEndpoints.length,
-            error: vapidMismatch
-              ? "Subscription key mismatch detected. Turn Push Notifications off and on, then try again."
-              : "No notifications were delivered. Please re-enable Push Notifications and try again.",
-            code: vapidMismatch ? "VAPID_MISMATCH" : "DELIVERY_FAILED",
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonResponse({
+          sent,
+          expired: expiredEndpoints.length,
+          error: vapidMismatch
+            ? "Subscription key mismatch detected. Turn Push Notifications off and on, then try again."
+            : "No notifications were delivered. Please re-enable Push Notifications and try again.",
+          code: vapidMismatch ? "VAPID_MISMATCH" : "DELIVERY_FAILED",
+        });
       }
 
-      return new Response(
-        JSON.stringify({ sent, expired: expiredEndpoints.length }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ sent, expired: expiredEndpoints.length });
     }
 
-    // Normal message notification flow
     if (!record?.id || !record?.channel_id || !record?.user_id || !record?.content) {
-      return new Response(JSON.stringify({ error: "Invalid payload" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Invalid payload" }, 400);
     }
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Get sender profile and channel name
     const [{ data: sender }, { data: channel }] = await Promise.all([
       supabase.from("profiles").select("display_name").eq("id", record.user_id).single(),
       supabase.from("channels").select("name").eq("id", record.channel_id).single(),
@@ -119,19 +136,15 @@ Deno.serve(async (req) => {
     const channelName = channel?.name || "chat";
     const preview = record.content.length > 80 ? record.content.slice(0, 80) + "…" : record.content;
 
-    // Get all push subscriptions except sender's
     const { data: subscriptions } = await supabase
       .from("push_subscriptions")
       .select("endpoint, p256dh, auth, user_id")
       .neq("user_id", record.user_id);
 
     if (!subscriptions || subscriptions.length === 0) {
-      return new Response(JSON.stringify({ sent: 0 }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ sent: 0 });
     }
 
-    // Check notification preferences
     const userIds = [...new Set(subscriptions.map((s: any) => s.user_id))];
     const { data: prefRows } = await supabase
       .from("notification_preferences")
@@ -141,18 +154,15 @@ Deno.serve(async (req) => {
     const disabledUsers = new Set(
       (prefRows || [])
         .filter((p: any) => p.chat_messages === false)
-        .map((p: any) => p.user_id)
+        .map((p: any) => p.user_id),
     );
 
     const filteredSubscriptions = subscriptions.filter(
-      (s: any) => !disabledUsers.has(s.user_id)
+      (s: any) => !disabledUsers.has(s.user_id),
     );
 
     if (filteredSubscriptions.length === 0) {
-      return new Response(
-        JSON.stringify({ sent: 0, filtered: subscriptions.length }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ sent: 0, filtered: subscriptions.length });
     }
 
     const notificationPayload = JSON.stringify({
@@ -169,7 +179,7 @@ Deno.serve(async (req) => {
       try {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-          notificationPayload
+          notificationPayload,
         );
         sent++;
       } catch (e: any) {
@@ -180,20 +190,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Clean up expired subscriptions
     if (expiredEndpoints.length > 0) {
       await supabase.from("push_subscriptions").delete().in("endpoint", expiredEndpoints);
     }
 
-    return new Response(
-      JSON.stringify({ sent, expired: expiredEndpoints.length }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (error) {
+    return jsonResponse({ sent, expired: expiredEndpoints.length });
+  } catch (error: any) {
     console.error("Push notification error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: error?.message ?? "Unknown error" }, 500);
   }
 });

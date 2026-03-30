@@ -2,9 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-// VAPID public key - safe to embed client-side
-const VAPID_PUBLIC_KEY = 'BP6ZYOIoWsyFM5K8duN6PCjsdr1Tazuphu8mmkrz0pEydPx5wQvc9S6sdp1jrC7L1GeL1wmHSygjzWgv7EXxBEc';
-
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -25,12 +22,23 @@ function arrayBufferToBase64Url(buffer: ArrayBuffer): string {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-function uint8ArrayToBase64Url(bytes: Uint8Array): string {
-  let binary = '';
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
+function normalizeBase64Url(value: string): string {
+  return value.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function fetchVapidPublicKey(): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('send-push-notification', {
+    body: { action: 'get_vapid_public_key' },
+  });
+
+  if (error) throw error;
+
+  const key = data?.vapidPublicKey;
+  if (!key || typeof key !== 'string') {
+    throw new Error('Missing VAPID public key');
   }
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+  return key;
 }
 
 export function usePushNotifications() {
@@ -48,7 +56,6 @@ export function usePushNotifications() {
     }
   }, []);
 
-  // Check existing subscription
   useEffect(() => {
     if (!isSupported || !user) return;
 
@@ -56,17 +63,31 @@ export function usePushNotifications() {
       try {
         const registration = await navigator.serviceWorker.ready;
         const subscription = await registration.pushManager.getSubscription();
-        if (subscription) {
-          const { data } = await supabase
-            .from('push_subscriptions')
-            .select('id')
-            .eq('endpoint', subscription.endpoint)
-            .eq('user_id', user.id)
-            .maybeSingle();
-          setIsSubscribed(!!data);
-        } else {
+
+        if (!subscription) {
           setIsSubscribed(false);
+          return;
         }
+
+        const vapidPublicKey = await fetchVapidPublicKey();
+        const existingServerKey = subscription.options.applicationServerKey;
+        const existingKeyBase64 = existingServerKey ? arrayBufferToBase64Url(existingServerKey) : null;
+
+        if (!existingKeyBase64 || normalizeBase64Url(existingKeyBase64) !== normalizeBase64Url(vapidPublicKey)) {
+          await supabase.from('push_subscriptions').delete().eq('user_id', user.id);
+          await subscription.unsubscribe();
+          setIsSubscribed(false);
+          return;
+        }
+
+        const { data } = await supabase
+          .from('push_subscriptions')
+          .select('id')
+          .eq('endpoint', subscription.endpoint)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        setIsSubscribed(!!data);
       } catch {
         setIsSubscribed(false);
       }
@@ -85,26 +106,21 @@ export function usePushNotifications() {
       if (perm !== 'granted') return false;
 
       const registration = await navigator.serviceWorker.ready;
-      const desiredKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+      const vapidPublicKey = await fetchVapidPublicKey();
+      const desiredKey = urlBase64ToUint8Array(vapidPublicKey);
 
-      // Always nuke any existing browser subscription and DB records to start clean
       let subscription = await registration.pushManager.getSubscription();
       if (subscription) {
         await subscription.unsubscribe();
         subscription = null;
       }
-      // Clear ALL DB subscriptions for this user to remove stale entries
-      await supabase
-        .from('push_subscriptions')
-        .delete()
-        .eq('user_id', user.id);
 
-      if (!subscription) {
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: desiredKey as BufferSource,
-        });
-      }
+      await supabase.from('push_subscriptions').delete().eq('user_id', user.id);
+
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: desiredKey as BufferSource,
+      });
 
       const key = subscription.getKey('p256dh');
       const auth = subscription.getKey('auth');
