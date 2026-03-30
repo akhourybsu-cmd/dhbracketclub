@@ -482,6 +482,13 @@ export default function LockboxCrackPage() {
     });
     invalidateAll();
     toast.success('Lock fully cracked! 🔓🎉');
+    // Log to activity feed
+    logActivity(user.id, {
+      event_type: 'lockbox_cracked',
+      target_type: 'lockbox_lock',
+      target_id: lock.id,
+      metadata: { lock_owner: lock.profiles?.display_name },
+    });
   };
 
   const handleMazeFail = async () => {
