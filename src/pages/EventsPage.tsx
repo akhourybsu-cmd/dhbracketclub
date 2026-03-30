@@ -449,25 +449,6 @@ export default function EventsPage() {
           </div>
         )}
 
-        {loading && (
-          <div className="space-y-2.5">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="glass-card p-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-12 h-12 rounded-xl skeleton-shimmer flex-shrink-0" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-3.5 rounded-md w-2/3 skeleton-shimmer" />
-                    <div className="h-2.5 rounded-md w-1/3 skeleton-shimmer" />
-                    <div className="flex gap-2 mt-1">
-                      <div className="h-2 rounded w-16 skeleton-shimmer" />
-                      <div className="h-2 rounded w-12 skeleton-shimmer" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </motion.div>
     </div>
   );
