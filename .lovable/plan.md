@@ -1,72 +1,56 @@
 
 
-# Chat Feature — Next-Level Polish & Optimization
+# Fix Push Notifications — Reliable End-to-End
 
-## Current State
-The chat is functional with channels, messages, threads, reactions, search, pins, optimistic sends, and realtime. The core architecture is solid. What follows are the targeted improvements to make it feel like iMessage/Discord-quality.
+## Root Cause
 
-## Changes
+The database trigger (`on_new_message_push_notify`) calls `net.http_post` to invoke the edge function, but `net._http_response` has zero rows and the edge function has zero logs. This means the trigger's HTTP call is silently failing — likely due to vault secret retrieval issues or pg_net job execution timing. The DB-trigger-to-edge-function pipeline has too many fragile moving parts (vault secrets, pg_net async jobs, custom Web Push crypto).
 
-### 1. Composer: iOS keyboard handling & visual polish
-**Problem**: On iOS, when the keyboard opens the composer can get pushed behind the bottom nav or the viewport doesn't resize correctly. The composer also lacks a typing-feel polish.
-**Fix**:
-- Add `visualViewport` resize listener in `MessageComposer` to ensure the composer stays visible above the keyboard on iOS
-- Use `position: sticky; bottom: 0` pattern instead of relying on flex-shrink
-- Add safe-area padding to the composer bottom
-- In `ChatPage.tsx`, add `pb-0` override and ensure the chat container uses `100dvh` minus header only (already mostly done, but verify no bottom-nav padding leaks in)
+Additionally, the `push_subscriptions` table is missing an **UPDATE** RLS policy, so the `upsert` call in the client silently fails when a user re-subscribes from the same browser.
 
-### 2. Scroll position preservation on older message load
-**Problem**: When loading older messages (`loadOlderMessages`), the scroll jumps because new content is prepended without preserving scroll position.
-**Fix**: In `MessageList`, before prepending older messages, capture `scrollHeight`. After state update, use a `useLayoutEffect` or `requestAnimationFrame` to set `scrollTop = newScrollHeight - oldScrollHeight`.
+## Plan
 
-### 3. Typing indicators (lightweight)
-**Problem**: No feedback when someone else is typing — a basic expectation of modern chat.
-**Fix**: Use Supabase Realtime `presence` on the channel to broadcast typing state. Show a subtle "User is typing..." indicator above the composer. Debounce typing broadcasts to every 2 seconds. Auto-clear after 3 seconds of inactivity.
+### 1. Switch from DB trigger to client-side edge function invocation
+Instead of relying on the fragile `pg_net` + vault pipeline, call the edge function directly from the client after a message is successfully inserted. This is the most reliable approach — the client already has auth context and can handle errors visibly.
 
-### 4. Read receipts / "New messages" divider
-**Problem**: When entering a channel with unread messages, there's no visual indicator of where new messages start.
-**Fix**: When fetching messages, compare `last_read_at` timestamp. Insert a "New messages" divider line in `MessageList` between the last-read message and the first unread one.
+**Files**: `src/pages/ChatPage.tsx`
+- After a successful message insert, fire-and-forget `supabase.functions.invoke('send-push-notification', { body: { record } })`
+- No need to await — push is best-effort
 
-### 5. Message grouping edge case — date boundary
-**Problem**: Already handled `nextSameAuthor` with date check, but the `sameAuthor` flag doesn't check date boundaries — consecutive messages from the same user spanning midnight will incorrectly group.
-**Fix**: Add date-label check to `sameAuthor` computation in `MessageList`.
+### 2. Drop the DB trigger
+Create a migration to drop the `on_new_message_push_notify` trigger (keep the function for reference but it won't be used).
 
-### 6. Swipe-to-reply (mobile)
-**Problem**: Long-press is the only way to reply on mobile. Most modern chat apps support swipe-right-to-reply for speed.
-**Fix**: Add a horizontal drag gesture on `MessageBubble` using Framer Motion's `drag="x"` with constraints. When dragged past a threshold (~60px), trigger `onOpenThread`. Show a reply icon emerging during the drag. Snap back on release.
+### 3. Add UPDATE RLS policy on push_subscriptions
+The upsert with `onConflict: 'endpoint'` requires UPDATE permission. Add:
+```sql
+CREATE POLICY "Users can update own subscriptions"
+  ON public.push_subscriptions FOR UPDATE USING (auth.uid() = user_id);
+```
 
-### 7. Image/media preview for URLs
-**Problem**: Pasted URLs render as plain text links. Modern chat apps show link previews.
-**Fix**: Detect URLs in message content. For known image extensions (.jpg, .png, .gif, .webp), render an inline `<img>` preview below the message text. This is a lightweight first step — full OpenGraph previews can come later.
+### 4. Replace custom Web Push crypto with `web-push` library
+The current 280-line hand-rolled ECDSA + AES-128-GCM encryption is error-prone. Replace with the battle-tested `web-push` npm package available via `npm:web-push` in Deno.
 
-### 8. Composer focus management
-**Problem**: After sending a message, focus returns to the textarea, but after certain actions (closing thread, switching channels), focus isn't managed well.
-**Fix**: Auto-focus the composer when selecting a channel or closing a thread panel. Expose a `focusComposer` ref callback from `MessageComposer`.
+**File**: `supabase/functions/send-push-notification/index.ts`
+- Import `web-push` via npm specifier
+- Use `webpush.sendNotification()` instead of custom crypto
+- Keep existing preference filtering and expired subscription cleanup
+- Remove `verify_jwt` requirement since client calls will include auth header
 
-### 9. Empty channel list padding on desktop
-**Problem**: On desktop, the channel sidebar scrolls but has no bottom padding — last channel can sit tight against the edge.
-**Fix**: Add `pb-20` to the `ChannelList` container.
+### 5. Add a push notification test button
+Add a "Send Test Notification" button in the Profile page's notification section so users can verify their setup works.
 
-### 10. Performance: memoize MessageBubble
-**Problem**: Every message re-renders when any state in the list changes (new message, reaction, etc.). With 50+ messages this causes noticeable lag.
-**Fix**: Wrap `MessageBubble` in `React.memo` with a custom comparator that checks `msg.id`, `msg.content`, `msg.edited_at`, `msg.reactions`, `msg.reply_count`, `msg.is_pinned`, `editingMessageId`, and `sameAuthor`/`nextSameAuthor`.
+**Files**: `src/components/profile/NotificationPreferences.tsx`, new edge function logic or inline test
+
+## Technical Details
+
+- The `web-push` library handles VAPID JWT signing and payload encryption correctly — eliminates the most likely failure point (custom crypto)
+- Client-side invocation means we get proper error reporting via `supabase.functions.invoke()` return value
+- Fire-and-forget pattern ensures message sending speed isn't affected
+- UPDATE policy fix ensures re-subscriptions work when users revisit the app
 
 ## Files to modify
-- `src/components/chat/MessageComposer.tsx` — keyboard handling, ref forwarding, focus management
-- `src/components/chat/MessageList.tsx` — scroll preservation, new-messages divider, sameAuthor date fix
-- `src/components/chat/MessageBubble.tsx` — React.memo, swipe-to-reply, inline image previews
-- `src/components/chat/ChannelList.tsx` — bottom padding
-- `src/pages/ChatPage.tsx` — typing indicator presence, focus management, pass last_read_at
-- `src/components/chat/types.ts` — no changes needed
-
-## Priority order
-1. Scroll preservation on load-more (functional bug)
-2. React.memo on MessageBubble (performance)
-3. sameAuthor date boundary fix (visual bug)
-4. Composer keyboard/focus management (mobile UX)
-5. New messages divider (UX polish)
-6. Inline image previews (feature)
-7. Swipe-to-reply (feature)
-8. Typing indicators (feature)
-9. Channel list padding (minor polish)
+- `supabase/functions/send-push-notification/index.ts` — rewrite with web-push lib
+- `src/pages/ChatPage.tsx` — add post-send push invocation
+- `src/components/profile/NotificationPreferences.tsx` — add test button
+- Migration: drop trigger + add UPDATE policy
 
