@@ -24,6 +24,22 @@ export default function ChatPage() {
   const { play } = useSoundEffect();
   const composerRef = useRef<MessageComposerHandle>(null);
 
+  // Dynamic viewport height to handle mobile keyboard
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const update = () => {
+      setViewportHeight(vv.height);
+    };
+
+    update();
+    vv.addEventListener('resize', update);
+    return () => vv.removeEventListener('resize', update);
+  }, []);
+
   const [channels, setChannels] = useState<Channel[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [channelMeta, setChannelMeta] = useState<Map<string, ChannelMeta>>(new Map());
@@ -601,7 +617,7 @@ export default function ChatPage() {
   /* ═══ CHANNEL LIST VIEW (mobile only — desktop uses sidebar) ═══ */
   if (showChannelList) {
     return (
-      <div className="flex overflow-hidden" style={{ height: 'calc(100dvh - 4.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))', maxHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))' }}>
+      <div className="flex overflow-hidden" style={{ height: viewportHeight ? `${viewportHeight - 72}px` : 'calc(100dvh - 4.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))' }}>
         {/* Desktop: always show sidebar + placeholder */}
         <div className="w-full lg:w-[260px] lg:border-r lg:border-border/25 flex-shrink-0 overflow-y-auto">
           <ChannelList
@@ -625,7 +641,7 @@ export default function ChatPage() {
 
   /* ═══ MESSAGE VIEW ═══ */
   return (
-    <div className="flex overflow-hidden" style={{ height: 'calc(100dvh - 4.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))', maxHeight: 'calc(100dvh - 4.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))' }}>
+    <div className="flex overflow-hidden" style={{ height: viewportHeight ? `${viewportHeight - 72}px` : 'calc(100dvh - 4.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))' }}>
       {/* Desktop sidebar */}
       <div className="hidden lg:block w-[260px] border-r border-border/25 flex-shrink-0 overflow-y-auto">
         <ChannelList

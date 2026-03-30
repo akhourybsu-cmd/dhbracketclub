@@ -94,30 +94,20 @@ export function MessageList({
     prevMsgCount.current = messages.length;
   }, [messages, autoScroll]);
 
-  // When mobile keyboard opens (visualViewport shrinks), scroll to bottom so
-  // the last message stays visible above the composer
+  // When the container resizes (e.g. keyboard open/close changes parent height),
+  // keep the last message visible by scrolling to bottom
   useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
+    const el = scrollRef.current;
+    if (!el || !autoScroll) return;
 
-    let prevHeight = vv.height;
-    const handleResize = () => {
-      const el = scrollRef.current;
-      if (!el) return;
-      const delta = prevHeight - vv.height;
-      // Keyboard opened (viewport shrank by >100px)
-      if (delta > 100) {
-        // Scroll down by the amount the viewport shrank
-        requestAnimationFrame(() => {
-          el.scrollTop += delta;
-        });
+    const observer = new ResizeObserver(() => {
+      if (autoScroll) {
+        messagesEndRef.current?.scrollIntoView();
       }
-      prevHeight = vv.height;
-    };
-
-    vv.addEventListener('resize', handleResize);
-    return () => vv.removeEventListener('resize', handleResize);
-  }, []);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [autoScroll]);
 
   // Passive, RAF-throttled scroll handler
   const rafRef = useRef<number | null>(null);
