@@ -52,7 +52,7 @@ export default function NotificationPreferencesSection() {
       } else if (data?.error) {
         toast.error(data.error);
       } else {
-        toast.error('No subscriptions found. Try toggling notifications off and on.');
+        toast.error('No test notification was delivered. Turn Push Notifications off and on, then try again.');
       }
     } catch (err: any) {
       console.error('Test push error:', err);

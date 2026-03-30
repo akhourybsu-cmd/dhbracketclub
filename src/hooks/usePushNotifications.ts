@@ -25,6 +25,14 @@ function arrayBufferToBase64Url(buffer: ArrayBuffer): string {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
+function uint8ArrayToBase64Url(bytes: Uint8Array): string {
+  let binary = '';
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
 export function usePushNotifications() {
   const { user } = useAuth();
   const [isSupported, setIsSupported] = useState(false);
@@ -70,19 +78,42 @@ export function usePushNotifications() {
   const subscribe = useCallback(async () => {
     if (!user || !isSupported) return false;
     setLoading(true);
+
     try {
       const perm = await Notification.requestPermission();
       setPermission(perm);
-      if (perm !== 'granted') {
-        setLoading(false);
-        return false;
-      }
+      if (perm !== 'granted') return false;
 
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
-      });
+      const desiredKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+      const desiredKeyBase64 = uint8ArrayToBase64Url(desiredKey);
+
+      let subscription = await registration.pushManager.getSubscription();
+
+      if (subscription) {
+        const existingServerKey = subscription.options.applicationServerKey;
+        const existingKeyBase64 = existingServerKey
+          ? arrayBufferToBase64Url(existingServerKey)
+          : null;
+
+        if (existingKeyBase64 !== desiredKeyBase64) {
+          await supabase
+            .from('push_subscriptions')
+            .delete()
+            .eq('endpoint', subscription.endpoint)
+            .eq('user_id', user.id);
+
+          await subscription.unsubscribe();
+          subscription = null;
+        }
+      }
+
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: desiredKey as BufferSource,
+        });
+      }
 
       const key = subscription.getKey('p256dh');
       const auth = subscription.getKey('auth');
@@ -103,18 +134,19 @@ export function usePushNotifications() {
 
       if (error) throw error;
       setIsSubscribed(true);
-      setLoading(false);
       return true;
     } catch (err) {
       console.error('Push subscribe error:', err);
-      setLoading(false);
       return false;
+    } finally {
+      setLoading(false);
     }
   }, [user, isSupported]);
 
   const unsubscribe = useCallback(async () => {
     if (!user) return;
     setLoading(true);
+
     try {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
@@ -122,14 +154,16 @@ export function usePushNotifications() {
         await supabase
           .from('push_subscriptions')
           .delete()
-          .eq('endpoint', subscription.endpoint);
+          .eq('endpoint', subscription.endpoint)
+          .eq('user_id', user.id);
         await subscription.unsubscribe();
       }
       setIsSubscribed(false);
     } catch (err) {
       console.error('Push unsubscribe error:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [user]);
 
   return {
