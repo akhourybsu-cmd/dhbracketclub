@@ -214,18 +214,18 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
             placeholder={placeholder || 'Message'}
             rows={1}
             className={cn(
-              "w-full resize-none bg-muted/20 border border-border/25 rounded-xl focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/20 focus-visible:border-primary/20 transition-colors placeholder:text-muted-foreground/50",
-              compact ? "text-xs pl-3.5 pr-11 py-2" : "text-sm pl-4 pr-12 py-2.5"
+              "w-full resize-none bg-muted/15 border border-border/20 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary/30 transition-all duration-200 placeholder:text-muted-foreground/40",
+              compact ? "text-xs pl-3.5 pr-11 py-2" : "text-sm pl-4 pr-12 py-3"
             )}
             autoComplete="off"
-            style={{ minHeight: compact ? 36 : 40, maxHeight: compact ? 96 : 104 }}
+            style={{ minHeight: compact ? 36 : 44, maxHeight: compact ? 96 : 104 }}
           />
           <Button
             size="sm"
             onClick={handleSend}
             disabled={!value.trim() || disabled}
             className={cn(
-              "absolute right-1.5 bottom-1.5 p-0 rounded-lg transition-all duration-200",
+              "absolute right-2 bottom-2 p-0 rounded-xl transition-all duration-200 shadow-sm",
               compact ? "h-7 w-7" : "h-8 w-8",
               value.trim() ? "opacity-100 scale-100" : "opacity-30 scale-90"
             )}

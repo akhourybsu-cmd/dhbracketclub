@@ -701,10 +701,10 @@ export default function ChatPage() {
                   lastReadAt={lastReadAt}
                 />
                 {!searchResults && (
-                  <div className="flex-shrink-0 border-t border-border/5">
+                  <div className="flex-shrink-0 border-t border-border/15 bg-background/80 backdrop-blur-sm">
                     {typingUsers.length > 0 && (
-                      <div className="px-4 sm:px-5 py-1">
-                        <span className="text-[10px] text-muted-foreground/60 font-medium italic">
+                      <div className="px-4 sm:px-5 pt-1.5 pb-0.5">
+                        <span className="text-[10px] text-muted-foreground/60 font-medium italic animate-pulse">
                           {typingUsers.length === 1 ? `${typingUsers[0]} is typing…` : `${typingUsers.join(', ')} are typing…`}
                         </span>
                       </div>
