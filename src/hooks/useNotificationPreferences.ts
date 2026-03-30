@@ -23,8 +23,8 @@ export function useNotificationPreferences() {
 
   useEffect(() => {
     if (!user) return;
-    const fetch = async () => {
-      const { data } = await (supabase as any)
+    const fetchPrefs = async () => {
+      const { data } = await supabase
         .from('notification_preferences')
         .select('chat_messages, polls, events, drafts')
         .eq('user_id', user.id)
@@ -34,7 +34,7 @@ export function useNotificationPreferences() {
       }
       setLoading(false);
     };
-    fetch();
+    fetchPrefs();
   }, [user]);
 
   const update = useCallback(
@@ -43,7 +43,7 @@ export function useNotificationPreferences() {
       const updated = { ...prefs, [key]: value };
       setPrefs(updated);
 
-      await (supabase as any).from('notification_preferences').upsert(
+      await supabase.from('notification_preferences').upsert(
         {
           user_id: user.id,
           ...updated,

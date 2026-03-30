@@ -430,6 +430,10 @@ export default function ChatPage() {
       toast.error('Failed to send reply');
     } else {
       setThreadMessages(prev => prev.map(m => m.id === optimisticId ? { ...inserted } : m));
+      // Fire-and-forget push notification for thread replies too
+      supabase.functions.invoke('send-push-notification', {
+        body: { record: { id: inserted.id, channel_id: inserted.channel_id, user_id: inserted.user_id, content: inserted.content } },
+      }).catch(() => {});
     }
   };
 
