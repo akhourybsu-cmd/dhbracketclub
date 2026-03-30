@@ -4,9 +4,10 @@ import { Lock, ChevronRight, Shield, ShieldAlert, ShieldCheck } from 'lucide-rea
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreateLock } from '@/hooks/useLockbox';
-import { LOCKBOX_COLORS, LOCKBOX_DIGITS, PRESET_MAZES } from '@/lib/lockboxMazes';
+import { LOCKBOX_COLORS, LOCKBOX_DIGITS, CellType } from '@/lib/lockboxMazes';
 import { logActivity } from '@/lib/activityLogger';
 import { MazePreview } from './MazePreview';
+import { MazeBuilder } from './MazeBuilder';
 import { toast } from 'sonner';
 
 interface Props {
@@ -18,6 +19,7 @@ interface Props {
 function LockStatusCard({ myLock }: { myLock: any }) {
   const colors = myLock.color_code.split(',');
   const isCracked = myLock.is_cracked;
+  const mazeGrid = myLock.maze_grid as CellType[][] | null;
 
   return (
     <div className={`glass-card p-5 border ${isCracked ? 'border-destructive/20' : 'border-primary/15'}`}>
@@ -58,7 +60,11 @@ function LockStatusCard({ myLock }: { myLock: any }) {
         </div>
         <div>
           <div className="text-[9px] font-bold text-muted-foreground/60 mb-1.5 tracking-wider">MAZE</div>
-          <MazePreview mazeId={myLock.maze_id} size={80} />
+          {mazeGrid ? (
+            <MazePreview grid={mazeGrid} size={80} showMines={true} />
+          ) : (
+            <div className="w-20 h-20 bg-muted/10 rounded-lg" />
+          )}
         </div>
       </div>
     </div>
@@ -72,7 +78,6 @@ export function LockCreator({ weekId, myLock }: Props) {
   const [step, setStep] = useState(0);
   const [numberCode, setNumberCode] = useState<number[]>([]);
   const [colorCode, setColorCode] = useState<string[]>([]);
-  const [mazeId, setMazeId] = useState<number | null>(null);
 
   if (myLock) return <LockStatusCard myLock={myLock} />;
 
@@ -86,14 +91,15 @@ export function LockCreator({ weekId, myLock }: Props) {
     else if (colorCode.length < 3) setColorCode([...colorCode, c]);
   };
 
-  const handleSubmit = async () => {
-    if (!weekId || !user || numberCode.length !== 3 || colorCode.length !== 3 || !mazeId) return;
+  const handleMazeSave = async (mazeGrid: CellType[][]) => {
+    if (!weekId || !user || numberCode.length !== 3 || colorCode.length !== 3) return;
     try {
       await createLock.mutateAsync({
-        week_id: weekId, user_id: user.id,
+        week_id: weekId,
+        user_id: user.id,
         number_code: numberCode.join(','),
         color_code: colorCode.join(','),
-        maze_id: mazeId,
+        maze_grid: mazeGrid,
       });
       toast.success('Lock created! 🔒');
       logActivity(user.id, {
@@ -189,25 +195,7 @@ export function LockCreator({ weekId, myLock }: Props) {
       )}
 
       {step === 2 && (
-        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="glass-card p-5">
-          <h3 className="font-bold text-sm mb-1">Choose a Maze</h3>
-          <p className="text-[10px] text-muted-foreground mb-4">Pick your final defense layer</p>
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            {PRESET_MAZES.map(maze => (
-              <button key={maze.id} onClick={() => setMazeId(maze.id)}
-                className={`p-3 rounded-xl border-2 transition-all active:scale-95 ${
-                  mazeId === maze.id ? 'border-primary bg-primary/5' : 'border-border/20 hover:border-border/40'
-                }`}>
-                <MazePreview mazeId={maze.id} size={100} />
-                <div className="text-[11px] font-bold mt-2">{maze.name}</div>
-                <div className="text-[9px] text-muted-foreground">{maze.size}×{maze.size}</div>
-              </button>
-            ))}
-          </div>
-          <Button onClick={handleSubmit} disabled={!mazeId || createLock.isPending} className="w-full h-11 font-bold">
-            {createLock.isPending ? 'Creating…' : '🔒 Set My Lock'}
-          </Button>
-        </motion.div>
+        <MazeBuilder onSave={handleMazeSave} isPending={createLock.isPending} />
       )}
     </div>
   );

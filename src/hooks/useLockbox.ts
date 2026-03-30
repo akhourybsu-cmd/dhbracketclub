@@ -66,7 +66,7 @@ export function useMyLock(weekId: string | undefined) {
 export function useCreateLock() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (params: { week_id: string; user_id: string; number_code: string; color_code: string; maze_id: number }) => {
+    mutationFn: async (params: { week_id: string; user_id: string; number_code: string; color_code: string; maze_grid?: any; maze_id?: number }) => {
       // Check for existing lock first (belt-and-suspenders with unique constraint)
       const { data: existing } = await supabase
         .from('lockbox_locks').select('id')

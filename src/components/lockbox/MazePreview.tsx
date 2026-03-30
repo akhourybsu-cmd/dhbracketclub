@@ -1,39 +1,52 @@
-import { PRESET_MAZES } from '@/lib/lockboxMazes';
+import { CellType, MAZE_SIZE, findCell } from '@/lib/lockboxMazes';
 
 interface Props {
-  mazeId: number;
+  grid: CellType[][];
   size?: number;
+  showMines?: boolean;
 }
 
-export function MazePreview({ mazeId, size = 100 }: Props) {
-  const maze = PRESET_MAZES.find(m => m.id === mazeId);
-  if (!maze) return null;
+export function MazePreview({ grid, size = 100, showMines = true }: Props) {
+  if (!grid || grid.length === 0) return null;
+  const mazeSize = grid.length;
+  const start = findCell(grid, 3);
+  const goal = findCell(grid, 4);
 
   return (
     <svg
       width={size}
       height={size}
-      viewBox={`0 0 ${maze.size} ${maze.size}`}
+      viewBox={`0 0 ${mazeSize} ${mazeSize}`}
       className="mx-auto rounded-lg overflow-hidden"
     >
-      <rect width={maze.size} height={maze.size} fill="hsl(var(--background))" />
-      {maze.grid.map((row, r) =>
-        row.map((cell, c) => (
-          <rect
-            key={`${r}-${c}`}
-            x={c + 0.04}
-            y={r + 0.04}
-            width={0.92}
-            height={0.92}
-            rx={0.1}
-            fill={cell === 1 ? 'hsl(var(--muted) / 0.4)' : 'hsl(var(--muted) / 0.08)'}
-          />
-        ))
+      <rect width={mazeSize} height={mazeSize} fill="hsl(var(--background))" />
+      {grid.map((row, r) =>
+        row.map((cell, c) => {
+          let fill = 'hsl(var(--muted) / 0.08)';
+          if (cell === 1) fill = 'hsl(var(--muted) / 0.4)';
+          else if (cell === 2 && showMines) fill = 'hsl(0 72% 55% / 0.2)';
+          return (
+            <rect
+              key={`${r}-${c}`}
+              x={c + 0.04}
+              y={r + 0.04}
+              width={0.92}
+              height={0.92}
+              rx={0.1}
+              fill={fill}
+            />
+          );
+        })
       )}
-      {/* Start */}
-      <circle cx={0.5} cy={0.5} r={0.22} fill="hsl(var(--primary))" />
-      {/* Goal */}
-      <circle cx={maze.size - 0.5} cy={maze.size - 0.5} r={0.22} fill="hsl(45 93% 52%)" />
+      {start && <circle cx={start[1] + 0.5} cy={start[0] + 0.5} r={0.22} fill="hsl(var(--primary))" />}
+      {goal && <circle cx={goal[1] + 0.5} cy={goal[0] + 0.5} r={0.22} fill="hsl(45 93% 52%)" />}
+      {showMines && grid.map((row, r) =>
+        row.map((cell, c) =>
+          cell === 2 ? (
+            <text key={`mine-${r}-${c}`} x={c + 0.5} y={r + 0.62} textAnchor="middle" fontSize={0.4}>💣</text>
+          ) : null
+        )
+      )}
     </svg>
   );
 }
