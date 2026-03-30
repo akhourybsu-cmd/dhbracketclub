@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -10,45 +11,70 @@ import { AnimatePresence } from "framer-motion";
 import { ThemeProvider } from "next-themes";
 import { useAppUpdate } from "@/hooks/useAppUpdate";
 
-import LandingPage from "./pages/LandingPage";
-import AuthPage from "./pages/AuthPage";
-import DashboardPage from "./pages/DashboardPage";
-import CreatePoolPage from "./pages/CreatePoolPage";
-import JoinPoolPage from "./pages/JoinPoolPage";
-import PoolDetailPage from "./pages/PoolDetailPage";
-import PoolsListPage from "./pages/PoolsListPage";
-import PoolSettingsPage from "./pages/PoolSettingsPage";
-import BracketEntryPage from "./pages/BracketEntryPage";
-import BracketDetailPage from "./pages/BracketDetailPage";
-import BracketComparePage from "./pages/BracketComparePage";
-import LeaderboardPage from "./pages/LeaderboardPage";
-import AdminToolsPage from "./pages/AdminToolsPage";
-import GameCenterPage from "./pages/GameCenterPage";
-import ProfilePage from "./pages/ProfilePage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import RankingsListPage from "./pages/RankingsListPage";
-import CreateRankingPage from "./pages/CreateRankingPage";
-import RankingDetailPage from "./pages/RankingDetailPage";
-import PollsListPage from "./pages/PollsListPage";
-import CreatePollPage from "./pages/CreatePollPage";
-import PollDetailPage from "./pages/PollDetailPage";
-import DraftsListPage from "./pages/DraftsListPage";
-import CreateDraftPage from "./pages/CreateDraftPage";
-import DraftDetailPage from "./pages/DraftDetailPage";
-import ChatPage from "./pages/ChatPage";
-import EventsPage from "./pages/EventsPage";
-import EventDetailPage from "./pages/EventDetailPage";
-import CompetePage from "./pages/CompetePage";
-import FeedPage from "./pages/FeedPage";
-import PostsPage from "./pages/PostsPage";
-import PostDetailPage from "./pages/PostDetailPage";
-import NotFound from "./pages/NotFound";
+// Lazy-loaded pages for code splitting
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+const AuthPage = lazy(() => import("./pages/AuthPage"));
+const DashboardPage = lazy(() => import("./pages/DashboardPage"));
+const CreatePoolPage = lazy(() => import("./pages/CreatePoolPage"));
+const JoinPoolPage = lazy(() => import("./pages/JoinPoolPage"));
+const PoolDetailPage = lazy(() => import("./pages/PoolDetailPage"));
+const PoolsListPage = lazy(() => import("./pages/PoolsListPage"));
+const PoolSettingsPage = lazy(() => import("./pages/PoolSettingsPage"));
+const BracketEntryPage = lazy(() => import("./pages/BracketEntryPage"));
+const BracketDetailPage = lazy(() => import("./pages/BracketDetailPage"));
+const BracketComparePage = lazy(() => import("./pages/BracketComparePage"));
+const LeaderboardPage = lazy(() => import("./pages/LeaderboardPage"));
+const AdminToolsPage = lazy(() => import("./pages/AdminToolsPage"));
+const GameCenterPage = lazy(() => import("./pages/GameCenterPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
+const RankingsListPage = lazy(() => import("./pages/RankingsListPage"));
+const CreateRankingPage = lazy(() => import("./pages/CreateRankingPage"));
+const RankingDetailPage = lazy(() => import("./pages/RankingDetailPage"));
+const PollsListPage = lazy(() => import("./pages/PollsListPage"));
+const CreatePollPage = lazy(() => import("./pages/CreatePollPage"));
+const PollDetailPage = lazy(() => import("./pages/PollDetailPage"));
+const DraftsListPage = lazy(() => import("./pages/DraftsListPage"));
+const CreateDraftPage = lazy(() => import("./pages/CreateDraftPage"));
+const DraftDetailPage = lazy(() => import("./pages/DraftDetailPage"));
+const ChatPage = lazy(() => import("./pages/ChatPage"));
+const EventsPage = lazy(() => import("./pages/EventsPage"));
+const EventDetailPage = lazy(() => import("./pages/EventDetailPage"));
+const CompetePage = lazy(() => import("./pages/CompetePage"));
+const FeedPage = lazy(() => import("./pages/FeedPage"));
+const PostsPage = lazy(() => import("./pages/PostsPage"));
+const PostDetailPage = lazy(() => import("./pages/PostDetailPage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 2, // 2 minutes — prevents redundant refetches
+      gcTime: 1000 * 60 * 5,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
+// Minimal loading fallback that matches the app's visual language
+function PageFallback() {
+  return (
+    <div className="flex items-center justify-center py-24">
+      <div className="loading-spinner-ring" />
+    </div>
+  );
+}
 
 const ProtectedPage = ({ children }: { children: React.ReactNode }) => (
   <ProtectedRoute>
-    <AppLayout><PageTransition>{children}</PageTransition></AppLayout>
+    <AppLayout>
+      <PageTransition>
+        <Suspense fallback={<PageFallback />}>
+          {children}
+        </Suspense>
+      </PageTransition>
+    </AppLayout>
   </ProtectedRoute>
 );
 
@@ -58,9 +84,9 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/auth" element={<AuthPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/" element={<Suspense fallback={<PageFallback />}><LandingPage /></Suspense>} />
+        <Route path="/auth" element={<Suspense fallback={<PageFallback />}><AuthPage /></Suspense>} />
+        <Route path="/reset-password" element={<Suspense fallback={<PageFallback />}><ResetPasswordPage /></Suspense>} />
 
         {/* Dashboard / Home */}
         <Route path="/dashboard" element={<ProtectedPage><DashboardPage /></ProtectedPage>} />
@@ -111,7 +137,7 @@ function AnimatedRoutes() {
         <Route path="/drafts/:draftId" element={<ProtectedPage><DraftDetailPage /></ProtectedPage>} />
 
         <Route path="/profile" element={<ProtectedPage><ProfilePage /></ProtectedPage>} />
-        <Route path="*" element={<NotFound />} />
+        <Route path="*" element={<Suspense fallback={<PageFallback />}><NotFound /></Suspense>} />
       </Routes>
     </AnimatePresence>
   );

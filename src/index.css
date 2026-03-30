@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+/* Fonts loaded via index.html <link> for faster rendering */
 
 @tailwind base;
 @tailwind components;
@@ -211,6 +211,8 @@
     /* Prevent iOS bounce/overscroll on the viewport level */
     height: 100%;
     overflow: hidden;
+    /* Eliminate 300ms tap delay on all touch targets */
+    touch-action: manipulation;
   }
 
   body {
@@ -289,6 +291,7 @@
     border: 1px solid hsl(var(--border) / 0.4);
     box-shadow: var(--shadow-card);
     transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+    will-change: transform;
   }
   .glass-card::before {
     content: '';
@@ -540,6 +543,8 @@
   /* ═══ Button press with haptic-feel ═══ */
   .btn-press {
     transition: transform 0.1s ease, box-shadow 0.15s ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
   .btn-press:active {
     transform: scale(0.96);

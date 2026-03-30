@@ -109,7 +109,24 @@ export default function PostsPage() {
           )}
         </AnimatePresence>
 
+        {/* Loading skeletons */}
+        {loading && (
+          <div className="space-y-2">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="glass-card p-4">
+                <div className="h-3.5 rounded-md w-2/3 skeleton-shimmer mb-2" />
+                <div className="h-2.5 rounded-md w-full skeleton-shimmer mb-2" />
+                <div className="flex justify-between">
+                  <div className="h-2 rounded w-28 skeleton-shimmer" />
+                  <div className="h-2 rounded w-10 skeleton-shimmer" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Posts list */}
+        {!loading && (
         <div className="space-y-2">
           {posts.map((post, i) => (
             <motion.div key={post.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
@@ -142,6 +159,7 @@ export default function PostsPage() {
             </motion.div>
           ))}
         </div>
+        )}
 
         {posts.length === 0 && !loading && (
           <div className="empty-state">
