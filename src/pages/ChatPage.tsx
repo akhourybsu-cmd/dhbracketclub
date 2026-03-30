@@ -644,7 +644,7 @@ export default function ChatPage() {
       {/* Main content area */}
       <div className="flex flex-col flex-1 min-w-0">
         {/* Header */}
-        <div className="flex items-center gap-2.5 py-3 border-b border-border/20 flex-shrink-0" style={{ background: 'hsl(var(--background) / 0.8)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))', paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))' }}>
+        <div className="flex items-center gap-2.5 py-3 border-b border-border/20 flex-shrink-0" style={{ background: 'hsl(var(--background) / 0.8)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0px))', paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))', paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))' }}>
           <button onClick={() => { setShowChannelList(true); setThreadParent(null); setShowPinned(false); }} className="p-1.5 -ml-0.5 rounded-lg hover:bg-muted/50 transition-colors lg:hidden">
             <ChevronLeft className="w-5 h-5 text-muted-foreground/60" />
           </button>

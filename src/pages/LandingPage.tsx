@@ -12,7 +12,7 @@ export default function LandingPage() {
   if (user) return <Navigate to="/dashboard" replace />;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-background flex flex-col relative overflow-hidden" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
       {/* Subtle ambient glow */}
       <div className="absolute top-[40%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full blur-[200px] pointer-events-none opacity-30" style={{ background: 'radial-gradient(circle, hsl(152, 72%, 46%, 0.15), transparent)' }} />
 
