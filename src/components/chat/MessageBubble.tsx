@@ -144,12 +144,15 @@ function MessageBubbleInner({
     };
   }, [reactionOpen]);
 
+  const isBeingEdited = editingMessageId === msg.id;
+
   const handleTouchStart = useCallback(() => {
+    if (isBeingEdited) return;
     longPressTimer.current = setTimeout(() => {
       navigator.vibrate?.(10);
       setShowMobileActions(true);
     }, 500);
-  }, []);
+  }, [isBeingEdited]);
 
   const handleTouchEnd = useCallback(() => {
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
@@ -196,7 +199,7 @@ function MessageBubbleInner({
           paddingRight: '10px',
           x: dragX,
         }}
-        drag="x"
+        drag={isBeingEdited ? false : "x"}
         dragConstraints={{ left: 0, right: SWIPE_THRESHOLD + 10 }}
         dragElastic={0.15}
         dragSnapToOrigin
@@ -331,8 +334,8 @@ function MessageBubbleInner({
             </div>
           )}
 
-          {/* Floating action bar (desktop hover) */}
-          <div className="absolute -top-3 right-2 hidden group-hover:flex items-center gap-0.5 bg-background/95 border border-border/20 rounded-lg px-0.5 py-0.5 shadow-lg backdrop-blur-md z-30">
+          {/* Floating action bar (desktop hover) — hidden while editing */}
+          {!isBeingEdited && <div className="absolute -top-3 right-2 hidden group-hover:flex items-center gap-0.5 bg-background/95 border border-border/20 rounded-lg px-0.5 py-0.5 shadow-lg backdrop-blur-md z-30">
             {QUICK_EMOJIS.slice(0, 4).map(emoji => (
               <button key={emoji} onClick={(e) => handleReaction(emoji, e)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 text-sm transition-colors">
                 {emoji}
@@ -355,7 +358,7 @@ function MessageBubbleInner({
                 </button>
               </>
             )}
-          </div>
+          </div>}
 
           {/* Mobile long-press action sheet */}
           <AnimatePresence>
