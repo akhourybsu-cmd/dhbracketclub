@@ -7,13 +7,89 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const jsonHeaders = {
-  ...corsHeaders,
-  "Content-Type": "application/json",
-};
+const jsonHeaders = { ...corsHeaders, "Content-Type": "application/json" };
 
 function jsonResponse(payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), { status, headers: jsonHeaders });
+}
+
+function getSupabase() {
+  const url = Deno.env.get("SUPABASE_URL")!;
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  return createClient(url, key);
+}
+
+// ── Send push to subscriptions, cleaning up expired ones ──
+async function deliverPush(
+  subscriptions: any[],
+  payload: string,
+  supabase: any,
+): Promise<{ sent: number; expired: number; vapidMismatch: boolean }> {
+  const expiredEndpoints: string[] = [];
+  let sent = 0;
+  let vapidMismatch = false;
+
+  for (const sub of subscriptions) {
+    try {
+      await webpush.sendNotification(
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+        payload,
+      );
+      sent++;
+    } catch (e: any) {
+      const sc = typeof e?.statusCode === "number" ? e.statusCode : undefined;
+      console.error("Push send error:", sc, e?.body);
+      if (sc === 410 || sc === 404) expiredEndpoints.push(sub.endpoint);
+      if (sc === 403) vapidMismatch = true;
+    }
+  }
+
+  if (expiredEndpoints.length > 0) {
+    await supabase.from("push_subscriptions").delete().in("endpoint", expiredEndpoints);
+  }
+
+  return { sent, expired: expiredEndpoints.length, vapidMismatch };
+}
+
+// ── THROTTLE CHECK: returns set of user_ids that were recently notified ──
+async function getThrottledUsers(
+  supabase: any,
+  channelId: string,
+  userIds: string[],
+  windowSeconds = 60,
+): Promise<Set<string>> {
+  const cutoff = new Date(Date.now() - windowSeconds * 1000).toISOString();
+  const { data } = await supabase
+    .from("push_throttle")
+    .select("user_id")
+    .eq("channel_id", channelId)
+    .in("user_id", userIds)
+    .gt("last_sent_at", cutoff);
+  return new Set((data || []).map((r: any) => r.user_id));
+}
+
+// ── Update throttle timestamps ──
+async function updateThrottle(supabase: any, channelId: string, userIds: string[]) {
+  if (userIds.length === 0) return;
+  const now = new Date().toISOString();
+  const rows = userIds.map((uid) => ({ user_id: uid, channel_id: channelId, last_sent_at: now }));
+  await supabase.from("push_throttle").upsert(rows, { onConflict: "user_id,channel_id" });
+}
+
+// ── ACTIVE VIEWER CHECK: users who read the channel in last 30s ──
+async function getActiveViewers(
+  supabase: any,
+  channelId: string,
+  userIds: string[],
+): Promise<Set<string>> {
+  const cutoff = new Date(Date.now() - 30_000).toISOString();
+  const { data } = await supabase
+    .from("channel_read_states")
+    .select("user_id")
+    .eq("channel_id", channelId)
+    .in("user_id", userIds)
+    .gt("last_read_at", cutoff);
+  return new Set((data || []).map((r: any) => r.user_id));
 }
 
 Deno.serve(async (req) => {
@@ -23,22 +99,15 @@ Deno.serve(async (req) => {
 
   try {
     let body: any = {};
-
     if (req.method !== "GET") {
-      try {
-        body = await req.json();
-      } catch {
-        body = {};
-      }
+      try { body = await req.json(); } catch { body = {}; }
     }
 
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
 
+    // ── GET VAPID public key ──
     if (req.method === "GET" || body?.action === "get_vapid_public_key") {
-      if (!vapidPublicKey) {
-        return jsonResponse({ error: "VAPID public key is not configured" }, 500);
-      }
-
+      if (!vapidPublicKey) return jsonResponse({ error: "VAPID public key is not configured" }, 500);
       return jsonResponse({ vapidPublicKey });
     }
 
@@ -50,26 +119,20 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Missing required push configuration" }, 500);
     }
 
-    webpush.setVapidDetails(
-      "https://dhbracketclub.lovable.app",
-      vapidPublicKey,
-      vapidPrivateKey,
-    );
+    webpush.setVapidDetails("https://dhbracketclub.lovable.app", vapidPublicKey, vapidPrivateKey);
+    const supabase = getSupabase();
 
-    const record = body.record;
-
+    // ══════════════════════════════════════════
+    // ── TEST NOTIFICATION ──
+    // ══════════════════════════════════════════
     if (body.test && body.user_id) {
-      const supabase = createClient(supabaseUrl, serviceRoleKey);
       const { data: subscriptions } = await supabase
         .from("push_subscriptions")
         .select("endpoint, p256dh, auth, user_id")
         .eq("user_id", body.user_id);
 
       if (!subscriptions || subscriptions.length === 0) {
-        return jsonResponse(
-          { error: "No push subscription found. Make sure notifications are enabled." },
-          404,
-        );
+        return jsonResponse({ error: "No push subscription found. Make sure notifications are enabled." }, 404);
       }
 
       const testPayload = JSON.stringify({
@@ -79,53 +142,70 @@ Deno.serve(async (req) => {
         icon: "/pwa-icon-512.png",
       });
 
-      let sent = 0;
-      const expiredEndpoints: string[] = [];
-      const failedDeliveries: Array<{ statusCode?: number; body?: string }> = [];
+      const result = await deliverPush(subscriptions, testPayload, supabase);
 
-      for (const sub of subscriptions) {
-        try {
-          await webpush.sendNotification(
-            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-            testPayload,
-          );
-          sent++;
-        } catch (e: any) {
-          const statusCode = typeof e?.statusCode === "number" ? e.statusCode : undefined;
-          const errorBody = typeof e?.body === "string" ? e.body : undefined;
-          console.error("Test push error:", statusCode, errorBody);
-          failedDeliveries.push({ statusCode, body: errorBody });
-
-          if (statusCode === 410 || statusCode === 404) {
-            expiredEndpoints.push(sub.endpoint);
-          }
-        }
-      }
-
-      if (expiredEndpoints.length > 0) {
-        await supabase.from("push_subscriptions").delete().in("endpoint", expiredEndpoints);
-      }
-
-      if (sent === 0 && failedDeliveries.length > 0) {
-        const vapidMismatch = failedDeliveries.some((failure) => failure.statusCode === 403);
+      if (result.sent === 0) {
         return jsonResponse({
-          sent,
-          expired: expiredEndpoints.length,
-          error: vapidMismatch
+          sent: 0,
+          expired: result.expired,
+          error: result.vapidMismatch
             ? "Subscription key mismatch detected. Turn Push Notifications off and on, then try again."
             : "No notifications were delivered. Please re-enable Push Notifications and try again.",
-          code: vapidMismatch ? "VAPID_MISMATCH" : "DELIVERY_FAILED",
+          code: result.vapidMismatch ? "VAPID_MISMATCH" : "DELIVERY_FAILED",
         });
       }
 
-      return jsonResponse({ sent, expired: expiredEndpoints.length });
+      return jsonResponse({ sent: result.sent, expired: result.expired });
     }
 
+    // ══════════════════════════════════════════
+    // ── GENERIC NOTIFICATIONS (poll, event, draft) ──
+    // ══════════════════════════════════════════
+    if (body.type && ["poll", "event", "draft"].includes(body.type)) {
+      const { type, title, message, url, sender_user_id } = body;
+
+      // Get all subscriptions except sender
+      const { data: subscriptions } = await supabase
+        .from("push_subscriptions")
+        .select("endpoint, p256dh, auth, user_id")
+        .neq("user_id", sender_user_id || "");
+
+      if (!subscriptions || subscriptions.length === 0) return jsonResponse({ sent: 0 });
+
+      // Check preferences
+      const userIds = [...new Set(subscriptions.map((s: any) => s.user_id))];
+      const prefColumn = type === "poll" ? "polls" : type === "event" ? "events" : "drafts";
+      const { data: prefRows } = await supabase
+        .from("notification_preferences")
+        .select(`user_id, ${prefColumn}`)
+        .in("user_id", userIds);
+
+      const disabledUsers = new Set(
+        (prefRows || []).filter((p: any) => p[prefColumn] === false).map((p: any) => p.user_id),
+      );
+
+      const filtered = subscriptions.filter((s: any) => !disabledUsers.has(s.user_id));
+      if (filtered.length === 0) return jsonResponse({ sent: 0, filtered: subscriptions.length });
+
+      const payload = JSON.stringify({
+        title: title || `New ${type}`,
+        body: message || "",
+        tag: `dh-${type}`,
+        data: { url: url || "/" },
+        icon: "/pwa-icon-512.png",
+      });
+
+      const result = await deliverPush(filtered, payload, supabase);
+      return jsonResponse({ sent: result.sent, expired: result.expired });
+    }
+
+    // ══════════════════════════════════════════
+    // ── CHAT MESSAGE NOTIFICATION ──
+    // ══════════════════════════════════════════
+    const record = body.record;
     if (!record?.id || !record?.channel_id || !record?.user_id || !record?.content) {
       return jsonResponse({ error: "Invalid payload" }, 400);
     }
-
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     const [{ data: sender }, { data: channel }] = await Promise.all([
       supabase.from("profiles").select("display_name").eq("id", record.user_id).single(),
@@ -136,7 +216,7 @@ Deno.serve(async (req) => {
     const channelName = channel?.name || "chat";
     const preview = record.content.length > 80 ? record.content.slice(0, 80) + "…" : record.content;
 
-    // Parse @mentions from message content
+    // Parse @mentions
     const mentionRe = /@([\w\s]+?)(?=\s@|\s|$)/g;
     const mentionedNames: string[] = [];
     let mentionMatch: RegExpExecArray | null;
@@ -144,12 +224,9 @@ Deno.serve(async (req) => {
       mentionedNames.push(mentionMatch[1].trim().toLowerCase());
     }
 
-    // Resolve mentioned user IDs
     let mentionedUserIds = new Set<string>();
     if (mentionedNames.length > 0) {
-      const { data: mentionedProfiles } = await supabase
-        .from("profiles")
-        .select("id, display_name");
+      const { data: mentionedProfiles } = await supabase.from("profiles").select("id, display_name");
       if (mentionedProfiles) {
         for (const p of mentionedProfiles) {
           if (mentionedNames.includes(p.display_name.toLowerCase())) {
@@ -159,67 +236,102 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Get all subscriptions except sender
     const { data: subscriptions } = await supabase
       .from("push_subscriptions")
       .select("endpoint, p256dh, auth, user_id")
       .neq("user_id", record.user_id);
 
-    if (!subscriptions || subscriptions.length === 0) {
-      return jsonResponse({ sent: 0 });
-    }
+    if (!subscriptions || subscriptions.length === 0) return jsonResponse({ sent: 0 });
 
-    const userIds = [...new Set(subscriptions.map((s: any) => s.user_id))];
+    const allUserIds = [...new Set(subscriptions.map((s: any) => s.user_id))];
+
+    // Check chat_messages + mentions preferences
     const { data: prefRows } = await supabase
       .from("notification_preferences")
-      .select("user_id, chat_messages")
-      .in("user_id", userIds);
+      .select("user_id, chat_messages, mentions")
+      .in("user_id", allUserIds);
 
-    const disabledUsers = new Set(
-      (prefRows || [])
-        .filter((p: any) => p.chat_messages === false)
-        .map((p: any) => p.user_id),
+    const chatDisabledUsers = new Set(
+      (prefRows || []).filter((p: any) => p.chat_messages === false).map((p: any) => p.user_id),
+    );
+    const mentionsDisabledUsers = new Set(
+      (prefRows || []).filter((p: any) => p.mentions === false).map((p: any) => p.user_id),
     );
 
-    // Send to users who either have chat_messages enabled OR are mentioned
-    const filteredSubscriptions = subscriptions.filter(
-      (s: any) => !disabledUsers.has(s.user_id) || mentionedUserIds.has(s.user_id),
-    );
+    // Active viewer suppression
+    const activeViewers = await getActiveViewers(supabase, record.channel_id, allUserIds);
+
+    // Throttle check (only for non-mentioned users)
+    const throttledUsers = await getThrottledUsers(supabase, record.channel_id, allUserIds);
+
+    // Filter subscriptions
+    const filteredSubscriptions = subscriptions.filter((s: any) => {
+      const uid = s.user_id;
+      const isMentioned = mentionedUserIds.has(uid);
+
+      // If mentioned but mentions preference is off, skip
+      if (isMentioned && mentionsDisabledUsers.has(uid)) return false;
+
+      // If mentioned (and mentions pref is on), always send (bypass throttle, active viewer, chat pref)
+      if (isMentioned) return true;
+
+      // Skip active viewers
+      if (activeViewers.has(uid)) return false;
+
+      // Skip if chat_messages disabled
+      if (chatDisabledUsers.has(uid)) return false;
+
+      // Skip if throttled
+      if (throttledUsers.has(uid)) return false;
+
+      return true;
+    });
 
     if (filteredSubscriptions.length === 0) {
       return jsonResponse({ sent: 0, filtered: subscriptions.length });
     }
 
-    const notificationPayload = JSON.stringify({
-      title: `${senderName} in #${channelName}`,
-      body: preview,
-      tag: `dh-channel-${record.channel_id}`,
-      data: { url: `/chat?channel=${record.channel_id}` },
-      icon: "/pwa-icon-512.png",
-    });
+    // Build separate payloads for mentioned vs regular users
+    const mentionSubs = filteredSubscriptions.filter((s: any) => mentionedUserIds.has(s.user_id));
+    const regularSubs = filteredSubscriptions.filter((s: any) => !mentionedUserIds.has(s.user_id));
 
-    const expiredEndpoints: string[] = [];
-    let sent = 0;
+    let totalSent = 0;
+    let totalExpired = 0;
 
-    for (const sub of filteredSubscriptions) {
-      try {
-        await webpush.sendNotification(
-          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-          notificationPayload,
-        );
-        sent++;
-      } catch (e: any) {
-        console.error("Push send error:", e.statusCode, e.body);
-        if (e.statusCode === 410 || e.statusCode === 404) {
-          expiredEndpoints.push(sub.endpoint);
-        }
-      }
+    // Mention notifications — always show actual message
+    if (mentionSubs.length > 0) {
+      const mentionPayload = JSON.stringify({
+        title: `${senderName} mentioned you in #${channelName}`,
+        body: preview,
+        tag: `dh-mention-${record.channel_id}`,
+        data: { url: `/chat?channel=${record.channel_id}` },
+        icon: "/pwa-icon-512.png",
+      });
+      const r = await deliverPush(mentionSubs, mentionPayload, supabase);
+      totalSent += r.sent;
+      totalExpired += r.expired;
     }
 
-    if (expiredEndpoints.length > 0) {
-      await supabase.from("push_subscriptions").delete().in("endpoint", expiredEndpoints);
+    // Regular chat notifications
+    if (regularSubs.length > 0) {
+      const chatPayload = JSON.stringify({
+        title: `${senderName} in #${channelName}`,
+        body: preview,
+        tag: `dh-channel-${record.channel_id}`,
+        data: { url: `/chat?channel=${record.channel_id}` },
+        icon: "/pwa-icon-512.png",
+      });
+      const r = await deliverPush(regularSubs, chatPayload, supabase);
+      totalSent += r.sent;
+      totalExpired += r.expired;
     }
 
-    return jsonResponse({ sent, expired: expiredEndpoints.length });
+    // Update throttle for users who received regular (non-mention) pushes
+    const sentRegularUserIds = [...new Set(regularSubs.map((s: any) => s.user_id))];
+    await updateThrottle(supabase, record.channel_id, sentRegularUserIds);
+
+    return jsonResponse({ sent: totalSent, expired: totalExpired });
   } catch (error: any) {
     console.error("Push notification error:", error);
     return jsonResponse({ error: error?.message ?? "Unknown error" }, 500);
