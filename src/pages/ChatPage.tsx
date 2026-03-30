@@ -607,6 +607,8 @@ export default function ChatPage() {
             loading={loading}
             onSelectChannel={selectChannel}
             onCreateChannel={handleCreateChannel}
+            onEditChannel={handleEditChannel}
+            onReorderChannels={handleReorderChannels}
           />
         </div>
         <div className="hidden lg:flex flex-1 items-center justify-center text-muted-foreground/50 text-sm">
@@ -629,6 +631,8 @@ export default function ChatPage() {
           loading={loading}
           onSelectChannel={selectChannel}
           onCreateChannel={handleCreateChannel}
+          onEditChannel={handleEditChannel}
+          onReorderChannels={handleReorderChannels}
         />
       </div>
 
