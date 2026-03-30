@@ -211,6 +211,8 @@
     /* Prevent iOS bounce/overscroll on the viewport level */
     height: 100%;
     overflow: hidden;
+    /* Eliminate 300ms tap delay on all touch targets */
+    touch-action: manipulation;
   }
 
   body {
