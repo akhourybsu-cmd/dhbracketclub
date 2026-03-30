@@ -152,6 +152,18 @@ export default function ChatPage() {
 
   useEffect(() => { fetchChannels(); }, [fetchChannels]);
 
+  /* ═══ FETCH MEMBERS FOR @MENTIONS ═══ */
+  useEffect(() => {
+    if (!user) return;
+    supabase.from('profiles').select('id, display_name, avatar_url').then(({ data }) => {
+      if (data) {
+        setMembers(data.map(p => ({ id: p.id, display_name: p.display_name, avatar_url: p.avatar_url })));
+        const me = data.find(p => p.id === user.id);
+        if (me) setCurrentDisplayName(me.display_name);
+      }
+    });
+  }, [user]);
+
   /* ═══ FETCH MESSAGES (paginated) ═══ */
   const fetchMessages = useCallback(async (before?: string) => {
     if (!selectedChannel || !user) return;
