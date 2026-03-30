@@ -9,6 +9,7 @@ interface MessageListProps {
   messages: Message[];
   selectedChannel: Channel | null;
   userId: string | undefined;
+  currentDisplayName?: string;
   searchQuery: string;
   onToggleReaction: (messageId: string, emoji: string) => void;
   onOpenThread: (msg: Message) => void;
@@ -40,7 +41,7 @@ function getDateLabel(dateStr: string) {
 }
 
 export function MessageList({
-  messages, selectedChannel, userId, searchQuery,
+  messages, selectedChannel, userId, currentDisplayName, searchQuery,
   onToggleReaction, onOpenThread, onTogglePin,
   onStartEditing, onDeleteMessage, onSaveEdit,
   editingMessageId, editContent, onEditContentChange, onCancelEdit,
@@ -209,6 +210,8 @@ export function MessageList({
                 isOwn={msg.user_id === userId}
                 sameAuthor={sameAuthor}
                 nextSameAuthor={nextSameAuthor}
+                currentUserId={userId}
+                currentDisplayName={currentDisplayName}
                 onToggleReaction={onToggleReaction}
                 onOpenThread={onOpenThread}
                 onTogglePin={onTogglePin}
