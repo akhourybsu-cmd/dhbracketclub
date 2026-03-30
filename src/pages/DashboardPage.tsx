@@ -657,17 +657,6 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
-      {/* Loading skeletons */}
-      {loading && (
-        <div className="space-y-2.5">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="glass-card p-5">
-              <div className="h-4 rounded-lg w-1/3 mb-3 skeleton-shimmer" />
-              <div className="h-3 rounded-lg w-1/2 skeleton-shimmer" />
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
