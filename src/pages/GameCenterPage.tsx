@@ -384,7 +384,7 @@ function GameCard({ game, teams, myPick, pickCounts, index }: {
       }} />
 
       {/* ─── Card Header ─── */}
-      <div className="flex items-center justify-between px-4 py-2 relative z-10" style={{
+      <div className="flex items-center justify-between px-3 sm:px-4 py-2 relative z-10 gap-1.5" style={{
         background: isLive
           ? 'linear-gradient(135deg, hsl(var(--live) / 0.06), transparent)'
           : 'hsl(var(--surface) / 0.4)',
