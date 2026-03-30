@@ -23,6 +23,8 @@ const FEED_ICONS: Record<string, { icon: any; color: string }> = {
   event_created: { icon: CalendarDays, color: 'success' },
   post_created: { icon: FileText, color: 'primary' },
   event_rsvp: { icon: Users, color: 'success' },
+  lockbox_created: { icon: Lock, color: 'destructive' },
+  lockbox_cracked: { icon: Unlock, color: 'destructive' },
 };
 
 const FEED_LABELS: Record<string, string> = {
@@ -36,6 +38,8 @@ const FEED_LABELS: Record<string, string> = {
   event_created: 'created an event',
   post_created: 'started a discussion',
   event_rsvp: 'RSVPed to an event',
+  lockbox_created: 'set their weekly lock 🔒',
+  lockbox_cracked: 'cracked a lock 🔓',
 };
 
 type Post = {
