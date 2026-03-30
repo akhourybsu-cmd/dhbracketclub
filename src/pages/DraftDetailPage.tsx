@@ -201,6 +201,7 @@ export default function DraftDetailPage() {
             message: `It's your turn in "${draft.topic}" — Round ${nextRound2 + 1}`,
             url: `/drafts/${draftId}`,
             sender_user_id: user.id,
+            target_user_id: nextPicker2.user_id,
           },
         }).catch(() => {});
       }

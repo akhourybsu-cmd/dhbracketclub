@@ -162,14 +162,20 @@ Deno.serve(async (req) => {
     // ── GENERIC NOTIFICATIONS (poll, event, draft) ──
     // ══════════════════════════════════════════
     if (body.type && ["poll", "event", "draft"].includes(body.type)) {
-      const { type, title, message, url, sender_user_id } = body;
+      const { type, title, message, url, sender_user_id, target_user_id } = body;
 
-      // Get all subscriptions except sender
-      const { data: subscriptions } = await supabase
+      // If target_user_id is set, only notify that specific user (e.g. draft turn)
+      let query = supabase
         .from("push_subscriptions")
-        .select("endpoint, p256dh, auth, user_id")
-        .neq("user_id", sender_user_id || "");
+        .select("endpoint, p256dh, auth, user_id");
 
+      if (target_user_id) {
+        query = query.eq("user_id", target_user_id);
+      } else {
+        query = query.neq("user_id", sender_user_id || "");
+      }
+
+      const { data: subscriptions } = await query;
       if (!subscriptions || subscriptions.length === 0) return jsonResponse({ sent: 0 });
 
       // Check preferences
