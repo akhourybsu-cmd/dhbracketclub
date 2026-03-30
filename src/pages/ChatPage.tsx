@@ -175,12 +175,15 @@ export default function ChatPage() {
     setHasMore(data.length === PAGE_SIZE);
 
     if (!before) {
+      // Capture lastReadAt BEFORE updating read state
       try {
         const sb = supabase as any;
-        const { data: existing } = await sb.from('channel_read_states').select('id').eq('channel_id', selectedChannel.id).eq('user_id', user.id).maybeSingle();
+        const { data: existing } = await sb.from('channel_read_states').select('id, last_read_at').eq('channel_id', selectedChannel.id).eq('user_id', user.id).maybeSingle();
         if (existing) {
+          setLastReadAt(existing.last_read_at);
           await sb.from('channel_read_states').update({ last_read_at: new Date().toISOString() }).eq('id', existing.id);
         } else {
+          setLastReadAt(null);
           await sb.from('channel_read_states').insert({ channel_id: selectedChannel.id, user_id: user.id });
         }
       } catch {}
