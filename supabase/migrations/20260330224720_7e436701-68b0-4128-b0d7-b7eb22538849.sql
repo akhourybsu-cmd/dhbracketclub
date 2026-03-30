@@ -1,0 +1,1 @@
+DELETE FROM lockbox_locks WHERE maze_grid IS NULL AND maze_id IS NOT NULL;
