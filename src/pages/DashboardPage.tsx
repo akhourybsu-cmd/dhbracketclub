@@ -169,6 +169,40 @@ export default function DashboardPage() {
 
   const totalActive = pools.length + rankings.length + polls.length + drafts.length;
 
+  if (loading) {
+    return (
+      <div className="pb-6">
+        {/* Hero skeleton */}
+        <div className="mb-7">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-9 h-9 rounded-xl skeleton-shimmer" />
+            <div className="h-2.5 w-20 rounded skeleton-shimmer" />
+          </div>
+          <div className="h-7 w-48 rounded-lg skeleton-shimmer mb-2" />
+          <div className="h-3 w-36 rounded skeleton-shimmer" />
+        </div>
+        {/* Quick create skeleton */}
+        <div className="grid grid-cols-4 gap-1.5 mb-7">
+          {[1,2,3,4].map(i => <div key={i} className="glass-card py-7 skeleton-shimmer" />)}
+        </div>
+        {/* Cards skeleton */}
+        <div className="space-y-2.5">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="glass-card p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl skeleton-shimmer flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3.5 rounded-md w-2/3 skeleton-shimmer" />
+                  <div className="h-2.5 rounded-md w-1/2 skeleton-shimmer" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="pb-6">
       {/* ═══ Hero Section ═══ */}
