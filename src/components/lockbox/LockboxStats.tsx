@@ -37,7 +37,7 @@ export function LockboxStats({ stats, isLoading }: Props) {
       <div className="glass-card p-8 text-center">
         <BarChart3 className="w-8 h-8 mx-auto mb-3 text-muted-foreground/30" />
         <h3 className="font-bold text-sm mb-1">No Stats Yet</h3>
-        <p className="text-[11px] text-muted-foreground">Play a full week to start building your Lockbox stats</p>
+        <p className="text-[11px] text-muted-foreground">Complete a full week to start building your Lockbox stats</p>
       </div>
     );
   }
@@ -46,26 +46,26 @@ export function LockboxStats({ stats, isLoading }: Props) {
     {
       title: 'OVERVIEW',
       items: [
-        { icon: Trophy, label: 'Total Points', value: stats.totalPoints, color: 'primary' },
-        { icon: Flame, label: 'Weekly Wins', value: stats.weeklyWins, color: 'amber-400' },
-        { icon: Trophy, label: 'Top 3 Finishes', value: stats.topThree, color: 'amber-400' },
-        { icon: BarChart3, label: 'Weeks Played', value: stats.weeksPlayed, color: 'primary' },
+        { icon: Trophy, label: 'Total Points', value: stats.totalPoints },
+        { icon: Flame, label: 'Weekly Wins', value: stats.weeklyWins },
+        { icon: Trophy, label: 'Top 3 Finishes', value: stats.topThree },
+        { icon: BarChart3, label: 'Weeks Played', value: stats.weeksPlayed },
       ],
     },
     {
       title: 'OFFENSE',
       items: [
-        { icon: Swords, label: 'Crack Points', value: stats.crackPoints, color: 'primary' },
-        { icon: Unlock, label: 'Locks Cracked', value: stats.locksCracked, color: 'primary' },
-        { icon: Target, label: 'Avg Attempts', value: stats.avgAttempts || '—', color: 'primary' },
-        { icon: Target, label: 'Best Crack', value: stats.bestCrack > 0 ? `${stats.bestCrack} tries` : '—', color: 'primary' },
+        { icon: Swords, label: 'Crack Points', value: stats.crackPoints },
+        { icon: Unlock, label: 'Locks Cracked', value: stats.locksCracked },
+        { icon: Target, label: 'Avg Attempts per Crack', value: stats.avgAttempts || '—' },
+        { icon: Target, label: 'Best Single Crack', value: stats.bestCrack > 0 ? `${stats.bestCrack} tries` : '—' },
       ],
     },
     {
       title: 'DEFENSE',
       items: [
-        { icon: Shield, label: 'Defense Points', value: stats.defensePoints, color: 'primary' },
-        { icon: Lock, label: 'Locks Defended', value: `${stats.locksDefended}/${stats.totalLocks}`, color: 'primary' },
+        { icon: Shield, label: 'Defense Points', value: stats.defensePoints },
+        { icon: Lock, label: 'Locks Defended', value: `${stats.locksDefended} of ${stats.totalLocks}` },
       ],
     },
   ];
@@ -87,7 +87,6 @@ export function LockboxStats({ stats, isLoading }: Props) {
         </motion.div>
       ))}
 
-      {/* Recent placements */}
       {stats.placements.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <div className="text-[10px] font-bold text-muted-foreground/60 mb-2 tracking-wider">RECENT WEEKS</div>
@@ -98,9 +97,9 @@ export function LockboxStats({ stats, isLoading }: Props) {
                   {p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : p.rank === 3 ? '🥉' : <span className="text-[11px] text-muted-foreground">#{p.rank || '—'}</span>}
                 </div>
                 <span className="text-[12px] text-muted-foreground flex-1">{p.total_points} pts</span>
-                <div className="flex gap-2 text-[10px] text-muted-foreground">
-                  <span>🗡️{p.crack_points}</span>
-                  <span>🛡️{p.defense_points}</span>
+                <div className="flex gap-2.5 text-[10px] text-muted-foreground">
+                  <span className="flex items-center gap-0.5"><Swords className="w-3 h-3" />{p.crack_points}</span>
+                  <span className="flex items-center gap-0.5"><Shield className="w-3 h-3" />{p.defense_points}</span>
                 </div>
               </div>
             ))}

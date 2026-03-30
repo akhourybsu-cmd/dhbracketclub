@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Lock, Unlock, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, Trophy, Swords } from 'lucide-react';
+import { ArrowLeft, Lock, Unlock, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, Trophy, Swords, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,30 +11,36 @@ import { logActivity } from '@/lib/activityLogger';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-// ── Phase Header ──
+// ── Phase Progress ──
 function PhaseProgress({ currentPhase, isSolved }: { currentPhase: string; isSolved: boolean }) {
   const phases = [
-    { key: 'number', label: 'Numbers', icon: '#' },
-    { key: 'color', label: 'Colors', icon: '●' },
-    { key: 'maze', label: 'Maze', icon: '◎' },
+    { key: 'number', label: 'Numbers', emoji: '#️⃣' },
+    { key: 'color', label: 'Colors', emoji: '🎨' },
+    { key: 'maze', label: 'Maze', emoji: '🏁' },
   ];
   const idx = phases.findIndex(p => p.key === currentPhase);
 
   return (
-    <div className="flex items-center gap-1 mb-5">
-      {phases.map((p, i) => {
-        const done = isSolved || i < idx || (isSolved && i <= idx);
-        const active = p.key === currentPhase && !isSolved;
-        const phaseIsDone = isSolved ? true : (p.key === 'number' ? currentPhase !== 'number' : p.key === 'color' ? (currentPhase === 'maze' || isSolved) : isSolved);
-        return (
-          <div key={p.key} className="flex-1">
-            <div className={`h-2 rounded-full transition-all duration-500 ${phaseIsDone ? 'bg-primary' : active ? 'bg-primary/50 animate-pulse' : 'bg-muted/20'}`} />
-            <div className={`text-[10px] mt-1.5 font-bold text-center ${active ? 'text-primary' : phaseIsDone ? 'text-primary/60' : 'text-muted-foreground/30'}`}>
-              {phaseIsDone && !active ? '✓ ' : ''}{p.label}
+    <div className="glass-card p-3.5 mb-4">
+      <div className="flex items-center gap-2">
+        {phases.map((p, i) => {
+          const done = isSolved || i < idx;
+          const active = p.key === currentPhase && !isSolved;
+          return (
+            <div key={p.key} className="flex-1">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <span className="text-[11px]">{done ? '✅' : active ? p.emoji : '⬜'}</span>
+                <span className={`text-[10px] font-bold ${active ? 'text-primary' : done ? 'text-primary/60' : 'text-muted-foreground/30'}`}>
+                  {p.label}
+                </span>
+              </div>
+              <div className={`h-1.5 rounded-full transition-all duration-500 ${
+                done ? 'bg-primary' : active ? 'bg-primary/50 animate-pulse' : 'bg-muted/20'
+              }`} />
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -47,33 +53,43 @@ function GuessRow({ guess, index, type }: { guess: any; index: number; type: 'nu
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.03 }}
-      className="flex items-center gap-2.5 py-1.5"
+      className="flex items-center gap-2.5 py-2"
     >
       <span className="text-[10px] text-muted-foreground/50 w-5 font-mono">#{index + 1}</span>
       <div className="flex gap-1.5">
         {values.map((v: string, j: number) => {
           if (type === 'color') {
             const color = LOCKBOX_COLORS.find(c => c.name === v);
-            return <div key={j} className="w-8 h-8 rounded-md border border-border/30" style={{ background: color?.value || 'gray' }} />;
+            return <div key={j} className="w-8 h-8 rounded-lg border border-border/30" style={{ background: color?.value || 'gray' }} />;
           }
           return (
-            <span key={j} className="w-8 h-8 rounded-md bg-muted/30 flex items-center justify-center font-mono font-bold text-sm">
+            <span key={j} className="w-8 h-8 rounded-lg bg-muted/30 flex items-center justify-center font-mono font-bold text-sm">
               {v}
             </span>
           );
         })}
       </div>
-      <div className="flex items-center gap-2 ml-auto">
-        <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-primary">
-          <span className="w-4 h-4 rounded-full bg-primary/15 flex items-center justify-center text-[9px]">🎯</span>
+      <div className="flex items-center gap-2.5 ml-auto">
+        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-primary">
+          <span className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center text-[10px]">🎯</span>
           {guess.correct_position}
         </span>
-        <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-amber-400">
-          <span className="w-4 h-4 rounded-full bg-amber-400/15 flex items-center justify-center text-[9px]">🔄</span>
+        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400">
+          <span className="w-5 h-5 rounded-full bg-amber-400/15 flex items-center justify-center text-[10px]">🔄</span>
           {guess.correct_value}
         </span>
       </div>
     </motion.div>
+  );
+}
+
+// ── Clue Legend (inline) ──
+function ClueLegend() {
+  return (
+    <div className="flex items-center gap-4 text-[9px] text-muted-foreground mb-3 px-1">
+      <span className="flex items-center gap-1"><span className="w-4 h-4 rounded-full bg-primary/15 flex items-center justify-center text-[8px]">🎯</span> Right spot</span>
+      <span className="flex items-center gap-1"><span className="w-4 h-4 rounded-full bg-amber-400/15 flex items-center justify-center text-[8px]">🔄</span> Wrong spot</span>
+    </div>
   );
 }
 
@@ -89,15 +105,15 @@ function NumberPhase({ onSubmit, guesses, isPending }: { onSubmit: (g: number[])
   const submit = () => { onSubmit(selected); setSelected([]); };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
       <div className="glass-card p-5">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-bold text-sm">Crack the Number Code</h3>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
-            Phase 1 of 3
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="font-black text-sm">Crack the Number Code</h3>
+          <span className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
+            PHASE 1
           </span>
         </div>
-        <p className="text-[11px] text-muted-foreground mb-4">Pick 3 unique digits (0–5). Order matters!</p>
+        <p className="text-[10px] text-muted-foreground mb-4">Pick 3 unique digits (0–5). Order matters.</p>
 
         {/* Input slots */}
         <div className="flex gap-2.5 mb-4 justify-center">
@@ -136,7 +152,11 @@ function NumberPhase({ onSubmit, guesses, isPending }: { onSubmit: (g: number[])
       {/* History */}
       {guesses.length > 0 && (
         <div className="glass-card p-4">
-          <div className="text-[10px] font-bold text-muted-foreground mb-2 tracking-wider">GUESS HISTORY</div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-bold text-muted-foreground/60 tracking-wider">GUESS HISTORY</span>
+            <span className="text-[10px] text-muted-foreground">{guesses.length} guess{guesses.length !== 1 ? 'es' : ''}</span>
+          </div>
+          <ClueLegend />
           <div className="divide-y divide-border/10">
             {guesses.map((g: any, i: number) => (
               <GuessRow key={g.id} guess={g} index={i} type="number" />
@@ -160,15 +180,15 @@ function ColorPhase({ onSubmit, guesses, isPending }: { onSubmit: (g: string[]) 
   const submit = () => { onSubmit(selected); setSelected([]); };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
       <div className="glass-card p-5">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-bold text-sm">Crack the Color Code</h3>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
-            Phase 2 of 3
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="font-black text-sm">Crack the Color Code</h3>
+          <span className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
+            PHASE 2
           </span>
         </div>
-        <p className="text-[11px] text-muted-foreground mb-4">Pick 3 unique colors. Order matters!</p>
+        <p className="text-[10px] text-muted-foreground mb-4">Pick 3 unique colors. Order matters.</p>
 
         {/* Selected slots */}
         <div className="flex gap-2.5 mb-4 justify-center">
@@ -191,7 +211,7 @@ function ColorPhase({ onSubmit, guesses, isPending }: { onSubmit: (g: string[]) 
             <button key={c.name} onClick={() => toggle(c.name)}
               className={`h-14 rounded-xl transition-all active:scale-90 border-2 ${
                 selected.includes(c.name)
-                  ? 'border-primary ring-2 ring-primary/30 opacity-70 scale-95'
+                  ? 'border-primary ring-2 ring-primary/30 scale-95'
                   : 'border-transparent hover:scale-105'
               }`}
               style={{ background: c.value }}>
@@ -207,7 +227,11 @@ function ColorPhase({ onSubmit, guesses, isPending }: { onSubmit: (g: string[]) 
 
       {guesses.length > 0 && (
         <div className="glass-card p-4">
-          <div className="text-[10px] font-bold text-muted-foreground mb-2 tracking-wider">GUESS HISTORY</div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-bold text-muted-foreground/60 tracking-wider">GUESS HISTORY</span>
+            <span className="text-[10px] text-muted-foreground">{guesses.length} guess{guesses.length !== 1 ? 'es' : ''}</span>
+          </div>
+          <ClueLegend />
           <div className="divide-y divide-border/10">
             {guesses.map((g: any, i: number) => (
               <GuessRow key={g.id} guess={g} index={i} type="color" />
@@ -228,7 +252,7 @@ function MazePhase({ maze, onSolve, onFail, isPending }: {
 }) {
   const [pos, setPos] = useState<[number, number]>([0, 0]);
   const [path, setPath] = useState<[number, number][]>([[0, 0]]);
-  const cellPx = Math.min(280, window.innerWidth - 80) / maze.size;
+  const cellPx = Math.min(300, window.innerWidth - 64) / maze.size;
   const svgSize = cellPx * maze.size;
 
   const move = useCallback((dr: number, dc: number) => {
@@ -248,7 +272,6 @@ function MazePhase({ maze, onSolve, onFail, isPending }: {
 
   const handleCellTap = useCallback((r: number, c: number) => {
     if (maze.grid[r][c] === 1) return;
-    // Only allow tapping adjacent cells
     const dr = r - pos[0];
     const dc = c - pos[1];
     if (Math.abs(dr) + Math.abs(dc) !== 1) return;
@@ -258,19 +281,19 @@ function MazePhase({ maze, onSolve, onFail, isPending }: {
   const reset = () => { setPos([0, 0]); setPath([[0, 0]]); };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
       <div className="glass-card p-5">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-bold text-sm">Solve the Maze</h3>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
-            Phase 3 of 3
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="font-black text-sm">Navigate the Maze</h3>
+          <span className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
+            FINAL PHASE
           </span>
         </div>
-        <p className="text-[11px] text-muted-foreground mb-4">
-          Tap adjacent cells or use D-pad. Navigate <span className="text-primary font-bold">●</span> to <span className="text-amber-400 font-bold">●</span>
+        <p className="text-[10px] text-muted-foreground mb-4">
+          Move the <span className="text-primary font-bold">green dot</span> to the <span className="text-amber-400 font-bold">gold goal</span>. Tap adjacent cells or use the D-pad.
         </p>
 
-        {/* Maze grid — tap to move */}
+        {/* Maze grid */}
         <div className="flex justify-center mb-4">
           <svg
             width={svgSize}
@@ -279,14 +302,10 @@ function MazePhase({ maze, onSolve, onFail, isPending }: {
             className="rounded-xl overflow-hidden border border-border/20"
             style={{ touchAction: 'none' }}
           >
-            {/* Background */}
             <rect width={maze.size} height={maze.size} fill="hsl(var(--background))" />
 
-            {/* Cells */}
             {maze.grid.map((row, r) =>
               row.map((cell, c) => {
-                const isStart = r === 0 && c === 0;
-                const isGoal = r === maze.size - 1 && c === maze.size - 1;
                 const isPath = cell === 0;
                 const isAdjacent = isPath && Math.abs(r - pos[0]) + Math.abs(c - pos[1]) === 1;
                 return (
@@ -299,12 +318,12 @@ function MazePhase({ maze, onSolve, onFail, isPending }: {
                     rx={0.12}
                     fill={
                       cell === 1
-                        ? 'hsl(var(--muted) / 0.4)'
+                        ? 'hsl(var(--muted) / 0.5)'
                         : isAdjacent
-                        ? 'hsl(var(--primary) / 0.08)'
+                        ? 'hsl(var(--primary) / 0.1)'
                         : 'hsl(var(--muted) / 0.08)'
                     }
-                    stroke={isAdjacent ? 'hsl(var(--primary) / 0.2)' : 'transparent'}
+                    stroke={isAdjacent ? 'hsl(var(--primary) / 0.25)' : 'transparent'}
                     strokeWidth={0.03}
                     onClick={() => handleCellTap(r, c)}
                     style={{ cursor: isAdjacent ? 'pointer' : 'default' }}
@@ -313,7 +332,7 @@ function MazePhase({ maze, onSolve, onFail, isPending }: {
               })
             )}
 
-            {/* Visited trail */}
+            {/* Trail */}
             {path.map(([r, c], i) => (
               <rect
                 key={`trail-${i}`}
@@ -322,13 +341,21 @@ function MazePhase({ maze, onSolve, onFail, isPending }: {
                 width={0.6}
                 height={0.6}
                 rx={0.1}
-                fill="hsl(var(--primary) / 0.15)"
+                fill="hsl(var(--primary) / 0.18)"
               />
             ))}
 
+            {/* Start label */}
+            <text x={0.5} y={0.15} textAnchor="middle" fill="hsl(var(--primary))" fontSize={0.22} fontWeight="bold">
+              START
+            </text>
+
             {/* Goal */}
-            <circle cx={maze.size - 0.5} cy={maze.size - 0.5} r={0.28} fill="hsl(45 93% 52%)" opacity={0.9} />
-            <circle cx={maze.size - 0.5} cy={maze.size - 0.5} r={0.15} fill="hsl(45 93% 62%)" />
+            <circle cx={maze.size - 0.5} cy={maze.size - 0.5} r={0.3} fill="hsl(45 93% 52%)" opacity={0.9} />
+            <circle cx={maze.size - 0.5} cy={maze.size - 0.5} r={0.16} fill="hsl(45 93% 62%)" />
+            <text x={maze.size - 0.5} y={maze.size - 0.05} textAnchor="middle" fill="hsl(45 93% 52%)" fontSize={0.2} fontWeight="bold">
+              GOAL
+            </text>
 
             {/* Player */}
             <circle cx={pos[1] + 0.5} cy={pos[0] + 0.5} r={0.32} fill="hsl(var(--primary))" />
@@ -358,7 +385,7 @@ function MazePhase({ maze, onSolve, onFail, isPending }: {
         </div>
 
         <Button variant="ghost" onClick={() => { onFail(); reset(); }} disabled={isPending} className="w-full text-xs text-muted-foreground">
-          Give Up This Attempt
+          Give Up This Attempt (+1 try)
         </Button>
       </div>
     </motion.div>
@@ -370,7 +397,11 @@ function SuccessScreen({ lock, attempt, onBack }: { lock: any; attempt: any; onB
   return (
     <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4">
       <div className="glass-card p-6 text-center border border-primary/20">
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.2, stiffness: 200 }}>
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: 'spring', delay: 0.2, stiffness: 200 }}
+        >
           <div className="w-16 h-16 rounded-2xl bg-primary/15 flex items-center justify-center mx-auto mb-4">
             <Unlock className="w-8 h-8 text-primary" />
           </div>
@@ -386,9 +417,13 @@ function SuccessScreen({ lock, attempt, onBack }: { lock: any; attempt: any; onB
             <div className="text-[10px] text-muted-foreground font-semibold">Total Attempts</div>
           </div>
           <div className="bg-muted/20 rounded-xl p-3">
-            <div className="text-2xl font-black text-primary">✓</div>
-            <div className="text-[10px] text-muted-foreground font-semibold">All 3 Phases</div>
+            <div className="text-2xl font-black text-primary">3/3</div>
+            <div className="text-[10px] text-muted-foreground font-semibold">Phases Cleared</div>
           </div>
+        </div>
+
+        <div className="text-[10px] text-muted-foreground mb-2">
+          +5 crack points earned{attempt?.total_attempts <= 5 ? ' · Potential best crack bonus!' : ''}
         </div>
       </div>
 
@@ -482,7 +517,6 @@ export default function LockboxCrackPage() {
     });
     invalidateAll();
     toast.success('Lock fully cracked! 🔓🎉');
-    // Log to activity feed
     logActivity(user.id, {
       event_type: 'lockbox_cracked',
       target_type: 'lockbox_lock',
@@ -498,7 +532,7 @@ export default function LockboxCrackPage() {
       guessValue: 'failed', lockCode: 'solved',
     });
     invalidateAll();
-    toast.error('Maze attempt failed');
+    toast.error('Maze attempt failed — +1 try');
   };
 
   const goBack = () => navigate('/lockbox');
@@ -517,7 +551,6 @@ export default function LockboxCrackPage() {
     );
   }
 
-  // Edge case: own lock
   if (lock.user_id === user?.id) {
     return (
       <div className="pb-6">
@@ -526,9 +559,10 @@ export default function LockboxCrackPage() {
           <div><h1 className="page-header-title">Your Lock</h1></div>
         </div>
         <div className="glass-card p-6 text-center">
-          <Lock className="w-8 h-8 mx-auto mb-3 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">You can't crack your own lock!</p>
-          <Button onClick={goBack} className="mt-4">Back to Lockbox</Button>
+          <Shield className="w-8 h-8 mx-auto mb-3 text-primary/40" />
+          <h3 className="font-bold text-sm mb-1">This is your lock</h3>
+          <p className="text-[11px] text-muted-foreground mb-4">You can't crack your own lock — go crack someone else's!</p>
+          <Button onClick={goBack}>Back to Lockbox</Button>
         </div>
       </div>
     );
@@ -547,13 +581,15 @@ export default function LockboxCrackPage() {
             <p className="page-header-subtitle">
               {isSolved
                 ? `🔓 Cracked in ${attempt?.total_attempts} attempts`
-                : `${attempt?.total_attempts || 0} attempts`}
+                : attempt
+                ? `${attempt.total_attempts} attempt${attempt.total_attempts !== 1 ? 's' : ''} so far`
+                : 'Ready to crack'}
             </p>
           </div>
           {!isSolved && attempt && (
-            <div className="text-right">
+            <div className="glass-card px-3 py-1.5 text-center">
               <div className="text-lg font-black text-primary">{attempt.total_attempts}</div>
-              <div className="text-[9px] text-muted-foreground font-semibold">tries</div>
+              <div className="text-[8px] text-muted-foreground font-bold tracking-wider">TRIES</div>
             </div>
           )}
         </div>
