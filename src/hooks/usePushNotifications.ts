@@ -49,7 +49,7 @@ export function usePushNotifications() {
         const registration = await navigator.serviceWorker.ready;
         const subscription = await registration.pushManager.getSubscription();
         if (subscription) {
-          const { data } = await (supabase as any)
+          const { data } = await supabase
             .from('push_subscriptions')
             .select('id')
             .eq('endpoint', subscription.endpoint)
@@ -91,7 +91,7 @@ export function usePushNotifications() {
       const p256dh = arrayBufferToBase64Url(key);
       const authStr = arrayBufferToBase64Url(auth);
 
-      const { error } = await (supabase as any).from('push_subscriptions').upsert(
+      const { error } = await supabase.from('push_subscriptions').upsert(
         {
           user_id: user.id,
           endpoint: subscription.endpoint,
@@ -119,7 +119,7 @@ export function usePushNotifications() {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
-        await (supabase as any)
+        await supabase
           .from('push_subscriptions')
           .delete()
           .eq('endpoint', subscription.endpoint);
