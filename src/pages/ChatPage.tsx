@@ -24,6 +24,22 @@ export default function ChatPage() {
   const { play } = useSoundEffect();
   const composerRef = useRef<MessageComposerHandle>(null);
 
+  // Dynamic viewport height to handle mobile keyboard
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const update = () => {
+      setViewportHeight(vv.height);
+    };
+
+    update();
+    vv.addEventListener('resize', update);
+    return () => vv.removeEventListener('resize', update);
+  }, []);
+
   const [channels, setChannels] = useState<Channel[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [channelMeta, setChannelMeta] = useState<Map<string, ChannelMeta>>(new Map());
