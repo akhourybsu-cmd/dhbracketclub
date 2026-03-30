@@ -128,8 +128,8 @@ export function ChannelList({
                             meta?.unread && "bg-muted/25"
                           )}
                         >
-                          {/* Drag handle */}
-                          <div className="w-4 flex-shrink-0 flex items-center justify-center opacity-0 group-hover:opacity-40 transition-opacity cursor-grab active:cursor-grabbing">
+                          {/* Drag handle — desktop only */}
+                          <div className="w-4 flex-shrink-0 items-center justify-center opacity-0 group-hover:opacity-40 transition-opacity cursor-grab active:cursor-grabbing hidden lg:flex">
                             <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
                           </div>
 
