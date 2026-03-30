@@ -1,85 +1,54 @@
 
 
-## Chat Optimization Plan
+## Fix Clipping & Out-of-Bounds Issues on Mobile (iPhone)
 
-### Overview
-Polish the chat to feel snappier, more responsive, and more fun — without breaking existing functionality. Six targeted improvements across performance, micro-interactions, and visual refinement.
-
----
-
-### 1. Stabilize callback references to prevent unnecessary re-renders
-
-**Problem**: In `ChatPage.tsx`, handler functions like `toggleReaction`, `togglePin`, `deleteMessage`, `startEditing`, and `openThread` are recreated every render because they lack `useCallback`. Since `MessageList` passes these to memoized `MessageBubble` components, the memo comparator doesn't check function refs — but the parent still does unnecessary work diffing.
-
-**Fix**: Wrap `toggleReaction`, `togglePin`, `deleteMessage`, `startEditing`, `openThread`, and `handleSaveEdit` in `useCallback` with proper dependency arrays. This ensures the functions are stable across renders.
+After reviewing the codebase, I identified several areas where content can clip or escape boundaries, especially on iPhones with notches/Dynamic Island and safe area insets.
 
 ---
 
-### 2. Virtualize the message list for large channels
+### Issues Found
 
-**Problem**: Channels with hundreds of messages render every `MessageBubble` DOM node, causing layout thrash on scroll and slow initial paint.
+1. **Channel list view not scrollable on mobile** — The channel list wrapper (`div.w-full`) inside the chat page has no `overflow-y-auto`. If there are many channels, they overflow the container and get clipped by `overflow-hidden` on the parent. On iPhone this means channels at the bottom are unreachable.
 
-**Fix**: Replace the plain `.map()` in `MessageList` with a lightweight virtualization approach. Rather than adding a heavy library, use `content-visibility: auto` CSS on each message wrapper `div`. This lets the browser skip layout/paint for offscreen messages natively — zero dependencies, big wins on long channels.
+2. **No horizontal safe area insets** — The app uses `env(safe-area-inset-bottom)` in several places but never accounts for `safe-area-inset-left` or `safe-area-inset-right`. On iPhones in landscape, content can clip behind the notch/sensor housing. The `viewport-fit=cover` meta tag is already set, which means the app *must* handle safe areas on all sides.
 
-**Files**: `MessageList.tsx` — add `style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 60px' }}` to each message wrapper div.
+3. **Chat header back button clips on left edge** — The back chevron (`-ml-1`) in the message view header sits very close to the left edge. On iPhones with rounded corners or in landscape, this can feel clipped.
 
----
+4. **Mobile action sheet (reactions) lacks side safe areas** — The `MessageBubble` action sheet is `fixed bottom-0 left-0 right-0` with only bottom safe area padding. On landscape iPhone, the left/right edges can be behind the notch.
 
-### 3. Debounce scroll handler and use passive listener
-
-**Problem**: The `onScroll` handler in `MessageList` fires on every scroll frame, calling `setState` (for `autoScroll`) on each tick.
-
-**Fix**:
-- Add `{ passive: true }` via `useEffect` with `addEventListener` instead of the JSX `onScroll` prop (passive listeners can't be set via React's synthetic events).
-- Throttle the handler to ~60ms using `requestAnimationFrame` guard so state updates batch naturally.
+5. **Channel list `ChannelList.tsx` padding doesn't account for safe areas** — The `px-4` is fine for portrait but insufficient for landscape on notched iPhones.
 
 ---
 
-### 4. Add micro-interaction polish
+### Plan
 
-Small touches that make the chat feel alive:
+#### 1. Make channel list scrollable on mobile
+In `ChatPage.tsx` (line 606), add `overflow-y-auto` to the channel list wrapper div so the list scrolls when channels exceed the viewport height.
 
-| Element | Enhancement |
-|---------|------------|
-| **Send button** | Add a spring scale animation on press (`active:scale-90 transition-transform`) and a brief success pulse after sending |
-| **Message appear** | Add a subtle `initial={{ opacity: 0, y: 6 }}` fade-up on new messages only (not on initial load or pagination) via a flag |
-| **Reaction tap** | Add `active:scale-90` spring on reaction emoji buttons for tactile feedback |
-| **Channel switch** | Cross-fade messages with a quick `opacity` transition instead of an instant swap |
+#### 2. Add horizontal safe area insets globally
+In `index.css`, add `padding-left: env(safe-area-inset-left, 0px)` and `padding-right: env(safe-area-inset-right, 0px)` to the `body` element. This protects all content from landscape notch clipping without needing per-component changes.
 
-**Files**: `MessageComposer.tsx`, `MessageBubble.tsx`, `MessageList.tsx`
+#### 3. Add safe area padding to the mobile bottom nav
+In `AppLayout.tsx` (line 180), the mobile nav already has bottom safe area but not left/right. Add `paddingLeft: 'env(safe-area-inset-left, 0px)'` and `paddingRight: 'env(safe-area-inset-right, 0px)'` to the style object.
 
----
+#### 4. Add safe area padding to the chat message action sheet
+In `MessageBubble.tsx`, the fixed action sheet (line 379) needs horizontal safe area insets added to its style: `paddingLeft` and `paddingRight` with `env(safe-area-inset-left)`.
 
-### 5. Improve composer feel
+#### 5. Increase chat header left padding on mobile
+In `ChatPage.tsx` (line 647), change `-ml-1` on the back button to `-ml-0.5` and add `pl-[max(1rem,env(safe-area-inset-left,0px))]` to the header bar so it respects the left safe area.
 
-**Problem**: The composer textarea feels flat — no visual feedback on focus beyond a ring, and the send button transition is basic.
-
-**Fix**:
-- Add a subtle background color shift on focus (`focus:bg-muted/25`)
-- Animate the send button entrance/exit with `framer-motion` scale+opacity when `value.trim()` toggles
-- Add a brief `scale(0.92)` press animation on the send button via Tailwind `active:scale-[0.92]`
-- Show a subtle gradient border on the textarea when focused
-
-**Files**: `MessageComposer.tsx`
-
----
-
-### 6. Optimize realtime handler to avoid profile fetches for known users
-
-**Problem**: Every incoming message from another user triggers a `supabase.from('profiles').select()` query to get their display name and avatar. For active channels this means redundant network requests.
-
-**Fix**: Maintain a `profileCache` ref (`Map<string, Profile>`) in `ChatPage.tsx`. Before fetching, check the cache. Populate it from the `members` array on load. This eliminates most profile fetches during active conversation.
-
-**Files**: `ChatPage.tsx`
+#### 6. Add safe area to MessageComposer
+In `MessageComposer.tsx` (line 184), add left/right safe area insets to the container's style object alongside the existing bottom inset.
 
 ---
 
 ### Files to modify
 
-| File | Changes |
-|------|---------|
-| `src/pages/ChatPage.tsx` | Wrap handlers in `useCallback`; add profile cache for realtime |
-| `src/components/chat/MessageList.tsx` | `content-visibility` on message wrappers; passive throttled scroll; new-message fade-in animation |
-| `src/components/chat/MessageComposer.tsx` | Focus background shift; animated send button; press feedback |
-| `src/components/chat/MessageBubble.tsx` | `active:scale-90` on reaction buttons; keep existing memo intact |
+| File | Change |
+|------|--------|
+| `src/index.css` | Add `padding-left/right: env(safe-area-inset-left/right)` to `body` |
+| `src/components/AppLayout.tsx` | Add horizontal safe area to mobile bottom nav |
+| `src/pages/ChatPage.tsx` | Add `overflow-y-auto` to channel list wrapper; add safe area to chat header |
+| `src/components/chat/MessageBubble.tsx` | Add horizontal safe area to action sheet |
+| `src/components/chat/MessageComposer.tsx` | Add horizontal safe area to composer container |
 
