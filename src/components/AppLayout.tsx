@@ -181,6 +181,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
         backdropFilter: 'blur(28px) saturate(200%)',
         boxShadow: '0 -4px 24px rgba(0,0,0,0.15), inset 0 1px 0 hsl(var(--foreground) / 0.02)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        paddingLeft: 'env(safe-area-inset-left, 0px)',
+        paddingRight: 'env(safe-area-inset-right, 0px)',
       }}>
         <div className="flex items-center justify-around h-[4rem] px-1">
           {navItems.map((item) => {
