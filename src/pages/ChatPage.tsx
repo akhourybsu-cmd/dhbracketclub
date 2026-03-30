@@ -708,6 +708,7 @@ export default function ChatPage() {
                   replies={threadMessages}
                   replyValue={threadReply}
                   onReplyChange={setThreadReply}
+                  onSendReply={handleThreadReply}
                   onClose={() => { setThreadParent(null); setTimeout(() => composerRef.current?.focus(), 100); }}
                 />
               </div>
