@@ -466,7 +466,7 @@ export default function LeaderboardPage() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: Math.min(i * 0.025, 0.4), type: 'spring', damping: 28, stiffness: 320 }}
                     className={cn(
-                      "grid grid-cols-[2rem_1fr_4.5rem_3.5rem_2.5rem] gap-1.5 px-4 items-center relative z-10 group transition-colors duration-200",
+                      "grid grid-cols-[1.75rem_1fr_3.5rem_2.5rem_2rem] sm:grid-cols-[2rem_1fr_4.5rem_3.5rem_2.5rem] gap-1 sm:gap-1.5 px-3 sm:px-4 items-center relative z-10 group transition-colors duration-200",
                       isMe ? "py-3.5" : "py-3",
                       i < standings.length - 1 && "border-b border-border/25",
                     )}

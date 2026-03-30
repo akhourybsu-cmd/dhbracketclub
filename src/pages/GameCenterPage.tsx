@@ -170,7 +170,7 @@ export default function GameCenterPage() {
               <Activity className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Game Center</h1>
+              <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight">Game Center</h1>
               <p className="text-sm text-muted-foreground font-medium mt-0.5">Live scores & results</p>
             </div>
           </div>
