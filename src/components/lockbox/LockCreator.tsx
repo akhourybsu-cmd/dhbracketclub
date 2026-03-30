@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Lock, Check, ChevronRight } from 'lucide-react';
+import { Lock, Check, ChevronRight, Shield, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreateLock } from '@/hooks/useLockbox';
@@ -13,83 +13,83 @@ interface Props {
   myLock: any;
 }
 
+// ── Lock Status Card (when lock exists) ──
+function LockStatusCard({ myLock }: { myLock: any }) {
+  const colors = myLock.color_code.split(',');
+  const isCracked = myLock.is_cracked;
+
+  return (
+    <div className={`glass-card p-5 border ${isCracked ? 'border-destructive/20' : 'border-primary/15'}`}>
+      <div className="flex items-center gap-3 mb-4">
+        <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${isCracked ? 'bg-destructive/12' : 'bg-primary/12'}`}>
+          {isCracked ? <ShieldAlert className="w-5 h-5 text-destructive" /> : <ShieldCheck className="w-5 h-5 text-primary" />}
+        </div>
+        <div>
+          <h3 className="font-bold text-sm">{isCracked ? 'Lock Cracked 💔' : 'Lock Active 🔒'}</h3>
+          <p className="text-[10px] text-muted-foreground">
+            {isCracked ? 'Someone broke through your defenses' : 'Your lock is holding strong this week'}
+          </p>
+        </div>
+        <div className={`ml-auto px-2.5 py-1 rounded-full text-[9px] font-bold ${
+          isCracked ? 'bg-destructive/15 text-destructive' : 'bg-primary/15 text-primary'
+        }`}>
+          {isCracked ? 'CRACKED' : 'DEFENDING'}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <div className="text-[9px] font-bold text-muted-foreground/60 mb-1.5 tracking-wider">NUMBERS</div>
+          <div className="flex gap-1.5">
+            {myLock.number_code.split(',').map((d: string, i: number) => (
+              <div key={i} className="w-9 h-9 rounded-lg bg-muted/20 flex items-center justify-center font-mono font-bold text-sm">{d}</div>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div className="text-[9px] font-bold text-muted-foreground/60 mb-1.5 tracking-wider">COLORS</div>
+          <div className="flex gap-1.5">
+            {colors.map((c: string, i: number) => {
+              const color = LOCKBOX_COLORS.find(lc => lc.name === c);
+              return <div key={i} className="w-9 h-9 rounded-lg border border-border/20" style={{ background: color?.value || 'gray' }} />;
+            })}
+          </div>
+        </div>
+        <div>
+          <div className="text-[9px] font-bold text-muted-foreground/60 mb-1.5 tracking-wider">MAZE</div>
+          <MazePreview mazeId={myLock.maze_id} size={80} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Lock Creator Steps ──
 export function LockCreator({ weekId, myLock }: Props) {
   const { user } = useAuth();
   const createLock = useCreateLock();
-  const [step, setStep] = useState(0); // 0=number, 1=color, 2=maze
+  const [step, setStep] = useState(0);
   const [numberCode, setNumberCode] = useState<number[]>([]);
   const [colorCode, setColorCode] = useState<string[]>([]);
   const [mazeId, setMazeId] = useState<number | null>(null);
 
-  if (myLock) {
-    const colors = myLock.color_code.split(',');
-    return (
-      <div className="glass-card p-5">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10">
-            <Lock className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h3 className="font-bold text-sm">Your Lock is Set</h3>
-            <p className="text-[11px] text-muted-foreground">
-              {myLock.is_cracked ? '💔 Someone cracked it!' : '🔒 Still holding strong'}
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <div>
-            <div className="text-[10px] font-semibold text-muted-foreground mb-1.5">NUMBER CODE</div>
-            <div className="flex gap-2">
-              {myLock.number_code.split(',').map((d: string, i: number) => (
-                <div key={i} className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center font-mono font-bold text-lg">
-                  {d}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div>
-            <div className="text-[10px] font-semibold text-muted-foreground mb-1.5">COLOR CODE</div>
-            <div className="flex gap-2">
-              {colors.map((c: string, i: number) => {
-                const color = LOCKBOX_COLORS.find(lc => lc.name === c);
-                return (
-                  <div key={i} className="w-10 h-10 rounded-lg border border-border/50" style={{ background: color?.value || 'gray' }} />
-                );
-              })}
-            </div>
-          </div>
-          <div>
-            <div className="text-[10px] font-semibold text-muted-foreground mb-1.5">MAZE</div>
-            <MazePreview mazeId={myLock.maze_id} size={120} />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (myLock) return <LockStatusCard myLock={myLock} />;
 
   const handleSelectDigit = (d: number) => {
-    if (numberCode.includes(d)) {
-      setNumberCode(numberCode.filter(n => n !== d));
-    } else if (numberCode.length < 3) {
-      setNumberCode([...numberCode, d]);
-    }
+    if (numberCode.includes(d)) setNumberCode(numberCode.filter(n => n !== d));
+    else if (numberCode.length < 3) setNumberCode([...numberCode, d]);
   };
 
   const handleSelectColor = (c: string) => {
-    if (colorCode.includes(c)) {
-      setColorCode(colorCode.filter(n => n !== c));
-    } else if (colorCode.length < 3) {
-      setColorCode([...colorCode, c]);
-    }
+    if (colorCode.includes(c)) setColorCode(colorCode.filter(n => n !== c));
+    else if (colorCode.length < 3) setColorCode([...colorCode, c]);
   };
 
   const handleSubmit = async () => {
     if (!weekId || !user || numberCode.length !== 3 || colorCode.length !== 3 || !mazeId) return;
     try {
       await createLock.mutateAsync({
-        week_id: weekId,
-        user_id: user.id,
+        week_id: weekId, user_id: user.id,
         number_code: numberCode.join(','),
         color_code: colorCode.join(','),
         maze_id: mazeId,
@@ -105,9 +105,13 @@ export function LockCreator({ weekId, myLock }: Props) {
       {/* Progress */}
       <div className="flex gap-1">
         {['Numbers', 'Colors', 'Maze'].map((label, i) => (
-          <button key={i} onClick={() => setStep(i)} className="flex-1">
-            <div className={`h-1 rounded-full transition-colors ${i <= step ? 'bg-primary' : 'bg-muted/30'}`} />
-            <div className={`text-[9px] mt-1 font-semibold ${i === step ? 'text-primary' : 'text-muted-foreground/50'}`}>{label}</div>
+          <button key={i} onClick={() => {
+            if (i === 1 && numberCode.length !== 3) return;
+            if (i === 2 && colorCode.length !== 3) return;
+            setStep(i);
+          }} className="flex-1">
+            <div className={`h-1.5 rounded-full transition-colors ${i <= step ? 'bg-primary' : 'bg-muted/20'}`} />
+            <div className={`text-[10px] mt-1 font-bold ${i === step ? 'text-primary' : 'text-muted-foreground/40'}`}>{label}</div>
           </button>
         ))}
       </div>
@@ -115,31 +119,32 @@ export function LockCreator({ weekId, myLock }: Props) {
       {step === 0 && (
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="glass-card p-5">
           <h3 className="font-bold text-sm mb-1">Pick 3 Digits</h3>
-          <p className="text-[11px] text-muted-foreground mb-4">Choose 3 unique digits (0-5). Order matters!</p>
-          <div className="flex gap-2 mb-4">
+          <p className="text-[11px] text-muted-foreground mb-4">Choose 3 unique digits (0–5). Order matters!</p>
+          <div className="flex gap-2.5 mb-4 justify-center">
             {numberCode.map((d, i) => (
-              <div key={i} className="w-12 h-12 rounded-lg bg-primary/15 border border-primary/30 flex items-center justify-center font-mono font-bold text-xl text-primary">
+              <motion.div key={i} initial={{ scale: 0.5 }} animate={{ scale: 1 }}
+                className="w-14 h-14 rounded-xl bg-primary/15 border-2 border-primary/40 flex items-center justify-center font-mono font-black text-2xl text-primary">
                 {d}
-              </div>
+              </motion.div>
             ))}
             {Array.from({ length: 3 - numberCode.length }).map((_, i) => (
-              <div key={`e-${i}`} className="w-12 h-12 rounded-lg border border-dashed border-muted-foreground/20 flex items-center justify-center">
-                <span className="text-muted-foreground/30 text-xl">?</span>
+              <div key={`e-${i}`} className="w-14 h-14 rounded-xl border-2 border-dashed border-muted-foreground/15 flex items-center justify-center">
+                <span className="text-muted-foreground/20 text-2xl font-mono">?</span>
               </div>
             ))}
           </div>
           <div className="grid grid-cols-6 gap-2 mb-4">
             {LOCKBOX_DIGITS.map(d => (
               <button key={d} onClick={() => handleSelectDigit(d)}
-                className={`h-11 rounded-lg font-mono font-bold text-lg transition-all ${
-                  numberCode.includes(d) ? 'bg-primary text-primary-foreground scale-95' : 'bg-muted/40 hover:bg-muted/60'
+                className={`h-12 rounded-xl font-mono font-bold text-lg transition-all active:scale-90 ${
+                  numberCode.includes(d) ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'bg-muted/30 hover:bg-muted/50'
                 }`}>
                 {d}
               </button>
             ))}
           </div>
-          <Button onClick={() => setStep(1)} disabled={numberCode.length !== 3} className="w-full">
-            Next <ChevronRight className="w-4 h-4" />
+          <Button onClick={() => setStep(1)} disabled={numberCode.length !== 3} className="w-full h-11">
+            Next <ChevronRight className="w-4 h-4 ml-1" />
           </Button>
         </motion.div>
       )}
@@ -148,32 +153,31 @@ export function LockCreator({ weekId, myLock }: Props) {
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="glass-card p-5">
           <h3 className="font-bold text-sm mb-1">Pick 3 Colors</h3>
           <p className="text-[11px] text-muted-foreground mb-4">Choose 3 unique colors. Order matters!</p>
-          <div className="flex gap-2 mb-4">
+          <div className="flex gap-2.5 mb-4 justify-center">
             {colorCode.map((c, i) => {
               const color = LOCKBOX_COLORS.find(lc => lc.name === c);
               return (
-                <div key={i} className="w-12 h-12 rounded-lg border-2 border-primary/30" style={{ background: color?.value }}>
-                  <Check className="w-4 h-4 text-white m-auto mt-3.5" />
-                </div>
+                <motion.div key={i} initial={{ scale: 0.5 }} animate={{ scale: 1 }}
+                  className="w-14 h-14 rounded-xl border-2 border-primary/40 shadow-lg" style={{ background: color?.value }} />
               );
             })}
             {Array.from({ length: 3 - colorCode.length }).map((_, i) => (
-              <div key={`e-${i}`} className="w-12 h-12 rounded-lg border border-dashed border-muted-foreground/20" />
+              <div key={`e-${i}`} className="w-14 h-14 rounded-xl border-2 border-dashed border-muted-foreground/15" />
             ))}
           </div>
-          <div className="flex gap-2 mb-4">
+          <div className="grid grid-cols-5 gap-2 mb-4">
             {LOCKBOX_COLORS.map(c => (
               <button key={c.name} onClick={() => handleSelectColor(c.name)}
-                className={`flex-1 h-14 rounded-lg transition-all border-2 ${
-                  colorCode.includes(c.name) ? 'border-primary scale-95 opacity-60' : 'border-transparent hover:scale-105'
+                className={`h-14 rounded-xl transition-all active:scale-90 border-2 ${
+                  colorCode.includes(c.name) ? 'border-primary ring-2 ring-primary/30 opacity-70 scale-95' : 'border-transparent hover:scale-105'
                 }`}
                 style={{ background: c.value }}>
-                <span className="text-[9px] font-bold text-white/90 drop-shadow">{c.name}</span>
+                <span className="text-[9px] font-bold text-white/90 drop-shadow-md">{c.name}</span>
               </button>
             ))}
           </div>
-          <Button onClick={() => setStep(2)} disabled={colorCode.length !== 3} className="w-full">
-            Next <ChevronRight className="w-4 h-4" />
+          <Button onClick={() => setStep(2)} disabled={colorCode.length !== 3} className="w-full h-11">
+            Next <ChevronRight className="w-4 h-4 ml-1" />
           </Button>
         </motion.div>
       )}
@@ -185,16 +189,16 @@ export function LockCreator({ weekId, myLock }: Props) {
           <div className="grid grid-cols-2 gap-3 mb-4">
             {PRESET_MAZES.map(maze => (
               <button key={maze.id} onClick={() => setMazeId(maze.id)}
-                className={`p-3 rounded-xl border-2 transition-all ${
-                  mazeId === maze.id ? 'border-primary bg-primary/5' : 'border-border/30 hover:border-border/60'
+                className={`p-3 rounded-xl border-2 transition-all active:scale-95 ${
+                  mazeId === maze.id ? 'border-primary bg-primary/5' : 'border-border/20 hover:border-border/40'
                 }`}>
                 <MazePreview mazeId={maze.id} size={100} />
-                <div className="text-[10px] font-bold mt-2">{maze.name}</div>
+                <div className="text-[11px] font-bold mt-2">{maze.name}</div>
                 <div className="text-[9px] text-muted-foreground">{maze.size}×{maze.size}</div>
               </button>
             ))}
           </div>
-          <Button onClick={handleSubmit} disabled={!mazeId || createLock.isPending} className="w-full">
+          <Button onClick={handleSubmit} disabled={!mazeId || createLock.isPending} className="w-full h-11 font-bold">
             {createLock.isPending ? 'Creating…' : '🔒 Set My Lock'}
           </Button>
         </motion.div>
