@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { History, Trophy, ChevronRight, Lock, Calendar } from 'lucide-react';
+import { History, ChevronRight, Calendar, Shield, Swords } from 'lucide-react';
 import { usePastWeeks, useWeekScores, useAllWeekLocks } from '@/hooks/useLockbox';
 
 function WeekDetail({ week }: { week: any }) {
@@ -10,22 +10,23 @@ function WeekDetail({ week }: { week: any }) {
 
   return (
     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-2 space-y-2">
-      {/* Winner + podium */}
       {scores && scores.length > 0 && (
         <div className="glass-card p-3.5">
           <div className="text-[10px] font-bold text-muted-foreground/60 mb-2 tracking-wider">FINAL STANDINGS</div>
           {scores.slice(0, 5).map((s: any, i: number) => (
-            <div key={s.id} className={`flex items-center gap-2.5 py-1.5 ${i < scores.length - 1 ? 'border-b border-border/5' : ''}`}>
+            <div key={s.id} className={`flex items-center gap-2.5 py-1.5 ${i < Math.min(scores.length, 5) - 1 ? 'border-b border-border/5' : ''}`}>
               <span className="w-6 text-center text-sm">{i < 3 ? medals[i] : `#${i + 1}`}</span>
               <span className="text-[12px] font-bold flex-1 truncate">{s.profiles?.display_name || 'Player'}</span>
-              <span className="text-[10px] text-muted-foreground">🗡️{s.crack_points} 🛡️{s.defense_points}</span>
+              <div className="flex gap-2 text-[10px] text-muted-foreground">
+                <span className="flex items-center gap-0.5"><Swords className="w-3 h-3" />{s.crack_points}</span>
+                <span className="flex items-center gap-0.5"><Shield className="w-3 h-3" />{s.defense_points}</span>
+              </div>
               <span className="font-bold text-sm">{s.total_points}</span>
             </div>
           ))}
         </div>
       )}
 
-      {/* Lock summary */}
       {locks && locks.length > 0 && (
         <div className="glass-card p-3.5">
           <div className="text-[10px] font-bold text-muted-foreground/60 mb-2 tracking-wider">LOCKS</div>
@@ -63,7 +64,7 @@ export function LockboxHistory() {
       <div className="glass-card p-8 text-center">
         <History className="w-8 h-8 mx-auto mb-3 text-muted-foreground/30" />
         <h3 className="font-bold text-sm mb-1">No History Yet</h3>
-        <p className="text-[11px] text-muted-foreground">Past weeks will appear here</p>
+        <p className="text-[11px] text-muted-foreground">Past weekly results will appear here</p>
       </div>
     );
   }

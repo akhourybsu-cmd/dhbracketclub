@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Lock, Check, ChevronRight, Shield, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Lock, ChevronRight, Shield, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreateLock } from '@/hooks/useLockbox';
@@ -14,7 +14,7 @@ interface Props {
   myLock: any;
 }
 
-// ── Lock Status Card (when lock exists) ──
+// ── Lock Status Card ──
 function LockStatusCard({ myLock }: { myLock: any }) {
   const colors = myLock.color_code.split(',');
   const isCracked = myLock.is_cracked;
@@ -28,7 +28,7 @@ function LockStatusCard({ myLock }: { myLock: any }) {
         <div>
           <h3 className="font-bold text-sm">{isCracked ? 'Lock Cracked 💔' : 'Lock Active 🔒'}</h3>
           <p className="text-[10px] text-muted-foreground">
-            {isCracked ? 'Someone broke through your defenses' : 'Your lock is holding strong this week'}
+            {isCracked ? 'Someone broke through your defenses' : 'Your lock is defending — earn 5 pts if uncracked!'}
           </p>
         </div>
         <div className={`ml-auto px-2.5 py-1 rounded-full text-[9px] font-bold ${
@@ -125,7 +125,7 @@ export function LockCreator({ weekId, myLock }: Props) {
       {step === 0 && (
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="glass-card p-5">
           <h3 className="font-bold text-sm mb-1">Pick 3 Digits</h3>
-          <p className="text-[11px] text-muted-foreground mb-4">Choose 3 unique digits (0–5). Order matters!</p>
+          <p className="text-[10px] text-muted-foreground mb-4">Choose 3 unique digits (0–5). Order matters!</p>
           <div className="flex gap-2.5 mb-4 justify-center">
             {numberCode.map((d, i) => (
               <motion.div key={i} initial={{ scale: 0.5 }} animate={{ scale: 1 }}
@@ -158,7 +158,7 @@ export function LockCreator({ weekId, myLock }: Props) {
       {step === 1 && (
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="glass-card p-5">
           <h3 className="font-bold text-sm mb-1">Pick 3 Colors</h3>
-          <p className="text-[11px] text-muted-foreground mb-4">Choose 3 unique colors. Order matters!</p>
+          <p className="text-[10px] text-muted-foreground mb-4">Choose 3 unique colors. Order matters!</p>
           <div className="flex gap-2.5 mb-4 justify-center">
             {colorCode.map((c, i) => {
               const color = LOCKBOX_COLORS.find(lc => lc.name === c);
@@ -175,7 +175,7 @@ export function LockCreator({ weekId, myLock }: Props) {
             {LOCKBOX_COLORS.map(c => (
               <button key={c.name} onClick={() => handleSelectColor(c.name)}
                 className={`h-14 rounded-xl transition-all active:scale-90 border-2 ${
-                  colorCode.includes(c.name) ? 'border-primary ring-2 ring-primary/30 opacity-70 scale-95' : 'border-transparent hover:scale-105'
+                  colorCode.includes(c.name) ? 'border-primary ring-2 ring-primary/30 scale-95' : 'border-transparent hover:scale-105'
                 }`}
                 style={{ background: c.value }}>
                 <span className="text-[9px] font-bold text-white/90 drop-shadow-md">{c.name}</span>
@@ -191,7 +191,7 @@ export function LockCreator({ weekId, myLock }: Props) {
       {step === 2 && (
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="glass-card p-5">
           <h3 className="font-bold text-sm mb-1">Choose a Maze</h3>
-          <p className="text-[11px] text-muted-foreground mb-4">Pick one maze as your final defense layer</p>
+          <p className="text-[10px] text-muted-foreground mb-4">Pick your final defense layer</p>
           <div className="grid grid-cols-2 gap-3 mb-4">
             {PRESET_MAZES.map(maze => (
               <button key={maze.id} onClick={() => setMazeId(maze.id)}
