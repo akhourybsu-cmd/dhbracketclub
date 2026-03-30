@@ -1018,6 +1018,7 @@ export type Database = {
           drafts: boolean
           events: boolean
           id: string
+          mentions: boolean
           polls: boolean
           updated_at: string
           user_id: string
@@ -1028,6 +1029,7 @@ export type Database = {
           drafts?: boolean
           events?: boolean
           id?: string
+          mentions?: boolean
           polls?: boolean
           updated_at?: string
           user_id: string
@@ -1038,6 +1040,7 @@ export type Database = {
           drafts?: boolean
           events?: boolean
           id?: string
+          mentions?: boolean
           polls?: boolean
           updated_at?: string
           user_id?: string
@@ -1443,6 +1446,24 @@ export type Database = {
           endpoint?: string
           id?: string
           p256dh?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      push_throttle: {
+        Row: {
+          channel_id: string
+          last_sent_at: string
+          user_id: string
+        }
+        Insert: {
+          channel_id: string
+          last_sent_at?: string
+          user_id: string
+        }
+        Update: {
+          channel_id?: string
+          last_sent_at?: string
           user_id?: string
         }
         Relationships: []
