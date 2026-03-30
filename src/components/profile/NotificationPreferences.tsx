@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, BarChart3, CalendarDays, Bookmark, Bell } from 'lucide-react';
+import { MessageCircle, BarChart3, CalendarDays, Bookmark, Bell, AtSign } from 'lucide-react';
 import { useNotificationPreferences, NotificationPreferences } from '@/hooks/useNotificationPreferences';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
@@ -16,8 +16,9 @@ const PREF_ITEMS: {
   icon: typeof MessageCircle;
 }[] = [
   { key: 'chat_messages', label: 'Chat Messages', description: 'New messages in chat channels', icon: MessageCircle },
+  { key: 'mentions', label: 'Mentions', description: '@mentions always break through (even when chat is off)', icon: AtSign },
   { key: 'polls', label: 'Polls', description: 'New polls and voting updates', icon: BarChart3 },
-  { key: 'events', label: 'Events', description: 'Event reminders and RSVPs', icon: CalendarDays },
+  { key: 'events', label: 'Events', description: 'New events and RSVPs', icon: CalendarDays },
   { key: 'drafts', label: 'Drafts', description: 'Draft picks and turn alerts', icon: Bookmark },
 ];
 
@@ -34,7 +35,6 @@ export default function NotificationPreferencesSection() {
     if (!user) return;
     setTestingSend(true);
     try {
-      // Ensure subscribed first
       if (!isSubscribed) {
         const ok = await subscribe();
         if (!ok) {

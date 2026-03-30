@@ -184,6 +184,27 @@ export default function DraftDetailPage() {
 
       setPickText('');
       toast.success('Pick made! 🔥');
+
+      // Notify the next picker it's their turn
+      const nextTotal2 = pickNumber;
+      const nextRound2 = Math.floor(nextTotal2 / participants.length);
+      const nextPos2 = nextTotal2 % participants.length;
+      const nextOrderIdx2 = nextRound2 % 2 === 0 ? nextPos2 : participants.length - 1 - nextPos2;
+      const sorted2 = [...participants].sort((a, b) => a.pick_order - b.pick_order);
+      const nextPicker2 = sorted2[nextOrderIdx2];
+
+      if (nextPicker2 && pickNumber < participants.length * draft.num_rounds) {
+        supabase.functions.invoke('send-push-notification', {
+          body: {
+            type: 'draft',
+            title: '🎯 Your Turn to Pick!',
+            message: `It's your turn in "${draft.topic}" — Round ${nextRound2 + 1}`,
+            url: `/drafts/${draftId}`,
+            sender_user_id: user.id,
+          },
+        }).catch(() => {});
+      }
+
       fetchData();
 
       // Fire-and-forget enrichment for the new pick
