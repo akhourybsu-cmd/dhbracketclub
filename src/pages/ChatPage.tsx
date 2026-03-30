@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 
 import { ChannelList } from '@/components/chat/ChannelList';
 import { MessageList } from '@/components/chat/MessageList';
-import { MessageComposer } from '@/components/chat/MessageComposer';
+import { MessageComposer, type MessageComposerHandle } from '@/components/chat/MessageComposer';
 import { ThreadPanel } from '@/components/chat/ThreadPanel';
 import { UserAvatar } from '@/components/chat/UserAvatar';
 import { CHANNEL_EMOJI } from '@/components/chat/types';
