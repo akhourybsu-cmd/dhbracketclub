@@ -312,16 +312,16 @@ function MessageBubbleInner({
           {msg.reactions && msg.reactions.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1.5">
               {msg.reactions.map(r => (
-                <button
-                  key={r.emoji}
-                  onClick={(e) => { e.stopPropagation(); handleReaction(r.emoji); }}
-                  className={cn(
-                    "inline-flex items-center gap-1 h-6 px-1.5 rounded-md text-[11px] border transition-all duration-150",
-                    r.user_reacted
-                      ? "border-primary/25 bg-primary/8 text-primary scale-[1.02]"
-                      : "border-border/15 bg-muted/20 text-muted-foreground/70 hover:border-border/30 hover:bg-muted/35"
-                  )}
-                >
+                  <button
+                    key={r.emoji}
+                    onClick={(e) => { e.stopPropagation(); handleReaction(r.emoji); }}
+                    className={cn(
+                      "inline-flex items-center gap-1 h-6 px-1.5 rounded-md text-[11px] border transition-all duration-150 active:scale-90",
+                      r.user_reacted
+                        ? "border-primary/25 bg-primary/8 text-primary scale-[1.02]"
+                        : "border-border/15 bg-muted/20 text-muted-foreground/70 hover:border-border/30 hover:bg-muted/35"
+                    )}
+                  >
                   {r.emoji} <span className="font-bold text-[10px]">{r.count}</span>
                 </button>
               ))}
@@ -337,7 +337,7 @@ function MessageBubbleInner({
           {/* Floating action bar (desktop hover) — hidden while editing */}
           {!isBeingEdited && <div className="absolute -top-3 right-2 hidden group-hover:flex items-center gap-0.5 bg-background/95 border border-border/20 rounded-lg px-0.5 py-0.5 shadow-lg backdrop-blur-md z-30">
             {QUICK_EMOJIS.slice(0, 4).map(emoji => (
-              <button key={emoji} onClick={(e) => handleReaction(emoji, e)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 text-sm transition-colors">
+              <button key={emoji} onClick={(e) => handleReaction(emoji, e)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 text-sm transition-colors active:scale-90">
                 {emoji}
               </button>
             ))}

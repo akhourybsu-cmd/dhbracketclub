@@ -258,8 +258,14 @@ export default function ChatPage() {
             });
             return;
           }
-          const { data: profile } = await supabase.from('profiles').select('display_name, avatar_url').eq('id', newMsg.user_id).single();
-          setMessages(prev => [...prev, { ...newMsg, profiles: profile, reply_count: 0, reactions: [] }]);
+          // Check members cache before fetching profile
+          const cached = members.find(m => m.id === newMsg.user_id);
+          if (cached) {
+            setMessages(prev => [...prev, { ...newMsg, profiles: { display_name: cached.display_name, avatar_url: cached.avatar_url }, reply_count: 0, reactions: [] }]);
+          } else {
+            const { data: profile } = await supabase.from('profiles').select('display_name, avatar_url').eq('id', newMsg.user_id).single();
+            setMessages(prev => [...prev, { ...newMsg, profiles: profile, reply_count: 0, reactions: [] }]);
+          }
           play('ping');
         })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `channel_id=eq.${selectedChannel.id}` },
@@ -402,7 +408,7 @@ export default function ChatPage() {
     setSending(false);
   };
 
-  const openThread = async (msg: Message) => {
+  const openThread = useCallback(async (msg: Message) => {
     setThreadParent(msg);
     setShowPinned(false);
     const { data } = await supabase
@@ -411,7 +417,7 @@ export default function ChatPage() {
       .eq('parent_message_id', msg.id)
       .order('created_at', { ascending: true });
     setThreadMessages(data || []);
-  };
+  }, []);
 
   const handleThreadReply = async () => {
     if (!threadReply.trim() || !threadParent || !user || !selectedChannel) return;
@@ -453,7 +459,7 @@ export default function ChatPage() {
     }
   };
 
-  const toggleReaction = async (messageId: string, emoji: string) => {
+  const toggleReaction = useCallback(async (messageId: string, emoji: string) => {
     if (!user) return;
     play('tap');
     const { data: existing } = await supabase
@@ -465,15 +471,14 @@ export default function ChatPage() {
     } else {
       await supabase.from('message_reactions').insert({ message_id: messageId, user_id: user.id, emoji });
     }
-  };
+  }, [user, play]);
 
-  const togglePin = async (msg: Message) => {
+  const togglePin = useCallback(async (msg: Message) => {
     if (!user) return;
     play('tap');
     const wasPinned = msg.is_pinned;
     await supabase.from('messages').update({ is_pinned: !wasPinned }).eq('id', msg.id);
     toast.success(wasPinned ? 'Unpinned' : 'Pinned');
-    // Update pinned panel if open
     if (showPinned) {
       if (wasPinned) {
         setPinnedMessages(prev => prev.filter(m => m.id !== msg.id));
@@ -481,27 +486,27 @@ export default function ChatPage() {
         setPinnedMessages(prev => [msg, ...prev]);
       }
     }
-  };
+  }, [user, play, showPinned]);
 
-  const deleteMessage = async (msgId: string) => {
+  const deleteMessage = useCallback(async (msgId: string) => {
     await supabase.from('message_reactions').delete().eq('message_id', msgId);
     await supabase.from('messages').delete().eq('parent_message_id', msgId);
     await supabase.from('messages').delete().eq('id', msgId);
-  };
+  }, []);
 
-  const startEditing = (msg: Message) => {
+  const startEditing = useCallback((msg: Message) => {
     setEditingMessageId(msg.id);
     setEditContent(msg.content);
-  };
+  }, []);
 
-  const handleSaveEdit = async (msgId: string, content: string) => {
+  const handleSaveEdit = useCallback(async (msgId: string, content: string) => {
     if (!content.trim()) return;
     play('tap');
     await supabase.from('messages').update({ content: content.trim(), edited_at: new Date().toISOString() }).eq('id', msgId);
     setEditingMessageId(null);
     setEditContent('');
     toast.success('Message edited');
-  };
+  }, [play]);
 
   const loadPinnedMessages = async () => {
     if (!selectedChannel) return;
