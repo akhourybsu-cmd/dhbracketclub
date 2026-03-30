@@ -86,6 +86,31 @@ export function MessageList({
     prevMsgCount.current = messages.length;
   }, [messages, autoScroll]);
 
+  // When mobile keyboard opens (visualViewport shrinks), scroll to bottom so
+  // the last message stays visible above the composer
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    let prevHeight = vv.height;
+    const handleResize = () => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const delta = prevHeight - vv.height;
+      // Keyboard opened (viewport shrank by >100px)
+      if (delta > 100) {
+        // Scroll down by the amount the viewport shrank
+        requestAnimationFrame(() => {
+          el.scrollTop += delta;
+        });
+      }
+      prevHeight = vv.height;
+    };
+
+    vv.addEventListener('resize', handleResize);
+    return () => vv.removeEventListener('resize', handleResize);
+  }, []);
+
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
