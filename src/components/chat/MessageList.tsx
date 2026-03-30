@@ -112,17 +112,34 @@ export function MessageList({
     return () => vv.removeEventListener('resize', handleResize);
   }, []);
 
-  const handleScroll = useCallback(() => {
+  // Passive, RAF-throttled scroll handler
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
 
-    if (el.scrollTop < 80 && hasMore && !loadingMore && onLoadMore) {
-      onLoadMore();
-    }
+    const handleScroll = () => {
+      if (rafRef.current) return;
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null;
+        if (!el) return;
 
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
-    setAutoScroll(nearBottom);
-    if (nearBottom) setNewMsgCount(0);
+        if (el.scrollTop < 80 && hasMore && !loadingMore && onLoadMore) {
+          onLoadMore();
+        }
+
+        const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+        setAutoScroll(nearBottom);
+        if (nearBottom) setNewMsgCount(0);
+      });
+    };
+
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      el.removeEventListener('scroll', handleScroll);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
   }, [hasMore, loadingMore, onLoadMore]);
 
   const scrollToBottom = () => {
@@ -146,7 +163,7 @@ export function MessageList({
   const hasUnreadDivider = unreadDividerAfterIdx >= 0 && unreadDividerAfterIdx < filtered.length - 1;
 
   return (
-    <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-5 relative" style={{ minHeight: 0 }}>
+    <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-5 relative" style={{ minHeight: 0 }}>
       <div className="py-3 space-y-0.5">
         {loadingMore && (
           <div className="text-center py-2">
@@ -189,7 +206,7 @@ export function MessageList({
             getDateLabel(msg.created_at) === getDateLabel(nextMsg.created_at);
 
           return (
-            <div key={msg.id}>
+            <div key={msg.id} style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 60px' }}>
               {showDate && (
                 <div className="flex items-center gap-3 py-4">
                   <div className="flex-1 h-px bg-border/8" />

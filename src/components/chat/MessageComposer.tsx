@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback, useState, forwardRef, useImperativeHandle } from 'react';
 import { Send } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from './UserAvatar';
@@ -214,24 +215,33 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
             placeholder={placeholder || 'Message'}
             rows={1}
             className={cn(
-              "w-full resize-none bg-muted/15 border border-border/20 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary/30 transition-all duration-200 placeholder:text-muted-foreground/40",
+              "w-full resize-none bg-muted/15 border border-border/20 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary/30 focus:bg-muted/25 transition-all duration-200 placeholder:text-muted-foreground/40",
               compact ? "text-xs pl-3.5 pr-11 py-2" : "text-sm pl-4 pr-12 py-3"
             )}
             autoComplete="off"
             style={{ minHeight: compact ? 36 : 44, maxHeight: compact ? 96 : 104 }}
           />
-          <Button
-            size="sm"
-            onClick={handleSend}
-            disabled={!value.trim() || disabled}
-            className={cn(
-              "absolute right-2 bottom-2 p-0 rounded-xl transition-all duration-200 shadow-sm",
-              compact ? "h-7 w-7" : "h-8 w-8",
-              value.trim() ? "opacity-100 scale-100" : "opacity-30 scale-90"
-            )}
-          >
-            <Send className={cn(compact ? "w-3 h-3" : "w-3.5 h-3.5")} />
-          </Button>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={value.trim() ? 'active' : 'inactive'}
+              initial={{ opacity: 0, scale: 0.6 }}
+              animate={{ opacity: value.trim() ? 1 : 0.3, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.6 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              className={cn("absolute right-2 bottom-2", compact ? "h-7 w-7" : "h-8 w-8")}
+            >
+              <Button
+                size="sm"
+                onClick={handleSend}
+                disabled={!value.trim() || disabled}
+                className={cn(
+                  "p-0 rounded-xl shadow-sm w-full h-full active:scale-[0.85] transition-transform",
+                )}
+              >
+                <Send className={cn(compact ? "w-3 h-3" : "w-3.5 h-3.5")} />
+              </Button>
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
     );
