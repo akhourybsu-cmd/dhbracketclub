@@ -377,7 +377,7 @@ function MessageBubbleInner({
                   exit={{ opacity: 0, y: 100 }}
                   transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                   className="fixed bottom-0 left-0 right-0 bg-background border-t border-border/15 rounded-t-2xl p-4 shadow-2xl z-50"
-                  style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+                  style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))', paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))', paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))' }}
                 >
                   <div className="w-10 h-1 rounded-full bg-muted-foreground/20 mx-auto mb-3" />
                   <div className="flex items-center gap-1 mb-3 px-1 overflow-x-auto">
