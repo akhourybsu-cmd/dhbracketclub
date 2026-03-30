@@ -22,6 +22,7 @@ const PAGE_SIZE = 50;
 export default function ChatPage() {
   const { user } = useAuth();
   const { play } = useSoundEffect();
+  const composerRef = useRef<MessageComposerHandle>(null);
 
   const [channels, setChannels] = useState<Channel[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -55,6 +56,14 @@ export default function ChatPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [searchResults, setSearchResults] = useState<Message[] | null>(null);
+
+  // Typing indicators
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTypingBroadcast = useRef(0);
+
+  // Last read timestamp for unread divider
+  const [lastReadAt, setLastReadAt] = useState<string | null>(null);
 
   /* ═══ HELPERS ═══ */
   const enrichMessages = useCallback(async (rawMsgs: any[], userId: string): Promise<Message[]> => {
