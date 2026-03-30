@@ -682,6 +682,7 @@ export default function ChatPage() {
                   messages={searchResults || messages}
                   selectedChannel={selectedChannel}
                   userId={user?.id}
+                  currentDisplayName={currentDisplayName}
                   searchQuery={searchResults ? '' : ''}
                   onToggleReaction={toggleReaction}
                   onOpenThread={openThread}
@@ -716,6 +717,7 @@ export default function ChatPage() {
                       onTyping={broadcastTyping}
                       disabled={sending}
                       placeholder={`Message #${selectedChannel?.name || ''}`}
+                      members={members}
                     />
                   </div>
                 )}
