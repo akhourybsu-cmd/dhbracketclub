@@ -96,6 +96,11 @@ export function LockCreator({ weekId, myLock }: Props) {
         maze_id: mazeId,
       });
       toast.success('Lock created! 🔒');
+      logActivity(user.id, {
+        event_type: 'lockbox_created',
+        target_type: 'lockbox_week',
+        target_id: weekId,
+      });
     } catch (e: any) {
       toast.error(e.message || 'Failed to create lock');
     }
