@@ -34,7 +34,7 @@ export default function CompetePage() {
           <div className="page-header-icon"><Swords /></div>
           <div>
             <h1 className="page-header-title">Compete</h1>
-            <p className="page-header-subtitle">Brackets, rankings, polls & drafts</p>
+            <p className="page-header-subtitle">Lockbox, brackets, rankings, polls & drafts</p>
           </div>
         </div>
 

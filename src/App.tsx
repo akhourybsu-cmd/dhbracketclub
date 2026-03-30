@@ -103,6 +103,10 @@ function AnimatedRoutes() {
         {/* Compete hub */}
         <Route path="/compete" element={<ProtectedPage><CompetePage /></ProtectedPage>} />
 
+        {/* Lockbox module */}
+        <Route path="/lockbox" element={<ProtectedPage><LockboxPage /></ProtectedPage>} />
+        <Route path="/lockbox/:lockId" element={<ProtectedPage><LockboxCrackPage /></ProtectedPage>} />
+
         {/* Feed + Posts */}
         <Route path="/feed" element={<ProtectedPage><FeedPage /></ProtectedPage>} />
         <Route path="/posts" element={<ProtectedPage><PostsPage /></ProtectedPage>} />
