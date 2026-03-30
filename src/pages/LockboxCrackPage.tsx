@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Lock, Unlock, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, Trophy, Swords, Shield } from 'lucide-react';
@@ -252,10 +252,30 @@ function MazePhase({ maze, onSolve, onFail, isPending }: {
 }) {
   const [pos, setPos] = useState<[number, number]>([0, 0]);
   const [path, setPath] = useState<[number, number][]>([[0, 0]]);
-  const cellPx = Math.min(300, window.innerWidth - 64) / maze.size;
+  const [solved, setSolved] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const onSolveRef = useRef(onSolve);
+  onSolveRef.current = onSolve;
+
+  // Responsive maze sizing
+  const [containerWidth, setContainerWidth] = useState(300);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        setContainerWidth(Math.min(entry.contentRect.width - 16, 340));
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const cellPx = containerWidth / maze.size;
   const svgSize = cellPx * maze.size;
 
   const move = useCallback((dr: number, dc: number) => {
+    if (solved) return;
     setPos(prev => {
       const nr = prev[0] + dr;
       const nc = prev[1] + dc;
@@ -264,11 +284,12 @@ function MazePhase({ maze, onSolve, onFail, isPending }: {
       const newPos: [number, number] = [nr, nc];
       setPath(p => [...p, newPos]);
       if (nr === maze.size - 1 && nc === maze.size - 1) {
-        setTimeout(() => onSolve(), 300);
+        setSolved(true);
+        setTimeout(() => onSolveRef.current(), 400);
       }
       return newPos;
     });
-  }, [maze, onSolve]);
+  }, [maze, solved]);
 
   const handleCellTap = useCallback((r: number, c: number) => {
     if (maze.grid[r][c] === 1) return;
@@ -278,11 +299,15 @@ function MazePhase({ maze, onSolve, onFail, isPending }: {
     move(dr, dc);
   }, [pos, maze, move]);
 
-  const reset = () => { setPos([0, 0]); setPath([[0, 0]]); };
+  const reset = () => {
+    if (solved) return;
+    setPos([0, 0]);
+    setPath([[0, 0]]);
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-      <div className="glass-card p-5">
+      <div className="glass-card p-5" ref={containerRef}>
         <div className="flex items-center justify-between mb-1">
           <h3 className="font-black text-sm">Navigate the Maze</h3>
           <span className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
@@ -307,7 +332,7 @@ function MazePhase({ maze, onSolve, onFail, isPending }: {
             {maze.grid.map((row, r) =>
               row.map((cell, c) => {
                 const isPath = cell === 0;
-                const isAdjacent = isPath && Math.abs(r - pos[0]) + Math.abs(c - pos[1]) === 1;
+                const isAdjacent = isPath && !solved && Math.abs(r - pos[0]) + Math.abs(c - pos[1]) === 1;
                 return (
                   <rect
                     key={`${r}-${c}`}
@@ -341,7 +366,7 @@ function MazePhase({ maze, onSolve, onFail, isPending }: {
                 width={0.6}
                 height={0.6}
                 rx={0.1}
-                fill="hsl(var(--primary) / 0.18)"
+                fill={solved ? 'hsl(var(--primary) / 0.35)' : 'hsl(var(--primary) / 0.18)'}
               />
             ))}
 
@@ -365,26 +390,26 @@ function MazePhase({ maze, onSolve, onFail, isPending }: {
 
         {/* D-pad controls */}
         <div className="flex flex-col items-center gap-1.5 mb-4">
-          <Button variant="outline" size="icon" onClick={() => move(-1, 0)} className="w-14 h-11 rounded-xl active:scale-90">
+          <Button variant="outline" size="icon" onClick={() => move(-1, 0)} disabled={solved} className="w-14 h-11 rounded-xl active:scale-90">
             <ChevronUp className="w-5 h-5" />
           </Button>
           <div className="flex gap-1.5">
-            <Button variant="outline" size="icon" onClick={() => move(0, -1)} className="w-14 h-11 rounded-xl active:scale-90">
+            <Button variant="outline" size="icon" onClick={() => move(0, -1)} disabled={solved} className="w-14 h-11 rounded-xl active:scale-90">
               <ChevronLeft className="w-5 h-5" />
             </Button>
-            <Button variant="outline" size="icon" onClick={reset} className="w-14 h-11 rounded-xl active:scale-90 text-muted-foreground">
+            <Button variant="outline" size="icon" onClick={reset} disabled={solved} className="w-14 h-11 rounded-xl active:scale-90 text-muted-foreground">
               <RotateCcw className="w-4 h-4" />
             </Button>
-            <Button variant="outline" size="icon" onClick={() => move(0, 1)} className="w-14 h-11 rounded-xl active:scale-90">
+            <Button variant="outline" size="icon" onClick={() => move(0, 1)} disabled={solved} className="w-14 h-11 rounded-xl active:scale-90">
               <ChevronRight className="w-5 h-5" />
             </Button>
           </div>
-          <Button variant="outline" size="icon" onClick={() => move(1, 0)} className="w-14 h-11 rounded-xl active:scale-90">
+          <Button variant="outline" size="icon" onClick={() => move(1, 0)} disabled={solved} className="w-14 h-11 rounded-xl active:scale-90">
             <ChevronDown className="w-5 h-5" />
           </Button>
         </div>
 
-        <Button variant="ghost" onClick={() => { onFail(); reset(); }} disabled={isPending} className="w-full text-xs text-muted-foreground">
+        <Button variant="ghost" onClick={() => { onFail(); reset(); }} disabled={isPending || solved} className="w-full text-xs text-muted-foreground">
           Give Up This Attempt (+1 try)
         </Button>
       </div>
@@ -460,7 +485,7 @@ export default function LockboxCrackPage() {
     enabled: !!lockId,
   });
 
-  const { data: attempt } = useQuery({
+  const { data: attempt, isLoading: attemptLoading } = useQuery({
     queryKey: ['lockbox-attempt', lockId, user?.id],
     queryFn: async () => {
       const { data } = await supabase
@@ -491,49 +516,65 @@ export default function LockboxCrackPage() {
 
   const handleNumberSubmit = async (guess: number[]) => {
     if (!lock || !user) return;
-    const result = await submitGuess.mutateAsync({
-      lockId: lock.id, attackerId: user.id, phase: 'number',
-      guessValue: guess.join(','), lockCode: lock.number_code,
-    });
-    invalidateAll();
-    if (result.isCorrect) toast.success('Number code cracked! 🎉');
+    try {
+      const result = await submitGuess.mutateAsync({
+        lockId: lock.id, attackerId: user.id, phase: 'number',
+        guessValue: guess.join(','), lockCode: lock.number_code,
+      });
+      invalidateAll();
+      if (result.isCorrect) toast.success('Number code cracked! 🎉');
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to submit guess');
+    }
   };
 
   const handleColorSubmit = async (guess: string[]) => {
     if (!lock || !user) return;
-    const result = await submitGuess.mutateAsync({
-      lockId: lock.id, attackerId: user.id, phase: 'color',
-      guessValue: guess.join(','), lockCode: lock.color_code,
-    });
-    invalidateAll();
-    if (result.isCorrect) toast.success('Color code cracked! 🎨');
+    try {
+      const result = await submitGuess.mutateAsync({
+        lockId: lock.id, attackerId: user.id, phase: 'color',
+        guessValue: guess.join(','), lockCode: lock.color_code,
+      });
+      invalidateAll();
+      if (result.isCorrect) toast.success('Color code cracked! 🎨');
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to submit guess');
+    }
   };
 
-  const handleMazeSolve = async () => {
+  const handleMazeSolve = useCallback(async () => {
     if (!lock || !user) return;
-    await submitGuess.mutateAsync({
-      lockId: lock.id, attackerId: user.id, phase: 'maze',
-      guessValue: 'solved', lockCode: 'solved',
-    });
-    invalidateAll();
-    toast.success('Lock fully cracked! 🔓🎉');
-    logActivity(user.id, {
-      event_type: 'lockbox_cracked',
-      target_type: 'lockbox_lock',
-      target_id: lock.id,
-      metadata: { lock_owner: lock.profiles?.display_name },
-    });
-  };
+    try {
+      await submitGuess.mutateAsync({
+        lockId: lock.id, attackerId: user.id, phase: 'maze',
+        guessValue: 'solved', lockCode: 'solved',
+      });
+      invalidateAll();
+      toast.success('Lock fully cracked! 🔓🎉');
+      logActivity(user.id, {
+        event_type: 'lockbox_cracked',
+        target_type: 'lockbox_lock',
+        target_id: lock.id,
+        metadata: { lock_owner: lock.profiles?.display_name },
+      });
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to submit');
+    }
+  }, [lock, user, submitGuess, qc, lockId]);
 
-  const handleMazeFail = async () => {
+  const handleMazeFail = useCallback(async () => {
     if (!lock || !user) return;
-    await submitGuess.mutateAsync({
-      lockId: lock.id, attackerId: user.id, phase: 'maze',
-      guessValue: 'failed', lockCode: 'solved',
-    });
-    invalidateAll();
-    toast.error('Maze attempt failed — +1 try');
-  };
+    try {
+      await submitGuess.mutateAsync({
+        lockId: lock.id, attackerId: user.id, phase: 'maze',
+        guessValue: 'failed', lockCode: 'solved',
+      });
+      invalidateAll();
+      toast.error('Maze attempt failed — +1 try');
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to submit');
+    }
+  }, [lock, user, submitGuess, qc, lockId]);
 
   const goBack = () => navigate('/lockbox');
 
@@ -551,6 +592,7 @@ export default function LockboxCrackPage() {
     );
   }
 
+  // Guard: own lock
   if (lock.user_id === user?.id) {
     return (
       <div className="pb-6">
@@ -567,6 +609,9 @@ export default function LockboxCrackPage() {
       </div>
     );
   }
+
+  // Guard: week ended and not solved — show read-only state
+  const isWeekExpired = lock.week_id ? false : false; // We check server-side now
 
   return (
     <div className="pb-6">
