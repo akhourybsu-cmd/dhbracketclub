@@ -17,18 +17,56 @@ import {
 const URL_RE = /(https?:\/\/[^\s<]+)/g;
 const IMAGE_EXT_RE = /\.(jpg|jpeg|png|gif|webp|avif|svg)(\?.*)?$/i;
 
-function renderContent(text: string) {
-  const parts = text.split(URL_RE);
-  if (parts.length === 1) return text;
-  return parts.map((part, i) =>
+const MENTION_RE = /@([\w\s]+?)(?=\s@|\s|$)/g;
+
+function renderContent(text: string, currentUserId?: string, currentDisplayName?: string) {
+  // First split by URLs
+  const urlParts = text.split(URL_RE);
+  if (urlParts.length === 1) return renderMentions(text, currentDisplayName);
+  return urlParts.map((part, i) =>
     URL_RE.test(part) ? (
       <a key={i} href={part} target="_blank" rel="noopener noreferrer"
         className="text-primary underline underline-offset-2 hover:text-primary/80 break-all"
         onClick={e => e.stopPropagation()}>{part}</a>
     ) : (
-      <Fragment key={i}>{part}</Fragment>
+      <Fragment key={i}>{renderMentions(part, currentDisplayName, i)}</Fragment>
     )
   );
+}
+
+function renderMentions(text: string, currentDisplayName?: string, keyPrefix: number = 0): React.ReactNode {
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  const re = new RegExp(MENTION_RE.source, 'g');
+
+  while ((match = re.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    const mentionName = match[1].trim();
+    const isCurrentUser = currentDisplayName && mentionName.toLowerCase() === currentDisplayName.toLowerCase();
+    parts.push(
+      <span
+        key={`${keyPrefix}-mention-${match.index}`}
+        className={cn(
+          "inline-block rounded px-1 py-0.5 font-semibold text-[12px]",
+          isCurrentUser
+            ? "bg-primary/20 text-primary"
+            : "bg-primary/10 text-primary/80"
+        )}
+      >
+        @{mentionName}
+      </span>
+    );
+    lastIndex = re.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : text;
 }
 
 function extractImageUrls(text: string): string[] {
@@ -42,6 +80,8 @@ interface MessageBubbleProps {
   isOwn: boolean;
   sameAuthor: boolean;
   nextSameAuthor?: boolean;
+  currentUserId?: string;
+  currentDisplayName?: string;
   onToggleReaction: (messageId: string, emoji: string) => void;
   onOpenThread: (msg: Message) => void;
   onTogglePin: (msg: Message) => void;
@@ -58,6 +98,7 @@ const SWIPE_THRESHOLD = 60;
 
 function MessageBubbleInner({
   msg, isOwn, sameAuthor, nextSameAuthor,
+  currentUserId, currentDisplayName,
   onToggleReaction, onOpenThread, onTogglePin,
   onStartEditing, onDeleteMessage, onSaveEdit,
   editingMessageId, editContent, onEditContentChange, onCancelEdit,
@@ -237,7 +278,7 @@ function MessageBubbleInner({
           ) : (
             <div>
               <p className="text-[13px] leading-[1.55] text-foreground/85 break-words whitespace-pre-wrap">
-                {renderContent(msg.content)}
+                {renderContent(msg.content, currentUserId, currentDisplayName)}
                 {msg.edited_at && <span className="text-[9px] text-muted-foreground/70 ml-1.5">(edited)</span>}
               </p>
               {/* Inline image previews */}

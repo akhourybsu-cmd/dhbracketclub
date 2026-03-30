@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 
 import { ChannelList } from '@/components/chat/ChannelList';
 import { MessageList } from '@/components/chat/MessageList';
-import { MessageComposer, type MessageComposerHandle } from '@/components/chat/MessageComposer';
+import { MessageComposer, type MessageComposerHandle, type MentionMember } from '@/components/chat/MessageComposer';
 import { ThreadPanel } from '@/components/chat/ThreadPanel';
 import { UserAvatar } from '@/components/chat/UserAvatar';
 import { CHANNEL_EMOJI } from '@/components/chat/types';
@@ -61,6 +61,10 @@ export default function ChatPage() {
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTypingBroadcast = useRef(0);
+
+  // Members for @mention autocomplete
+  const [members, setMembers] = useState<MentionMember[]>([]);
+  const [currentDisplayName, setCurrentDisplayName] = useState<string>('');
 
   // Last read timestamp for unread divider
   const [lastReadAt, setLastReadAt] = useState<string | null>(null);
@@ -147,6 +151,18 @@ export default function ChatPage() {
   }, [user, selectedChannel]);
 
   useEffect(() => { fetchChannels(); }, [fetchChannels]);
+
+  /* ═══ FETCH MEMBERS FOR @MENTIONS ═══ */
+  useEffect(() => {
+    if (!user) return;
+    supabase.from('profiles').select('id, display_name, avatar_url').then(({ data }) => {
+      if (data) {
+        setMembers(data.map(p => ({ id: p.id, display_name: p.display_name, avatar_url: p.avatar_url })));
+        const me = data.find(p => p.id === user.id);
+        if (me) setCurrentDisplayName(me.display_name);
+      }
+    });
+  }, [user]);
 
   /* ═══ FETCH MESSAGES (paginated) ═══ */
   const fetchMessages = useCallback(async (before?: string) => {
@@ -666,6 +682,7 @@ export default function ChatPage() {
                   messages={searchResults || messages}
                   selectedChannel={selectedChannel}
                   userId={user?.id}
+                  currentDisplayName={currentDisplayName}
                   searchQuery={searchResults ? '' : ''}
                   onToggleReaction={toggleReaction}
                   onOpenThread={openThread}
@@ -700,6 +717,7 @@ export default function ChatPage() {
                       onTyping={broadcastTyping}
                       disabled={sending}
                       placeholder={`Message #${selectedChannel?.name || ''}`}
+                      members={members}
                     />
                   </div>
                 )}
