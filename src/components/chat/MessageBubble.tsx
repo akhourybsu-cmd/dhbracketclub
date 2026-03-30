@@ -200,6 +200,7 @@ function MessageBubbleInner({
           x: dragX,
         }}
         drag={isBeingEdited ? false : "x"}
+        dragDirectionLock
         dragConstraints={{ left: 0, right: SWIPE_THRESHOLD + 10 }}
         dragElastic={0.15}
         dragSnapToOrigin
