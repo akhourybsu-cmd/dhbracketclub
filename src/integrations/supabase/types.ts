@@ -917,6 +917,224 @@ export type Database = {
         }
         Relationships: []
       }
+      lockbox_attempts: {
+        Row: {
+          attacker_id: string
+          id: string
+          is_solved: boolean
+          lock_id: string
+          phase: string
+          solved_at: string | null
+          started_at: string
+          total_attempts: number
+          updated_at: string
+        }
+        Insert: {
+          attacker_id: string
+          id?: string
+          is_solved?: boolean
+          lock_id: string
+          phase?: string
+          solved_at?: string | null
+          started_at?: string
+          total_attempts?: number
+          updated_at?: string
+        }
+        Update: {
+          attacker_id?: string
+          id?: string
+          is_solved?: boolean
+          lock_id?: string
+          phase?: string
+          solved_at?: string | null
+          started_at?: string
+          total_attempts?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lockbox_attempts_attacker_id_fkey"
+            columns: ["attacker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lockbox_attempts_lock_id_fkey"
+            columns: ["lock_id"]
+            isOneToOne: false
+            referencedRelation: "lockbox_locks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lockbox_guesses: {
+        Row: {
+          attempt_id: string
+          correct_position: number
+          correct_value: number
+          created_at: string
+          guess_value: string
+          id: string
+          is_correct: boolean
+          phase: string
+        }
+        Insert: {
+          attempt_id: string
+          correct_position?: number
+          correct_value?: number
+          created_at?: string
+          guess_value: string
+          id?: string
+          is_correct?: boolean
+          phase: string
+        }
+        Update: {
+          attempt_id?: string
+          correct_position?: number
+          correct_value?: number
+          created_at?: string
+          guess_value?: string
+          id?: string
+          is_correct?: boolean
+          phase?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lockbox_guesses_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "lockbox_attempts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lockbox_locks: {
+        Row: {
+          color_code: string
+          created_at: string
+          id: string
+          is_cracked: boolean
+          maze_id: number
+          number_code: string
+          user_id: string
+          week_id: string
+        }
+        Insert: {
+          color_code: string
+          created_at?: string
+          id?: string
+          is_cracked?: boolean
+          maze_id: number
+          number_code: string
+          user_id: string
+          week_id: string
+        }
+        Update: {
+          color_code?: string
+          created_at?: string
+          id?: string
+          is_cracked?: boolean
+          maze_id?: number
+          number_code?: string
+          user_id?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lockbox_locks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lockbox_locks_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "lockbox_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lockbox_scores: {
+        Row: {
+          crack_points: number
+          created_at: string
+          defense_points: number
+          id: string
+          rank: number | null
+          total_points: number
+          user_id: string
+          week_id: string
+        }
+        Insert: {
+          crack_points?: number
+          created_at?: string
+          defense_points?: number
+          id?: string
+          rank?: number | null
+          total_points?: number
+          user_id: string
+          week_id: string
+        }
+        Update: {
+          crack_points?: number
+          created_at?: string
+          defense_points?: number
+          id?: string
+          rank?: number | null
+          total_points?: number
+          user_id?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lockbox_scores_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lockbox_scores_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "lockbox_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lockbox_weeks: {
+        Row: {
+          created_at: string
+          ends_at: string
+          id: string
+          starts_at: string
+          status: string
+          week_number: number
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          ends_at: string
+          id?: string
+          starts_at: string
+          status?: string
+          week_number: number
+          year: number
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string
+          id?: string
+          starts_at?: string
+          status?: string
+          week_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
       message_reactions: {
         Row: {
           created_at: string
