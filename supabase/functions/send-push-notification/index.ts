@@ -53,6 +53,7 @@ Deno.serve(async (req) => {
 
       let sent = 0;
       const expiredEndpoints: string[] = [];
+      const failedDeliveries: Array<{ statusCode?: number; body?: string }> = [];
 
       for (const sub of subscriptions) {
         try {
@@ -62,8 +63,12 @@ Deno.serve(async (req) => {
           );
           sent++;
         } catch (e: any) {
-          console.error("Test push error:", e.statusCode, e.body);
-          if (e.statusCode === 410 || e.statusCode === 404) {
+          const statusCode = typeof e?.statusCode === "number" ? e.statusCode : undefined;
+          const body = typeof e?.body === "string" ? e.body : undefined;
+          console.error("Test push error:", statusCode, body);
+          failedDeliveries.push({ statusCode, body });
+
+          if (statusCode === 410 || statusCode === 404) {
             expiredEndpoints.push(sub.endpoint);
           }
         }
@@ -71,6 +76,21 @@ Deno.serve(async (req) => {
 
       if (expiredEndpoints.length > 0) {
         await supabase.from("push_subscriptions").delete().in("endpoint", expiredEndpoints);
+      }
+
+      if (sent === 0 && failedDeliveries.length > 0) {
+        const vapidMismatch = failedDeliveries.some((failure) => failure.statusCode === 403);
+        return new Response(
+          JSON.stringify({
+            sent,
+            expired: expiredEndpoints.length,
+            error: vapidMismatch
+              ? "Subscription key mismatch detected. Turn Push Notifications off and on, then try again."
+              : "No notifications were delivered. Please re-enable Push Notifications and try again.",
+            code: vapidMismatch ? "VAPID_MISMATCH" : "DELIVERY_FAILED",
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
       return new Response(
