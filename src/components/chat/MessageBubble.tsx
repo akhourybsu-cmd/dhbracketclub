@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback, useEffect, Fragment } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useRef, useCallback, useEffect, Fragment, memo } from 'react';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import {
@@ -13,8 +13,9 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-/* ═══ URL auto-linking ═══ */
+/* ═══ URL auto-linking + inline image preview ═══ */
 const URL_RE = /(https?:\/\/[^\s<]+)/g;
+const IMAGE_EXT_RE = /\.(jpg|jpeg|png|gif|webp|avif|svg)(\?.*)?$/i;
 
 function renderContent(text: string) {
   const parts = text.split(URL_RE);
@@ -30,11 +31,16 @@ function renderContent(text: string) {
   );
 }
 
+function extractImageUrls(text: string): string[] {
+  const matches = text.match(URL_RE);
+  if (!matches) return [];
+  return matches.filter(url => IMAGE_EXT_RE.test(url));
+}
+
 interface MessageBubbleProps {
   msg: Message;
   isOwn: boolean;
   sameAuthor: boolean;
-  /** True when the NEXT message is also by the same author (hides avatar on middle messages) */
   nextSameAuthor?: boolean;
   onToggleReaction: (messageId: string, emoji: string) => void;
   onOpenThread: (msg: Message) => void;
@@ -48,7 +54,9 @@ interface MessageBubbleProps {
   onCancelEdit: () => void;
 }
 
-export function MessageBubble({
+const SWIPE_THRESHOLD = 60;
+
+function MessageBubbleInner({
   msg, isOwn, sameAuthor, nextSameAuthor,
   onToggleReaction, onOpenThread, onTogglePin,
   onStartEditing, onDeleteMessage, onSaveEdit,
@@ -61,6 +69,12 @@ export function MessageBubble({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const editRef = useRef<HTMLTextAreaElement>(null);
   const reactionRef = useRef<HTMLDivElement>(null);
+
+  // Swipe-to-reply
+  const dragX = useMotionValue(0);
+  const replyIconOpacity = useTransform(dragX, [0, SWIPE_THRESHOLD], [0, 1]);
+  const replyIconScale = useTransform(dragX, [0, SWIPE_THRESHOLD], [0.5, 1]);
+  const [swiped, setSwiped] = useState(false);
 
   // Auto-resize edit textarea
   useEffect(() => {
@@ -121,13 +135,13 @@ export function MessageBubble({
     setShowMobileActions(false);
   };
 
-  // For consecutive same-author messages, only show the small avatar on the LAST
-  // message in the group (i.e. when nextSameAuthor is false).
   const showGroupedAvatar = sameAuthor && !nextSameAuthor;
+
+  const imageUrls = extractImageUrls(msg.content);
 
   return (
     <>
-      <div
+      <motion.div
         className={cn(
           "group relative py-1.5 rounded-xl transition-colors",
           "hover:bg-muted/12",
@@ -135,12 +149,41 @@ export function MessageBubble({
           isOwn && "bg-primary/[0.04]",
           msg._optimistic && "opacity-70"
         )}
-        style={{ borderLeft: `3px solid ${getUserColor(msg.user_id)}`, paddingLeft: '10px', paddingRight: '10px' }}
+        style={{
+          borderLeft: `3px solid ${getUserColor(msg.user_id)}`,
+          paddingLeft: '10px',
+          paddingRight: '10px',
+          x: dragX,
+        }}
+        drag="x"
+        dragConstraints={{ left: 0, right: SWIPE_THRESHOLD + 10 }}
+        dragElastic={0.15}
+        dragSnapToOrigin
+        onDrag={(_, info) => {
+          if (info.offset.x > SWIPE_THRESHOLD && !swiped) {
+            setSwiped(true);
+            navigator.vibrate?.(10);
+          }
+        }}
+        onDragEnd={(_, info) => {
+          if (info.offset.x > SWIPE_THRESHOLD) {
+            onOpenThread(msg);
+          }
+          setSwiped(false);
+        }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onTouchMove={handleTouchMove}
         onClick={handleTapTimestamp}
       >
+        {/* Swipe reply icon (behind the message) */}
+        <motion.div
+          className="absolute left-[-32px] top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center pointer-events-none"
+          style={{ opacity: replyIconOpacity, scale: replyIconScale }}
+        >
+          <Reply className="w-3.5 h-3.5 text-primary" />
+        </motion.div>
+
         {/* Author line */}
         {!sameAuthor && (
           <div className="flex items-center gap-2 mb-1">
@@ -151,7 +194,7 @@ export function MessageBubble({
           </div>
         )}
 
-        {/* Content area — NO overflow-hidden so action bar & reaction picker aren't clipped */}
+        {/* Content area */}
         <div className="relative pl-[38px]">
           {sameAuthor && (
             <div className="absolute left-0 top-0.5 flex items-center gap-1">
@@ -197,6 +240,22 @@ export function MessageBubble({
                 {renderContent(msg.content)}
                 {msg.edited_at && <span className="text-[9px] text-muted-foreground/70 ml-1.5">(edited)</span>}
               </p>
+              {/* Inline image previews */}
+              {imageUrls.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {imageUrls.map((url, i) => (
+                    <a key={i} href={url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                      <img
+                        src={url}
+                        alt="Shared image"
+                        className="rounded-lg max-w-[240px] max-h-[180px] object-cover border border-border/15"
+                        loading="lazy"
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    </a>
+                  ))}
+                </div>
+              )}
               {msg._optimistic && (
                 <span className="inline-flex items-center gap-1 mt-0.5 text-[9px] text-muted-foreground/50 font-medium">
                   <Loader2 className="w-2.5 h-2.5 animate-spin" /> Sending…
@@ -231,7 +290,7 @@ export function MessageBubble({
             </div>
           )}
 
-          {/* Floating action bar (desktop hover) — positioned outside overflow-hidden */}
+          {/* Floating action bar (desktop hover) */}
           <div className="absolute -top-4 right-2 hidden group-hover:flex items-center gap-0.5 bg-surface-elevated/95 border border-border/15 rounded-lg px-0.5 py-0.5 shadow-xl backdrop-blur-sm z-30">
             {QUICK_EMOJIS.slice(0, 4).map(emoji => (
               <button key={emoji} onClick={(e) => handleReaction(emoji, e)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 text-sm transition-colors">
@@ -342,7 +401,7 @@ export function MessageBubble({
             </button>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
@@ -360,3 +419,20 @@ export function MessageBubble({
     </>
   );
 }
+
+export const MessageBubble = memo(MessageBubbleInner, (prev, next) => {
+  return (
+    prev.msg.id === next.msg.id &&
+    prev.msg.content === next.msg.content &&
+    prev.msg.edited_at === next.msg.edited_at &&
+    prev.msg.is_pinned === next.msg.is_pinned &&
+    prev.msg.reply_count === next.msg.reply_count &&
+    prev.msg._optimistic === next.msg._optimistic &&
+    prev.isOwn === next.isOwn &&
+    prev.sameAuthor === next.sameAuthor &&
+    prev.nextSameAuthor === next.nextSameAuthor &&
+    prev.editingMessageId === next.editingMessageId &&
+    prev.editContent === next.editContent &&
+    JSON.stringify(prev.msg.reactions) === JSON.stringify(next.msg.reactions)
+  );
+});
