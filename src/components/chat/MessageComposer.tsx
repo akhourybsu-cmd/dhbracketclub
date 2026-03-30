@@ -63,25 +63,8 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
       }
     }, [autoFocus]);
 
-    // iOS keyboard: keep composer visible using visualViewport
-    useEffect(() => {
-      const vv = window.visualViewport;
-      if (!vv || !containerRef.current) return;
-
-      const handleResize = () => {
-        const container = containerRef.current;
-        if (!container) return;
-        const offsetBottom = window.innerHeight - vv.height - vv.offsetTop;
-        container.style.transform = offsetBottom > 0 ? `translateY(-${offsetBottom}px)` : '';
-      };
-
-      vv.addEventListener('resize', handleResize);
-      vv.addEventListener('scroll', handleResize);
-      return () => {
-        vv.removeEventListener('resize', handleResize);
-        vv.removeEventListener('scroll', handleResize);
-      };
-    }, []);
+    // Note: keyboard adjustment is handled by the parent MessageList component
+    // to avoid double-compensation on iOS.
 
     // Detect @ mention trigger from cursor position
     const detectMention = useCallback(() => {

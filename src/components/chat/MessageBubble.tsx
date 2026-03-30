@@ -439,9 +439,9 @@ function MessageBubbleInner({
           {(msg.reply_count || 0) > 0 && (
             <button
               onClick={(e) => { e.stopPropagation(); onOpenThread(msg); }}
-              className="flex items-center gap-1.5 mt-2 text-[11px] font-semibold text-primary/80 hover:text-primary transition-colors"
+              className="flex items-center gap-1.5 mt-2 py-1.5 -my-1 text-[11px] font-semibold text-primary/80 hover:text-primary transition-colors touch-action-manipulation"
             >
-              <MessageSquare className="w-3 h-3" />
+              <MessageSquare className="w-3.5 h-3.5" />
               {msg.reply_count} {msg.reply_count === 1 ? 'reply' : 'replies'}
             </button>
           )}
