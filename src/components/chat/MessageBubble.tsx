@@ -278,7 +278,7 @@ function MessageBubbleInner({
           ) : (
             <div>
               <p className="text-[13px] leading-[1.55] text-foreground/85 break-words whitespace-pre-wrap">
-                {renderContent(msg.content)}
+                {renderContent(msg.content, currentUserId, currentDisplayName)}
                 {msg.edited_at && <span className="text-[9px] text-muted-foreground/70 ml-1.5">(edited)</span>}
               </p>
               {/* Inline image previews */}
