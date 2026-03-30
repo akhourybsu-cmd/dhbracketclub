@@ -146,7 +146,7 @@ export function MessageList({
   const hasUnreadDivider = unreadDividerAfterIdx >= 0 && unreadDividerAfterIdx < filtered.length - 1;
 
   return (
-    <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-5 relative">
+    <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-5 relative" style={{ minHeight: 0 }}>
       <div className="py-3 space-y-0.5">
         {loadingMore && (
           <div className="text-center py-2">
@@ -237,7 +237,7 @@ export function MessageList({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 10 }}
             onClick={scrollToBottom}
-            className="fixed bottom-24 right-6 w-10 h-10 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors z-20"
+            className="sticky bottom-4 ml-auto mr-2 w-10 h-10 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors z-20"
           >
             <ChevronDown className="w-5 h-5" />
             {newMsgCount > 0 && (
