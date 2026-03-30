@@ -192,6 +192,7 @@ Deno.serve(async (req) => {
     const notificationPayload = JSON.stringify({
       title: `${senderName} in #${channelName}`,
       body: preview,
+      tag: `dh-channel-${record.channel_id}`,
       data: { url: `/chat?channel=${record.channel_id}` },
       icon: "/pwa-icon-512.png",
     });
