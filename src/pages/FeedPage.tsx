@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import {
   Trophy, BarChart3, MessageCircle, Bookmark, CalendarDays, FileText, Newspaper,
-  Zap, Users, Pin, ChevronRight, Plus
+  Zap, Users, Pin, ChevronRight, Plus, Lock, Unlock
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
