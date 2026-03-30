@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreateLock } from '@/hooks/useLockbox';
 import { LOCKBOX_COLORS, LOCKBOX_DIGITS, PRESET_MAZES } from '@/lib/lockboxMazes';
+import { logActivity } from '@/lib/activityLogger';
 import { MazePreview } from './MazePreview';
 import { toast } from 'sonner';
 
