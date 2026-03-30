@@ -1,42 +1,26 @@
 
 
-## Channel List Spacing & Channel Management
+## Fix Chat Message Overlap & Suppress Actions During Edit
 
-### 1. Add padding/whitespace to channel list container
+### Problem 1: Messages overlap the composer bar
+The `MessageList` scrollable area and the composer both live in a flex column, but the scroll-to-bottom FAB uses `fixed` positioning with a hardcoded `bottom-24`. When the composer grows (multi-line input) or the keyboard opens, messages at the bottom can sit behind the composer. The core layout is correct (flex column with `flex-1` for messages and `flex-shrink-0` for composer), but the FAB needs to be positioned relative to the scroll container, not the viewport.
 
-The `ChannelList` component has no horizontal padding — the content sits flush against the edges. On mobile (where it takes the full screen width), this looks cramped.
+**Fix in `MessageList.tsx`:**
+- Change the scroll-to-bottom button from `fixed` to `sticky` positioning at the bottom of the scroll container, or use `absolute` inside a `relative` wrapper so it floats above the composer naturally.
+- Specifically: wrap the scroll area in `relative`, make the FAB `absolute bottom-4 right-4` so it stays inside the message pane and never overlaps the composer.
 
-**Fix**: Add `px-4` padding to the outer wrapper div in `ChannelList.tsx` (line 42). This gives breathing room on all sides, especially on mobile.
+### Problem 2: Reaction bar appears while editing a message
+The desktop hover action bar (`group-hover:flex`) and the mobile long-press handler both activate regardless of whether the message is currently being edited. This means hovering or long-pressing an in-edit message shows reactions/actions that obscure the edit textarea.
 
-Also add slight top padding (`pt-2`) so the "Chat" header isn't jammed against the top edge.
-
-### 2. Edit channel names
-
-Add a long-press / context-menu action on each channel row in `ChannelList`:
-- Show an inline edit mode (replace channel name text with an `Input` field)
-- On confirm, update the channel name in the `channels` table via `supabase.from('channels').update({ name }).eq('id', ch.id)`
-- Add an `onEditChannel` callback prop to `ChannelListProps` and implement the handler in `ChatPage.tsx`
-- Show a small pencil icon or "..." menu on hover/long-press to trigger edit mode
-
-### 3. Reorder channels via drag-and-drop
-
-- Use `framer-motion`'s `Reorder` components (`Reorder.Group` + `Reorder.Item`) which are already available (framer-motion is installed)
-- Wrap each category's channel list in `<Reorder.Group>` and each channel row in `<Reorder.Item>`
-- On reorder complete, update the `position` column for each affected channel via a batch update
-- Add an `onReorderChannels` callback prop and implement the DB update in `ChatPage.tsx`
-- Add a subtle drag handle (grip dots icon) visible on the left side of each channel row when in an "edit mode" or always subtly visible
+**Fix in `MessageBubble.tsx`:**
+- Gate the desktop hover action bar: only render it when `editingMessageId !== msg.id`. One simple condition wrapping the bar div.
+- Gate the mobile long-press: in `handleTouchStart`, bail out early if `editingMessageId === msg.id` so the action sheet never opens while editing.
+- Also disable swipe-to-reply drag when editing (set `drag={editingMessageId === msg.id ? false : "x"}`).
 
 ### Files to modify
 
 | File | Change |
 |------|--------|
-| `src/components/chat/ChannelList.tsx` | Add `px-4 pt-2` padding, edit-in-place UI, `Reorder.Group`/`Reorder.Item` for drag reorder, new props |
-| `src/pages/ChatPage.tsx` | Add `handleEditChannel` and `handleReorderChannels` handlers with Supabase update calls |
-| `src/components/chat/types.ts` | No changes needed (Channel type already has `position`) |
-
-### Technical notes
-
-- `Reorder` from framer-motion handles drag-and-drop with smooth animations out of the box — no new dependencies needed
-- Channel position updates use `Promise.all` with individual `.update()` calls for each repositioned channel
-- Edit mode uses local state in `ChannelList` — toggled per channel via a small "..." dropdown or pencil icon
+| `src/components/chat/MessageList.tsx` | Change FAB from `fixed` to `absolute` inside a `relative` container so it stays within the message pane |
+| `src/components/chat/MessageBubble.tsx` | Hide hover action bar and disable long-press/swipe when the message is being edited |
 
