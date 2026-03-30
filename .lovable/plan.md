@@ -1,25 +1,35 @@
 
 
-## Fix: Push Content Below the Status Bar
+## Fix: Composer Overlapping Messages + Auto-Scroll on Channel Entry
 
-### Problem
-The app uses `viewport-fit=cover` and `apple-mobile-web-app-status-bar-style: black-translucent`, which means content renders *behind* the iOS status bar (time, battery, signal). But there is zero `safe-area-inset-top` padding anywhere in the codebase — so page content overlaps the status bar on iPhones.
+### Root Causes
 
-### Fix
-Add top safe area padding in two places to cover all screens:
+**1. Composer overlap:** The chat container height is `calc(100dvh - 4.5rem - env(safe-area-inset-bottom))` — but AppLayout now adds `padding-top: env(safe-area-inset-top)` to the outer shell. The chat container doesn't subtract that top inset, so it's taller than the available space, pushing the composer below the visible area and overlapping messages.
 
-#### 1. `src/components/AppLayout.tsx`
-Add `padding-top: env(safe-area-inset-top, 0px)` to the outer shell `div` (line 99). This pushes all authenticated pages (dashboard, chat, events, etc.) below the status bar. The desktop sidebar also needs `pt-[env(safe-area-inset-top)]` so it doesn't clip on iPad/Mac notch.
+**2. No auto-scroll on channel switch:** `MessageList` initializes `autoScroll = true` but never resets it when the channel changes. If a user scrolled up in one channel, `autoScroll` stays `false` when they switch to another channel.
 
-#### 2. `src/pages/LandingPage.tsx`
-Add `pt-[env(safe-area-inset-top)]` to the outer container (line 15) so the landing header doesn't sit behind the status bar.
+### Fixes
 
-#### 3. `src/pages/AuthPage.tsx`
-Same — add `pt-[env(safe-area-inset-top)]` to the outer container so the auth form doesn't overlap the status bar.
+#### 1. `src/pages/ChatPage.tsx` — Subtract top safe area from container height
 
-#### 4. `src/pages/ChatPage.tsx`
-The chat header (line 647) needs `padding-top` that accounts for the safe area since chat uses its own full-height layout outside the normal AppLayout content wrapper.
+Change the height calc on both the channel list view (line 604) and message view (line 628) from:
+```
+calc(100dvh - 4.5rem - env(safe-area-inset-bottom, 0px))
+```
+to:
+```
+calc(100dvh - 4.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))
+```
 
-### Scope
-Four files, one-line change each. No redesign, no structural changes.
+This ensures the chat container fits exactly in the space between the top safe area and the bottom nav.
+
+#### 2. `src/components/chat/MessageList.tsx` — Reset auto-scroll when channel changes
+
+Add a `useEffect` that resets `autoScroll` to `true` and scrolls to bottom when `selectedChannel` changes. This ensures entering any channel always shows the latest messages.
+
+### Files
+| File | Change |
+|------|--------|
+| `src/pages/ChatPage.tsx` | Update height calc to include safe-area-inset-top (2 lines) |
+| `src/components/chat/MessageList.tsx` | Add effect to reset autoScroll on channel change (~5 lines) |
 
