@@ -6,19 +6,34 @@ self.addEventListener('push', (event) => {
 
   try {
     const data = event.data.json();
-    const options = {
-      body: data.body || '',
-      icon: data.icon || '/pwa-icon-512.png',
-      badge: '/pwa-icon-512.png',
-      data: data.data || {},
-      vibrate: [100, 50, 100],
-      tag: 'dh-chat-' + (data.data?.url || 'default'),
-      renotify: true,
-    };
+    const tag = data.tag || 'dh-chat-' + (data.data?.url || 'default');
 
-    event.waitUntil(
-      self.registration.showNotification(data.title || 'DH', options)
-    );
+    // Check for existing notification with same tag to build a count
+    const showPromise = self.registration.getNotifications({ tag }).then((existing) => {
+      let body = data.body || '';
+      let count = 1;
+
+      if (existing.length > 0) {
+        const prev = existing[0];
+        const prevCount = prev.data?.messageCount || 1;
+        count = prevCount + 1;
+        body = `${count} new messages`;
+      }
+
+      const options = {
+        body,
+        icon: data.icon || '/pwa-icon-512.png',
+        badge: '/pwa-icon-512.png',
+        data: { ...(data.data || {}), messageCount: count },
+        vibrate: [100, 50, 100],
+        tag,
+        renotify: true,
+      };
+
+      return self.registration.showNotification(data.title || 'DH', options);
+    });
+
+    event.waitUntil(showPromise);
   } catch (e) {
     console.error('Push event error:', e);
   }
