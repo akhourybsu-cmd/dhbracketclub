@@ -62,13 +62,23 @@ export function useMyLock(weekId: string | undefined) {
   });
 }
 
-// ── Create Lock ──
+// ── Create Lock (with duplicate guard) ──
 export function useCreateLock() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (params: { week_id: string; user_id: string; number_code: string; color_code: string; maze_id: number }) => {
+      // Check for existing lock first (belt-and-suspenders with unique constraint)
+      const { data: existing } = await supabase
+        .from('lockbox_locks').select('id')
+        .eq('week_id', params.week_id).eq('user_id', params.user_id)
+        .maybeSingle();
+      if (existing) throw new Error('You already have a lock for this week');
+
       const { data, error } = await supabase.from('lockbox_locks').insert(params).select().single();
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505') throw new Error('You already have a lock for this week');
+        throw error;
+      }
       return data;
     },
     onSuccess: (_, vars) => {
@@ -129,7 +139,6 @@ export function useAllWeekAttempts(weekId: string | undefined) {
     queryKey: ['lockbox-all-attempts', weekId],
     enabled: !!weekId,
     queryFn: async () => {
-      // Get all locks for this week first, then all attempts on those locks
       const { data: locks } = await supabase
         .from('lockbox_locks').select('id').eq('week_id', weekId!);
       const lockIds = (locks || []).map((l: any) => l.id);
@@ -185,6 +194,24 @@ export function useSubmitGuess() {
       guessValue: string;
       lockCode: string;
     }) => {
+      // Check if lock's week is still active
+      const { data: lockData } = await supabase
+        .from('lockbox_locks')
+        .select('week_id')
+        .eq('id', params.lockId)
+        .single();
+      if (lockData) {
+        const { data: weekData } = await supabase
+          .from('lockbox_weeks')
+          .select('ends_at')
+          .eq('id', lockData.week_id)
+          .single();
+        if (weekData && new Date(weekData.ends_at) < new Date()) {
+          throw new Error('This week has ended — no more guesses allowed');
+        }
+      }
+
+      // Get or create attempt (with race condition guard)
       let { data: attempt } = await supabase
         .from('lockbox_attempts').select('*')
         .eq('lock_id', params.lockId).eq('attacker_id', params.attackerId)
@@ -195,29 +222,55 @@ export function useSubmitGuess() {
           .from('lockbox_attempts')
           .insert({ lock_id: params.lockId, attacker_id: params.attackerId, phase: 'number', total_attempts: 0 })
           .select().single();
-        if (error) throw error;
-        attempt = newAttempt;
+        if (error) {
+          // Race condition: another request created it
+          const { data: retry } = await supabase
+            .from('lockbox_attempts').select('*')
+            .eq('lock_id', params.lockId).eq('attacker_id', params.attackerId)
+            .single();
+          if (!retry) throw error;
+          attempt = retry;
+        } else {
+          attempt = newAttempt;
+        }
       }
 
+      // Validate phase matches attempt state
+      if (attempt.is_solved) {
+        throw new Error('You already cracked this lock');
+      }
+      if (params.phase !== attempt.phase) {
+        throw new Error(`Expected phase "${attempt.phase}" but got "${params.phase}"`);
+      }
+
+      // Calculate clue feedback
       const guessArr = params.guessValue.split(',');
       const codeArr = params.lockCode.split(',');
       let correctPosition = 0;
       let correctValue = 0;
-      const usedGuess = new Array(3).fill(false);
-      const usedCode = new Array(3).fill(false);
 
-      for (let i = 0; i < 3; i++) {
-        if (guessArr[i] === codeArr[i]) { correctPosition++; usedGuess[i] = true; usedCode[i] = true; }
-      }
-      for (let i = 0; i < 3; i++) {
-        if (usedGuess[i]) continue;
-        for (let j = 0; j < 3; j++) {
-          if (usedCode[j]) continue;
-          if (guessArr[i] === codeArr[j]) { correctValue++; usedCode[j] = true; break; }
+      if (params.phase !== 'maze') {
+        const usedGuess = new Array(3).fill(false);
+        const usedCode = new Array(3).fill(false);
+
+        for (let i = 0; i < 3; i++) {
+          if (guessArr[i] === codeArr[i]) { correctPosition++; usedGuess[i] = true; usedCode[i] = true; }
         }
+        for (let i = 0; i < 3; i++) {
+          if (usedGuess[i]) continue;
+          for (let j = 0; j < 3; j++) {
+            if (usedCode[j]) continue;
+            if (guessArr[i] === codeArr[j]) { correctValue++; usedCode[j] = true; break; }
+          }
+        }
+      } else {
+        // Maze: solved or failed
+        correctPosition = params.guessValue === 'solved' ? 1 : 0;
       }
 
-      const isCorrect = correctPosition === 3;
+      const isCorrect = params.phase === 'maze'
+        ? params.guessValue === 'solved'
+        : correctPosition === 3;
 
       await supabase.from('lockbox_guesses').insert({
         attempt_id: attempt.id, phase: params.phase,
@@ -248,6 +301,7 @@ export function useSubmitGuess() {
       qc.invalidateQueries({ queryKey: ['lockbox-guesses'] });
       qc.invalidateQueries({ queryKey: ['lockbox-all-attempts'] });
       qc.invalidateQueries({ queryKey: ['lockbox-lock-attempts'] });
+      qc.invalidateQueries({ queryKey: ['lockbox-attempt'] });
     },
   });
 }
@@ -267,18 +321,23 @@ export function useWeekScores(weekId: string | undefined) {
   });
 }
 
-// ── Past Weeks ──
+// ── Past Weeks (excludes current week) ──
 export function usePastWeeks() {
   return useQuery({
     queryKey: ['lockbox-past-weeks'],
     queryFn: async () => {
+      const bounds = getWeekBounds();
       const { data } = await supabase
         .from('lockbox_weeks')
         .select('*')
+        .not('week_number', 'eq', bounds.week_number)
         .order('year', { ascending: false })
         .order('week_number', { ascending: false })
         .limit(20);
-      return data || [];
+      // Also filter by year if needed (could be same week_number different year)
+      return (data || []).filter(
+        (w: any) => !(w.week_number === bounds.week_number && w.year === bounds.year)
+      );
     },
     staleTime: 1000 * 60 * 5,
   });
@@ -290,17 +349,14 @@ export function usePlayerStats(userId: string | undefined) {
     queryKey: ['lockbox-player-stats', userId],
     enabled: !!userId,
     queryFn: async () => {
-      // All scores
       const { data: scores } = await supabase
         .from('lockbox_scores').select('*')
         .eq('user_id', userId!);
 
-      // All solved attempts by this user
       const { data: solvedAttempts } = await supabase
         .from('lockbox_attempts').select('*')
         .eq('attacker_id', userId!).eq('is_solved', true);
 
-      // All locks by this user
       const { data: locks } = await supabase
         .from('lockbox_locks').select('*')
         .eq('user_id', userId!);
@@ -320,12 +376,8 @@ export function usePlayerStats(userId: string | undefined) {
         : 0;
       const bestCrack = attemptCounts.length > 0 ? Math.min(...attemptCounts) : 0;
 
-      // Weekly placements
       const placements = (scores || [])
-        .sort((a: any, b: any) => {
-          const wa = a.week_id; const wb = b.week_id;
-          return wa < wb ? 1 : -1;
-        })
+        .sort((a: any, b: any) => (a.week_id < b.week_id ? 1 : -1))
         .slice(0, 10);
 
       return {
@@ -348,14 +400,12 @@ export function useComputedLeaderboard(weekId: string | undefined) {
   const scores = useWeekScores(weekId);
 
   const leaderboard = (() => {
-    // If we have formal scores, use them
     if (scores.data && scores.data.length > 0) return null;
     
     const locks = allLocks.data || [];
     const attempts = allAttempts.data || [];
     if (locks.length === 0) return [];
 
-    // Build player map
     const players = new Map<string, {
       userId: string; name: string; avatar: string | null;
       crackPts: number; defensePts: number; locksCracked: number;
@@ -369,7 +419,6 @@ export function useComputedLeaderboard(weekId: string | undefined) {
       return players.get(id)!;
     };
 
-    // Defense: lock owners
     for (const lock of locks) {
       ensurePlayer(lock.user_id, lock.profiles?.display_name || 'Player', lock.profiles?.avatar_url);
       if (!lock.is_cracked) {
@@ -377,7 +426,6 @@ export function useComputedLeaderboard(weekId: string | undefined) {
       }
     }
 
-    // Crack scoring per lock
     for (const lock of locks) {
       const lockAttempts = attempts.filter((a: any) => a.lock_id === lock.id && a.is_solved);
       for (const a of lockAttempts) {
@@ -387,9 +435,11 @@ export function useComputedLeaderboard(weekId: string | undefined) {
         p.totalAttempts += a.total_attempts;
         p.solves++;
       }
-      // Best crack bonus
       if (lockAttempts.length > 0) {
-        const best = lockAttempts.sort((a: any, b: any) => a.total_attempts - b.total_attempts)[0];
+        const best = [...lockAttempts].sort((a: any, b: any) => {
+          if (a.total_attempts !== b.total_attempts) return a.total_attempts - b.total_attempts;
+          return new Date(a.solved_at).getTime() - new Date(b.solved_at).getTime();
+        })[0];
         const p = players.get(best.attacker_id);
         if (p) p.crackPts += 2;
       }
@@ -397,7 +447,11 @@ export function useComputedLeaderboard(weekId: string | undefined) {
 
     return Array.from(players.values())
       .map(p => ({ ...p, totalPts: p.crackPts + p.defensePts, avgAttempts: p.solves > 0 ? Math.round(p.totalAttempts / p.solves * 10) / 10 : 0 }))
-      .sort((a, b) => b.totalPts - a.totalPts);
+      .sort((a, b) => {
+        if (b.totalPts !== a.totalPts) return b.totalPts - a.totalPts;
+        if (b.locksCracked !== a.locksCracked) return b.locksCracked - a.locksCracked;
+        return a.avgAttempts - b.avgAttempts; // lower avg is better
+      });
   })();
 
   return {
