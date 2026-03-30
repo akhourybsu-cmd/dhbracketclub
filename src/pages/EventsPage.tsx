@@ -165,7 +165,7 @@ export default function EventsPage() {
     <div className="pb-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         {/* Header */}
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-5 gap-2">
           <div className="page-header mb-0">
             <div className="page-header-icon"><CalendarDays /></div>
             <div>

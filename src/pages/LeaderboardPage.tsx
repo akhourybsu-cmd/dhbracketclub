@@ -227,7 +227,7 @@ export default function LeaderboardPage() {
           background: 'radial-gradient(ellipse 70% 60% at 50% 0%, hsl(var(--primary) / 0.06), transparent)',
         }} />
 
-        <div className="flex items-center justify-between relative z-10">
+        <div className="flex items-center justify-between relative z-10 gap-3">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{
               background: 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.04))',
@@ -236,7 +236,7 @@ export default function LeaderboardPage() {
               <img src={dhMonogram} alt="DH" className="w-8 h-8 object-contain" style={{ filter: 'drop-shadow(0 0 6px hsl(var(--primary) / 0.2))' }} />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Leaderboard</h1>
+              <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight">Leaderboard</h1>
               <p className="text-sm text-muted-foreground font-medium mt-0.5">{pool?.name}</p>
             </div>
           </div>
@@ -438,7 +438,7 @@ export default function LeaderboardPage() {
 
              {/* Table header */}
             <div
-              className="grid grid-cols-[2rem_1fr_4.5rem_3.5rem_2.5rem] gap-1.5 px-4 py-2.5 relative z-10"
+              className="grid grid-cols-[1.75rem_1fr_3.5rem_2.5rem_2rem] sm:grid-cols-[2rem_1fr_4.5rem_3.5rem_2.5rem] gap-1 sm:gap-1.5 px-3 sm:px-4 py-2.5 relative z-10"
               style={{
                 background: 'linear-gradient(180deg, hsl(var(--surface-elevated)), hsl(var(--surface)))',
                 borderBottom: '1px solid hsl(var(--border) / 0.3)',
@@ -466,7 +466,7 @@ export default function LeaderboardPage() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: Math.min(i * 0.025, 0.4), type: 'spring', damping: 28, stiffness: 320 }}
                     className={cn(
-                      "grid grid-cols-[2rem_1fr_4.5rem_3.5rem_2.5rem] gap-1.5 px-4 items-center relative z-10 group transition-colors duration-200",
+                      "grid grid-cols-[1.75rem_1fr_3.5rem_2.5rem_2rem] sm:grid-cols-[2rem_1fr_4.5rem_3.5rem_2.5rem] gap-1 sm:gap-1.5 px-3 sm:px-4 items-center relative z-10 group transition-colors duration-200",
                       isMe ? "py-3.5" : "py-3",
                       i < standings.length - 1 && "border-b border-border/25",
                     )}

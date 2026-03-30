@@ -98,11 +98,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col">
       {/* Main Content */}
-      <main className="flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] lg:pb-0 lg:pl-64 overflow-x-hidden">
+      <main className="flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] lg:pb-0 lg:pl-64 overflow-x-hidden min-w-0">
         {location.pathname === '/chat' ? (
           children
         ) : (
-          <div className="max-w-[640px] mx-auto px-4 sm:px-5 py-5 sm:py-6 lg:py-8">
+          <div className="max-w-[640px] mx-auto px-4 sm:px-5 py-5 sm:py-6 lg:py-8 min-w-0">
             {children}
           </div>
         )}

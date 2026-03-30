@@ -260,7 +260,7 @@ export default function PoolDetailPage() {
       </motion.div>
 
       {/* Quick Links — action tiles */}
-      <div className={cn("grid gap-2.5 mb-7", isAdmin ? "grid-cols-4" : "grid-cols-2")}>
+      <div className={cn("grid gap-2.5 mb-7", isAdmin ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2")}>
         {[
           { to: `/pools/${poolId}/leaderboard`, icon: Trophy, label: 'Leaderboard', color: 'gold' },
           { to: `/pools/${poolId}/games`, icon: Activity, label: 'Game Center', color: 'primary' },

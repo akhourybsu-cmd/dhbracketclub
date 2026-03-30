@@ -161,7 +161,7 @@ export default function GameCenterPage() {
           background: 'radial-gradient(ellipse 70% 60% at 50% 0%, hsl(var(--primary) / 0.06), transparent)',
         }} />
 
-        <div className="flex items-center justify-between relative z-10">
+        <div className="flex items-center justify-between relative z-10 gap-3">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{
               background: 'linear-gradient(135deg, hsl(var(--primary) / 0.2), hsl(var(--primary) / 0.06))',
@@ -170,7 +170,7 @@ export default function GameCenterPage() {
               <Activity className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Game Center</h1>
+              <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight">Game Center</h1>
               <p className="text-sm text-muted-foreground font-medium mt-0.5">Live scores & results</p>
             </div>
           </div>
@@ -384,7 +384,7 @@ function GameCard({ game, teams, myPick, pickCounts, index }: {
       }} />
 
       {/* ─── Card Header ─── */}
-      <div className="flex items-center justify-between px-4 py-2 relative z-10" style={{
+      <div className="flex items-center justify-between px-3 sm:px-4 py-2 relative z-10 gap-1.5" style={{
         background: isLive
           ? 'linear-gradient(135deg, hsl(var(--live) / 0.06), transparent)'
           : 'hsl(var(--surface) / 0.4)',

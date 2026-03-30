@@ -219,7 +219,8 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     height: 100%;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     padding-left: env(safe-area-inset-left, 0px);
     padding-right: env(safe-area-inset-right, 0px);
@@ -227,6 +228,7 @@
 
   #root {
     min-height: 100%;
+    overflow-x: hidden;
   }
 
   /* ═══ Noise grain overlay (dark mode only) ═══ */
