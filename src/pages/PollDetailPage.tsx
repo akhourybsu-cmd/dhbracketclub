@@ -195,14 +195,6 @@ export default function PollDetailPage() {
   const isOpen = poll.status === 'open' && !isExpired;
   const hasVoted = !!myVote;
 
-  // Auto-close poll if past closes_at and still marked open in DB
-  useEffect(() => {
-    if (poll && poll.status === 'open' && poll.closes_at && new Date(poll.closes_at) < new Date()) {
-      supabase.from('polls').update({ status: 'closed' }).eq('id', poll.id).then(() => {
-        fetchData();
-      });
-    }
-  }, [poll?.id, poll?.status, poll?.closes_at]);
 
   // Count votes per option
   const voteCounts = new Map<string, number>();
