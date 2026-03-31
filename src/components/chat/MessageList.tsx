@@ -26,6 +26,7 @@ interface MessageListProps {
   loadingMore?: boolean;
   isSearchActive?: boolean;
   lastReadAt?: string | null;
+  scrollToBottomTrigger?: number;
 }
 
 function getDateLabel(dateStr: string) {

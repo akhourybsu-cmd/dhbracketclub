@@ -29,6 +29,7 @@ export default function ChatPage() {
 
   // Dynamic viewport height to handle mobile keyboard
   const [chatHeight, setChatHeight] = useState<string>('calc(100dvh - env(safe-area-inset-top, 0px))');
+  const [scrollToBottomTrigger, setScrollToBottomTrigger] = useState(0);
 
   useEffect(() => {
     const vv = window.visualViewport;
@@ -37,20 +38,21 @@ export default function ChatPage() {
     const fullHeight = window.innerHeight;
 
     const update = () => {
-      const vpH = vv.height;
-      if (isDesktop()) {
-        // Desktop: no bottom nav, just use full viewport
-        setChatHeight(`${vpH}px`);
-      } else {
-        // Mobile: check if keyboard is open
-        const keyboardOpen = fullHeight - vpH > 100;
-        if (keyboardOpen) {
+      requestAnimationFrame(() => {
+        const vpH = vv.height;
+        if (isDesktop()) {
           setChatHeight(`${vpH}px`);
         } else {
-          // Subtract bottom nav (4.5rem ≈ 72px)
-          setChatHeight(`${vpH - 72}px`);
+          const keyboardOpen = fullHeight - vpH > 100;
+          if (keyboardOpen) {
+            setChatHeight(`${vpH}px`);
+          } else {
+            setChatHeight(`${vpH - 72}px`);
+          }
         }
-      }
+        // Trigger scroll-to-bottom after height settles (keyboard open/close)
+        setScrollToBottomTrigger(c => c + 1);
+      });
     };
     update();
     vv.addEventListener('resize', update);
