@@ -70,6 +70,7 @@ export default function EnrichedItemCard({
   const category = enrichment?.category || 'generic';
   const gradient = categoryGradients[category] || categoryGradients.generic;
   const isLowConfidence = enrichment?.status === 'low_confidence';
+  const hasImageCandidates = onImageClick && (enrichment?.metadata?.image_candidates as any[])?.length > 0;
 
   return (
     <motion.div
