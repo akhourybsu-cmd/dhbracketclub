@@ -1,0 +1,246 @@
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils';
+import { Link2, Image as ImageIcon, Play, Music, Globe, ExternalLink, Loader2, Filter, ChevronDown } from 'lucide-react';
+import { format } from 'date-fns';
+import { UserAvatar } from '@/components/chat/UserAvatar';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+type MediaType = 'all' | 'link' | 'image' | 'youtube' | 'spotify';
+
+interface MediaItem {
+  id: string;
+  url: string;
+  content_type: string;
+  title: string | null;
+  description: string | null;
+  image_url: string | null;
+  site_name: string | null;
+  embed_type: string | null;
+  embed_id: string | null;
+  created_at: string;
+  message_id: string;
+  message?: {
+    channel_id: string;
+    user_id: string;
+    content: string;
+    profiles?: { display_name: string; avatar_url: string | null };
+  };
+  channel_name?: string;
+}
+
+const TYPE_TABS: { value: MediaType; label: string; icon: React.ElementType }[] = [
+  { value: 'all', label: 'All', icon: Globe },
+  { value: 'link', label: 'Links', icon: Link2 },
+  { value: 'image', label: 'Images', icon: ImageIcon },
+  { value: 'youtube', label: 'YouTube', icon: Play },
+  { value: 'spotify', label: 'Spotify', icon: Music },
+];
+
+export default function SharedMediaPage() {
+  const { user } = useAuth();
+  const [items, setItems] = useState<MediaItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeType, setActiveType] = useState<MediaType>('all');
+  const [channels, setChannels] = useState<{ id: string; name: string }[]>([]);
+  const [filterChannel, setFilterChannel] = useState<string>('all');
+
+  const fetchMedia = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+
+    let query = (supabase as any)
+      .from('message_link_previews')
+      .select('*, messages!inner(channel_id, user_id, content, profiles:user_id(display_name, avatar_url))')
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (activeType !== 'all') {
+      query = query.eq('content_type', activeType);
+    }
+
+    if (filterChannel !== 'all') {
+      query = query.eq('messages.channel_id', filterChannel);
+    }
+
+    const { data } = await query;
+
+    if (data) {
+      // Fetch channel names
+      const channelIds = [...new Set((data as any[]).map((d: any) => d.messages?.channel_id).filter(Boolean))];
+      const { data: chData } = await supabase.from('channels').select('id, name').in('id', channelIds);
+      const chMap = new Map((chData || []).map(c => [c.id, c.name]));
+
+      setItems((data as any[]).map((d: any) => ({
+        ...d,
+        message: d.messages,
+        channel_name: chMap.get(d.messages?.channel_id) || 'Unknown',
+      })));
+    }
+
+    setLoading(false);
+  }, [user, activeType, filterChannel]);
+
+  useEffect(() => { fetchMedia(); }, [fetchMedia]);
+
+  useEffect(() => {
+    supabase.from('channels').select('id, name').order('position').then(({ data }) => {
+      if (data) setChannels(data);
+    });
+  }, []);
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'youtube': return <Play className="w-3 h-3 text-[#FF0000]" />;
+      case 'spotify': return <Music className="w-3 h-3 text-[#1DB954]" />;
+      case 'image': return <ImageIcon className="w-3 h-3 text-primary/70" />;
+      default: return <Link2 className="w-3 h-3 text-muted-foreground/60" />;
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-xl font-extrabold tracking-tight">Shared</h1>
+        <p className="text-xs text-muted-foreground/60 mt-0.5">Links and media shared across all channels</p>
+      </div>
+
+      {/* Type filter tabs */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+        {TYPE_TABS.map(tab => {
+          const Icon = tab.icon;
+          const active = activeType === tab.value;
+          return (
+            <button
+              key={tab.value}
+              onClick={() => setActiveType(tab.value)}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-semibold whitespace-nowrap transition-all duration-150",
+                active
+                  ? "bg-primary/15 text-primary border border-primary/20"
+                  : "bg-muted/15 text-muted-foreground/60 border border-border/10 hover:bg-muted/30 hover:text-foreground/70"
+              )}
+            >
+              <Icon className="w-3 h-3" />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Channel filter */}
+      <div className="flex items-center gap-2">
+        <Filter className="w-3.5 h-3.5 text-muted-foreground/40" />
+        <Select value={filterChannel} onValueChange={setFilterChannel}>
+          <SelectTrigger className="h-8 text-xs w-[180px] bg-muted/15 border-border/20">
+            <SelectValue placeholder="All channels" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All channels</SelectItem>
+            {channels.map(ch => (
+              <SelectItem key={ch.id} value={ch.id}>#{ch.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Media grid */}
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-5 h-5 text-muted-foreground/40 animate-spin" />
+        </div>
+      ) : items.length === 0 ? (
+        <div className="text-center py-16">
+          <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, hsl(var(--muted) / 0.4), hsl(var(--muted) / 0.15))' }}>
+            <Link2 className="w-6 h-6 text-muted-foreground/40" />
+          </div>
+          <p className="text-sm text-muted-foreground/60 font-medium">No shared media yet</p>
+          <p className="text-[11px] text-muted-foreground/40 mt-1">Links and media shared in chat will appear here</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {items.map(item => (
+            <MediaItemCard key={item.id} item={item} getTypeIcon={getTypeIcon} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MediaItemCard({ item, getTypeIcon }: { item: MediaItem; getTypeIcon: (type: string) => React.ReactNode }) {
+  let hostname = '';
+  try { hostname = new URL(item.url).hostname.replace(/^www\./, ''); } catch {}
+
+  return (
+    <a
+      href={item.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block glass-card p-3.5 hover:bg-muted/15 transition-colors group"
+    >
+      <div className="flex gap-3 relative z-10">
+        {/* Thumbnail */}
+        {item.content_type === 'image' ? (
+          <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-muted/20">
+            <img src={item.url} alt="" className="w-full h-full object-cover" loading="lazy" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+          </div>
+        ) : item.content_type === 'youtube' && item.embed_id ? (
+          <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-black/30 relative">
+            <img src={`https://img.youtube.com/vi/${item.embed_id}/mqdefault.jpg`} alt="" className="w-full h-full object-cover" loading="lazy" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-6 h-6 rounded-full bg-[#FF0000] flex items-center justify-center">
+                <Play className="w-3 h-3 text-white fill-white ml-px" />
+              </div>
+            </div>
+          </div>
+        ) : item.image_url ? (
+          <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-muted/20">
+            <img src={item.image_url} alt="" className="w-full h-full object-cover" loading="lazy" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+          </div>
+        ) : (
+          <div className="w-16 h-16 rounded-lg flex-shrink-0 bg-muted/12 flex items-center justify-center">
+            {getTypeIcon(item.content_type)}
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="flex-1 min-w-0 space-y-0.5">
+          <p className="text-[12px] font-semibold text-foreground/85 leading-tight line-clamp-1 group-hover:text-primary transition-colors">
+            {item.title || hostname || 'Link'}
+          </p>
+          {item.description && (
+            <p className="text-[10px] text-muted-foreground/50 leading-snug line-clamp-1">{item.description}</p>
+          )}
+          <div className="flex items-center gap-2 mt-1">
+            <span className="flex items-center gap-1 text-[9px] text-muted-foreground/40">
+              {getTypeIcon(item.content_type)}
+              {hostname}
+            </span>
+            <span className="text-[8px] text-muted-foreground/30">•</span>
+            {item.channel_name && (
+              <span className="text-[9px] text-muted-foreground/40">#{item.channel_name}</span>
+            )}
+            <span className="text-[8px] text-muted-foreground/30">•</span>
+            <span className="text-[9px] text-muted-foreground/35">{format(new Date(item.created_at), 'MMM d')}</span>
+          </div>
+          {item.message?.profiles && (
+            <div className="flex items-center gap-1.5 mt-1">
+              <UserAvatar userId={item.message.user_id} name={item.message.profiles.display_name} avatarUrl={item.message.profiles.avatar_url} size={14} />
+              <span className="text-[9px] text-muted-foreground/40 font-medium">{item.message.profiles.display_name}</span>
+            </div>
+          )}
+        </div>
+
+        <ExternalLink className="w-3.5 h-3.5 text-muted-foreground/20 group-hover:text-muted-foreground/50 transition-colors flex-shrink-0 mt-0.5" />
+      </div>
+    </a>
+  );
+}
