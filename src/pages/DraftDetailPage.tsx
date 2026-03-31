@@ -536,6 +536,9 @@ export default function DraftDetailPage() {
                             enrichment={enrichment}
                             showRank
                             compact={!hasEnrichments}
+                            onImageClick={enrichment && (enrichment.metadata?.image_candidates as any[])?.length > 0
+                              ? () => setImagePickerPick(pick)
+                              : undefined}
                             actions={
                               <span className="text-[10px] text-muted-foreground/60 flex-shrink-0 text-right">
                                 <span className="block font-medium">{pick.profiles?.display_name}</span>
