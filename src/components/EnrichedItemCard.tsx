@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { ImageOff, Sparkles } from 'lucide-react';
+import { ImageOff, Sparkles, RefreshCw } from 'lucide-react';
 import type { ItemEnrichment } from '@/hooks/useItemEnrichments';
 
 interface EnrichedItemCardProps {
@@ -10,6 +10,7 @@ interface EnrichedItemCardProps {
   showRank?: boolean;
   compact?: boolean;
   onClick?: () => void;
+  onImageClick?: () => void;
   actions?: React.ReactNode;
   className?: string;
 }
@@ -60,6 +61,7 @@ export default function EnrichedItemCard({
   showRank = true,
   compact = false,
   onClick,
+  onImageClick,
   actions,
   className,
 }: EnrichedItemCardProps) {
@@ -68,6 +70,7 @@ export default function EnrichedItemCard({
   const category = enrichment?.category || 'generic';
   const gradient = categoryGradients[category] || categoryGradients.generic;
   const isLowConfidence = enrichment?.status === 'low_confidence';
+  const hasImageCandidates = onImageClick && (enrichment?.metadata?.image_candidates as any[])?.length > 0;
 
   return (
     <motion.div
@@ -96,10 +99,14 @@ export default function EnrichedItemCard({
       )}
 
       {/* Image thumbnail */}
-      <div className={cn(
-        "relative flex-shrink-0 rounded-lg overflow-hidden",
-        compact ? "w-10 h-10" : "w-12 h-12"
-      )}>
+      <div
+        className={cn(
+          "relative flex-shrink-0 rounded-lg overflow-hidden",
+          compact ? "w-10 h-10" : "w-12 h-12",
+          hasImageCandidates && "cursor-pointer"
+        )}
+        onClick={hasImageCandidates ? (e) => { e.stopPropagation(); onImageClick?.(); } : undefined}
+      >
         {hasImage ? (
           <img
             src={imageUrl!}
@@ -122,6 +129,12 @@ export default function EnrichedItemCard({
             {label.charAt(0).toUpperCase()}
           </span>
         </div>
+        {/* Swap icon overlay */}
+        {hasImageCandidates && (
+          <div className="absolute inset-0 bg-background/0 hover:bg-background/40 transition-colors flex items-center justify-center group/swap">
+            <RefreshCw className="w-3.5 h-3.5 text-foreground/0 group-hover/swap:text-foreground/80 transition-colors" />
+          </div>
+        )}
         {/* Low confidence indicator */}
         {isLowConfidence && (
           <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-warning flex items-center justify-center">

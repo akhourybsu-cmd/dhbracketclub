@@ -12,6 +12,7 @@ import { useDraftUpdates } from '@/hooks/useRealtimeSubscription';
 import { useItemEnrichments, useEnrichDraftPicks } from '@/hooks/useItemEnrichments';
 import EnrichedItemCard, { EnrichedItemSkeleton } from '@/components/EnrichedItemCard';
 import ShareButton from '@/components/ShareButton';
+import ImagePickerDialog from '@/components/draft/ImagePickerDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -62,6 +63,7 @@ export default function DraftDetailPage() {
   const [editing, setEditing] = useState(false);
   const [editTopic, setEditTopic] = useState('');
   const [saving, setSaving] = useState(false);
+  const [imagePickerPick, setImagePickerPick] = useState<Pick | null>(null);
 
   const pickIds = picks.map(p => p.id);
   const { enrichments, loading: enrichmentsLoading, fetchEnrichments } = useItemEnrichments(pickIds, 'draft_pick');
@@ -534,6 +536,9 @@ export default function DraftDetailPage() {
                             enrichment={enrichment}
                             showRank
                             compact={!hasEnrichments}
+                            onImageClick={enrichment && (enrichment.metadata?.image_candidates as any[])?.length > 0
+                              ? () => setImagePickerPick(pick)
+                              : undefined}
                             actions={
                               <span className="text-[10px] text-muted-foreground/60 flex-shrink-0 text-right">
                                 <span className="block font-medium">{pick.profiles?.display_name}</span>
@@ -594,6 +599,9 @@ export default function DraftDetailPage() {
                           enrichment={enrichment}
                           showRank
                           compact={!hasEnrichments}
+                          onImageClick={enrichment && (enrichment.metadata?.image_candidates as any[])?.length > 0
+                            ? () => setImagePickerPick(pick)
+                            : undefined}
                           actions={
                             <span className="text-[10px] font-mono text-muted-foreground/70 flex-shrink-0">
                               Rd {pick.round}
@@ -627,6 +635,20 @@ export default function DraftDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Image picker dialog */}
+      {imagePickerPick && enrichments.get(imagePickerPick.id) && (
+        <ImagePickerDialog
+          open={!!imagePickerPick}
+          onOpenChange={(open) => { if (!open) setImagePickerPick(null); }}
+          pickName={imagePickerPick.pick_text}
+          enrichment={enrichments.get(imagePickerPick.id)!}
+          onImageSelected={() => {
+            fetchEnrichments();
+            setImagePickerPick(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -13,6 +13,13 @@ const SUPPORTED_CATEGORIES = [
 ] as const;
 type Category = typeof SUPPORTED_CATEGORIES[number];
 
+interface ImageCandidate {
+  url: string;
+  thumbnail: string;
+  source: string;
+  label: string;
+}
+
 interface EnrichmentResult {
   normalized_name: string;
   matched_name: string | null;
@@ -187,12 +194,26 @@ async function enrichFromOpenLibrary(
 ): Promise<EnrichmentResult> {
   try {
     const query = encodeURIComponent(enrichment.normalized_name || name);
-    const res = await fetch(`https://openlibrary.org/search.json?title=${query}&limit=1`);
+    const res = await fetch(`https://openlibrary.org/search.json?title=${query}&limit=5`);
     if (!res.ok) return enrichment;
     const data = await res.json();
-    const doc = data.docs?.[0];
-    if (!doc) return enrichment;
+    const docs = data.docs || [];
+    if (!docs.length) return enrichment;
 
+    const candidates: ImageCandidate[] = [];
+    for (const doc of docs.slice(0, 5)) {
+      const coverId = doc.cover_i;
+      if (coverId) {
+        candidates.push({
+          url: `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`,
+          thumbnail: `https://covers.openlibrary.org/b/id/${coverId}-M.jpg`,
+          source: "openlibrary",
+          label: doc.title || name,
+        });
+      }
+    }
+
+    const doc = docs[0];
     const coverId = doc.cover_i;
     if (coverId) {
       enrichment.image_url = `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`;
@@ -206,6 +227,7 @@ async function enrichFromOpenLibrary(
       ...enrichment.metadata,
       author: doc.author_name?.[0],
       year: doc.first_publish_year,
+      image_candidates: candidates,
     };
     return enrichment;
   } catch {
@@ -223,13 +245,27 @@ async function enrichFromiTunes(
     const mediaType = category === "movie" ? "movie" : category === "tv" ? "tvShow" : "music";
     const entity = category === "movie" ? "movie" : category === "tv" ? "tvSeason" : "album";
     const query = encodeURIComponent(enrichment.normalized_name || name);
-    const url = `https://itunes.apple.com/search?term=${query}&media=${mediaType}&entity=${entity}&limit=3`;
+    const url = `https://itunes.apple.com/search?term=${query}&media=${mediaType}&entity=${entity}&limit=5`;
 
     const res = await fetch(url);
     if (!res.ok) return enrichment;
     const data = await res.json();
     const results = data.results;
     if (!results?.length) return enrichment;
+
+    // Collect image candidates from all results
+    const candidates: ImageCandidate[] = [];
+    for (const r of results.slice(0, 5)) {
+      const raw: string = r.artworkUrl100 || r.artworkUrl60 || "";
+      if (raw) {
+        candidates.push({
+          url: raw.replace("100x100bb", "600x600bb"),
+          thumbnail: raw.replace("100x100bb", "200x200bb"),
+          source: "itunes",
+          label: r.trackName || r.collectionName || name,
+        });
+      }
+    }
 
     const match = results[0];
     const rawArtwork: string = match.artworkUrl100 || match.artworkUrl60 || "";
@@ -248,6 +284,7 @@ async function enrichFromiTunes(
         year: match.releaseDate ? new Date(match.releaseDate).getFullYear() : enrichment.metadata.year,
         director: match.artistName || enrichment.metadata.director,
         genre: match.primaryGenreName || enrichment.metadata.genre,
+        image_candidates: [...(enrichment.metadata.image_candidates as ImageCandidate[] || []), ...candidates],
       };
     } else if (category === "tv") {
       enrichment.matched_name = match.collectionName || enrichment.matched_name;
@@ -256,6 +293,7 @@ async function enrichFromiTunes(
         year: match.releaseDate ? new Date(match.releaseDate).getFullYear() : enrichment.metadata.year,
         network: match.artistName || enrichment.metadata.network,
         genre: match.primaryGenreName || enrichment.metadata.genre,
+        image_candidates: [...(enrichment.metadata.image_candidates as ImageCandidate[] || []), ...candidates],
       };
     } else if (category === "music") {
       enrichment.matched_name = match.collectionName || match.trackName || enrichment.matched_name;
@@ -264,6 +302,7 @@ async function enrichFromiTunes(
         artist: match.artistName || enrichment.metadata.artist,
         year: match.releaseDate ? new Date(match.releaseDate).getFullYear() : enrichment.metadata.year,
         genre: match.primaryGenreName || enrichment.metadata.genre,
+        image_candidates: [...(enrichment.metadata.image_candidates as ImageCandidate[] || []), ...candidates],
       };
     }
 
@@ -281,12 +320,25 @@ async function enrichFromDeezer(
 ): Promise<EnrichmentResult> {
   try {
     const query = encodeURIComponent(enrichment.normalized_name || name);
-    const res = await fetch(`https://api.deezer.com/search/album?q=${query}&limit=3`);
+    const res = await fetch(`https://api.deezer.com/search/album?q=${query}&limit=5`);
     if (!res.ok) return enrichment;
     const data = await res.json();
-    const album = data.data?.[0];
-    if (!album) return enrichment;
+    const albums = data.data || [];
+    if (!albums.length) return enrichment;
 
+    const candidates: ImageCandidate[] = [];
+    for (const a of albums.slice(0, 5)) {
+      if (a.cover_xl || a.cover_big) {
+        candidates.push({
+          url: a.cover_xl || a.cover_big,
+          thumbnail: a.cover_medium || a.cover_small || a.cover_xl || a.cover_big,
+          source: "deezer",
+          label: a.title || name,
+        });
+      }
+    }
+
+    const album = albums[0];
     if (album.cover_xl || album.cover_big) {
       enrichment.image_url = album.cover_xl || album.cover_big;
       enrichment.thumbnail_url = album.cover_medium || album.cover_small || enrichment.image_url;
@@ -298,6 +350,7 @@ async function enrichFromDeezer(
     enrichment.metadata = {
       ...enrichment.metadata,
       artist: album.artist?.name || enrichment.metadata.artist,
+      image_candidates: [...(enrichment.metadata.image_candidates as ImageCandidate[] || []), ...candidates],
     };
     return enrichment;
   } catch (err) {
@@ -391,10 +444,17 @@ async function enrichFromSportsDB(
 ): Promise<EnrichmentResult> {
   try {
     const query = encodeURIComponent(enrichment.normalized_name || name);
+    const candidates: ImageCandidate[] = (enrichment.metadata.image_candidates as ImageCandidate[] || []);
+
     const teamRes = await fetch(`https://www.thesportsdb.com/api/v1/json/1/searchteams.php?t=${query}`);
     if (teamRes.ok) {
       const teamData = await teamRes.json();
-      const team = teamData.teams?.[0];
+      const teams = teamData.teams || [];
+      for (const t of teams.slice(0, 5)) {
+        const img = t.strBadge || t.strLogo;
+        if (img) candidates.push({ url: img, thumbnail: img + "/preview", source: "thesportsdb", label: t.strTeam || name });
+      }
+      const team = teams[0];
       if (team) {
         const badge = team.strBadge || team.strLogo;
         if (badge) {
@@ -411,6 +471,7 @@ async function enrichFromSportsDB(
           league: team.strLeague,
           stadium: team.strStadium,
           country: team.strCountry,
+          image_candidates: candidates,
         };
         return enrichment;
       }
@@ -418,7 +479,12 @@ async function enrichFromSportsDB(
     const playerRes = await fetch(`https://www.thesportsdb.com/api/v1/json/1/searchplayers.php?p=${query}`);
     if (playerRes.ok) {
       const playerData = await playerRes.json();
-      const player = playerData.player?.[0];
+      const players = playerData.player || [];
+      for (const pl of players.slice(0, 5)) {
+        const img = pl.strThumb || pl.strCutout;
+        if (img) candidates.push({ url: img, thumbnail: img + "/preview", source: "thesportsdb", label: pl.strPlayer || name });
+      }
+      const player = players[0];
       if (player) {
         const thumb = player.strThumb || player.strCutout;
         if (thumb) {
@@ -435,8 +501,12 @@ async function enrichFromSportsDB(
           team: player.strTeam,
           position: player.strPosition,
           nationality: player.strNationality,
+          image_candidates: candidates,
         };
       }
+    }
+    if (candidates.length) {
+      enrichment.metadata = { ...enrichment.metadata, image_candidates: candidates };
     }
     return enrichment;
   } catch (err) {
@@ -476,6 +546,10 @@ async function enrichFromWikipedia(
       enrichment.source_provider = "wikipedia";
       enrichment.confidence = Math.max(enrichment.confidence, 0.8);
       enrichment.status = "matched";
+
+      const candidates: ImageCandidate[] = (enrichment.metadata.image_candidates as ImageCandidate[] || []);
+      candidates.push({ url: original || thumb, thumbnail: thumb || original, source: "wikipedia", label: pageTitle });
+      enrichment.metadata = { ...enrichment.metadata, image_candidates: candidates };
     }
 
     return enrichment;
