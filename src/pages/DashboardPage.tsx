@@ -540,7 +540,7 @@ export default function DashboardPage() {
                       <div className="min-w-0 flex-1">
                         <h3 className="font-bold text-[13px] truncate tracking-tight">{d.topic}</h3>
                         <p className="text-[10px] text-muted-foreground/70 font-medium">
-                          {d.num_rounds} rounds • {d.status === 'in_progress' ? 'Live' : d.status === 'setup' ? 'Setup' : 'Complete'}
+                          {d.num_rounds} rounds • {d.status === 'in_progress' ? 'In Progress' : d.status === 'setup' ? 'Setup' : 'Complete'}
                         </p>
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
