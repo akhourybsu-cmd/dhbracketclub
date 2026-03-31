@@ -359,7 +359,7 @@ export default function DraftDetailPage() {
               isInProgress && 'bg-success/10 text-success',
               isDraftComplete && 'bg-primary/10 text-primary',
             )}>
-              {isSetup ? 'Setup' : isInProgress && !isDraftComplete ? 'Live' : 'Complete'}
+              {isSetup ? 'Setup' : isInProgress && !isDraftComplete ? 'In Progress' : 'Complete'}
             </span>
             {isCreator && (
               <DropdownMenu>

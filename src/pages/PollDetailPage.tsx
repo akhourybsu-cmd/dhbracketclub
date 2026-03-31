@@ -80,6 +80,15 @@ export default function PollDetailPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Auto-close poll if past closes_at and still marked open in DB
+  useEffect(() => {
+    if (poll && poll.status === 'open' && poll.closes_at && new Date(poll.closes_at) < new Date()) {
+      supabase.from('polls').update({ status: 'closed' }).eq('id', poll.id).then(() => {
+        fetchData();
+      });
+    }
+  }, [poll?.id, poll?.status, poll?.closes_at]);
+
   // Realtime: auto-refresh when anyone votes
   usePollVoteUpdates(pollId, fetchData);
 
@@ -182,8 +191,10 @@ export default function PollDetailPage() {
   }
 
   const totalVotes = votes.length;
-  const isOpen = poll.status === 'open';
+  const isExpired = poll.closes_at && new Date(poll.closes_at) < new Date();
+  const isOpen = poll.status === 'open' && !isExpired;
   const hasVoted = !!myVote;
+
 
   // Count votes per option
   const voteCounts = new Map<string, number>();

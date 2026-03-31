@@ -23,20 +23,47 @@ export default function DraftsListPage() {
         .order('created_at', { ascending: false });
 
       if (data) {
-        setDrafts(data);
         const draftIds = data.map(d => d.id);
 
         if (draftIds.length > 0) {
-          const { data: parts } = await supabase
-            .from('draft_participants')
-            .select('draft_id')
-            .in('draft_id', draftIds);
+          const [{ data: parts }, { data: picks }] = await Promise.all([
+            supabase.from('draft_participants').select('draft_id').in('draft_id', draftIds),
+            supabase.from('draft_picks').select('draft_id').in('draft_id', draftIds),
+          ]);
 
           if (parts) {
             const counts = new Map<string, number>();
             parts.forEach(p => counts.set(p.draft_id, (counts.get(p.draft_id) || 0) + 1));
             setParticipantCounts(counts);
           }
+
+          // Auto-fix drafts stuck in in_progress that are actually complete
+          const pickCounts = new Map<string, number>();
+          if (picks) picks.forEach(p => pickCounts.set(p.draft_id, (pickCounts.get(p.draft_id) || 0) + 1));
+
+          const partCounts = new Map<string, number>();
+          if (parts) parts.forEach(p => partCounts.set(p.draft_id, (partCounts.get(p.draft_id) || 0) + 1));
+
+          const fixIds: string[] = [];
+          const updatedData = data.map(d => {
+            if (d.status === 'in_progress') {
+              const numParts = partCounts.get(d.id) || 0;
+              const numPicks = pickCounts.get(d.id) || 0;
+              const totalExpected = numParts * d.num_rounds;
+              if (numParts > 0 && numPicks >= totalExpected) {
+                fixIds.push(d.id);
+                return { ...d, status: 'complete' };
+              }
+            }
+            return d;
+          });
+
+          for (const id of fixIds) {
+            await supabase.from('drafts').update({ status: 'complete' }).eq('id', id);
+          }
+          setDrafts(updatedData);
+        } else {
+          setDrafts(data);
         }
       }
       setLoading(false);
@@ -46,8 +73,8 @@ export default function DraftsListPage() {
 
   const statusConfig: Record<string, { label: string; cls: string }> = {
     setup: { label: 'Setup', cls: 'bg-muted text-muted-foreground' },
-    in_progress: { label: 'Live', cls: 'bg-success/10 text-success' },
-    complete: { label: 'Done', cls: 'bg-primary/10 text-primary' },
+    in_progress: { label: 'In Progress', cls: 'bg-success/10 text-success' },
+    complete: { label: 'Complete', cls: 'bg-primary/10 text-primary' },
   };
 
   return (
