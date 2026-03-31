@@ -69,12 +69,11 @@ function ImagePreview({ url }: { url: string }) {
 
 /* ═══ YOUTUBE PREVIEW ═══ */
 function YouTubePreview({ link, messageId }: { link: ParsedLink; messageId: string }) {
-  if (!link.embedId) return <PlainLink url={link.url} />;
-
   const [title, setTitle] = useState<string | null>(null);
-  const thumbnailUrl = `https://img.youtube.com/vi/${link.embedId}/mqdefault.jpg`;
+  const thumbnailUrl = link.embedId ? `https://img.youtube.com/vi/${link.embedId}/mqdefault.jpg` : '';
 
   useEffect(() => {
+    if (!link.embedId) return;
     let cancelled = false;
     async function fetchTitle() {
       // Check cache first
