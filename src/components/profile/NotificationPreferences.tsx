@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, BarChart3, CalendarDays, Bookmark, Bell, AtSign } from 'lucide-react';
+import { MessageCircle, BarChart3, CalendarDays, Bookmark, Bell, AtSign, Lock } from 'lucide-react';
 import { useNotificationPreferences, NotificationPreferences } from '@/hooks/useNotificationPreferences';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
