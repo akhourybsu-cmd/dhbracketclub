@@ -154,8 +154,8 @@ export function MazeBuilder({ onSave, isPending }: Props) {
           <span className="text-[9px] px-2 py-1 rounded-full bg-muted/20 text-muted-foreground font-bold">
             {wallCount} walls
           </span>
-          <span className="text-[9px] px-2 py-1 rounded-full bg-destructive/10 text-destructive font-bold">
-            {mineCount} mines
+          <span className={`text-[9px] px-2 py-1 rounded-full font-bold ${mineCount > MAX_BOMBS ? 'bg-destructive/15 text-destructive' : 'bg-destructive/10 text-destructive'}`}>
+            {mineCount}/{MAX_BOMBS} mines
           </span>
         </div>
 

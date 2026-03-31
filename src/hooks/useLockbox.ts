@@ -5,7 +5,6 @@ import {
   BASE_CRACK_POINTS, getEfficiencyBonus, getDefensePoints,
   sortCracksForBest, BEST_CRACK_BONUS,
 } from '@/lib/lockboxScoring';
-import { useAuth } from '@/contexts/AuthContext';
 
 // ── Week Bounds ──
 function getWeekBounds() {
