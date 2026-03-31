@@ -26,12 +26,24 @@ export default function ChatPage() {
   const composerRef = useRef<MessageComposerHandle>(null);
 
   // Dynamic viewport height to handle mobile keyboard
-  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+  const [chatHeight, setChatHeight] = useState<string>('calc(100dvh - 4.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))');
 
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    const update = () => setViewportHeight(vv.height);
+    const fullHeight = window.innerHeight;
+    const update = () => {
+      const vpH = vv.height;
+      // If viewport shrank significantly, the keyboard is open — bottom nav is hidden behind it
+      const keyboardOpen = fullHeight - vpH > 100;
+      if (keyboardOpen) {
+        // Use full visual viewport — no nav bar subtraction needed
+        setChatHeight(`${vpH}px`);
+      } else {
+        // Normal state: subtract bottom nav (4.5rem ≈ 72px)
+        setChatHeight(`${vpH - 72}px`);
+      }
+    };
     update();
     vv.addEventListener('resize', update);
     return () => vv.removeEventListener('resize', update);
