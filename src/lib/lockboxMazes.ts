@@ -1,6 +1,8 @@
 // Custom maze system for DH Lockbox
 // Cell types: 0=open, 1=wall, 2=mine, 3=start, 4=goal
 
+import { MAX_BOMBS } from './lockboxScoring';
+
 export type CellType = 0 | 1 | 2 | 3 | 4;
 
 export interface MazeGrid {
@@ -119,6 +121,40 @@ function countPaths(grid: CellType[][]): number {
   return count;
 }
 
+// Get the safe solution path (for bomb placement validation)
+function getSafePath(grid: CellType[][]): Set<string> | null {
+  const start = findCell(grid, 3);
+  const goal = findCell(grid, 4);
+  if (!start || !goal) return null;
+
+  const size = grid.length;
+  const dirs: [number, number][] = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+  const queue: { pos: [number, number]; path: [number, number][] }[] = [
+    { pos: start, path: [start] },
+  ];
+  const visited = new Set<string>();
+  visited.add(`${start[0]},${start[1]}`);
+
+  while (queue.length > 0) {
+    const { pos, path } = queue.shift()!;
+    if (pos[0] === goal[0] && pos[1] === goal[1]) {
+      return new Set(path.map(([r, c]) => `${r},${c}`));
+    }
+    for (const [dr, dc] of dirs) {
+      const nr = pos[0] + dr;
+      const nc = pos[1] + dc;
+      const key = `${nr},${nc}`;
+      if (nr >= 0 && nr < size && nc >= 0 && nc < size && !visited.has(key)) {
+        const cell = grid[nr][nc];
+        if (cell === 1 || cell === 2) continue; // safe path avoids walls and mines
+        visited.add(key);
+        queue.push({ pos: [nr, nc], path: [...path, [nr, nc]] });
+      }
+    }
+  }
+  return null;
+}
+
 // Validate maze for saving
 export interface MazeValidation {
   valid: boolean;
@@ -134,6 +170,19 @@ export function validateMaze(grid: CellType[][]): MazeValidation {
   if (!start) errors.push('Place a Start tile');
   if (!goal) errors.push('Place a Goal tile');
 
+  // Count mines and enforce limit
+  let mineCount = 0;
+  for (const row of grid) {
+    for (const cell of row) {
+      if (cell === 2) mineCount++;
+    }
+  }
+  if (mineCount > MAX_BOMBS) errors.push(`Too many mines (max ${MAX_BOMBS})`);
+
+  // Validate bomb placement: not on start or goal
+  if (start && grid[start[0]][start[1]] === 2) errors.push('Cannot place a mine on the Start tile');
+  if (goal && grid[goal[0]][goal[1]] === 2) errors.push('Cannot place a mine on the Goal tile');
+
   if (start && goal) {
     // Check path exists ignoring mines (so mines don't make it impossible)
     const pathIgnoringMines = findPath(grid, true);
@@ -147,17 +196,22 @@ export function validateMaze(grid: CellType[][]): MazeValidation {
       } else if (safePathCount > 1) {
         errors.push('Multiple safe paths exist — add walls or mines to create exactly one');
       }
-    }
-  }
 
-  // Count mines (limit to reasonable amount)
-  let mineCount = 0;
-  for (const row of grid) {
-    for (const cell of row) {
-      if (cell === 2) mineCount++;
+      // Validate bombs are NOT on the solution path
+      if (safePathCount === 1) {
+        const safePath = getSafePath(grid);
+        if (safePath) {
+          for (let r = 0; r < grid.length; r++) {
+            for (let c = 0; c < grid[r].length; c++) {
+              if (grid[r][c] === 2 && safePath.has(`${r},${c}`)) {
+                errors.push('A mine is on the solution path — mines can only be on false branches');
+              }
+            }
+          }
+        }
+      }
     }
   }
-  if (mineCount > 8) errors.push('Too many mines (max 8)');
 
   return { valid: errors.length === 0, errors };
 }

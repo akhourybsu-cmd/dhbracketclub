@@ -1,5 +1,9 @@
 import { motion } from 'framer-motion';
-import { X, Swords, Shield, Trophy, Zap, HelpCircle } from 'lucide-react';
+import { X, Swords, Shield, Trophy, Zap, HelpCircle, Target } from 'lucide-react';
+import {
+  BASE_CRACK_POINTS, BEST_CRACK_BONUS, UNCRACKED_DEFENSE_POINTS,
+  EFFICIENCY_TIERS, DEFENSE_TIERS,
+} from '@/lib/lockboxScoring';
 
 interface Props {
   onClose: () => void;
@@ -19,46 +23,78 @@ export function LockboxScoringInfo({ onClose }: Props) {
       <h3 className="font-bold text-sm mb-3">How Scoring Works</h3>
 
       <div className="space-y-3">
+        {/* Crack base */}
         <div className="flex gap-3">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
             <Swords className="w-4 h-4 text-primary" />
           </div>
           <div>
-            <div className="text-[12px] font-bold">Crack a Lock — 5 pts</div>
+            <div className="text-[12px] font-bold">Crack a Lock — {BASE_CRACK_POINTS} pts</div>
             <div className="text-[10px] text-muted-foreground">Solve all 3 phases (numbers → colors → maze)</div>
           </div>
         </div>
 
+        {/* Efficiency bonus */}
+        <div className="flex gap-3">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <Target className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <div className="text-[12px] font-bold">Efficiency Bonus</div>
+            <div className="text-[10px] text-muted-foreground mb-1.5">Fewer attempts = more bonus points</div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+              {EFFICIENCY_TIERS.map(t => (
+                <div key={t.range} className="text-[9px] text-muted-foreground flex justify-between">
+                  <span>{t.range}</span>
+                  <span className="font-bold text-primary">{t.bonus}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Best crack */}
         <div className="flex gap-3">
           <div className="w-8 h-8 rounded-lg bg-amber-400/10 flex items-center justify-center flex-shrink-0">
             <Zap className="w-4 h-4 text-amber-400" />
           </div>
           <div>
-            <div className="text-[12px] font-bold">Best Crack Bonus — +2 pts</div>
-            <div className="text-[10px] text-muted-foreground">Fewest total attempts on a lock wins the bonus</div>
+            <div className="text-[12px] font-bold">Best Crack Bonus — +{BEST_CRACK_BONUS} pts</div>
+            <div className="text-[10px] text-muted-foreground">Fewest attempts on a lock wins the bonus (ties: fastest time, then earliest finish)</div>
           </div>
         </div>
 
+        {/* Defense */}
         <div className="flex gap-3">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
             <Shield className="w-4 h-4 text-primary" />
           </div>
           <div>
-            <div className="text-[12px] font-bold">Defend Your Lock — 5 pts</div>
-            <div className="text-[10px] text-muted-foreground">No one cracks your lock by end of week</div>
+            <div className="text-[12px] font-bold">Defense Points</div>
+            <div className="text-[10px] text-muted-foreground mb-1.5">Harder locks earn more defense</div>
+            <div className="space-y-0.5">
+              {DEFENSE_TIERS.map(t => (
+                <div key={t.condition} className="text-[9px] text-muted-foreground flex justify-between">
+                  <span>{t.condition}</span>
+                  <span className="font-bold text-primary">{t.points}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
+        {/* Attempts */}
         <div className="flex gap-3">
           <div className="w-8 h-8 rounded-lg bg-muted/20 flex items-center justify-center flex-shrink-0">
             <HelpCircle className="w-4 h-4 text-muted-foreground" />
           </div>
           <div>
             <div className="text-[12px] font-bold">What Counts as an Attempt?</div>
-            <div className="text-[10px] text-muted-foreground">Each number guess, color guess, or failed maze try = 1 attempt</div>
+            <div className="text-[10px] text-muted-foreground">Each number guess, color guess, or failed maze run = 1 attempt. Total across all phases.</div>
           </div>
         </div>
 
+        {/* Weekly winner */}
         <div className="flex gap-3">
           <div className="w-8 h-8 rounded-lg bg-amber-400/10 flex items-center justify-center flex-shrink-0">
             <Trophy className="w-4 h-4 text-amber-400" />
