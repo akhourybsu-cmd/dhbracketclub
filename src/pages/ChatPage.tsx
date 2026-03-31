@@ -488,6 +488,9 @@ export default function ChatPage() {
           <button onClick={() => { setShowSearch(!showSearch); setSearchQuery(''); setSearchResults(null); }} className={cn("p-1.5 rounded-lg transition-colors", showSearch ? "bg-primary/15 text-primary" : "hover:bg-muted/50 text-muted-foreground/60")}>
             <Search className="w-4 h-4" />
           </button>
+          <button onClick={() => navigate('/shared')} className="p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground/60 transition-colors" title="Shared Media">
+            <Link2 className="w-4 h-4" />
+          </button>
           {pinnedCount > 0 && (
             <button onClick={loadPinnedMessages} className={cn("p-1.5 rounded-lg transition-colors", showPinned ? "bg-premium-warm/15 text-premium-warm" : "hover:bg-muted/50 text-muted-foreground/60")}>
               <Pin className="w-4 h-4" />
