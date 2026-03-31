@@ -444,11 +444,11 @@ export default function DashboardPage() {
                 <motion.div key={pool.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 + i * 0.04 }}>
                   <Link to={`/pools/${pool.id}`} className="block group">
                     <div className="glass-card p-3.5 transition-all duration-200 group-hover:border-primary/15">
-                      <div className="flex items-center gap-3 relative z-10">
+                        <div className="flex items-center gap-3 relative z-10">
                         <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{
-                          background: locked ? 'hsl(var(--muted) / 0.5)' : 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.04))',
+                          background: (bs === 'complete' || locked) ? 'hsl(var(--muted) / 0.5)' : 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.04))',
                         }}>
-                          <Trophy className={cn("w-4 h-4", locked ? "text-muted-foreground/60" : "text-primary")} />
+                          <Trophy className={cn("w-4 h-4", (bs === 'complete' || locked) ? "text-muted-foreground/60" : "text-primary")} />
                         </div>
                         <div className="min-w-0 flex-1">
                           <h3 className="font-bold text-[13px] truncate tracking-tight">{pool.name}</h3>
