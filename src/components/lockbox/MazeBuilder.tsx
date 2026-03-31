@@ -6,6 +6,7 @@ import {
   CellType, MAZE_SIZE, CELL_ICONS, CELL_LABELS,
   createEmptyGrid, validateMaze, findCell,
 } from '@/lib/lockboxMazes';
+import { MAX_BOMBS } from '@/lib/lockboxScoring';
 
 interface Props {
   onSave: (grid: CellType[][]) => void;
