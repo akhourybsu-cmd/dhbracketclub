@@ -216,7 +216,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
     const canSend = (value.trim().length > 0 || pendingImages.length > 0) && !disabled && !uploading;
 
     return (
-      <div ref={containerRef} className={cn("flex flex-col", compact ? "px-4 py-3" : "px-4 sm:px-5 py-3")}
+      <div ref={containerRef} className={cn("flex flex-col sticky bottom-0", compact ? "px-4 py-3" : "px-4 sm:px-5 py-3")}
         style={{ paddingBottom: compact ? undefined : 'calc(0.75rem + env(safe-area-inset-bottom, 0px))', paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))', paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))' }}
       >
         {/* Image preview strip */}

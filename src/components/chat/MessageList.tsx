@@ -55,15 +55,33 @@ export function MessageList({
   const [newMsgCount, setNewMsgCount] = useState(0);
   const prevMsgCount = useRef(messages.length);
 
-  // Reset auto-scroll when channel changes so we always land at the bottom
+  // Reset auto-scroll when channel changes — use MutationObserver to wait for messages
   useEffect(() => {
     setAutoScroll(true);
     setNewMsgCount(0);
-    // Use a short delay to ensure messages have rendered before scrolling
-    const t = setTimeout(() => {
+
+    const el = scrollRef.current;
+    if (!el) return;
+
+    // Immediate attempt
+    requestAnimationFrame(() => {
       messagesEndRef.current?.scrollIntoView();
-    }, 50);
-    return () => clearTimeout(t);
+    });
+
+    // MutationObserver: if messages render after the rAF, scroll again
+    const observer = new MutationObserver(() => {
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView();
+      });
+    });
+    observer.observe(el, { childList: true, subtree: true });
+
+    // Disconnect after a generous window
+    const t = setTimeout(() => observer.disconnect(), 1500);
+    return () => {
+      clearTimeout(t);
+      observer.disconnect();
+    };
   }, [selectedChannel?.id]);
 
   // Scroll preservation on load-more (prepend)
@@ -100,20 +118,30 @@ export function MessageList({
     prevMsgCount.current = messages.length;
   }, [messages, autoScroll]);
 
-  // When the container resizes (e.g. keyboard open/close changes parent height),
-  // keep the last message visible by scrolling to bottom
+  // When the container resizes (keyboard open/close), always re-anchor to bottom
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el || !autoScroll) return;
+    if (!el) return;
 
     const observer = new ResizeObserver(() => {
-      if (autoScroll) {
-        messagesEndRef.current?.scrollIntoView();
-      }
+      requestAnimationFrame(() => {
+        if (autoScroll) {
+          messagesEndRef.current?.scrollIntoView();
+        }
+      });
     });
     observer.observe(el);
     return () => observer.disconnect();
   }, [autoScroll]);
+
+  // Respond to external scroll-to-bottom trigger (keyboard open/close from parent)
+  useEffect(() => {
+    if (scrollToBottomTrigger && autoScroll) {
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView();
+      });
+    }
+  }, [scrollToBottomTrigger]);
 
   // Passive, RAF-throttled scroll handler
   const rafRef = useRef<number | null>(null);

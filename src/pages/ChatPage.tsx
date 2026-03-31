@@ -588,6 +588,7 @@ export default function ChatPage() {
                   loadingMore={loadingMore}
                   isSearchActive={!!searchResults}
                   lastReadAt={lastReadAt}
+                  scrollToBottomTrigger={scrollToBottomTrigger}
                 />
                 {!searchResults && (
                   <div className="flex-shrink-0 border-t border-border/15 bg-background/80 backdrop-blur-sm">
