@@ -127,8 +127,12 @@ export default function PollsListPage() {
                         {voted ? (
                           <span className="status-pill bg-success/10 text-success"><CheckCircle2 className="w-3 h-3 mr-0.5" />Voted</span>
                         ) : (
-                          <span className={cn("status-pill", p.status === 'open' ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground')}>
-                            {p.status === 'open' ? 'Open' : 'Closed'}
+                          <span className={cn("status-pill", 
+                            (p.status === 'open' && !(p.closes_at && new Date(p.closes_at) < new Date())) 
+                              ? 'bg-success/10 text-success' 
+                              : 'bg-muted text-muted-foreground'
+                          )}>
+                            {(p.status === 'open' && !(p.closes_at && new Date(p.closes_at) < new Date())) ? 'Open' : 'Closed'}
                           </span>
                         )}
                         <ArrowRight className="w-4 h-4 text-muted-foreground/60 group-hover:text-muted-foreground transition-all" />
