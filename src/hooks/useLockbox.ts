@@ -1,6 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import {
+  BASE_CRACK_POINTS, getEfficiencyBonus, getDefensePoints,
+  sortCracksForBest, BEST_CRACK_BONUS,
+} from '@/lib/lockboxScoring';
+import { useAuth } from '@/contexts/AuthContext';
 
 // ── Week Bounds ──
 function getWeekBounds() {
