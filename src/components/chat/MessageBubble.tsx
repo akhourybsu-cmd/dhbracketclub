@@ -84,7 +84,7 @@ function renderMentions(text: string, currentDisplayName?: string, keyPrefix: nu
 function extractImageUrls(text: string): string[] {
   const matches = text.match(URL_RE);
   if (!matches) return [];
-  return matches.filter(url => IMAGE_EXT_RE.test(url));
+  return matches.filter(isImageUrl);
 }
 
 interface MessageBubbleProps {
