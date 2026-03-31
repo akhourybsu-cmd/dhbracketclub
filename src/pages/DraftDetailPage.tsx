@@ -12,6 +12,7 @@ import { useDraftUpdates } from '@/hooks/useRealtimeSubscription';
 import { useItemEnrichments, useEnrichDraftPicks } from '@/hooks/useItemEnrichments';
 import EnrichedItemCard, { EnrichedItemSkeleton } from '@/components/EnrichedItemCard';
 import ShareButton from '@/components/ShareButton';
+import ImagePickerDialog from '@/components/draft/ImagePickerDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
