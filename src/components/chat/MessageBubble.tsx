@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, Fragment, memo } from 'react';
+import { useState, useRef, useCallback, useEffect, Fragment, memo, useMemo } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -12,6 +12,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { parseMessageLinks } from '@/lib/linkParser';
+import { LinkPreviewCard } from './LinkPreviewCard';
 
 /* ═══ URL auto-linking + inline image preview ═══ */
 const URL_RE = /(https?:\/\/[^\s<]+)/g;
@@ -182,6 +184,9 @@ function MessageBubbleInner({
   const showGroupedAvatar = sameAuthor && !nextSameAuthor;
 
   const imageUrls = extractImageUrls(msg.content);
+  const parsedLinks = useMemo(() => parseMessageLinks(msg.content), [msg.content]);
+  // Only show link preview cards for non-image links (images are handled by existing inline preview)
+  const previewLinks = parsedLinks.filter(l => l.contentType !== 'image');
 
   return (
     <>
@@ -285,6 +290,14 @@ function MessageBubbleInner({
                 {renderContent(msg.content, currentUserId, currentDisplayName)}
                 {msg.edited_at && <span className="text-[9px] text-muted-foreground/70 ml-1.5">(edited)</span>}
               </p>
+              {/* Rich link/media previews */}
+              {previewLinks.length > 0 && !msg._optimistic && (
+                <div className="space-y-1.5">
+                  {previewLinks.map((link, i) => (
+                    <LinkPreviewCard key={`${link.url}-${i}`} link={link} messageId={msg.id} />
+                  ))}
+                </div>
+              )}
               {/* Inline image previews */}
               {imageUrls.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
@@ -293,7 +306,7 @@ function MessageBubbleInner({
                       <img
                         src={url}
                         alt="Shared image"
-                        className="rounded-lg max-w-[240px] max-h-[180px] object-cover border border-border/15"
+                        className="rounded-xl max-w-[280px] max-h-[220px] object-cover border border-border/15"
                         loading="lazy"
                         onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
                       />

@@ -1138,6 +1138,59 @@ export type Database = {
         }
         Relationships: []
       }
+      message_link_previews: {
+        Row: {
+          content_type: string
+          created_at: string
+          description: string | null
+          embed_id: string | null
+          embed_type: string | null
+          fetched_at: string | null
+          id: string
+          image_url: string | null
+          message_id: string
+          site_name: string | null
+          title: string | null
+          url: string
+        }
+        Insert: {
+          content_type?: string
+          created_at?: string
+          description?: string | null
+          embed_id?: string | null
+          embed_type?: string | null
+          fetched_at?: string | null
+          id?: string
+          image_url?: string | null
+          message_id: string
+          site_name?: string | null
+          title?: string | null
+          url: string
+        }
+        Update: {
+          content_type?: string
+          created_at?: string
+          description?: string | null
+          embed_id?: string | null
+          embed_type?: string | null
+          fetched_at?: string | null
+          id?: string
+          image_url?: string | null
+          message_id?: string
+          site_name?: string | null
+          title?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_link_previews_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_reactions: {
         Row: {
           created_at: string
