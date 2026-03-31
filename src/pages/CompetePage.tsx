@@ -28,7 +28,7 @@ function LockboxCompeteCard() {
   const dayLabel = day ? format(new Date(day.starts_at), 'MMM d') : 'Today';
 
   // Build context line
-  let contextLine = weekLabel;
+  let contextLine = dayLabel;
   if (!myLock) {
     contextLine += ' · Create your lock';
   } else if (inProgress > 0) {
