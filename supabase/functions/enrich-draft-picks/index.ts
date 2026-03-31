@@ -194,12 +194,26 @@ async function enrichFromOpenLibrary(
 ): Promise<EnrichmentResult> {
   try {
     const query = encodeURIComponent(enrichment.normalized_name || name);
-    const res = await fetch(`https://openlibrary.org/search.json?title=${query}&limit=1`);
+    const res = await fetch(`https://openlibrary.org/search.json?title=${query}&limit=5`);
     if (!res.ok) return enrichment;
     const data = await res.json();
-    const doc = data.docs?.[0];
-    if (!doc) return enrichment;
+    const docs = data.docs || [];
+    if (!docs.length) return enrichment;
 
+    const candidates: ImageCandidate[] = [];
+    for (const doc of docs.slice(0, 5)) {
+      const coverId = doc.cover_i;
+      if (coverId) {
+        candidates.push({
+          url: `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`,
+          thumbnail: `https://covers.openlibrary.org/b/id/${coverId}-M.jpg`,
+          source: "openlibrary",
+          label: doc.title || name,
+        });
+      }
+    }
+
+    const doc = docs[0];
     const coverId = doc.cover_i;
     if (coverId) {
       enrichment.image_url = `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`;
@@ -213,6 +227,7 @@ async function enrichFromOpenLibrary(
       ...enrichment.metadata,
       author: doc.author_name?.[0],
       year: doc.first_publish_year,
+      image_candidates: candidates,
     };
     return enrichment;
   } catch {
