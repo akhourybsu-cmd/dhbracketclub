@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { parseMessageLinks } from '@/lib/linkParser';
 import { AnimatePresence } from 'framer-motion';
 import { Hash, ChevronLeft, Pin, Search, X } from 'lucide-react';
 import { format } from 'date-fns';
