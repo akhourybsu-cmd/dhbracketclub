@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { History, ChevronRight, Calendar, Shield, Swords } from 'lucide-react';
-import { usePastWeeks, useWeekScores, useAllWeekLocks } from '@/hooks/useLockbox';
+import { usePastDays, useDayScores, useAllDayLocks } from '@/hooks/useLockbox';
+import { format } from 'date-fns';
 
-function WeekDetail({ week }: { week: any }) {
-  const { data: scores } = useWeekScores(week.id);
-  const { data: locks } = useAllWeekLocks(week.id);
+function DayDetail({ day }: { day: any }) {
+  const { data: scores } = useDayScores(day.id);
+  const { data: locks } = useAllDayLocks(day.id);
   const medals = ['🥇', '🥈', '🥉'];
 
   return (
@@ -39,15 +40,15 @@ function WeekDetail({ week }: { week: any }) {
       )}
 
       {(!scores || scores.length === 0) && (
-        <div className="text-[11px] text-muted-foreground text-center py-3">No scores recorded for this week</div>
+        <div className="text-[11px] text-muted-foreground text-center py-3">No scores recorded for this day</div>
       )}
     </motion.div>
   );
 }
 
 export function LockboxHistory() {
-  const { data: weeks, isLoading } = usePastWeeks();
-  const [expandedWeek, setExpandedWeek] = useState<string | null>(null);
+  const { data: days, isLoading } = usePastDays();
+  const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -59,45 +60,45 @@ export function LockboxHistory() {
     );
   }
 
-  if (!weeks || weeks.length === 0) {
+  if (!days || days.length === 0) {
     return (
       <div className="glass-card p-8 text-center">
         <History className="w-8 h-8 mx-auto mb-3 text-muted-foreground/30" />
         <h3 className="font-bold text-sm mb-1">No History Yet</h3>
-        <p className="text-[11px] text-muted-foreground">Past weekly results will appear here</p>
+        <p className="text-[11px] text-muted-foreground">Past daily results will appear here</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-2">
-      <div className="text-[10px] font-bold text-muted-foreground/60 tracking-wider mb-2">WEEKLY ARCHIVE</div>
-      {weeks.map((week: any) => {
-        const isExpanded = expandedWeek === week.id;
-        const startDate = new Date(week.starts_at);
-        const dateStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      <div className="text-[10px] font-bold text-muted-foreground/60 tracking-wider mb-2">DAILY ARCHIVE</div>
+      {days.map((day: any) => {
+        const isExpanded = expandedDay === day.id;
+        const startDate = new Date(day.starts_at);
+        const dateStr = format(startDate, 'EEE, MMM d');
 
         return (
-          <div key={week.id}>
+          <div key={day.id}>
             <button
-              onClick={() => setExpandedWeek(isExpanded ? null : week.id)}
+              onClick={() => setExpandedDay(isExpanded ? null : day.id)}
               className="w-full glass-card p-3.5 flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
             >
               <div className="w-9 h-9 rounded-xl bg-muted/20 flex items-center justify-center">
                 <Calendar className="w-4 h-4 text-muted-foreground" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-bold text-[13px]">Week {week.week_number}</div>
-                <div className="text-[10px] text-muted-foreground">{dateStr} • {week.year}</div>
+                <div className="font-bold text-[13px]">{dateStr}</div>
+                <div className="text-[10px] text-muted-foreground">{day.year}</div>
               </div>
               <div className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                week.status === 'active' ? 'bg-primary/15 text-primary' : 'bg-muted/30 text-muted-foreground'
+                day.status === 'active' ? 'bg-primary/15 text-primary' : 'bg-muted/30 text-muted-foreground'
               }`}>
-                {week.status === 'active' ? 'CURRENT' : 'COMPLETE'}
+                {day.status === 'active' ? 'TODAY' : 'COMPLETE'}
               </div>
               <ChevronRight className={`w-4 h-4 text-muted-foreground/30 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
             </button>
-            {isExpanded && <WeekDetail week={week} />}
+            {isExpanded && <DayDetail day={day} />}
           </div>
         );
       })}

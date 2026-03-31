@@ -13,7 +13,7 @@ export function CrackList({ locks, weekId }: Props) {
       <div className="glass-card p-8 text-center">
         <Swords className="w-8 h-8 mx-auto mb-3 text-muted-foreground/30" />
         <h3 className="font-bold text-sm mb-1">No Locks to Crack</h3>
-        <p className="text-[11px] text-muted-foreground">Waiting for other players to set their locks this week</p>
+        <p className="text-[11px] text-muted-foreground">Waiting for other players to set their locks today</p>
       </div>
     );
   }

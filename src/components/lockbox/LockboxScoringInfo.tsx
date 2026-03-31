@@ -23,7 +23,6 @@ export function LockboxScoringInfo({ onClose }: Props) {
       <h3 className="font-bold text-sm mb-3">How Scoring Works</h3>
 
       <div className="space-y-3">
-        {/* Crack base */}
         <div className="flex gap-3">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
             <Swords className="w-4 h-4 text-primary" />
@@ -34,7 +33,6 @@ export function LockboxScoringInfo({ onClose }: Props) {
           </div>
         </div>
 
-        {/* Efficiency bonus */}
         <div className="flex gap-3">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
             <Target className="w-4 h-4 text-primary" />
@@ -53,7 +51,6 @@ export function LockboxScoringInfo({ onClose }: Props) {
           </div>
         </div>
 
-        {/* Best crack */}
         <div className="flex gap-3">
           <div className="w-8 h-8 rounded-lg bg-amber-400/10 flex items-center justify-center flex-shrink-0">
             <Zap className="w-4 h-4 text-amber-400" />
@@ -64,7 +61,6 @@ export function LockboxScoringInfo({ onClose }: Props) {
           </div>
         </div>
 
-        {/* Defense */}
         <div className="flex gap-3">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
             <Shield className="w-4 h-4 text-primary" />
@@ -83,7 +79,6 @@ export function LockboxScoringInfo({ onClose }: Props) {
           </div>
         </div>
 
-        {/* Attempts */}
         <div className="flex gap-3">
           <div className="w-8 h-8 rounded-lg bg-muted/20 flex items-center justify-center flex-shrink-0">
             <HelpCircle className="w-4 h-4 text-muted-foreground" />
@@ -94,19 +89,17 @@ export function LockboxScoringInfo({ onClose }: Props) {
           </div>
         </div>
 
-        {/* Weekly winner */}
         <div className="flex gap-3">
           <div className="w-8 h-8 rounded-lg bg-amber-400/10 flex items-center justify-center flex-shrink-0">
             <Trophy className="w-4 h-4 text-amber-400" />
           </div>
           <div>
-            <div className="text-[12px] font-bold">Weekly Winner</div>
-            <div className="text-[10px] text-muted-foreground">Most total points at end of week wins. New locks reset every week.</div>
+            <div className="text-[12px] font-bold">Daily Winner</div>
+            <div className="text-[10px] text-muted-foreground">Most total points at end of day wins. New locks reset every day.</div>
           </div>
         </div>
       </div>
 
-      {/* Clue feedback legend */}
       <div className="mt-4 pt-3 border-t border-border/10">
         <div className="text-[10px] font-bold text-muted-foreground/60 mb-2 tracking-wider">CLUE FEEDBACK</div>
         <div className="flex gap-4">

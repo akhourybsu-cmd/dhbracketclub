@@ -6,30 +6,26 @@ import {
   sortCracksForBest, BEST_CRACK_BONUS,
 } from '@/lib/lockboxScoring';
 
-// ── Week Bounds ──
-function getWeekBounds() {
+// ── Day Bounds ──
+function getDayBounds() {
   const now = new Date();
-  const day = now.getUTCDay();
-  const start = new Date(now);
-  start.setUTCDate(now.getUTCDate() - day);
-  start.setUTCHours(0, 0, 0, 0);
+  const start = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
   const end = new Date(start);
-  end.setUTCDate(start.getUTCDate() + 7);
+  end.setUTCDate(start.getUTCDate() + 1);
 
-  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
-  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const weekNumber = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  // Day of year as the identifier
+  const yearStart = new Date(Date.UTC(now.getFullYear(), 0, 1));
+  const dayOfYear = Math.ceil((start.getTime() - yearStart.getTime()) / 86400000) + 1;
 
-  return { starts_at: start.toISOString(), ends_at: end.toISOString(), week_number: weekNumber, year: now.getFullYear() };
+  return { starts_at: start.toISOString(), ends_at: end.toISOString(), week_number: dayOfYear, year: now.getFullYear() };
 }
 
-// ── Current Week ──
-export function useCurrentWeek() {
+// ── Current Day ──
+export function useCurrentDay() {
   return useQuery({
-    queryKey: ['lockbox-week'],
+    queryKey: ['lockbox-day'],
     queryFn: async () => {
-      const bounds = getWeekBounds();
+      const bounds = getDayBounds();
       const { data } = await supabase
         .from('lockbox_weeks').select('*')
         .eq('week_number', bounds.week_number).eq('year', bounds.year)
@@ -50,16 +46,19 @@ export function useCurrentWeek() {
   });
 }
 
+// Keep old export name as alias for backward compat
+export const useCurrentWeek = useCurrentDay;
+
 // ── My Lock ──
-export function useMyLock(weekId: string | undefined) {
+export function useMyLock(dayId: string | undefined) {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ['lockbox-my-lock', weekId],
-    enabled: !!weekId && !!user,
+    queryKey: ['lockbox-my-lock', dayId],
+    enabled: !!dayId && !!user,
     queryFn: async () => {
       const { data } = await supabase
         .from('lockbox_locks').select('*')
-        .eq('week_id', weekId!).eq('user_id', user!.id)
+        .eq('week_id', dayId!).eq('user_id', user!.id)
         .maybeSingle();
       return data;
     },
@@ -71,16 +70,15 @@ export function useCreateLock() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (params: { week_id: string; user_id: string; number_code: string; color_code: string; maze_grid?: any; maze_id?: number }) => {
-      // Check for existing lock first (belt-and-suspenders with unique constraint)
       const { data: existing } = await supabase
         .from('lockbox_locks').select('id')
         .eq('week_id', params.week_id).eq('user_id', params.user_id)
         .maybeSingle();
-      if (existing) throw new Error('You already have a lock for this week');
+      if (existing) throw new Error('You already have a lock for today');
 
       const { data, error } = await supabase.from('lockbox_locks').insert(params).select().single();
       if (error) {
-        if (error.code === '23505') throw new Error('You already have a lock for this week');
+        if (error.code === '23505') throw new Error('You already have a lock for today');
         throw error;
       }
       return data;
@@ -92,17 +90,17 @@ export function useCreateLock() {
   });
 }
 
-// ── Week Locks (others' locks with my attempts) ──
-export function useWeekLocks(weekId: string | undefined) {
+// ── Day Locks (others' locks with my attempts) ──
+export function useDayLocks(dayId: string | undefined) {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ['lockbox-locks', weekId],
-    enabled: !!weekId && !!user,
+    queryKey: ['lockbox-locks', dayId],
+    enabled: !!dayId && !!user,
     queryFn: async () => {
       const { data: locks } = await supabase
         .from('lockbox_locks')
         .select('*, profiles:user_id(display_name, avatar_url)')
-        .eq('week_id', weekId!)
+        .eq('week_id', dayId!)
         .neq('user_id', user!.id);
 
       const lockIds = (locks || []).map((l: any) => l.id);
@@ -122,29 +120,34 @@ export function useWeekLocks(weekId: string | undefined) {
   });
 }
 
-// ── ALL locks for a week (for leaderboard/results) ──
-export function useAllWeekLocks(weekId: string | undefined) {
+// Keep old export name as alias
+export const useWeekLocks = useDayLocks;
+
+// ── ALL locks for a day (for leaderboard/results) ──
+export function useAllDayLocks(dayId: string | undefined) {
   return useQuery({
-    queryKey: ['lockbox-all-locks', weekId],
-    enabled: !!weekId,
+    queryKey: ['lockbox-all-locks', dayId],
+    enabled: !!dayId,
     queryFn: async () => {
       const { data } = await supabase
         .from('lockbox_locks')
         .select('*, profiles:user_id(display_name, avatar_url)')
-        .eq('week_id', weekId!);
+        .eq('week_id', dayId!);
       return data || [];
     },
   });
 }
 
-// ── ALL attempts for a week (for computed leaderboard) ──
-export function useAllWeekAttempts(weekId: string | undefined) {
+export const useAllWeekLocks = useAllDayLocks;
+
+// ── ALL attempts for a day (for computed leaderboard) ──
+export function useAllDayAttempts(dayId: string | undefined) {
   return useQuery({
-    queryKey: ['lockbox-all-attempts', weekId],
-    enabled: !!weekId,
+    queryKey: ['lockbox-all-attempts', dayId],
+    enabled: !!dayId,
     queryFn: async () => {
       const { data: locks } = await supabase
-        .from('lockbox_locks').select('id').eq('week_id', weekId!);
+        .from('lockbox_locks').select('id').eq('week_id', dayId!);
       const lockIds = (locks || []).map((l: any) => l.id);
       if (lockIds.length === 0) return [];
       const { data } = await supabase
@@ -198,20 +201,20 @@ export function useSubmitGuess() {
       guessValue: string;
       lockCode: string;
     }) => {
-      // Check if lock's week is still active
+      // Check if lock's day is still active
       const { data: lockData } = await supabase
         .from('lockbox_locks')
         .select('week_id')
         .eq('id', params.lockId)
         .single();
       if (lockData) {
-        const { data: weekData } = await supabase
+        const { data: dayData } = await supabase
           .from('lockbox_weeks')
           .select('ends_at')
           .eq('id', lockData.week_id)
           .single();
-        if (weekData && new Date(weekData.ends_at) < new Date()) {
-          throw new Error('This week has ended — no more guesses allowed');
+        if (dayData && new Date(dayData.ends_at) < new Date()) {
+          throw new Error('Today\'s round has ended — no more guesses allowed');
         }
       }
 
@@ -227,7 +230,6 @@ export function useSubmitGuess() {
           .insert({ lock_id: params.lockId, attacker_id: params.attackerId, phase: 'number', total_attempts: 0 })
           .select().single();
         if (error) {
-          // Race condition: another request created it
           const { data: retry } = await supabase
             .from('lockbox_attempts').select('*')
             .eq('lock_id', params.lockId).eq('attacker_id', params.attackerId)
@@ -239,7 +241,6 @@ export function useSubmitGuess() {
         }
       }
 
-      // Validate phase matches attempt state
       if (attempt.is_solved) {
         throw new Error('You already cracked this lock');
       }
@@ -247,7 +248,6 @@ export function useSubmitGuess() {
         throw new Error(`Expected phase "${attempt.phase}" but got "${params.phase}"`);
       }
 
-      // Calculate clue feedback
       const guessArr = params.guessValue.split(',');
       const codeArr = params.lockCode.split(',');
       let correctPosition = 0;
@@ -268,7 +268,6 @@ export function useSubmitGuess() {
           }
         }
       } else {
-        // Maze: solved or failed
         correctPosition = params.guessValue === 'solved' ? 1 : 0;
       }
 
@@ -300,7 +299,7 @@ export function useSubmitGuess() {
 
       return { correctPosition, correctValue, isCorrect, phase: params.phase, newPhase: updates.phase };
     },
-    onSuccess: (_, params) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['lockbox-locks'] });
       qc.invalidateQueries({ queryKey: ['lockbox-guesses'] });
       qc.invalidateQueries({ queryKey: ['lockbox-all-attempts'] });
@@ -310,35 +309,35 @@ export function useSubmitGuess() {
   });
 }
 
-// ── Week Scores ──
-export function useWeekScores(weekId: string | undefined) {
+// ── Day Scores ──
+export function useDayScores(dayId: string | undefined) {
   return useQuery({
-    queryKey: ['lockbox-scores', weekId],
-    enabled: !!weekId,
+    queryKey: ['lockbox-scores', dayId],
+    enabled: !!dayId,
     queryFn: async () => {
       const { data } = await supabase
         .from('lockbox_scores')
         .select('*, profiles:user_id(display_name, avatar_url)')
-        .eq('week_id', weekId!).order('total_points', { ascending: false });
+        .eq('week_id', dayId!).order('total_points', { ascending: false });
       return data || [];
     },
   });
 }
 
-// ── Past Weeks (excludes current week) ──
-export function usePastWeeks() {
+export const useWeekScores = useDayScores;
+
+// ── Past Days (excludes current day) ──
+export function usePastDays() {
   return useQuery({
-    queryKey: ['lockbox-past-weeks'],
+    queryKey: ['lockbox-past-days'],
     queryFn: async () => {
-      const bounds = getWeekBounds();
+      const bounds = getDayBounds();
       const { data } = await supabase
         .from('lockbox_weeks')
         .select('*')
-        .not('week_number', 'eq', bounds.week_number)
         .order('year', { ascending: false })
         .order('week_number', { ascending: false })
-        .limit(20);
-      // Also filter by year if needed (could be same week_number different year)
+        .limit(30);
       return (data || []).filter(
         (w: any) => !(w.week_number === bounds.week_number && w.year === bounds.year)
       );
@@ -346,6 +345,8 @@ export function usePastWeeks() {
     staleTime: 1000 * 60 * 5,
   });
 }
+
+export const usePastWeeks = usePastDays;
 
 // ── Player Lifetime Stats (computed from attempts + scores) ──
 export function usePlayerStats(userId: string | undefined) {
@@ -368,7 +369,7 @@ export function usePlayerStats(userId: string | undefined) {
       const totalPoints = (scores || []).reduce((s: number, r: any) => s + (r.total_points || 0), 0);
       const crackPoints = (scores || []).reduce((s: number, r: any) => s + (r.crack_points || 0), 0);
       const defensePoints = (scores || []).reduce((s: number, r: any) => s + (r.defense_points || 0), 0);
-      const weeklyWins = (scores || []).filter((s: any) => s.rank === 1).length;
+      const dailyWins = (scores || []).filter((s: any) => s.rank === 1).length;
       const topThree = (scores || []).filter((s: any) => s.rank && s.rank <= 3).length;
       const locksCracked = (solvedAttempts || []).length;
       const locksDefended = (locks || []).filter((l: any) => !l.is_cracked).length;
@@ -386,10 +387,10 @@ export function usePlayerStats(userId: string | undefined) {
 
       return {
         totalPoints, crackPoints, defensePoints,
-        weeklyWins, topThree,
+        dailyWins, topThree,
         locksCracked, locksDefended, totalLocks,
         avgAttempts, bestCrack,
-        weeksPlayed: (scores || []).length,
+        daysPlayed: (scores || []).length,
         placements,
       };
     },
@@ -398,10 +399,10 @@ export function usePlayerStats(userId: string | undefined) {
 }
 
 // ── Computed Leaderboard (from locks + attempts when scores aren't written yet) ──
-export function useComputedLeaderboard(weekId: string | undefined) {
-  const allLocks = useAllWeekLocks(weekId);
-  const allAttempts = useAllWeekAttempts(weekId);
-  const scores = useWeekScores(weekId);
+export function useComputedLeaderboard(dayId: string | undefined) {
+  const allLocks = useAllDayLocks(dayId);
+  const allAttempts = useAllDayAttempts(dayId);
+  const scores = useDayScores(dayId);
 
   const leaderboard = (() => {
     if (scores.data && scores.data.length > 0) return null;
@@ -423,7 +424,6 @@ export function useComputedLeaderboard(weekId: string | undefined) {
       return players.get(id)!;
     };
 
-    // Process each lock for defense scoring
     for (const lock of locks) {
       ensurePlayer(lock.user_id, lock.profiles?.display_name || 'Player', lock.profiles?.avatar_url);
       const lockSolves = attempts.filter((a: any) => a.lock_id === lock.id && a.is_solved);
@@ -434,11 +434,9 @@ export function useComputedLeaderboard(weekId: string | undefined) {
       players.get(lock.user_id)!.defensePts += defPts;
     }
 
-    // Process each lock for offense scoring
     for (const lock of locks) {
       const lockSolves = attempts.filter((a: any) => a.lock_id === lock.id && a.is_solved);
       
-      // Award crack points to each solver
       for (const a of lockSolves) {
         const p = ensurePlayer(a.attacker_id, a.profiles?.display_name || 'Player', a.profiles?.avatar_url);
         p.crackPts += BASE_CRACK_POINTS + getEfficiencyBonus(a.total_attempts);
@@ -447,7 +445,6 @@ export function useComputedLeaderboard(weekId: string | undefined) {
         p.solves++;
       }
       
-      // Best crack bonus
       if (lockSolves.length > 0) {
         const sorted = sortCracksForBest(lockSolves);
         if (sorted.length > 0) {

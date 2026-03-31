@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Shield, Swords, Trophy, History, BarChart3, Info } from 'lucide-react';
-import { useCurrentWeek, useMyLock, useWeekLocks, useComputedLeaderboard, usePlayerStats } from '@/hooks/useLockbox';
+import { useCurrentDay, useMyLock, useDayLocks, useComputedLeaderboard, usePlayerStats } from '@/hooks/useLockbox';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LockCreator } from '@/components/lockbox/LockCreator';
@@ -11,15 +11,16 @@ import { LockboxStats } from '@/components/lockbox/LockboxStats';
 import { LockboxHistory } from '@/components/lockbox/LockboxHistory';
 import { LockboxScoringInfo } from '@/components/lockbox/LockboxScoringInfo';
 import { LockboxOnboarding } from '@/components/lockbox/LockboxOnboarding';
+import { format } from 'date-fns';
 
 const ONBOARDING_KEY = 'dh-lockbox-onboarding-dismissed';
 
 export default function LockboxPage() {
   const { user } = useAuth();
-  const { data: week, isLoading: weekLoading } = useCurrentWeek();
-  const { data: myLock, isLoading: lockLoading } = useMyLock(week?.id);
-  const { data: locks } = useWeekLocks(week?.id);
-  const computed = useComputedLeaderboard(week?.id);
+  const { data: day, isLoading: dayLoading } = useCurrentDay();
+  const { data: myLock, isLoading: lockLoading } = useMyLock(day?.id);
+  const { data: locks } = useDayLocks(day?.id);
+  const computed = useComputedLeaderboard(day?.id);
   const playerStats = usePlayerStats(user?.id);
   const [tab, setTab] = useState('mylock');
   const [showScoringInfo, setShowScoringInfo] = useState(false);
@@ -32,14 +33,14 @@ export default function LockboxPage() {
     localStorage.setItem(ONBOARDING_KEY, '1');
   };
 
-  if (weekLoading || lockLoading) {
+  if (dayLoading || lockLoading) {
     return (
       <div className="pb-6">
         <div className="page-header">
           <div className="page-header-icon"><Lock /></div>
           <div>
             <h1 className="page-header-title">DH Lockbox</h1>
-            <p className="page-header-subtitle">Loading week…</p>
+            <p className="page-header-subtitle">Loading today…</p>
           </div>
         </div>
         <div className="space-y-3">
@@ -53,7 +54,7 @@ export default function LockboxPage() {
     );
   }
 
-  const weekLabel = week ? `Week ${week.week_number}` : '';
+  const dayLabel = day ? format(new Date(day.starts_at), 'MMM d') : 'Today';
   const crackedCount = (locks || []).filter((l: any) => l.myAttempt?.is_solved).length;
   const totalLocks = (locks || []).length;
   const inProgressCount = (locks || []).filter((l: any) => l.myAttempt && !l.myAttempt.is_solved).length;
@@ -61,7 +62,6 @@ export default function LockboxPage() {
   const myRank = computed.data?.findIndex(p => p.userId === user?.id);
   const myPoints = computed.data?.find(p => p.userId === user?.id)?.totalPts || 0;
 
-  // Subtitle helper
   const getSubtitle = () => {
     if (!myLock) return 'Create your lock to get started';
     if (totalLocks === 0) return 'Waiting for other players';
@@ -82,7 +82,7 @@ export default function LockboxPage() {
           </div>
           <div className="flex-1">
             <h1 className="page-header-title">DH Lockbox</h1>
-            <p className="page-header-subtitle">{weekLabel} • {getSubtitle()}</p>
+            <p className="page-header-subtitle">{dayLabel} • {getSubtitle()}</p>
           </div>
           <button
             onClick={() => setShowScoringInfo(!showScoringInfo)}
@@ -154,7 +154,7 @@ export default function LockboxPage() {
             </div>
             <div className="flex-1 text-left">
               <div className="font-bold text-[12px]">Create Your Lock</div>
-              <div className="text-[10px] text-muted-foreground">Set up your weekly defense</div>
+              <div className="text-[10px] text-muted-foreground">Set up today's defense</div>
             </div>
             <span className="text-[10px] px-2 py-1 rounded-full bg-primary/15 text-primary font-bold">
               START
@@ -182,11 +182,11 @@ export default function LockboxPage() {
           </TabsList>
 
           <TabsContent value="mylock">
-            <LockCreator weekId={week?.id} myLock={myLock} />
+            <LockCreator weekId={day?.id} myLock={myLock} />
           </TabsContent>
 
           <TabsContent value="crack">
-            <CrackList locks={locks || []} weekId={week?.id} />
+            <CrackList locks={locks || []} weekId={day?.id} />
           </TabsContent>
 
           <TabsContent value="board">
@@ -195,8 +195,8 @@ export default function LockboxPage() {
               formalScores={computed.formalScores || []}
               locks={computed.locks || []}
               attempts={computed.attempts || []}
-              weekLabel={weekLabel}
-              weekId={week?.id}
+              weekLabel={dayLabel}
+              weekId={day?.id}
             />
           </TabsContent>
 
