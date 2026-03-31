@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, BarChart3, MessageCircle, Bookmark, ChevronRight, Plus, Swords, Lock, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useCurrentWeek, useMyLock, useWeekLocks } from '@/hooks/useLockbox';
+import { useCurrentDay, useMyLock, useDayLocks } from '@/hooks/useLockbox';
+import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Non-lockbox modules
