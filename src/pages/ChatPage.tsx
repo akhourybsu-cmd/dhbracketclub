@@ -590,8 +590,11 @@ export default function ChatPage() {
     // Reset message input (preserve draft? no — clean slate per channel)
     setNewMessage('');
     play('tap');
-    // Focus composer after channel switch
-    setTimeout(() => composerRef.current?.focus(), 200);
+    // Don't auto-focus composer on mobile — prevents keyboard from popping up
+    const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
+    if (isDesktop) {
+      setTimeout(() => composerRef.current?.focus(), 200);
+    }
   };
 
   /* ═══ DB-SIDE SEARCH ═══ */
