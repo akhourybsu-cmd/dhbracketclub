@@ -580,6 +580,15 @@ export default function ChatPage() {
     setThreadParent(null);
     setShowPinned(false);
     setLastReadAt(null);
+    // Reset search state
+    setShowSearch(false);
+    setSearchQuery('');
+    setSearchResults(null);
+    // Reset edit state
+    setEditingMessageId(null);
+    setEditContent('');
+    // Reset message input (preserve draft? no — clean slate per channel)
+    setNewMessage('');
     play('tap');
     // Focus composer after channel switch
     setTimeout(() => composerRef.current?.focus(), 200);
