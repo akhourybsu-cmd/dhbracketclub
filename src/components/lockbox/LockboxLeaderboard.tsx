@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Swords, Shield, Unlock, Lock, ChevronDown, Zap } from 'lucide-react';
+import { getDefensePoints, getEfficiencyBonus, BEST_CRACK_BONUS, sortCracksForBest, BASE_CRACK_POINTS } from '@/lib/lockboxScoring';
 
 interface ComputedPlayer {
   userId: string;
