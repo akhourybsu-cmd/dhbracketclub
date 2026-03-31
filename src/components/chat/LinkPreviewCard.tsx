@@ -101,7 +101,9 @@ function YouTubePreview({ link, messageId }: { link: ParsedLink; messageId: stri
     }
     fetchTitle();
     return () => { cancelled = true; };
-  }, [link.url, messageId]);
+  }, [link.url, link.embedId, messageId]);
+
+  if (!link.embedId) return <PlainLink url={link.url} />;
 
   return (
     <a
