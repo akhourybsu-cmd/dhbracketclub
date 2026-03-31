@@ -256,4 +256,5 @@ export const STATUS_CONFIG: Record<string, { label: string; className: string }>
   submitted: { label: 'Submitted', className: 'bg-success/15 text-success' },
   locked: { label: 'Locked', className: 'bg-primary/15 text-primary' },
   incomplete: { label: 'Incomplete', className: 'bg-destructive/15 text-destructive' },
+  complete: { label: 'Complete', className: 'bg-muted text-muted-foreground' },
 };
