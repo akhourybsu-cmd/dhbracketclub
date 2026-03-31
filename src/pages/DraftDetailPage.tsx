@@ -63,6 +63,7 @@ export default function DraftDetailPage() {
   const [editing, setEditing] = useState(false);
   const [editTopic, setEditTopic] = useState('');
   const [saving, setSaving] = useState(false);
+  const [imagePickerPick, setImagePickerPick] = useState<Pick | null>(null);
 
   const pickIds = picks.map(p => p.id);
   const { enrichments, loading: enrichmentsLoading, fetchEnrichments } = useItemEnrichments(pickIds, 'draft_pick');
