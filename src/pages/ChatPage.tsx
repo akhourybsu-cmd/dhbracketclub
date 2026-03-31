@@ -24,6 +24,7 @@ import { useChatActions } from '@/hooks/useChatActions';
 
 export default function ChatPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const composerRef = useRef<MessageComposerHandle>(null);
 
   // Dynamic viewport height to handle mobile keyboard
