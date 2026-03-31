@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, Fragment, memo } from 'react';
+import { useState, useRef, useCallback, useEffect, Fragment, memo, useMemo } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -12,6 +12,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { parseMessageLinks } from '@/lib/linkParser';
+import { LinkPreviewCard } from './LinkPreviewCard';
 
 /* ═══ URL auto-linking + inline image preview ═══ */
 const URL_RE = /(https?:\/\/[^\s<]+)/g;
