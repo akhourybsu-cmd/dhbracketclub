@@ -13,6 +13,13 @@ const SUPPORTED_CATEGORIES = [
 ] as const;
 type Category = typeof SUPPORTED_CATEGORIES[number];
 
+interface ImageCandidate {
+  url: string;
+  thumbnail: string;
+  source: string;
+  label: string;
+}
+
 interface EnrichmentResult {
   normalized_name: string;
   matched_name: string | null;

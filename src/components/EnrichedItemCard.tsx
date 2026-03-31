@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { ImageOff, Sparkles } from 'lucide-react';
+import { ImageOff, Sparkles, RefreshCw } from 'lucide-react';
 import type { ItemEnrichment } from '@/hooks/useItemEnrichments';
 
 interface EnrichedItemCardProps {
@@ -10,6 +10,7 @@ interface EnrichedItemCardProps {
   showRank?: boolean;
   compact?: boolean;
   onClick?: () => void;
+  onImageClick?: () => void;
   actions?: React.ReactNode;
   className?: string;
 }
