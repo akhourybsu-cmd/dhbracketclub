@@ -20,6 +20,7 @@ const navItems = [
 const sidebarModules = [
   { path: '/dashboard', label: 'Home', icon: LayoutDashboard },
   { path: '/chat', label: 'Chat', icon: MessageSquareText },
+  { path: '/shared', label: 'Shared', icon: Link2 },
   { path: '/feed', label: 'Feed', icon: Newspaper },
   { path: '/events', label: 'Events', icon: CalendarDays },
   { type: 'divider', label: 'Compete' },

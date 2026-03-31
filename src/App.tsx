@@ -96,6 +96,7 @@ function AnimatedRoutes() {
 
         {/* Chat */}
         <Route path="/chat" element={<ProtectedPage><ChatPage /></ProtectedPage>} />
+        <Route path="/shared" element={<ProtectedPage><SharedMediaPage /></ProtectedPage>} />
 
         {/* Events */}
         <Route path="/events" element={<ProtectedPage><EventsPage /></ProtectedPage>} />
