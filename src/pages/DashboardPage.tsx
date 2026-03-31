@@ -132,15 +132,23 @@ export default function DashboardPage() {
 
       // Rankings, Polls, Drafts — fetch active ones
       const [{ data: rankData }, { data: pollData }, { data: draftData }, { data: activityData }, { data: eventsData }] = await Promise.all([
-        supabase.from('rankings').select('*, competitions(title, status)').eq('status', 'open').order('created_at', { ascending: false }).limit(5),
-        supabase.from('polls').select('*, competitions(title, status)').eq('status', 'open').order('created_at', { ascending: false }).limit(5),
-        supabase.from('drafts').select('*, competitions(title, status)').neq('status', 'complete').order('created_at', { ascending: false }).limit(5),
+        supabase.from('rankings').select('*, competitions(title, status)').order('created_at', { ascending: false }).limit(5),
+        supabase.from('polls').select('*, competitions(title, status)').order('created_at', { ascending: false }).limit(5),
+        supabase.from('drafts').select('*, competitions(title, status)').order('created_at', { ascending: false }).limit(5),
         supabase.from('activity_feed').select('*, profiles:actor_user_id(display_name)').order('created_at', { ascending: false }).limit(10),
         supabase.from('events').select('*, profiles:created_by(display_name)').gte('starts_at', new Date().toISOString()).order('starts_at', { ascending: true }).limit(3),
       ]);
 
+      // Derive effective statuses client-side
       if (rankData) setRankings(rankData);
-      if (pollData) setPolls(pollData);
+      if (pollData) {
+        setPolls(pollData.map(p => {
+          if (p.status === 'open' && p.closes_at && isPast(new Date(p.closes_at))) {
+            return { ...p, status: 'closed' };
+          }
+          return p;
+        }));
+      }
       if (draftData) setDrafts(draftData);
       if (activityData) setActivity(activityData);
       if (eventsData) setUpcomingEvents(eventsData);
@@ -454,34 +462,37 @@ export default function DashboardPage() {
             <Link to="/rankings" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors">View All</Link>
           </div>
           <div className="space-y-2 mb-7">
-            {rankings.slice(0, 3).map((r: any, i: number) => (
-              <motion.div key={r.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.04 }}>
-                <Link to={`/rankings/${r.id}`} className="block group">
-                  <div className="glass-card p-3.5 transition-all duration-200 group-hover:border-accent/15">
-                    <div className="flex items-center gap-3 relative z-10">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{
-                        background: 'linear-gradient(135deg, hsl(var(--accent) / 0.15), hsl(var(--accent) / 0.04))',
-                      }}>
-                        <BarChart3 className="w-4 h-4" style={{ color: 'hsl(var(--accent))' }} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-bold text-[13px] truncate tracking-tight">{r.topic}</h3>
-                        <p className="text-[10px] text-muted-foreground/70 font-medium">{r.item_count} items to rank</p>
-                      </div>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <span className="status-pill bg-success/10 text-success">Open</span>
-                        <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60" />
+            {rankings.slice(0, 3).map((r: any, i: number) => {
+              const isClosed = r.status === 'closed';
+              return (
+                <motion.div key={r.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.04 }}>
+                  <Link to={`/rankings/${r.id}`} className="block group">
+                    <div className="glass-card p-3.5 transition-all duration-200 group-hover:border-accent/15">
+                      <div className="flex items-center gap-3 relative z-10">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{
+                          background: isClosed ? 'hsl(var(--muted) / 0.5)' : 'linear-gradient(135deg, hsl(var(--accent) / 0.15), hsl(var(--accent) / 0.04))',
+                        }}>
+                          <BarChart3 className={cn("w-4 h-4", isClosed ? "text-muted-foreground/60" : "")} style={isClosed ? {} : { color: 'hsl(var(--accent))' }} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-bold text-[13px] truncate tracking-tight">{r.topic}</h3>
+                          <p className="text-[10px] text-muted-foreground/70 font-medium">{r.item_count} items to rank</p>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className={cn("status-pill", isClosed ? "bg-muted text-muted-foreground" : "bg-success/10 text-success")}>{isClosed ? 'Complete' : 'Open'}</span>
+                          <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60" />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
+                  </Link>
+                </motion.div>
+              );
+            })}
           </div>
         </motion.div>
       )}
 
-      {/* ═══ Active Polls ═══ */}
+      {/* ═══ Polls ═══ */}
       {polls.length > 0 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.34 }}>
           <div className="section-divider mb-3">
@@ -492,26 +503,32 @@ export default function DashboardPage() {
             <Link to="/polls" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors">View All</Link>
           </div>
           <div className="space-y-2 mb-7">
-            {polls.slice(0, 3).map((p: any, i: number) => (
-              <motion.div key={p.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36 + i * 0.04 }}>
-                <Link to={`/polls/${p.id}`} className="block group">
-                  <div className="glass-card p-3.5 transition-all duration-200 group-hover:border-warning/15">
-                    <div className="flex items-center gap-3 relative z-10">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{
-                        background: 'linear-gradient(135deg, hsl(var(--warning) / 0.15), hsl(var(--warning) / 0.04))',
-                      }}>
-                        <MessageCircle className="w-4 h-4" style={{ color: 'hsl(var(--warning))' }} />
+            {polls.slice(0, 3).map((p: any, i: number) => {
+              const isClosed = p.status === 'closed';
+              return (
+                <motion.div key={p.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36 + i * 0.04 }}>
+                  <Link to={`/polls/${p.id}`} className="block group">
+                    <div className="glass-card p-3.5 transition-all duration-200 group-hover:border-warning/15">
+                      <div className="flex items-center gap-3 relative z-10">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{
+                          background: isClosed ? 'hsl(var(--muted) / 0.5)' : 'linear-gradient(135deg, hsl(var(--warning) / 0.15), hsl(var(--warning) / 0.04))',
+                        }}>
+                          <MessageCircle className={cn("w-4 h-4", isClosed ? "text-muted-foreground/60" : "")} style={isClosed ? {} : { color: 'hsl(var(--warning))' }} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-bold text-[13px] truncate tracking-tight">{p.question}</h3>
+                          <p className="text-[10px] text-muted-foreground/70 font-medium capitalize">{p.poll_type} choice</p>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className={cn("status-pill", isClosed ? "bg-muted text-muted-foreground" : "bg-success/10 text-success")}>{isClosed ? 'Closed' : 'Open'}</span>
+                          <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60" />
+                        </div>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-bold text-[13px] truncate tracking-tight">{p.question}</h3>
-                        <p className="text-[10px] text-muted-foreground/70 font-medium capitalize">{p.poll_type} choice</p>
-                      </div>
-                      <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
                     </div>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
+                  </Link>
+                </motion.div>
+              );
+            })}
           </div>
         </motion.div>
       )}
