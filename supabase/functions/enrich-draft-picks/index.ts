@@ -320,12 +320,25 @@ async function enrichFromDeezer(
 ): Promise<EnrichmentResult> {
   try {
     const query = encodeURIComponent(enrichment.normalized_name || name);
-    const res = await fetch(`https://api.deezer.com/search/album?q=${query}&limit=3`);
+    const res = await fetch(`https://api.deezer.com/search/album?q=${query}&limit=5`);
     if (!res.ok) return enrichment;
     const data = await res.json();
-    const album = data.data?.[0];
-    if (!album) return enrichment;
+    const albums = data.data || [];
+    if (!albums.length) return enrichment;
 
+    const candidates: ImageCandidate[] = [];
+    for (const a of albums.slice(0, 5)) {
+      if (a.cover_xl || a.cover_big) {
+        candidates.push({
+          url: a.cover_xl || a.cover_big,
+          thumbnail: a.cover_medium || a.cover_small || a.cover_xl || a.cover_big,
+          source: "deezer",
+          label: a.title || name,
+        });
+      }
+    }
+
+    const album = albums[0];
     if (album.cover_xl || album.cover_big) {
       enrichment.image_url = album.cover_xl || album.cover_big;
       enrichment.thumbnail_url = album.cover_medium || album.cover_small || enrichment.image_url;
@@ -337,6 +350,7 @@ async function enrichFromDeezer(
     enrichment.metadata = {
       ...enrichment.metadata,
       artist: album.artist?.name || enrichment.metadata.artist,
+      image_candidates: [...(enrichment.metadata.image_candidates as ImageCandidate[] || []), ...candidates],
     };
     return enrichment;
   } catch (err) {
