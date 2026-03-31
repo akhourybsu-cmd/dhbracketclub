@@ -57,7 +57,11 @@ export function MessageList({
   useEffect(() => {
     setAutoScroll(true);
     setNewMsgCount(0);
-    messagesEndRef.current?.scrollIntoView();
+    // Use a short delay to ensure messages have rendered before scrolling
+    const t = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView();
+    }, 50);
+    return () => clearTimeout(t);
   }, [selectedChannel?.id]);
 
   // Scroll preservation on load-more (prepend)
