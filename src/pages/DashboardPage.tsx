@@ -112,11 +112,34 @@ export default function DashboardPage() {
             }
           }
 
+          // Check if all tournament games are decided for each pool
+          const tournamentIds = [...new Set(poolData.map((p: any) => p.tournament_id).filter(Boolean))];
+          const gameCompletionMap = new Map<string, boolean>();
+          if (tournamentIds.length > 0) {
+            for (const pool of poolData) {
+              const tid = (pool as any).tournament_id;
+              if (!tid || gameCompletionMap.has(tid)) continue;
+              const { count: totalGames } = await supabase
+                .from('games')
+                .select('*', { count: 'exact', head: true })
+                .eq('tournament_id', tid)
+                .gt('round_number', 0);
+              const { count: decidedGames } = await supabase
+                .from('games')
+                .select('*', { count: 'exact', head: true })
+                .eq('tournament_id', tid)
+                .gt('round_number', 0)
+                .not('winner_team_id', 'is', null);
+              gameCompletionMap.set(tid, (totalGames ?? 0) > 0 && totalGames === decidedGames);
+            }
+          }
+
           const sm = new Map<string, string>();
-          poolData.forEach(p => {
+          poolData.forEach((p: any) => {
             const b = brackets.find(br => br.pool_id === p.id);
             const picksCount = b ? (bracketPickCounts.get(b.id) || 0) : 0;
-            const ds = getBracketDisplayStatus(b?.status || null, p.lock_time, picksCount, TOTAL_GAMES);
+            const allDecided = gameCompletionMap.get(p.tournament_id) || false;
+            const ds = getBracketDisplayStatus(b?.status || null, p.lock_time, picksCount, TOTAL_GAMES, allDecided);
             sm.set(p.id, ds);
           });
           setBracketStatuses(sm);
