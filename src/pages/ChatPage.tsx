@@ -205,11 +205,19 @@ export default function ChatPage() {
   }, [selectedChannel, loadOlderMessages]);
 
   /* ═══ ACTIONS ═══ */
-  const handleSend = async () => {
-    if (!newMessage.trim() || !selectedChannel || !user || sending) return;
+  const handleSend = async (imageUrls?: string[]) => {
+    const hasText = newMessage.trim().length > 0;
+    const hasImages = imageUrls && imageUrls.length > 0;
+    if ((!hasText && !hasImages) || !selectedChannel || !user || sending) return;
     play('tap');
     setSending(true);
-    const content = newMessage.trim();
+
+    // Build content: text + image URLs on separate lines
+    let content = newMessage.trim();
+    if (hasImages) {
+      const imgLines = imageUrls.map(url => url).join('\n');
+      content = content ? `${content}\n${imgLines}` : imgLines;
+    }
     setNewMessage('');
 
     const optimisticId = `opt-${Date.now()}`;
@@ -253,7 +261,6 @@ export default function ChatPage() {
       if (links.length > 0) {
         links.forEach(link => {
           if (link.contentType === 'image') {
-            // Store image links directly without OG fetch
             (supabase as any).from('message_link_previews').insert({
               message_id: inserted.id,
               url: link.url,
@@ -261,7 +268,6 @@ export default function ChatPage() {
               title: link.url.split('/').pop() || 'Image',
             }).then(() => {});
           } else if (link.contentType === 'youtube' || link.contentType === 'spotify') {
-            // Store embed links directly
             (supabase as any).from('message_link_previews').insert({
               message_id: inserted.id,
               url: link.url,
@@ -270,7 +276,6 @@ export default function ChatPage() {
               embed_id: link.embedId,
             }).then(() => {});
           }
-          // Generic links will be fetched and cached by LinkPreviewCard on render
         });
       }
     }
