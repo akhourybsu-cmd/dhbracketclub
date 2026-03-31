@@ -104,7 +104,7 @@ export function LockCreator({ weekId, myLock }: Props) {
       toast.success('Lock created! 🔒');
       logActivity(user.id, {
         event_type: 'lockbox_created',
-        target_type: 'lockbox_week',
+        target_type: 'lockbox_day',
         target_id: weekId,
       });
     } catch (e: any) {

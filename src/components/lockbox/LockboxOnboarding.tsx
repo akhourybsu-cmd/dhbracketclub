@@ -12,7 +12,7 @@ const steps = [
   {
     icon: Lock,
     title: 'Build Your Lock',
-    desc: 'Create a 3-layer lock each week — numbers, colors, and a maze.',
+    desc: 'Create a 3-layer lock each day — numbers, colors, and a maze.',
     color: 'primary',
   },
   {
@@ -29,8 +29,8 @@ const steps = [
   },
   {
     icon: Trophy,
-    title: 'Weekly Champion',
-    desc: 'Earn points for cracking and defending. New competition every week.',
+    title: 'Daily Champion',
+    desc: 'Earn points for cracking and defending. New competition every day.',
     color: 'amber-400',
   },
 ];
@@ -47,7 +47,6 @@ export function LockboxOnboarding({ onDismiss, onCreateLock }: Props) {
       exit={{ opacity: 0, y: -12 }}
       className="glass-card p-5 mb-4 border border-primary/15 relative overflow-hidden"
     >
-      {/* Dismiss */}
       <button
         onClick={onDismiss}
         className="absolute top-3 right-3 p-1.5 rounded-lg hover:bg-muted/30 transition-colors z-10"
@@ -55,7 +54,6 @@ export function LockboxOnboarding({ onDismiss, onCreateLock }: Props) {
         <X className="w-3.5 h-3.5 text-muted-foreground" />
       </button>
 
-      {/* Step dots */}
       <div className="flex gap-1.5 mb-4">
         {steps.map((_, i) => (
           <div
@@ -93,12 +91,7 @@ export function LockboxOnboarding({ onDismiss, onCreateLock }: Props) {
 
       <div className="flex gap-2 mt-4">
         {step > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setStep(step - 1)}
-            className="text-[11px] h-9 px-3"
-          >
+          <Button variant="ghost" size="sm" onClick={() => setStep(step - 1)} className="text-[11px] h-9 px-3">
             Back
           </Button>
         )}

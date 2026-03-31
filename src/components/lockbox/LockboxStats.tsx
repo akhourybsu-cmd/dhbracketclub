@@ -5,14 +5,14 @@ interface PlayerStats {
   totalPoints: number;
   crackPoints: number;
   defensePoints: number;
-  weeklyWins: number;
+  dailyWins: number;
   topThree: number;
   locksCracked: number;
   locksDefended: number;
   totalLocks: number;
   avgAttempts: number;
   bestCrack: number;
-  weeksPlayed: number;
+  daysPlayed: number;
   placements: any[];
 }
 
@@ -32,12 +32,12 @@ export function LockboxStats({ stats, isLoading }: Props) {
     );
   }
 
-  if (!stats || stats.weeksPlayed === 0) {
+  if (!stats || stats.daysPlayed === 0) {
     return (
       <div className="glass-card p-8 text-center">
         <BarChart3 className="w-8 h-8 mx-auto mb-3 text-muted-foreground/30" />
         <h3 className="font-bold text-sm mb-1">No Stats Yet</h3>
-        <p className="text-[11px] text-muted-foreground">Complete a full week to start building your Lockbox stats</p>
+        <p className="text-[11px] text-muted-foreground">Complete a full day to start building your Lockbox stats</p>
       </div>
     );
   }
@@ -47,9 +47,9 @@ export function LockboxStats({ stats, isLoading }: Props) {
       title: 'OVERVIEW',
       items: [
         { icon: Trophy, label: 'Total Points', value: stats.totalPoints },
-        { icon: Flame, label: 'Weekly Wins', value: stats.weeklyWins },
+        { icon: Flame, label: 'Daily Wins', value: stats.dailyWins },
         { icon: Trophy, label: 'Top 3 Finishes', value: stats.topThree },
-        { icon: BarChart3, label: 'Weeks Played', value: stats.weeksPlayed },
+        { icon: BarChart3, label: 'Days Played', value: stats.daysPlayed },
       ],
     },
     {
@@ -89,7 +89,7 @@ export function LockboxStats({ stats, isLoading }: Props) {
 
       {stats.placements.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          <div className="text-[10px] font-bold text-muted-foreground/60 mb-2 tracking-wider">RECENT WEEKS</div>
+          <div className="text-[10px] font-bold text-muted-foreground/60 mb-2 tracking-wider">RECENT DAYS</div>
           <div className="glass-card p-1">
             {stats.placements.map((p: any, i: number) => (
               <div key={p.id} className={`flex items-center gap-3 p-3 ${i < stats.placements.length - 1 ? 'border-b border-border/10' : ''}`}>

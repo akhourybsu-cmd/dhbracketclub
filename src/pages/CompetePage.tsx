@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, BarChart3, MessageCircle, Bookmark, ChevronRight, Plus, Swords, Lock, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useCurrentWeek, useMyLock, useWeekLocks } from '@/hooks/useLockbox';
+import { useCurrentDay, useMyLock, useDayLocks } from '@/hooks/useLockbox';
+import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Non-lockbox modules
@@ -16,18 +17,18 @@ const modules = [
 
 function LockboxCompeteCard() {
   const { user } = useAuth();
-  const { data: week } = useCurrentWeek();
-  const { data: myLock } = useMyLock(week?.id);
-  const { data: locks } = useWeekLocks(week?.id);
+  const { data: day } = useCurrentDay();
+  const { data: myLock } = useMyLock(day?.id);
+  const { data: locks } = useDayLocks(day?.id);
 
   const crackedCount = (locks || []).filter((l: any) => l.myAttempt?.is_solved).length;
   const totalLocks = (locks || []).length;
   const inProgress = (locks || []).filter((l: any) => l.myAttempt && !l.myAttempt.is_solved).length;
 
-  const weekLabel = week ? `Week ${week.week_number}` : '';
+  const dayLabel = day ? format(new Date(day.starts_at), 'MMM d') : 'Today';
 
   // Build context line
-  let contextLine = weekLabel;
+  let contextLine = dayLabel;
   if (!myLock) {
     contextLine += ' · Create your lock';
   } else if (inProgress > 0) {
@@ -51,7 +52,7 @@ function LockboxCompeteCard() {
               <div className="flex items-center gap-2">
                 <h2 className="font-bold text-[15px] tracking-tight">DH Lockbox</h2>
                 <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-destructive/12 text-destructive">
-                  WEEKLY
+                  DAILY
                 </span>
               </div>
               <p className="text-[11px] text-muted-foreground/70">{contextLine}</p>
