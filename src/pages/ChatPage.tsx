@@ -595,6 +595,7 @@ export default function ChatPage() {
                       disabled={sending}
                       placeholder={`Message #${selectedChannel?.name || ''}`}
                       members={members}
+                      userId={user?.id}
                     />
                   </div>
                 )}
