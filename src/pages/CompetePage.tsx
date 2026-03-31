@@ -25,7 +25,7 @@ function LockboxCompeteCard() {
   const totalLocks = (locks || []).length;
   const inProgress = (locks || []).filter((l: any) => l.myAttempt && !l.myAttempt.is_solved).length;
 
-  const weekLabel = week ? `Week ${week.week_number}` : '';
+  const dayLabel = day ? format(new Date(day.starts_at), 'MMM d') : 'Today';
 
   // Build context line
   let contextLine = weekLabel;
