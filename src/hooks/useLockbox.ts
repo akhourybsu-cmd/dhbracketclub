@@ -83,9 +83,26 @@ export function useCreateLock() {
       }
       return data;
     },
-    onSuccess: (_, vars) => {
+    onSuccess: (data, vars) => {
       qc.invalidateQueries({ queryKey: ['lockbox-my-lock', vars.week_id] });
       qc.invalidateQueries({ queryKey: ['lockbox-locks'] });
+
+      // Notify others that a new lock is ready to crack
+      supabase.auth.getUser().then(({ data: authData }) => {
+        const displayName = authData?.user?.user_metadata?.display_name;
+        supabase.from('profiles').select('display_name').eq('id', vars.user_id).single().then(({ data: profile }) => {
+          const name = profile?.display_name || displayName || 'Someone';
+          supabase.functions.invoke('send-push-notification', {
+            body: {
+              type: 'lockbox',
+              title: '🔒 New Lock Ready',
+              message: `${name} set up a lock — try to crack it!`,
+              url: '/lockbox',
+              sender_user_id: vars.user_id,
+            },
+          }).catch(() => {});
+        });
+      });
     },
   });
 }
