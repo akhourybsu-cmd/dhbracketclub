@@ -1,9 +1,10 @@
 import { useRef, useEffect, useCallback, useState, forwardRef, useImperativeHandle } from 'react';
-import { Send } from 'lucide-react';
+import { Send, Plus, Image, Camera, X, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from './UserAvatar';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface MentionMember {
   id: string;
@@ -15,28 +16,41 @@ export interface MessageComposerHandle {
   focus: () => void;
 }
 
+export interface PendingImage {
+  file: File;
+  previewUrl: string;
+}
+
 interface MessageComposerProps {
   value: string;
   onChange: (value: string) => void;
-  onSend: () => void;
+  onSend: (imageUrls?: string[]) => void;
   onTyping?: () => void;
   disabled?: boolean;
   placeholder?: string;
   compact?: boolean;
   autoFocus?: boolean;
   members?: MentionMember[];
+  userId?: string;
 }
 
 export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposerProps>(
-  ({ value, onChange, onSend, onTyping, disabled, placeholder, compact, autoFocus, members = [] }, ref) => {
+  ({ value, onChange, onSend, onTyping, disabled, placeholder, compact, autoFocus, members = [], userId }, ref) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const cameraInputRef = useRef<HTMLInputElement>(null);
 
     // Mention state
     const [mentionQuery, setMentionQuery] = useState<string | null>(null);
     const [mentionIndex, setMentionIndex] = useState(0);
-    const [mentionStart, setMentionStart] = useState(0); // cursor pos of the '@'
+    const [mentionStart, setMentionStart] = useState(0);
+
+    // Attach menu & images
+    const [showAttachMenu, setShowAttachMenu] = useState(false);
+    const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+    const [uploading, setUploading] = useState(false);
 
     useImperativeHandle(ref, () => ({
       focus: () => textareaRef.current?.focus(),
@@ -55,7 +69,6 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
 
     useEffect(() => { resize(); }, [value, resize]);
 
-    // Auto-focus on mount
     useEffect(() => {
       if (autoFocus) {
         const t = setTimeout(() => textareaRef.current?.focus(), 150);
@@ -63,23 +76,28 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
       }
     }, [autoFocus]);
 
-    // Note: keyboard adjustment is handled by the parent MessageList component
-    // to avoid double-compensation on iOS.
+    // Close attach menu on outside click
+    useEffect(() => {
+      if (!showAttachMenu) return;
+      const handler = (e: MouseEvent) => {
+        if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+          setShowAttachMenu(false);
+        }
+      };
+      document.addEventListener('mousedown', handler);
+      return () => document.removeEventListener('mousedown', handler);
+    }, [showAttachMenu]);
 
-    // Detect @ mention trigger from cursor position
+    // Detect @ mention trigger
     const detectMention = useCallback(() => {
       const el = textareaRef.current;
       if (!el || members.length === 0) { setMentionQuery(null); return; }
       const cursor = el.selectionStart;
       const text = el.value;
-
-      // Walk backwards from cursor to find '@'
       let i = cursor - 1;
       while (i >= 0 && text[i] !== '@' && text[i] !== ' ' && text[i] !== '\n') i--;
-
       if (i >= 0 && text[i] === '@' && (i === 0 || text[i - 1] === ' ' || text[i - 1] === '\n')) {
-        const query = text.slice(i + 1, cursor);
-        setMentionQuery(query);
+        setMentionQuery(text.slice(i + 1, cursor));
         setMentionStart(i);
         setMentionIndex(0);
       } else {
@@ -97,10 +115,8 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
       const before = value.slice(0, mentionStart);
       const after = value.slice(el.selectionStart);
       const mention = `@${member.display_name} `;
-      const newValue = before + mention + after;
-      onChange(newValue);
+      onChange(before + mention + after);
       setMentionQuery(null);
-      // Set cursor after mention
       requestAnimationFrame(() => {
         const pos = before.length + mention.length;
         el.selectionStart = el.selectionEnd = pos;
@@ -108,127 +124,232 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
       });
     }, [value, mentionStart, onChange]);
 
-    const handleSend = () => {
-      onSend();
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
+    // Image handling
+    const handleFilesSelected = (files: FileList | null) => {
+      if (!files) return;
+      const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/')).slice(0, 4 - pendingImages.length);
+      const newPending = imageFiles.map(file => ({
+        file,
+        previewUrl: URL.createObjectURL(file),
+      }));
+      setPendingImages(prev => [...prev, ...newPending].slice(0, 4));
+      setShowAttachMenu(false);
+    };
+
+    const removePendingImage = (index: number) => {
+      setPendingImages(prev => {
+        const removed = prev[index];
+        URL.revokeObjectURL(removed.previewUrl);
+        return prev.filter((_, i) => i !== index);
+      });
+    };
+
+    // Cleanup preview URLs
+    useEffect(() => {
+      return () => {
+        pendingImages.forEach(p => URL.revokeObjectURL(p.previewUrl));
+      };
+    }, []);
+
+    const uploadImages = async (): Promise<string[]> => {
+      if (!userId || pendingImages.length === 0) return [];
+      const urls: string[] = [];
+      for (const pending of pendingImages) {
+        const ext = pending.file.name.split('.').pop() || 'jpg';
+        const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage.from('chat-attachments').upload(path, pending.file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+        if (!error) {
+          const { data: urlData } = supabase.storage.from('chat-attachments').getPublicUrl(path);
+          urls.push(urlData.publicUrl);
+        }
       }
+      return urls;
+    };
+
+    const handleSend = async () => {
+      const hasText = value.trim().length > 0;
+      const hasImages = pendingImages.length > 0;
+      if ((!hasText && !hasImages) || disabled || uploading) return;
+
+      if (hasImages) {
+        setUploading(true);
+        try {
+          const uploadedUrls = await uploadImages();
+          // Clear pending images
+          pendingImages.forEach(p => URL.revokeObjectURL(p.previewUrl));
+          setPendingImages([]);
+          onSend(uploadedUrls);
+        } catch {
+          // keep images on failure
+        } finally {
+          setUploading(false);
+        }
+      } else {
+        onSend();
+      }
+
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
       setMentionQuery(null);
-      // Re-focus after send only on desktop to avoid keyboard flash on mobile
       const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
-      if (isDesktop) {
-        textareaRef.current?.focus();
-      }
+      if (isDesktop) textareaRef.current?.focus();
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-      // Handle mention dropdown navigation
       if (mentionQuery !== null && filteredMembers.length > 0) {
-        if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          setMentionIndex(prev => (prev + 1) % filteredMembers.length);
-          return;
-        }
-        if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          setMentionIndex(prev => (prev - 1 + filteredMembers.length) % filteredMembers.length);
-          return;
-        }
-        if (e.key === 'Enter' || e.key === 'Tab') {
-          e.preventDefault();
-          insertMention(filteredMembers[mentionIndex]);
-          return;
-        }
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          setMentionQuery(null);
-          return;
-        }
+        if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIndex(prev => (prev + 1) % filteredMembers.length); return; }
+        if (e.key === 'ArrowUp') { e.preventDefault(); setMentionIndex(prev => (prev - 1 + filteredMembers.length) % filteredMembers.length); return; }
+        if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); insertMention(filteredMembers[mentionIndex]); return; }
+        if (e.key === 'Escape') { e.preventDefault(); setMentionQuery(null); return; }
       }
-
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        handleSend();
-      }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       onChange(e.target.value);
       onTyping?.();
-      // Detect mention after value updates
       requestAnimationFrame(detectMention);
     };
 
-    const handleSelect = () => {
-      // Re-check mention on cursor move
-      detectMention();
-    };
+    const canSend = (value.trim().length > 0 || pendingImages.length > 0) && !disabled && !uploading;
 
     return (
-      <div
-        ref={containerRef}
-        className={cn("flex items-end gap-2", compact ? "px-4 py-3" : "px-4 sm:px-5 py-3")}
+      <div ref={containerRef} className={cn("flex flex-col", compact ? "px-4 py-3" : "px-4 sm:px-5 py-3")}
         style={{ paddingBottom: compact ? undefined : 'calc(0.75rem + env(safe-area-inset-bottom, 0px))', paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))', paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))' }}
       >
-        <div className="flex-1 relative">
-          {/* Mention autocomplete dropdown */}
-          {mentionQuery !== null && filteredMembers.length > 0 && (
-            <div
-              ref={dropdownRef}
-              className="absolute bottom-full left-0 right-0 mb-1 bg-popover border border-border/25 rounded-xl shadow-xl z-50 overflow-hidden max-h-[200px] overflow-y-auto"
+        {/* Image preview strip */}
+        <AnimatePresence>
+          {pendingImages.length > 0 && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="flex gap-2 mb-2 overflow-x-auto"
             >
-              {filteredMembers.map((member, i) => (
-                <button
-                  key={member.id}
-                  onMouseDown={(e) => { e.preventDefault(); insertMention(member); }}
-                  className={cn(
-                    "w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors",
-                    i === mentionIndex ? "bg-primary/10 text-primary" : "hover:bg-muted/50 text-foreground/80"
+              {pendingImages.map((img, i) => (
+                <div key={i} className="relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border border-border/30 bg-muted/20">
+                  <img src={img.previewUrl} alt="" className="w-full h-full object-cover" />
+                  <button
+                    onClick={() => removePendingImage(i)}
+                    className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-sm"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                  {uploading && (
+                    <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                    </div>
                   )}
-                >
-                  <UserAvatar userId={member.id} name={member.display_name} avatarUrl={member.avatar_url} size={24} />
-                  <span className="font-medium truncate">{member.display_name}</span>
-                </button>
+                </div>
               ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div className="flex items-end gap-2">
+          {/* Attach button */}
+          {!compact && (
+            <div className="relative flex-shrink-0">
+              <button
+                onClick={() => setShowAttachMenu(!showAttachMenu)}
+                className={cn(
+                  "w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 mb-0.5",
+                  showAttachMenu ? "bg-primary/15 text-primary rotate-45" : "hover:bg-muted/40 text-muted-foreground/50"
+                )}
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+
+              <AnimatePresence>
+                {showAttachMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                    className="absolute bottom-full left-0 mb-2 bg-popover border border-border/25 rounded-xl shadow-xl z-50 overflow-hidden min-w-[160px]"
+                  >
+                    <button
+                      onClick={() => { fileInputRef.current?.click(); }}
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-sm hover:bg-muted/50 transition-colors text-foreground/80"
+                    >
+                      <Image className="w-4 h-4 text-primary/70" />
+                      <span className="font-medium">Photo Library</span>
+                    </button>
+                    <button
+                      onClick={() => { cameraInputRef.current?.click(); }}
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-sm hover:bg-muted/50 transition-colors text-foreground/80"
+                    >
+                      <Camera className="w-4 h-4 text-primary/70" />
+                      <span className="font-medium">Take Photo</span>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
 
-          <textarea
-            ref={textareaRef}
-            value={value}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            onSelect={handleSelect}
-            placeholder={placeholder || 'Message'}
-            rows={1}
-            className={cn(
-              "w-full resize-none bg-muted/15 border border-border/20 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary/30 focus:bg-muted/25 transition-all duration-200 placeholder:text-muted-foreground/40",
-              compact ? "text-xs pl-3.5 pr-11 py-2" : "text-sm pl-4 pr-12 py-3"
+          {/* Hidden file inputs */}
+          <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={e => { handleFilesSelected(e.target.files); e.target.value = ''; }} />
+          <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => { handleFilesSelected(e.target.files); e.target.value = ''; }} />
+
+          <div className="flex-1 relative">
+            {/* Mention autocomplete dropdown */}
+            {mentionQuery !== null && filteredMembers.length > 0 && (
+              <div ref={dropdownRef} className="absolute bottom-full left-0 right-0 mb-1 bg-popover border border-border/25 rounded-xl shadow-xl z-50 overflow-hidden max-h-[200px] overflow-y-auto">
+                {filteredMembers.map((member, i) => (
+                  <button
+                    key={member.id}
+                    onMouseDown={(e) => { e.preventDefault(); insertMention(member); }}
+                    className={cn(
+                      "w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors",
+                      i === mentionIndex ? "bg-primary/10 text-primary" : "hover:bg-muted/50 text-foreground/80"
+                    )}
+                  >
+                    <UserAvatar userId={member.id} name={member.display_name} avatarUrl={member.avatar_url} size={24} />
+                    <span className="font-medium truncate">{member.display_name}</span>
+                  </button>
+                ))}
+              </div>
             )}
-            autoComplete="off"
-            style={{ minHeight: compact ? 36 : 44, maxHeight: compact ? 96 : 104 }}
-          />
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={value.trim() ? 'active' : 'inactive'}
-              initial={{ opacity: 0, scale: 0.6 }}
-              animate={{ opacity: value.trim() ? 1 : 0.3, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.6 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-              className={cn("absolute right-2 bottom-2", compact ? "h-7 w-7" : "h-8 w-8")}
-            >
-              <Button
-                size="sm"
-                onClick={handleSend}
-                disabled={!value.trim() || disabled}
-                className={cn(
-                  "p-0 rounded-xl shadow-sm w-full h-full active:scale-[0.85] transition-transform",
-                )}
+
+            <textarea
+              ref={textareaRef}
+              value={value}
+              onChange={handleChange}
+              onKeyDown={handleKeyDown}
+              onSelect={detectMention}
+              placeholder={placeholder || 'Message'}
+              rows={1}
+              className={cn(
+                "w-full resize-none bg-muted/15 border border-border/20 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary/30 focus:bg-muted/25 transition-all duration-200 placeholder:text-muted-foreground/40",
+                compact ? "text-xs pl-3.5 pr-11 py-2" : "text-sm pl-4 pr-12 py-3"
+              )}
+              autoComplete="off"
+              style={{ minHeight: compact ? 36 : 44, maxHeight: compact ? 96 : 104 }}
+            />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={canSend ? 'active' : 'inactive'}
+                initial={{ opacity: 0, scale: 0.6 }}
+                animate={{ opacity: canSend ? 1 : 0.3, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.6 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                className={cn("absolute right-2 bottom-2", compact ? "h-7 w-7" : "h-8 w-8")}
               >
-                <Send className={cn(compact ? "w-3 h-3" : "w-3.5 h-3.5")} />
-              </Button>
-            </motion.div>
-          </AnimatePresence>
+                <Button
+                  size="sm"
+                  onClick={handleSend}
+                  disabled={!canSend}
+                  className={cn("p-0 rounded-xl shadow-sm w-full h-full active:scale-[0.85] transition-transform")}
+                >
+                  {uploading ? <Loader2 className={cn(compact ? "w-3 h-3" : "w-3.5 h-3.5", "animate-spin")} /> : <Send className={cn(compact ? "w-3 h-3" : "w-3.5 h-3.5")} />}
+                </Button>
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </div>
       </div>
     );

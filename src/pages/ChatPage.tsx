@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { parseMessageLinks } from '@/lib/linkParser';
 import { AnimatePresence } from 'framer-motion';
-import { Hash, ChevronLeft, Pin, Search, X } from 'lucide-react';
+import { Hash, ChevronLeft, Pin, Search, X, Link2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -23,6 +24,7 @@ import { useChatActions } from '@/hooks/useChatActions';
 
 export default function ChatPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const composerRef = useRef<MessageComposerHandle>(null);
 
   // Dynamic viewport height to handle mobile keyboard
@@ -203,11 +205,19 @@ export default function ChatPage() {
   }, [selectedChannel, loadOlderMessages]);
 
   /* ═══ ACTIONS ═══ */
-  const handleSend = async () => {
-    if (!newMessage.trim() || !selectedChannel || !user || sending) return;
+  const handleSend = async (imageUrls?: string[]) => {
+    const hasText = newMessage.trim().length > 0;
+    const hasImages = imageUrls && imageUrls.length > 0;
+    if ((!hasText && !hasImages) || !selectedChannel || !user || sending) return;
     play('tap');
     setSending(true);
-    const content = newMessage.trim();
+
+    // Build content: text + image URLs on separate lines
+    let content = newMessage.trim();
+    if (hasImages) {
+      const imgLines = imageUrls.map(url => url).join('\n');
+      content = content ? `${content}\n${imgLines}` : imgLines;
+    }
     setNewMessage('');
 
     const optimisticId = `opt-${Date.now()}`;
@@ -251,7 +261,6 @@ export default function ChatPage() {
       if (links.length > 0) {
         links.forEach(link => {
           if (link.contentType === 'image') {
-            // Store image links directly without OG fetch
             (supabase as any).from('message_link_previews').insert({
               message_id: inserted.id,
               url: link.url,
@@ -259,7 +268,6 @@ export default function ChatPage() {
               title: link.url.split('/').pop() || 'Image',
             }).then(() => {});
           } else if (link.contentType === 'youtube' || link.contentType === 'spotify') {
-            // Store embed links directly
             (supabase as any).from('message_link_previews').insert({
               message_id: inserted.id,
               url: link.url,
@@ -268,7 +276,6 @@ export default function ChatPage() {
               embed_id: link.embedId,
             }).then(() => {});
           }
-          // Generic links will be fetched and cached by LinkPreviewCard on render
         });
       }
     }
@@ -486,6 +493,9 @@ export default function ChatPage() {
           <button onClick={() => { setShowSearch(!showSearch); setSearchQuery(''); setSearchResults(null); }} className={cn("p-1.5 rounded-lg transition-colors", showSearch ? "bg-primary/15 text-primary" : "hover:bg-muted/50 text-muted-foreground/60")}>
             <Search className="w-4 h-4" />
           </button>
+          <button onClick={() => navigate('/shared')} className="p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground/60 transition-colors" title="Shared Media">
+            <Link2 className="w-4 h-4" />
+          </button>
           {pinnedCount > 0 && (
             <button onClick={loadPinnedMessages} className={cn("p-1.5 rounded-lg transition-colors", showPinned ? "bg-premium-warm/15 text-premium-warm" : "hover:bg-muted/50 text-muted-foreground/60")}>
               <Pin className="w-4 h-4" />
@@ -585,6 +595,7 @@ export default function ChatPage() {
                       disabled={sending}
                       placeholder={`Message #${selectedChannel?.name || ''}`}
                       members={members}
+                      userId={user?.id}
                     />
                   </div>
                 )}
