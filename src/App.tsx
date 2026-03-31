@@ -46,6 +46,7 @@ const LockboxCrackPage = lazy(() => import("./pages/LockboxCrackPage"));
 const FeedPage = lazy(() => import("./pages/FeedPage"));
 const PostsPage = lazy(() => import("./pages/PostsPage"));
 const PostDetailPage = lazy(() => import("./pages/PostDetailPage"));
+const SharedMediaPage = lazy(() => import("./pages/SharedMediaPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
