@@ -44,21 +44,23 @@ export default function DraftsListPage() {
           const partCounts = new Map<string, number>();
           if (parts) parts.forEach(p => partCounts.set(p.draft_id, (partCounts.get(p.draft_id) || 0) + 1));
 
-          const fixPromises: Promise<any>[] = [];
+          const fixIds: string[] = [];
           const updatedData = data.map(d => {
             if (d.status === 'in_progress') {
               const numParts = partCounts.get(d.id) || 0;
               const numPicks = pickCounts.get(d.id) || 0;
               const totalExpected = numParts * d.num_rounds;
               if (numParts > 0 && numPicks >= totalExpected) {
-                fixPromises.push(supabase.from('drafts').update({ status: 'complete' as const }).eq('id', d.id).then());
+                fixIds.push(d.id);
                 return { ...d, status: 'complete' };
               }
             }
             return d;
           });
 
-          if (fixPromises.length > 0) await Promise.all(fixPromises);
+          for (const id of fixIds) {
+            await supabase.from('drafts').update({ status: 'complete' }).eq('id', id);
+          }
           setDrafts(updatedData);
         } else {
           setDrafts(data);
