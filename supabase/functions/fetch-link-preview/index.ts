@@ -3,6 +3,81 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+/* ═══ Spotify oEmbed ═══ */
+async function fetchSpotifyPreview(url: string) {
+  try {
+    const res = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`, {
+      headers: { 'Accept': 'application/json' },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return {
+      title: data.title || null,
+      description: data.description || `by ${data.provider_name || 'Spotify'}`,
+      image_url: data.thumbnail_url || null,
+      site_name: 'Spotify',
+      content_type: 'spotify',
+    };
+  } catch { return null; }
+}
+
+/* ═══ YouTube oEmbed ═══ */
+async function fetchYouTubePreview(url: string) {
+  try {
+    const res = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return {
+      title: data.title || null,
+      description: `by ${data.author_name || 'YouTube'}`,
+      image_url: data.thumbnail_url || null,
+      site_name: 'YouTube',
+      content_type: 'youtube',
+    };
+  } catch { return null; }
+}
+
+/* ═══ Apple Music / iTunes oEmbed ═══ */
+async function fetchAppleMusicPreview(url: string) {
+  try {
+    const res = await fetch(`https://music.apple.com/oembed?url=${encodeURIComponent(url)}&format=json`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return {
+      title: data.title || data.name || null,
+      description: data.author_name || data.provider_name || 'Apple Music',
+      image_url: data.thumbnail_url || data.artworkUrl100 || null,
+      site_name: 'Apple Music',
+      content_type: 'link',
+    };
+  } catch { return null; }
+}
+
+/* ═══ SoundCloud oEmbed ═══ */
+async function fetchSoundCloudPreview(url: string) {
+  try {
+    const res = await fetch(`https://soundcloud.com/oembed?url=${encodeURIComponent(url)}&format=json`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return {
+      title: data.title || null,
+      description: `by ${data.author_name || 'SoundCloud'}`,
+      image_url: data.thumbnail_url || null,
+      site_name: 'SoundCloud',
+      content_type: 'link',
+    };
+  } catch { return null; }
+}
+
+/* ═══ Detect known domains ═══ */
+function getSpecialFetcher(hostname: string, url: string) {
+  if (hostname.includes('spotify.com')) return () => fetchSpotifyPreview(url);
+  if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) return () => fetchYouTubePreview(url);
+  if (hostname.includes('music.apple.com')) return () => fetchAppleMusicPreview(url);
+  if (hostname.includes('soundcloud.com')) return () => fetchSoundCloudPreview(url);
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -34,12 +109,25 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Try oEmbed for known domains first — gives authoritative titles
+    const specialFetcher = getSpecialFetcher(parsedUrl.hostname, url);
+    if (specialFetcher) {
+      const specialData = await specialFetcher();
+      if (specialData?.title) {
+        console.log('oEmbed hit for', parsedUrl.hostname, '→', specialData.title);
+        return new Response(JSON.stringify(specialData), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    // Fallback: generic HTML scraping
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
 
     const res = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; DHClubBot/1.0)',
+        'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
         'Accept': 'text/html,application/xhtml+xml',
       },
       signal: controller.signal,
@@ -80,7 +168,7 @@ Deno.serve(async (req) => {
     let html = '';
     const decoder = new TextDecoder();
     let bytesRead = 0;
-    const MAX_BYTES = 50_000;
+    const MAX_BYTES = 80_000;
 
     while (bytesRead < MAX_BYTES) {
       const { done, value } = await reader.read();
@@ -120,9 +208,13 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Decode HTML entities in title
+    const decodeEntities = (str: string) =>
+      str.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#x27;/g, "'").replace(/&#x2F;/g, '/');
+
     return new Response(JSON.stringify({
-      title: title?.slice(0, 300),
-      description: description?.slice(0, 500),
+      title: decodeEntities(title || '').slice(0, 300),
+      description: description ? decodeEntities(description).slice(0, 500) : null,
       image_url: imageUrl,
       site_name: siteName?.slice(0, 100),
       content_type: 'link',
