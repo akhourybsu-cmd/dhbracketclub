@@ -229,9 +229,36 @@ export default function ChatPage() {
         ? { ...inserted, reply_count: 0, reactions: [] }
         : m
       ));
+      // Fire-and-forget: push notification + link preview generation
       supabase.functions.invoke('send-push-notification', {
         body: { record: { id: inserted.id, channel_id: inserted.channel_id, user_id: inserted.user_id, content: inserted.content } },
       }).catch(() => {});
+
+      // Generate link previews for any URLs in the message
+      const links = parseMessageLinks(content);
+      if (links.length > 0) {
+        links.forEach(link => {
+          if (link.contentType === 'image') {
+            // Store image links directly without OG fetch
+            (supabase as any).from('message_link_previews').insert({
+              message_id: inserted.id,
+              url: link.url,
+              content_type: 'image',
+              title: link.url.split('/').pop() || 'Image',
+            }).then(() => {});
+          } else if (link.contentType === 'youtube' || link.contentType === 'spotify') {
+            // Store embed links directly
+            (supabase as any).from('message_link_previews').insert({
+              message_id: inserted.id,
+              url: link.url,
+              content_type: link.contentType,
+              embed_type: link.embedType,
+              embed_id: link.embedId,
+            }).then(() => {});
+          }
+          // Generic links will be fetched and cached by LinkPreviewCard on render
+        });
+      }
     }
     setSending(false);
   };
