@@ -220,6 +220,7 @@ export default function ChatPage() {
         }
       } catch {}
 
+      // Clear unread for this channel in sidebar meta AND refresh global unread count
       setChannelMeta(prev => {
         const next = new Map(prev);
         const m = next.get(selectedChannel.id);
