@@ -24,9 +24,9 @@ function LinkPreviewCardInner({ link, messageId }: LinkPreviewCardProps) {
     case 'image':
       return <ImagePreview url={link.url} />;
     case 'youtube':
-      return <YouTubePreview link={link} />;
+      return <YouTubePreview link={link} messageId={messageId} />;
     case 'spotify':
-      return <SpotifyPreview link={link} />;
+      return <SpotifyPreview link={link} messageId={messageId} />;
     case 'link':
       return <GenericLinkPreview link={link} messageId={messageId} />;
     default:
