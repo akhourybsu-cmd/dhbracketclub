@@ -47,6 +47,7 @@ export function MessageList({
   onStartEditing, onDeleteMessage, onSaveEdit,
   editingMessageId, editContent, onEditContentChange, onCancelEdit,
   onLoadMore, hasMore, loadingMore, isSearchActive, lastReadAt,
+  scrollToBottomTrigger,
 }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
