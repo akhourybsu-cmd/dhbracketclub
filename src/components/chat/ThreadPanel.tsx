@@ -12,10 +12,21 @@ import type { Message } from './types';
 /* URL auto-linking + image detection */
 const URL_RE = /(https?:\/\/[^\s<]+)/g;
 const IMAGE_EXT_RE = /\.(jpg|jpeg|png|gif|webp|avif|svg)(\?[^\s]*)?$/i;
+const STORAGE_IMAGE_RE = /\/storage\/v1\/object\/public\/chat-attachments\//i;
+
+function isImageUrl(url: string): boolean {
+  return IMAGE_EXT_RE.test(url) || STORAGE_IMAGE_RE.test(url);
+}
+
+function stripImageUrls(text: string): string {
+  return text.replace(URL_RE, match => isImageUrl(match) ? '' : match).replace(/\n{2,}/g, '\n').trim();
+}
 
 function renderContent(text: string) {
-  const parts = text.split(URL_RE);
-  if (parts.length === 1) return text;
+  const cleaned = stripImageUrls(text);
+  if (!cleaned) return null;
+  const parts = cleaned.split(URL_RE);
+  if (parts.length === 1) return cleaned;
   return parts.map((part, i) =>
     URL_RE.test(part) ? (
       <a key={i} href={part} target="_blank" rel="noopener noreferrer"
@@ -29,7 +40,7 @@ function renderContent(text: string) {
 function extractImageUrls(text: string): string[] {
   const matches = text.match(URL_RE);
   if (!matches) return [];
-  return matches.filter(url => IMAGE_EXT_RE.test(url));
+  return matches.filter(isImageUrl);
 }
 
 interface ThreadPanelProps {

@@ -18,6 +18,16 @@ import { LinkPreviewCard } from './LinkPreviewCard';
 /* ═══ URL auto-linking + inline image preview ═══ */
 const URL_RE = /(https?:\/\/[^\s<]+)/g;
 const IMAGE_EXT_RE = /\.(jpg|jpeg|png|gif|webp|avif|svg)(\?.*)?$/i;
+const STORAGE_IMAGE_RE = /\/storage\/v1\/object\/public\/chat-attachments\//i;
+
+function isImageUrl(url: string): boolean {
+  return IMAGE_EXT_RE.test(url) || STORAGE_IMAGE_RE.test(url);
+}
+
+/** Remove image URLs from text so they only show as visual previews */
+function stripImageUrls(text: string): string {
+  return text.replace(URL_RE, match => isImageUrl(match) ? '' : match).replace(/\n{2,}/g, '\n').trim();
+}
 
 const MENTION_RE = /@([\w\s]+?)(?=\s@|\s|$)/g;
 
@@ -74,7 +84,7 @@ function renderMentions(text: string, currentDisplayName?: string, keyPrefix: nu
 function extractImageUrls(text: string): string[] {
   const matches = text.match(URL_RE);
   if (!matches) return [];
-  return matches.filter(url => IMAGE_EXT_RE.test(url));
+  return matches.filter(isImageUrl);
 }
 
 interface MessageBubbleProps {
@@ -286,8 +296,8 @@ function MessageBubbleInner({
             </div>
           ) : (
             <div>
-              <p className="text-[13px] leading-[1.55] text-foreground/85 break-words whitespace-pre-wrap">
-                {renderContent(msg.content, currentUserId, currentDisplayName)}
+              <p className={cn("text-[13px] leading-[1.55] text-foreground/85 break-words whitespace-pre-wrap", imageUrls.length > 0 && !stripImageUrls(msg.content) && "hidden")}>
+                {renderContent(stripImageUrls(msg.content), currentUserId, currentDisplayName)}
                 {msg.edited_at && <span className="text-[9px] text-muted-foreground/70 ml-1.5">(edited)</span>}
               </p>
               {/* Rich link/media previews */}
