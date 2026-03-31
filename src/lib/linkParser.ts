@@ -30,8 +30,8 @@ export function extractUrls(text: string): string[] {
 }
 
 export function classifyUrl(url: string): ParsedLink {
-  // Image
-  if (IMAGE_EXT_RE.test(url)) {
+  // Image by extension or Supabase storage URL
+  if (IMAGE_EXT_RE.test(url) || STORAGE_IMAGE_RE.test(url)) {
     return { url, contentType: 'image' };
   }
 
