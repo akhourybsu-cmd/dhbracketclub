@@ -492,7 +492,7 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
-      {/* ═══ Active Polls ═══ */}
+      {/* ═══ Polls ═══ */}
       {polls.length > 0 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.34 }}>
           <div className="section-divider mb-3">
@@ -503,26 +503,32 @@ export default function DashboardPage() {
             <Link to="/polls" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors">View All</Link>
           </div>
           <div className="space-y-2 mb-7">
-            {polls.slice(0, 3).map((p: any, i: number) => (
-              <motion.div key={p.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36 + i * 0.04 }}>
-                <Link to={`/polls/${p.id}`} className="block group">
-                  <div className="glass-card p-3.5 transition-all duration-200 group-hover:border-warning/15">
-                    <div className="flex items-center gap-3 relative z-10">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{
-                        background: 'linear-gradient(135deg, hsl(var(--warning) / 0.15), hsl(var(--warning) / 0.04))',
-                      }}>
-                        <MessageCircle className="w-4 h-4" style={{ color: 'hsl(var(--warning))' }} />
+            {polls.slice(0, 3).map((p: any, i: number) => {
+              const isClosed = p.status === 'closed';
+              return (
+                <motion.div key={p.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36 + i * 0.04 }}>
+                  <Link to={`/polls/${p.id}`} className="block group">
+                    <div className="glass-card p-3.5 transition-all duration-200 group-hover:border-warning/15">
+                      <div className="flex items-center gap-3 relative z-10">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{
+                          background: isClosed ? 'hsl(var(--muted) / 0.5)' : 'linear-gradient(135deg, hsl(var(--warning) / 0.15), hsl(var(--warning) / 0.04))',
+                        }}>
+                          <MessageCircle className={cn("w-4 h-4", isClosed ? "text-muted-foreground/60" : "")} style={isClosed ? {} : { color: 'hsl(var(--warning))' }} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-bold text-[13px] truncate tracking-tight">{p.question}</h3>
+                          <p className="text-[10px] text-muted-foreground/70 font-medium capitalize">{p.poll_type} choice</p>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className={cn("status-pill", isClosed ? "bg-muted text-muted-foreground" : "bg-success/10 text-success")}>{isClosed ? 'Closed' : 'Open'}</span>
+                          <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60" />
+                        </div>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-bold text-[13px] truncate tracking-tight">{p.question}</h3>
-                        <p className="text-[10px] text-muted-foreground/70 font-medium capitalize">{p.poll_type} choice</p>
-                      </div>
-                      <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
                     </div>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
+                  </Link>
+                </motion.div>
+              );
+            })}
           </div>
         </motion.div>
       )}
