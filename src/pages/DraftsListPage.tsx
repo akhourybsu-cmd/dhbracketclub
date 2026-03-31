@@ -51,7 +51,7 @@ export default function DraftsListPage() {
               const numPicks = pickCounts.get(d.id) || 0;
               const totalExpected = numParts * d.num_rounds;
               if (numParts > 0 && numPicks >= totalExpected) {
-                fixPromises.push(supabase.from('drafts').update({ status: 'complete' }).eq('id', d.id));
+                fixPromises.push(supabase.from('drafts').update({ status: 'complete' as const }).eq('id', d.id).then());
                 return { ...d, status: 'complete' };
               }
             }
