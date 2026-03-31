@@ -144,7 +144,38 @@ function YouTubePreview({ link, messageId }: { link: ParsedLink; messageId: stri
 }
 
 /* ═══ SPOTIFY PREVIEW ═══ */
-function SpotifyPreview({ link }: { link: ParsedLink }) {
+function SpotifyPreview({ link, messageId }: { link: ParsedLink; messageId: string }) {
+  const [title, setTitle] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!link.embedType || !link.embedId) return;
+    let cancelled = false;
+    async function fetchTitle() {
+      const { data: cached } = await supabase
+        .from('message_link_previews' as any)
+        .select('title')
+        .eq('message_id', messageId)
+        .eq('url', link.url)
+        .maybeSingle();
+      if (cancelled) return;
+      if (cached && (cached as any).title) { setTitle((cached as any).title); return; }
+
+      try {
+        const { data } = await supabase.functions.invoke('fetch-link-preview', { body: { url: link.url } });
+        if (cancelled) return;
+        if (data?.title) {
+          setTitle(data.title);
+          supabase.from('message_link_previews' as any).insert({
+            message_id: messageId, url: link.url, content_type: 'spotify',
+            title: data.title, description: data.description, image_url: data.image_url, site_name: data.site_name,
+          }).then(() => {});
+        }
+      } catch {}
+    }
+    fetchTitle();
+    return () => { cancelled = true; };
+  }, [link.url, link.embedType, link.embedId, messageId]);
+
   if (!link.embedType || !link.embedId) return <PlainLink url={link.url} />;
 
   const embedUrl = `https://open.spotify.com/embed/${link.embedType}/${link.embedId}?utm_source=generator&theme=0`;
@@ -152,6 +183,12 @@ function SpotifyPreview({ link }: { link: ParsedLink }) {
 
   return (
     <div className="mt-2 max-w-[320px]" onClick={e => e.stopPropagation()}>
+      {title && (
+        <p className="text-[11px] font-semibold text-foreground/80 leading-tight line-clamp-1 mb-1 flex items-center gap-1.5">
+          <Music className="w-3 h-3 text-[#1DB954] flex-shrink-0" />
+          {title}
+        </p>
+      )}
       <div className="overflow-hidden rounded-xl border border-border/15">
         <iframe
           src={embedUrl}
