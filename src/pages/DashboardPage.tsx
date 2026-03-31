@@ -548,7 +548,7 @@ export default function DashboardPage() {
                           "status-pill",
                           d.status === 'in_progress' ? 'bg-success/10 text-success' : d.status === 'setup' ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
                         )}>
-                          {d.status === 'in_progress' ? 'Live' : d.status === 'setup' ? 'Setup' : 'Done'}
+                          {d.status === 'in_progress' ? 'In Progress' : d.status === 'setup' ? 'Setup' : 'Complete'}
                         </span>
                         <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60" />
                       </div>
