@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSubmitGuess, useAttemptGuesses } from '@/hooks/useLockbox';
 import { LOCKBOX_COLORS, LOCKBOX_DIGITS, CellType, getAttackerView, findCell } from '@/lib/lockboxMazes';
 import { logActivity } from '@/lib/activityLogger';
+import { getEfficiencyBonus, BASE_CRACK_POINTS } from '@/lib/lockboxScoring';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
