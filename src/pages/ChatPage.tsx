@@ -35,26 +35,30 @@ export default function ChatPage() {
     const vv = window.visualViewport;
     if (!vv) return;
     const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches;
-    const fullHeight = window.innerHeight;
 
     const update = () => {
       requestAnimationFrame(() => {
-        const vpH = vv.height;
-        if (isDesktop()) {
-          setChatHeight(`${vpH}px`);
-        } else {
-          // Always subtract bottom nav on mobile — it stays visible even with keyboard open
-          setChatHeight(`${vpH - 72}px`);
-        }
-        // Trigger scroll-to-bottom after height settles (keyboard open/close)
+        const viewportHeight = vv.height + vv.offsetTop;
+        const keyboardInset = Math.max(0, window.innerHeight - viewportHeight);
+        const keyboardOpen = keyboardInset > 100;
+        const mobileBottomOffset = keyboardOpen ? 0 : 72;
+        const nextHeight = isDesktop()
+          ? viewportHeight
+          : Math.max(220, viewportHeight - mobileBottomOffset);
+
+        setChatHeight(`${nextHeight}px`);
         setScrollToBottomTrigger(c => c + 1);
       });
     };
+
     update();
     vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
     window.addEventListener('resize', update);
+
     return () => {
       vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
       window.removeEventListener('resize', update);
     };
   }, []);

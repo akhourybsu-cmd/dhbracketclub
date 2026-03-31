@@ -35,6 +35,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { play } = useSoundEffect();
   const { user } = useAuth();
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
   // Fetch unread chat count
   const fetchUnreadCount = useCallback(async () => {
@@ -82,6 +83,37 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => { fetchUnreadCount(); }, [location.pathname, fetchUnreadCount]);
 
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches;
+
+    const updateKeyboardState = () => {
+      if (isDesktop()) {
+        setIsKeyboardOpen(false);
+        return;
+      }
+
+      const viewportHeight = vv.height + vv.offsetTop;
+      const keyboardInset = Math.max(0, window.innerHeight - viewportHeight);
+      setIsKeyboardOpen(keyboardInset > 100);
+    };
+
+    updateKeyboardState();
+    vv.addEventListener('resize', updateKeyboardState);
+    vv.addEventListener('scroll', updateKeyboardState);
+    window.addEventListener('resize', updateKeyboardState);
+
+    return () => {
+      vv.removeEventListener('resize', updateKeyboardState);
+      vv.removeEventListener('scroll', updateKeyboardState);
+      window.removeEventListener('resize', updateKeyboardState);
+    };
+  }, []);
+
+  const isChatRoute = location.pathname.startsWith('/chat');
+
   const isNavActive = (path: string) => {
     if (path === '/brackets') {
       return location.pathname.startsWith('/brackets') || location.pathname.startsWith('/pools');
@@ -99,7 +131,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
       {/* Main Content */}
-      <main className="flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] lg:pb-0 lg:pl-64 overflow-x-hidden min-w-0">
+      <main className={cn(
+        "flex-1 lg:pb-0 lg:pl-64 overflow-x-hidden min-w-0",
+        isChatRoute ? "pb-0" : "pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))]"
+      )}>
         {location.pathname === '/chat' ? (
           children
         ) : (
@@ -178,7 +213,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Mobile Bottom Nav */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 border-t border-border/25" style={{
+      <nav className={cn(
+        "lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 border-t border-border/25 transition-all duration-200",
+        isChatRoute && isKeyboardOpen && "translate-y-full opacity-0 pointer-events-none"
+      )} style={{
         backdropFilter: 'blur(28px) saturate(200%)',
         boxShadow: '0 -4px 24px rgba(0,0,0,0.15), inset 0 1px 0 hsl(var(--foreground) / 0.02)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
