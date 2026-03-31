@@ -61,6 +61,7 @@ export default function EnrichedItemCard({
   showRank = true,
   compact = false,
   onClick,
+  onImageClick,
   actions,
   className,
 }: EnrichedItemCardProps) {
