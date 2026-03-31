@@ -245,13 +245,27 @@ async function enrichFromiTunes(
     const mediaType = category === "movie" ? "movie" : category === "tv" ? "tvShow" : "music";
     const entity = category === "movie" ? "movie" : category === "tv" ? "tvSeason" : "album";
     const query = encodeURIComponent(enrichment.normalized_name || name);
-    const url = `https://itunes.apple.com/search?term=${query}&media=${mediaType}&entity=${entity}&limit=3`;
+    const url = `https://itunes.apple.com/search?term=${query}&media=${mediaType}&entity=${entity}&limit=5`;
 
     const res = await fetch(url);
     if (!res.ok) return enrichment;
     const data = await res.json();
     const results = data.results;
     if (!results?.length) return enrichment;
+
+    // Collect image candidates from all results
+    const candidates: ImageCandidate[] = [];
+    for (const r of results.slice(0, 5)) {
+      const raw: string = r.artworkUrl100 || r.artworkUrl60 || "";
+      if (raw) {
+        candidates.push({
+          url: raw.replace("100x100bb", "600x600bb"),
+          thumbnail: raw.replace("100x100bb", "200x200bb"),
+          source: "itunes",
+          label: r.trackName || r.collectionName || name,
+        });
+      }
+    }
 
     const match = results[0];
     const rawArtwork: string = match.artworkUrl100 || match.artworkUrl60 || "";
@@ -270,6 +284,7 @@ async function enrichFromiTunes(
         year: match.releaseDate ? new Date(match.releaseDate).getFullYear() : enrichment.metadata.year,
         director: match.artistName || enrichment.metadata.director,
         genre: match.primaryGenreName || enrichment.metadata.genre,
+        image_candidates: [...(enrichment.metadata.image_candidates as ImageCandidate[] || []), ...candidates],
       };
     } else if (category === "tv") {
       enrichment.matched_name = match.collectionName || enrichment.matched_name;
@@ -278,6 +293,7 @@ async function enrichFromiTunes(
         year: match.releaseDate ? new Date(match.releaseDate).getFullYear() : enrichment.metadata.year,
         network: match.artistName || enrichment.metadata.network,
         genre: match.primaryGenreName || enrichment.metadata.genre,
+        image_candidates: [...(enrichment.metadata.image_candidates as ImageCandidate[] || []), ...candidates],
       };
     } else if (category === "music") {
       enrichment.matched_name = match.collectionName || match.trackName || enrichment.matched_name;
@@ -286,6 +302,7 @@ async function enrichFromiTunes(
         artist: match.artistName || enrichment.metadata.artist,
         year: match.releaseDate ? new Date(match.releaseDate).getFullYear() : enrichment.metadata.year,
         genre: match.primaryGenreName || enrichment.metadata.genre,
+        image_candidates: [...(enrichment.metadata.image_candidates as ImageCandidate[] || []), ...candidates],
       };
     }
 
