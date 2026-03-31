@@ -89,7 +89,7 @@ export default function DashboardPage() {
         const poolIds = memberships.map(m => m.pool_id);
         const { data: poolData } = await supabase
           .from('pools')
-          .select('id, name, invite_code, lock_time, tournaments(name, season_year)')
+          .select('id, name, invite_code, lock_time, tournament_id, tournaments(name, season_year)')
           .in('id', poolIds);
         if (poolData) setPools(poolData);
 
