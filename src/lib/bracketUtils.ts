@@ -231,8 +231,9 @@ export function getBracketDisplayStatus(
   bracketStatus: string | null,
   poolLockTime: string,
   picksCount: number,
-  totalGames: number = TOTAL_GAMES
-): 'draft' | 'submitted' | 'locked' | 'incomplete' | 'none' {
+  totalGames: number = TOTAL_GAMES,
+  allGamesDecided: boolean = false
+): 'draft' | 'submitted' | 'locked' | 'incomplete' | 'none' | 'complete' {
   if (!bracketStatus) return 'none';
 
   const isLocked = new Date(poolLockTime) <= new Date();
@@ -241,7 +242,9 @@ export function getBracketDisplayStatus(
     return bracketStatus === 'submitted' ? 'submitted' : 'draft';
   }
 
-  // After lock
+  // After lock — check if tournament is finished
+  if (allGamesDecided) return 'complete';
+
   if (bracketStatus === 'submitted') return 'locked';
   if (picksCount >= totalGames) return 'locked'; // Draft but complete
   return 'incomplete';
