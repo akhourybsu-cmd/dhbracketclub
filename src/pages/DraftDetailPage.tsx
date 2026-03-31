@@ -635,6 +635,20 @@ export default function DraftDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Image picker dialog */}
+      {imagePickerPick && enrichments.get(imagePickerPick.id) && (
+        <ImagePickerDialog
+          open={!!imagePickerPick}
+          onOpenChange={(open) => { if (!open) setImagePickerPick(null); }}
+          pickName={imagePickerPick.pick_text}
+          enrichment={enrichments.get(imagePickerPick.id)!}
+          onImageSelected={() => {
+            fetchEnrichments();
+            setImagePickerPick(null);
+          }}
+        />
+      )}
     </div>
   );
 }
