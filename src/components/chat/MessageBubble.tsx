@@ -184,6 +184,9 @@ function MessageBubbleInner({
   const showGroupedAvatar = sameAuthor && !nextSameAuthor;
 
   const imageUrls = extractImageUrls(msg.content);
+  const parsedLinks = useMemo(() => parseMessageLinks(msg.content), [msg.content]);
+  // Only show link preview cards for non-image links (images are handled by existing inline preview)
+  const previewLinks = parsedLinks.filter(l => l.contentType !== 'image');
 
   return (
     <>
