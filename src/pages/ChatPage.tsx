@@ -43,12 +43,8 @@ export default function ChatPage() {
         if (isDesktop()) {
           setChatHeight(`${vpH}px`);
         } else {
-          const keyboardOpen = fullHeight - vpH > 100;
-          if (keyboardOpen) {
-            setChatHeight(`${vpH}px`);
-          } else {
-            setChatHeight(`${vpH - 72}px`);
-          }
+          // Always subtract bottom nav on mobile — it stays visible even with keyboard open
+          setChatHeight(`${vpH - 72}px`);
         }
         // Trigger scroll-to-bottom after height settles (keyboard open/close)
         setScrollToBottomTrigger(c => c + 1);
