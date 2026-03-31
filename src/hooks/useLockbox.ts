@@ -309,6 +309,30 @@ export function useSubmitGuess() {
           updates.is_solved = true;
           updates.solved_at = new Date().toISOString();
           await supabase.from('lockbox_locks').update({ is_cracked: true }).eq('id', params.lockId);
+
+          // Notify the lock owner that their lock was cracked
+          const { data: lockOwner } = await supabase
+            .from('lockbox_locks')
+            .select('user_id, profiles:user_id(display_name)')
+            .eq('id', params.lockId)
+            .single();
+
+          if (lockOwner && lockOwner.user_id !== params.attackerId) {
+            const { data: attackerProfile } = await supabase
+              .from('profiles').select('display_name').eq('id', params.attackerId).single();
+            const attackerName = attackerProfile?.display_name || 'Someone';
+
+            supabase.functions.invoke('send-push-notification', {
+              body: {
+                type: 'lockbox',
+                title: '💔 Your Lock Was Cracked!',
+                message: `${attackerName} cracked your lock!`,
+                url: '/lockbox',
+                sender_user_id: params.attackerId,
+                target_user_id: lockOwner.user_id,
+              },
+            }).catch(() => {});
+          }
         }
       }
 
