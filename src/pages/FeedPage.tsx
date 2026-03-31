@@ -38,7 +38,7 @@ const FEED_LABELS: Record<string, string> = {
   event_created: 'created an event',
   post_created: 'started a discussion',
   event_rsvp: 'RSVPed to an event',
-  lockbox_created: 'set their weekly lock 🔒',
+  lockbox_created: 'set their daily lock 🔒',
   lockbox_cracked: 'cracked a lock 🔓',
 };
 

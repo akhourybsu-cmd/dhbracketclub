@@ -52,7 +52,7 @@ function LockboxCompeteCard() {
               <div className="flex items-center gap-2">
                 <h2 className="font-bold text-[15px] tracking-tight">DH Lockbox</h2>
                 <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-destructive/12 text-destructive">
-                  WEEKLY
+                  DAILY
                 </span>
               </div>
               <p className="text-[11px] text-muted-foreground/70">{contextLine}</p>
