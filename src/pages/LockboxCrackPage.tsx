@@ -472,6 +472,10 @@ function MazePhase({ mazeGrid, onSolve, onFail, isPending, mazeAttempts }: {
 
 // ── Success Screen ──
 function SuccessScreen({ lock, attempt, onBack }: { lock: any; attempt: any; onBack: () => void }) {
+  const totalAttempts = attempt?.total_attempts || 0;
+  const effBonus = getEfficiencyBonus(totalAttempts);
+  const totalCrackPts = BASE_CRACK_POINTS + effBonus;
+
   return (
     <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4">
       <div className="glass-card p-6 text-center border border-primary/20">
@@ -489,19 +493,24 @@ function SuccessScreen({ lock, attempt, onBack }: { lock: any; attempt: any; onB
           You cracked <span className="font-bold text-foreground">{lock.profiles?.display_name}'s</span> lock
         </p>
 
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="grid grid-cols-3 gap-2 mb-4">
           <div className="bg-muted/20 rounded-xl p-3">
-            <div className="text-2xl font-black text-primary">{attempt?.total_attempts}</div>
-            <div className="text-[10px] text-muted-foreground font-semibold">Total Attempts</div>
+            <div className="text-2xl font-black text-primary">{totalAttempts}</div>
+            <div className="text-[9px] text-muted-foreground font-semibold">Total Tries</div>
           </div>
           <div className="bg-muted/20 rounded-xl p-3">
-            <div className="text-2xl font-black text-primary">3/3</div>
-            <div className="text-[10px] text-muted-foreground font-semibold">Phases Cleared</div>
+            <div className="text-2xl font-black text-primary">{totalCrackPts}</div>
+            <div className="text-[9px] text-muted-foreground font-semibold">Crack Pts</div>
+          </div>
+          <div className="bg-muted/20 rounded-xl p-3">
+            <div className="text-2xl font-black text-primary">+{effBonus}</div>
+            <div className="text-[9px] text-muted-foreground font-semibold">Efficiency</div>
           </div>
         </div>
 
         <div className="text-[10px] text-muted-foreground mb-2">
-          +5 crack points earned{attempt?.total_attempts <= 5 ? ' · Potential best crack bonus!' : ''}
+          {effBonus > 0 ? `🎯 Efficiency bonus: +${effBonus} pts for ${totalAttempts} attempts` : 'No efficiency bonus (12+ attempts)'}
+          {totalAttempts <= 5 ? ' · Potential best crack bonus (+2)!' : ''}
         </div>
       </div>
 

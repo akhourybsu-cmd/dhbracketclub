@@ -32,7 +32,13 @@ function LockResultDetail({ lock, attempts }: { lock: any; attempts: any[] }) {
     });
 
   const solvedCount = lockAttempts.filter((a: any) => a.is_solved).length;
-  const best = lockAttempts.find((a: any) => a.is_solved);
+  const solvedAttempts = lockAttempts.filter((a: any) => a.is_solved);
+  const bestSorted = sortCracksForBest(solvedAttempts);
+  const best = bestSorted[0] || null;
+  const bestAttempts = best?.total_attempts ?? null;
+
+  // Compute defense points for display
+  const defPts = getDefensePoints(lock.is_cracked, bestAttempts);
 
   return (
     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
@@ -42,22 +48,31 @@ function LockResultDetail({ lock, attempts }: { lock: any; attempts: any[] }) {
         <span>{lockAttempts.length} attempted</span>
         {best && <span className="text-primary font-bold flex items-center gap-0.5"><Zap className="w-3 h-3" /> Best: {best.total_attempts} tries</span>}
       </div>
-      {lockAttempts.slice(0, 5).map((a: any, i: number) => (
-        <div key={a.id} className="flex items-center gap-2 text-[11px]">
-          {i === 0 && a.is_solved && <span className="text-[9px]">👑</span>}
-          <span className="font-bold truncate flex-1">{a.profiles?.display_name || 'Player'}</span>
-          {a.is_solved ? (
-            <span className="text-primary font-bold">{a.total_attempts} tries ✓</span>
-          ) : (
-            <span className="text-muted-foreground capitalize">{a.phase} phase · {a.total_attempts}</span>
-          )}
-        </div>
-      ))}
-      {!lock.is_cracked && (
+      {lockAttempts.slice(0, 5).map((a: any, i: number) => {
+        const isBest = best && a.id === best.id;
+        const effBonus = a.is_solved ? getEfficiencyBonus(a.total_attempts) : 0;
+        const pts = a.is_solved ? BASE_CRACK_POINTS + effBonus + (isBest ? BEST_CRACK_BONUS : 0) : 0;
+        return (
+          <div key={a.id} className="flex items-center gap-2 text-[11px]">
+            {isBest && <span className="text-[9px]">👑</span>}
+            <span className="font-bold truncate flex-1">{a.profiles?.display_name || 'Player'}</span>
+            {a.is_solved ? (
+              <span className="text-primary font-bold">{a.total_attempts} tries · {pts} pts ✓</span>
+            ) : (
+              <span className="text-muted-foreground capitalize">{a.phase} phase · {a.total_attempts}</span>
+            )}
+          </div>
+        );
+      })}
+      {!lock.is_cracked ? (
         <div className="text-[10px] font-bold text-primary flex items-center gap-1 mt-1">
-          <Shield className="w-3 h-3" /> Uncracked — +5 defense pts
+          <Shield className="w-3 h-3" /> Uncracked — +{defPts} defense pts
         </div>
-      )}
+      ) : defPts > 0 ? (
+        <div className="text-[10px] font-bold text-muted-foreground flex items-center gap-1 mt-1">
+          <Shield className="w-3 h-3" /> Defense — +{defPts} pts (best crack: {bestAttempts})
+        </div>
+      ) : null}
     </motion.div>
   );
 }
