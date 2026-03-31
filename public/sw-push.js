@@ -1,6 +1,22 @@
 // Push notification handler for the service worker
 // This file is imported by the PWA service worker
 
+// On activation, clear ALL old caches to prevent stale data
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          // Keep only workbox-precache caches (they're versioned)
+          if (!cacheName.includes('workbox-precache')) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+});
+
 self.addEventListener('push', (event) => {
   if (!event.data) return;
 
