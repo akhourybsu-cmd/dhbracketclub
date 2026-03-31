@@ -6,6 +6,7 @@ import {
   CellType, MAZE_SIZE, CELL_ICONS, CELL_LABELS,
   createEmptyGrid, validateMaze, findCell,
 } from '@/lib/lockboxMazes';
+import { MAX_BOMBS } from '@/lib/lockboxScoring';
 
 interface Props {
   onSave: (grid: CellType[][]) => void;
@@ -90,7 +91,7 @@ export function MazeBuilder({ onSave, isPending }: Props) {
       <div className="glass-card p-5">
         <h3 className="font-bold text-sm mb-1">Build Your Maze</h3>
         <p className="text-[10px] text-muted-foreground mb-4">
-          Tap a tool, then tap cells. Must have exactly <strong>one safe path</strong> from Start to Goal. Mines are hidden from attackers!
+          Tap a tool, then tap cells. Must have exactly <strong>one safe path</strong> from Start to Goal. Mines are hidden from attackers! Max <strong>{MAX_BOMBS} mines</strong>.
         </p>
 
         {/* Tool palette */}
@@ -153,8 +154,8 @@ export function MazeBuilder({ onSave, isPending }: Props) {
           <span className="text-[9px] px-2 py-1 rounded-full bg-muted/20 text-muted-foreground font-bold">
             {wallCount} walls
           </span>
-          <span className="text-[9px] px-2 py-1 rounded-full bg-destructive/10 text-destructive font-bold">
-            {mineCount} mines
+          <span className={`text-[9px] px-2 py-1 rounded-full font-bold ${mineCount > MAX_BOMBS ? 'bg-destructive/15 text-destructive' : 'bg-destructive/10 text-destructive'}`}>
+            {mineCount}/{MAX_BOMBS} mines
           </span>
         </div>
 
