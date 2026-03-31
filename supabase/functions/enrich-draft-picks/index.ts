@@ -444,10 +444,17 @@ async function enrichFromSportsDB(
 ): Promise<EnrichmentResult> {
   try {
     const query = encodeURIComponent(enrichment.normalized_name || name);
+    const candidates: ImageCandidate[] = (enrichment.metadata.image_candidates as ImageCandidate[] || []);
+
     const teamRes = await fetch(`https://www.thesportsdb.com/api/v1/json/1/searchteams.php?t=${query}`);
     if (teamRes.ok) {
       const teamData = await teamRes.json();
-      const team = teamData.teams?.[0];
+      const teams = teamData.teams || [];
+      for (const t of teams.slice(0, 5)) {
+        const img = t.strBadge || t.strLogo;
+        if (img) candidates.push({ url: img, thumbnail: img + "/preview", source: "thesportsdb", label: t.strTeam || name });
+      }
+      const team = teams[0];
       if (team) {
         const badge = team.strBadge || team.strLogo;
         if (badge) {
@@ -464,6 +471,7 @@ async function enrichFromSportsDB(
           league: team.strLeague,
           stadium: team.strStadium,
           country: team.strCountry,
+          image_candidates: candidates,
         };
         return enrichment;
       }
@@ -471,7 +479,12 @@ async function enrichFromSportsDB(
     const playerRes = await fetch(`https://www.thesportsdb.com/api/v1/json/1/searchplayers.php?p=${query}`);
     if (playerRes.ok) {
       const playerData = await playerRes.json();
-      const player = playerData.player?.[0];
+      const players = playerData.player || [];
+      for (const pl of players.slice(0, 5)) {
+        const img = pl.strThumb || pl.strCutout;
+        if (img) candidates.push({ url: img, thumbnail: img + "/preview", source: "thesportsdb", label: pl.strPlayer || name });
+      }
+      const player = players[0];
       if (player) {
         const thumb = player.strThumb || player.strCutout;
         if (thumb) {
@@ -488,8 +501,12 @@ async function enrichFromSportsDB(
           team: player.strTeam,
           position: player.strPosition,
           nationality: player.strNationality,
+          image_candidates: candidates,
         };
       }
+    }
+    if (candidates.length) {
+      enrichment.metadata = { ...enrichment.metadata, image_candidates: candidates };
     }
     return enrichment;
   } catch (err) {
