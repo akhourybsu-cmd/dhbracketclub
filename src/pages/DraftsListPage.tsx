@@ -71,8 +71,8 @@ export default function DraftsListPage() {
 
   const statusConfig: Record<string, { label: string; cls: string }> = {
     setup: { label: 'Setup', cls: 'bg-muted text-muted-foreground' },
-    in_progress: { label: 'Live', cls: 'bg-success/10 text-success' },
-    complete: { label: 'Done', cls: 'bg-primary/10 text-primary' },
+    in_progress: { label: 'In Progress', cls: 'bg-success/10 text-success' },
+    complete: { label: 'Complete', cls: 'bg-primary/10 text-primary' },
   };
 
   return (
