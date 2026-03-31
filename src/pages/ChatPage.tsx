@@ -28,27 +28,37 @@ export default function ChatPage() {
   const composerRef = useRef<MessageComposerHandle>(null);
 
   // Dynamic viewport height to handle mobile keyboard
-  const [chatHeight, setChatHeight] = useState<string>('calc(100dvh - 4.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))');
+  const [chatHeight, setChatHeight] = useState<string>('calc(100dvh - env(safe-area-inset-top, 0px))');
 
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
+    const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches;
     const fullHeight = window.innerHeight;
+
     const update = () => {
       const vpH = vv.height;
-      // If viewport shrank significantly, the keyboard is open — bottom nav is hidden behind it
-      const keyboardOpen = fullHeight - vpH > 100;
-      if (keyboardOpen) {
-        // Use full visual viewport — no nav bar subtraction needed
+      if (isDesktop()) {
+        // Desktop: no bottom nav, just use full viewport
         setChatHeight(`${vpH}px`);
       } else {
-        // Normal state: subtract bottom nav (4.5rem ≈ 72px)
-        setChatHeight(`${vpH - 72}px`);
+        // Mobile: check if keyboard is open
+        const keyboardOpen = fullHeight - vpH > 100;
+        if (keyboardOpen) {
+          setChatHeight(`${vpH}px`);
+        } else {
+          // Subtract bottom nav (4.5rem ≈ 72px)
+          setChatHeight(`${vpH - 72}px`);
+        }
       }
     };
     update();
     vv.addEventListener('resize', update);
-    return () => vv.removeEventListener('resize', update);
+    window.addEventListener('resize', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      window.removeEventListener('resize', update);
+    };
   }, []);
 
   const [channels, setChannels] = useState<Channel[]>([]);

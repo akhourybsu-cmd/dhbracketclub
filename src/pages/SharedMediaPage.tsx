@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
-import { Link2, Image as ImageIcon, Play, Music, Globe, ExternalLink, Loader2, Filter, ChevronDown } from 'lucide-react';
+import { Link2, Image as ImageIcon, Play, Music, Globe, ExternalLink, Loader2, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 import { UserAvatar } from '@/components/chat/UserAvatar';
 import {
@@ -27,12 +27,10 @@ interface MediaItem {
   embed_id: string | null;
   created_at: string;
   message_id: string;
-  message?: {
-    channel_id: string;
-    user_id: string;
-    content: string;
-    profiles?: { display_name: string; avatar_url: string | null };
-  };
+  channel_id?: string;
+  user_id?: string;
+  sender_name?: string;
+  sender_avatar?: string | null;
   channel_name?: string;
 }
 
@@ -56,33 +54,63 @@ export default function SharedMediaPage() {
     if (!user) return;
     setLoading(true);
 
-    let query = (supabase as any)
-      .from('message_link_previews')
-      .select('*, messages!inner(channel_id, user_id, content, profiles:user_id(display_name, avatar_url))')
-      .order('created_at', { ascending: false })
-      .limit(100);
+    try {
+      // Fetch link previews
+      let query = supabase
+        .from('message_link_previews')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
 
-    if (activeType !== 'all') {
-      query = query.eq('content_type', activeType);
-    }
+      if (activeType !== 'all') {
+        query = query.eq('content_type', activeType);
+      }
 
-    if (filterChannel !== 'all') {
-      query = query.eq('messages.channel_id', filterChannel);
-    }
+      const { data: previews } = await query;
+      if (!previews || previews.length === 0) {
+        setItems([]);
+        setLoading(false);
+        return;
+      }
 
-    const { data } = await query;
+      // Fetch associated messages to get channel_id and user info
+      const messageIds = [...new Set(previews.map(p => p.message_id))];
+      const { data: messagesData } = await supabase
+        .from('messages')
+        .select('id, channel_id, user_id, profiles:user_id(display_name, avatar_url)')
+        .in('id', messageIds);
 
-    if (data) {
+      const msgMap = new Map<string, any>();
+      (messagesData || []).forEach((m: any) => msgMap.set(m.id, m));
+
       // Fetch channel names
-      const channelIds = [...new Set((data as any[]).map((d: any) => d.messages?.channel_id).filter(Boolean))];
-      const { data: chData } = await supabase.from('channels').select('id, name').in('id', channelIds);
+      const channelIds = [...new Set((messagesData || []).map((m: any) => m.channel_id).filter(Boolean))];
+      const { data: chData } = channelIds.length > 0
+        ? await supabase.from('channels').select('id, name').in('id', channelIds)
+        : { data: [] };
       const chMap = new Map((chData || []).map(c => [c.id, c.name]));
 
-      setItems((data as any[]).map((d: any) => ({
-        ...d,
-        message: d.messages,
-        channel_name: chMap.get(d.messages?.channel_id) || 'Unknown',
-      })));
+      let result: MediaItem[] = previews.map((p: any) => {
+        const msg = msgMap.get(p.message_id);
+        return {
+          ...p,
+          channel_id: msg?.channel_id,
+          user_id: msg?.user_id,
+          sender_name: msg?.profiles?.display_name || 'Unknown',
+          sender_avatar: msg?.profiles?.avatar_url || null,
+          channel_name: chMap.get(msg?.channel_id) || 'Unknown',
+        };
+      });
+
+      // Apply channel filter client-side
+      if (filterChannel !== 'all') {
+        result = result.filter(item => item.channel_id === filterChannel);
+      }
+
+      setItems(result);
+    } catch (err) {
+      console.error('SharedMedia fetch error:', err);
+      setItems([]);
     }
 
     setLoading(false);
@@ -90,6 +118,7 @@ export default function SharedMediaPage() {
 
   useEffect(() => { fetchMedia(); }, [fetchMedia]);
 
+  // Fetch channels once
   useEffect(() => {
     supabase.from('channels').select('id, name').order('position').then(({ data }) => {
       if (data) setChannels(data);
@@ -224,17 +253,19 @@ function MediaItemCard({ item, getTypeIcon }: { item: MediaItem; getTypeIcon: (t
               {getTypeIcon(item.content_type)}
               {hostname}
             </span>
-            <span className="text-[8px] text-muted-foreground/30">•</span>
             {item.channel_name && (
-              <span className="text-[9px] text-muted-foreground/40">#{item.channel_name}</span>
+              <>
+                <span className="text-[8px] text-muted-foreground/30">•</span>
+                <span className="text-[9px] text-muted-foreground/40">#{item.channel_name}</span>
+              </>
             )}
             <span className="text-[8px] text-muted-foreground/30">•</span>
             <span className="text-[9px] text-muted-foreground/35">{format(new Date(item.created_at), 'MMM d')}</span>
           </div>
-          {item.message?.profiles && (
+          {item.sender_name && (
             <div className="flex items-center gap-1.5 mt-1">
-              <UserAvatar userId={item.message.user_id} name={item.message.profiles.display_name} avatarUrl={item.message.profiles.avatar_url} size={14} />
-              <span className="text-[9px] text-muted-foreground/40 font-medium">{item.message.profiles.display_name}</span>
+              <UserAvatar userId={item.user_id || ''} name={item.sender_name} avatarUrl={item.sender_avatar} size={14} />
+              <span className="text-[9px] text-muted-foreground/40 font-medium">{item.sender_name}</span>
             </div>
           )}
         </div>

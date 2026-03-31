@@ -13,7 +13,9 @@ export interface ParsedLink {
 }
 
 const URL_RE = /(https?:\/\/[^\s<]+)/g;
-const IMAGE_EXT_RE = /\.(jpg|jpeg|png|gif|webp|avif|svg)(\?[^\s]*)?$/i;
+const IMAGE_EXT_RE = /\.(jpg|jpeg|png|gif|webp|avif|svg|heic)(\?[^\s]*)?$/i;
+// Supabase storage URLs contain /object/public/ and are images
+const STORAGE_IMAGE_RE = /\/storage\/v1\/object\/public\/chat-attachments\//i;
 
 // YouTube patterns
 const YT_PATTERNS = [
@@ -28,8 +30,8 @@ export function extractUrls(text: string): string[] {
 }
 
 export function classifyUrl(url: string): ParsedLink {
-  // Image
-  if (IMAGE_EXT_RE.test(url)) {
+  // Image by extension or Supabase storage URL
+  if (IMAGE_EXT_RE.test(url) || STORAGE_IMAGE_RE.test(url)) {
     return { url, contentType: 'image' };
   }
 

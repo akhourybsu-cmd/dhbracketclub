@@ -1,6 +1,6 @@
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 Deno.serve(async (req) => {
@@ -17,7 +17,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Validate URL
     let parsedUrl: URL;
     try {
       parsedUrl = new URL(url);
@@ -28,7 +27,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Only allow http/https
     if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
       return new Response(JSON.stringify({ error: 'Unsupported protocol' }), {
         status: 400,
@@ -36,7 +34,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch the page with a timeout
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
 
@@ -52,7 +49,6 @@ Deno.serve(async (req) => {
 
     const contentType = res.headers.get('content-type') || '';
 
-    // If it's an image, return minimal metadata
     if (contentType.startsWith('image/')) {
       return new Response(JSON.stringify({
         title: parsedUrl.pathname.split('/').pop() || 'Image',
@@ -74,7 +70,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Read only first 50KB to avoid huge pages
     const reader = res.body?.getReader();
     if (!reader) {
       return new Response(JSON.stringify({ title: parsedUrl.hostname, site_name: parsedUrl.hostname }), {
@@ -95,7 +90,6 @@ Deno.serve(async (req) => {
     }
     reader.cancel();
 
-    // Parse OG tags with regex (no DOM parser needed)
     const getMetaContent = (property: string): string | null => {
       const patterns = [
         new RegExp(`<meta[^>]+(?:property|name)=["']${property}["'][^>]+content=["']([^"']+)["']`, 'i'),
@@ -118,7 +112,6 @@ Deno.serve(async (req) => {
     let imageUrl = getMetaContent('og:image') || getMetaContent('twitter:image');
     const siteName = getMetaContent('og:site_name') || parsedUrl.hostname;
 
-    // Resolve relative image URLs
     if (imageUrl && !imageUrl.startsWith('http')) {
       try {
         imageUrl = new URL(imageUrl, url).href;
