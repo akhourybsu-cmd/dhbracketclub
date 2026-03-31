@@ -8,6 +8,7 @@ export interface NotificationPreferences {
   events: boolean;
   drafts: boolean;
   mentions: boolean;
+  lockbox: boolean;
 }
 
 const DEFAULTS: NotificationPreferences = {
@@ -16,6 +17,7 @@ const DEFAULTS: NotificationPreferences = {
   events: true,
   drafts: true,
   mentions: true,
+  lockbox: true,
 };
 
 export function useNotificationPreferences() {
@@ -28,7 +30,7 @@ export function useNotificationPreferences() {
     const fetchPrefs = async () => {
       const { data } = await supabase
         .from('notification_preferences')
-        .select('chat_messages, polls, events, drafts, mentions')
+        .select('chat_messages, polls, events, drafts, mentions, lockbox')
         .eq('user_id', user.id)
         .maybeSingle();
       if (data) {

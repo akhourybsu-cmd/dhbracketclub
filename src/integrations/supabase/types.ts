@@ -1292,6 +1292,7 @@ export type Database = {
           drafts: boolean
           events: boolean
           id: string
+          lockbox: boolean
           mentions: boolean
           polls: boolean
           updated_at: string
@@ -1303,6 +1304,7 @@ export type Database = {
           drafts?: boolean
           events?: boolean
           id?: string
+          lockbox?: boolean
           mentions?: boolean
           polls?: boolean
           updated_at?: string
@@ -1314,6 +1316,7 @@ export type Database = {
           drafts?: boolean
           events?: boolean
           id?: string
+          lockbox?: boolean
           mentions?: boolean
           polls?: boolean
           updated_at?: string
