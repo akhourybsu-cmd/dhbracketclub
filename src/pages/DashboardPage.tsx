@@ -89,7 +89,7 @@ export default function DashboardPage() {
         const poolIds = memberships.map(m => m.pool_id);
         const { data: poolData } = await supabase
           .from('pools')
-          .select('id, name, invite_code, lock_time, tournaments(name, season_year)')
+          .select('id, name, invite_code, lock_time, tournament_id, tournaments(name, season_year)')
           .in('id', poolIds);
         if (poolData) setPools(poolData);
 
@@ -112,11 +112,34 @@ export default function DashboardPage() {
             }
           }
 
+          // Check if all tournament games are decided for each pool
+          const tournamentIds = [...new Set(poolData.map((p: any) => p.tournament_id).filter(Boolean))];
+          const gameCompletionMap = new Map<string, boolean>();
+          if (tournamentIds.length > 0) {
+            for (const pool of poolData) {
+              const tid = (pool as any).tournament_id;
+              if (!tid || gameCompletionMap.has(tid)) continue;
+              const { count: totalGames } = await supabase
+                .from('games')
+                .select('*', { count: 'exact', head: true })
+                .eq('tournament_id', tid)
+                .gt('round_number', 0);
+              const { count: decidedGames } = await supabase
+                .from('games')
+                .select('*', { count: 'exact', head: true })
+                .eq('tournament_id', tid)
+                .gt('round_number', 0)
+                .not('winner_team_id', 'is', null);
+              gameCompletionMap.set(tid, (totalGames ?? 0) > 0 && totalGames === decidedGames);
+            }
+          }
+
           const sm = new Map<string, string>();
-          poolData.forEach(p => {
+          poolData.forEach((p: any) => {
             const b = brackets.find(br => br.pool_id === p.id);
             const picksCount = b ? (bracketPickCounts.get(b.id) || 0) : 0;
-            const ds = getBracketDisplayStatus(b?.status || null, p.lock_time, picksCount, TOTAL_GAMES);
+            const allDecided = gameCompletionMap.get(p.tournament_id) || false;
+            const ds = getBracketDisplayStatus(b?.status || null, p.lock_time, picksCount, TOTAL_GAMES, allDecided);
             sm.set(p.id, ds);
           });
           setBracketStatuses(sm);
@@ -421,11 +444,11 @@ export default function DashboardPage() {
                 <motion.div key={pool.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 + i * 0.04 }}>
                   <Link to={`/pools/${pool.id}`} className="block group">
                     <div className="glass-card p-3.5 transition-all duration-200 group-hover:border-primary/15">
-                      <div className="flex items-center gap-3 relative z-10">
+                        <div className="flex items-center gap-3 relative z-10">
                         <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{
-                          background: locked ? 'hsl(var(--muted) / 0.5)' : 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.04))',
+                          background: (bs === 'complete' || locked) ? 'hsl(var(--muted) / 0.5)' : 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.04))',
                         }}>
-                          <Trophy className={cn("w-4 h-4", locked ? "text-muted-foreground/60" : "text-primary")} />
+                          <Trophy className={cn("w-4 h-4", (bs === 'complete' || locked) ? "text-muted-foreground/60" : "text-primary")} />
                         </div>
                         <div className="min-w-0 flex-1">
                           <h3 className="font-bold text-[13px] truncate tracking-tight">{pool.name}</h3>

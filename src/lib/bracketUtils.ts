@@ -231,8 +231,9 @@ export function getBracketDisplayStatus(
   bracketStatus: string | null,
   poolLockTime: string,
   picksCount: number,
-  totalGames: number = TOTAL_GAMES
-): 'draft' | 'submitted' | 'locked' | 'incomplete' | 'none' {
+  totalGames: number = TOTAL_GAMES,
+  allGamesDecided: boolean = false
+): 'draft' | 'submitted' | 'locked' | 'incomplete' | 'none' | 'complete' {
   if (!bracketStatus) return 'none';
 
   const isLocked = new Date(poolLockTime) <= new Date();
@@ -241,7 +242,9 @@ export function getBracketDisplayStatus(
     return bracketStatus === 'submitted' ? 'submitted' : 'draft';
   }
 
-  // After lock
+  // After lock — check if tournament is finished
+  if (allGamesDecided) return 'complete';
+
   if (bracketStatus === 'submitted') return 'locked';
   if (picksCount >= totalGames) return 'locked'; // Draft but complete
   return 'incomplete';
@@ -253,4 +256,5 @@ export const STATUS_CONFIG: Record<string, { label: string; className: string }>
   submitted: { label: 'Submitted', className: 'bg-success/15 text-success' },
   locked: { label: 'Locked', className: 'bg-primary/15 text-primary' },
   incomplete: { label: 'Incomplete', className: 'bg-destructive/15 text-destructive' },
+  complete: { label: 'Complete', className: 'bg-muted text-muted-foreground' },
 };
