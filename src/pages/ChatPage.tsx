@@ -803,7 +803,7 @@ export default function ChatPage() {
                   replyValue={threadReply}
                   onReplyChange={setThreadReply}
                   onSendReply={handleThreadReply}
-                  onClose={() => { setThreadParent(null); setTimeout(() => composerRef.current?.focus(), 100); }}
+                  onClose={() => { setThreadParent(null); const isDesktop = window.matchMedia('(min-width: 1024px)').matches; if (isDesktop) setTimeout(() => composerRef.current?.focus(), 100); }}
                 />
               </div>
             )}
