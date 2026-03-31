@@ -424,29 +424,37 @@ export function useComputedLeaderboard(weekId: string | undefined) {
       return players.get(id)!;
     };
 
+    // Process each lock for defense scoring
     for (const lock of locks) {
       ensurePlayer(lock.user_id, lock.profiles?.display_name || 'Player', lock.profiles?.avatar_url);
-      if (!lock.is_cracked) {
-        players.get(lock.user_id)!.defensePts += 5;
-      }
+      const lockSolves = attempts.filter((a: any) => a.lock_id === lock.id && a.is_solved);
+      const bestCrackAttempts = lockSolves.length > 0
+        ? Math.min(...lockSolves.map((a: any) => a.total_attempts))
+        : null;
+      const defPts = getDefensePoints(lock.is_cracked, bestCrackAttempts);
+      players.get(lock.user_id)!.defensePts += defPts;
     }
 
+    // Process each lock for offense scoring
     for (const lock of locks) {
-      const lockAttempts = attempts.filter((a: any) => a.lock_id === lock.id && a.is_solved);
-      for (const a of lockAttempts) {
+      const lockSolves = attempts.filter((a: any) => a.lock_id === lock.id && a.is_solved);
+      
+      // Award crack points to each solver
+      for (const a of lockSolves) {
         const p = ensurePlayer(a.attacker_id, a.profiles?.display_name || 'Player', a.profiles?.avatar_url);
-        p.crackPts += 5;
+        p.crackPts += BASE_CRACK_POINTS + getEfficiencyBonus(a.total_attempts);
         p.locksCracked++;
         p.totalAttempts += a.total_attempts;
         p.solves++;
       }
-      if (lockAttempts.length > 0) {
-        const best = [...lockAttempts].sort((a: any, b: any) => {
-          if (a.total_attempts !== b.total_attempts) return a.total_attempts - b.total_attempts;
-          return new Date(a.solved_at).getTime() - new Date(b.solved_at).getTime();
-        })[0];
-        const p = players.get(best.attacker_id);
-        if (p) p.crackPts += 2;
+      
+      // Best crack bonus
+      if (lockSolves.length > 0) {
+        const sorted = sortCracksForBest(lockSolves);
+        if (sorted.length > 0) {
+          const p = players.get(sorted[0].attacker_id);
+          if (p) p.crackPts += BEST_CRACK_BONUS;
+        }
       }
     }
 
@@ -455,7 +463,7 @@ export function useComputedLeaderboard(weekId: string | undefined) {
       .sort((a, b) => {
         if (b.totalPts !== a.totalPts) return b.totalPts - a.totalPts;
         if (b.locksCracked !== a.locksCracked) return b.locksCracked - a.locksCracked;
-        return a.avgAttempts - b.avgAttempts; // lower avg is better
+        return a.avgAttempts - b.avgAttempts;
       });
   })();
 
