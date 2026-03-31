@@ -161,10 +161,10 @@ Deno.serve(async (req) => {
     // ══════════════════════════════════════════
     // ── GENERIC NOTIFICATIONS (poll, event, draft) ──
     // ══════════════════════════════════════════
-    if (body.type && ["poll", "event", "draft"].includes(body.type)) {
+    if (body.type && ["poll", "event", "draft", "lockbox"].includes(body.type)) {
       const { type, title, message, url, sender_user_id, target_user_id } = body;
 
-      // If target_user_id is set, only notify that specific user (e.g. draft turn)
+      // If target_user_id is set, only notify that specific user (e.g. draft turn, lock cracked)
       let query = supabase
         .from("push_subscriptions")
         .select("endpoint, p256dh, auth, user_id");
@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
 
       // Check preferences
       const userIds = [...new Set(subscriptions.map((s: any) => s.user_id))];
-      const prefColumn = type === "poll" ? "polls" : type === "event" ? "events" : "drafts";
+      const prefColumn = type === "poll" ? "polls" : type === "event" ? "events" : type === "lockbox" ? "lockbox" : "drafts";
       const { data: prefRows } = await supabase
         .from("notification_preferences")
         .select(`user_id, ${prefColumn}`)
