@@ -546,6 +546,10 @@ async function enrichFromWikipedia(
       enrichment.source_provider = "wikipedia";
       enrichment.confidence = Math.max(enrichment.confidence, 0.8);
       enrichment.status = "matched";
+
+      const candidates: ImageCandidate[] = (enrichment.metadata.image_candidates as ImageCandidate[] || []);
+      candidates.push({ url: original || thumb, thumbnail: thumb || original, source: "wikipedia", label: pageTitle });
+      enrichment.metadata = { ...enrichment.metadata, image_candidates: candidates };
     }
 
     return enrichment;
