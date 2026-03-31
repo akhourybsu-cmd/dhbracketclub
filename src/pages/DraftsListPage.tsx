@@ -23,20 +23,45 @@ export default function DraftsListPage() {
         .order('created_at', { ascending: false });
 
       if (data) {
-        setDrafts(data);
         const draftIds = data.map(d => d.id);
 
         if (draftIds.length > 0) {
-          const { data: parts } = await supabase
-            .from('draft_participants')
-            .select('draft_id')
-            .in('draft_id', draftIds);
+          const [{ data: parts }, { data: picks }] = await Promise.all([
+            supabase.from('draft_participants').select('draft_id').in('draft_id', draftIds),
+            supabase.from('draft_picks').select('draft_id').in('draft_id', draftIds),
+          ]);
 
           if (parts) {
             const counts = new Map<string, number>();
             parts.forEach(p => counts.set(p.draft_id, (counts.get(p.draft_id) || 0) + 1));
             setParticipantCounts(counts);
           }
+
+          // Auto-fix drafts stuck in in_progress that are actually complete
+          const pickCounts = new Map<string, number>();
+          if (picks) picks.forEach(p => pickCounts.set(p.draft_id, (pickCounts.get(p.draft_id) || 0) + 1));
+
+          const partCounts = new Map<string, number>();
+          if (parts) parts.forEach(p => partCounts.set(p.draft_id, (partCounts.get(p.draft_id) || 0) + 1));
+
+          const fixPromises: Promise<any>[] = [];
+          const updatedData = data.map(d => {
+            if (d.status === 'in_progress') {
+              const numParts = partCounts.get(d.id) || 0;
+              const numPicks = pickCounts.get(d.id) || 0;
+              const totalExpected = numParts * d.num_rounds;
+              if (numParts > 0 && numPicks >= totalExpected) {
+                fixPromises.push(supabase.from('drafts').update({ status: 'complete' }).eq('id', d.id));
+                return { ...d, status: 'complete' };
+              }
+            }
+            return d;
+          });
+
+          if (fixPromises.length > 0) await Promise.all(fixPromises);
+          setDrafts(updatedData);
+        } else {
+          setDrafts(data);
         }
       }
       setLoading(false);
