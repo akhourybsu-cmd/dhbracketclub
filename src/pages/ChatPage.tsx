@@ -430,7 +430,7 @@ export default function ChatPage() {
   /* ═══ CHANNEL LIST VIEW (mobile only — desktop uses sidebar) ═══ */
   if (showChannelList) {
     return (
-      <div className="flex overflow-hidden" style={{ height: viewportHeight ? `${viewportHeight - 72}px` : 'calc(100dvh - 4.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))' }}>
+      <div className="flex overflow-hidden" style={{ height: chatHeight }}>
         <div className="w-full lg:w-[260px] lg:border-r lg:border-border/25 flex-shrink-0 overflow-y-auto">
           <ChannelList
             channels={channels}
