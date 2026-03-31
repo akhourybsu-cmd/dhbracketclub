@@ -132,15 +132,23 @@ export default function DashboardPage() {
 
       // Rankings, Polls, Drafts — fetch active ones
       const [{ data: rankData }, { data: pollData }, { data: draftData }, { data: activityData }, { data: eventsData }] = await Promise.all([
-        supabase.from('rankings').select('*, competitions(title, status)').eq('status', 'open').order('created_at', { ascending: false }).limit(5),
-        supabase.from('polls').select('*, competitions(title, status)').eq('status', 'open').order('created_at', { ascending: false }).limit(5),
-        supabase.from('drafts').select('*, competitions(title, status)').neq('status', 'complete').order('created_at', { ascending: false }).limit(5),
+        supabase.from('rankings').select('*, competitions(title, status)').order('created_at', { ascending: false }).limit(5),
+        supabase.from('polls').select('*, competitions(title, status)').order('created_at', { ascending: false }).limit(5),
+        supabase.from('drafts').select('*, competitions(title, status)').order('created_at', { ascending: false }).limit(5),
         supabase.from('activity_feed').select('*, profiles:actor_user_id(display_name)').order('created_at', { ascending: false }).limit(10),
         supabase.from('events').select('*, profiles:created_by(display_name)').gte('starts_at', new Date().toISOString()).order('starts_at', { ascending: true }).limit(3),
       ]);
 
+      // Derive effective statuses client-side
       if (rankData) setRankings(rankData);
-      if (pollData) setPolls(pollData);
+      if (pollData) {
+        setPolls(pollData.map(p => {
+          if (p.status === 'open' && p.closes_at && isPast(new Date(p.closes_at))) {
+            return { ...p, status: 'closed' };
+          }
+          return p;
+        }));
+      }
       if (draftData) setDrafts(draftData);
       if (activityData) setActivity(activityData);
       if (eventsData) setUpcomingEvents(eventsData);
