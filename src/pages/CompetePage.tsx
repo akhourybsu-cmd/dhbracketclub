@@ -17,9 +17,9 @@ const modules = [
 
 function LockboxCompeteCard() {
   const { user } = useAuth();
-  const { data: week } = useCurrentWeek();
-  const { data: myLock } = useMyLock(week?.id);
-  const { data: locks } = useWeekLocks(week?.id);
+  const { data: day } = useCurrentDay();
+  const { data: myLock } = useMyLock(day?.id);
+  const { data: locks } = useDayLocks(day?.id);
 
   const crackedCount = (locks || []).filter((l: any) => l.myAttempt?.is_solved).length;
   const totalLocks = (locks || []).length;
