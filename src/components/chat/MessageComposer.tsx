@@ -114,7 +114,11 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
         textareaRef.current.style.height = 'auto';
       }
       setMentionQuery(null);
-      textareaRef.current?.focus();
+      // Re-focus after send only on desktop to avoid keyboard flash on mobile
+      const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
+      if (isDesktop) {
+        textareaRef.current?.focus();
+      }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {

@@ -220,6 +220,7 @@ export default function ChatPage() {
         }
       } catch {}
 
+      // Clear unread for this channel in sidebar meta AND refresh global unread count
       setChannelMeta(prev => {
         const next = new Map(prev);
         const m = next.get(selectedChannel.id);
@@ -590,8 +591,11 @@ export default function ChatPage() {
     // Reset message input (preserve draft? no — clean slate per channel)
     setNewMessage('');
     play('tap');
-    // Focus composer after channel switch
-    setTimeout(() => composerRef.current?.focus(), 200);
+    // Don't auto-focus composer on mobile — prevents keyboard from popping up
+    const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
+    if (isDesktop) {
+      setTimeout(() => composerRef.current?.focus(), 200);
+    }
   };
 
   /* ═══ DB-SIDE SEARCH ═══ */
@@ -799,7 +803,7 @@ export default function ChatPage() {
                   replyValue={threadReply}
                   onReplyChange={setThreadReply}
                   onSendReply={handleThreadReply}
-                  onClose={() => { setThreadParent(null); setTimeout(() => composerRef.current?.focus(), 100); }}
+                  onClose={() => { setThreadParent(null); const isDesktop = window.matchMedia('(min-width: 1024px)').matches; if (isDesktop) setTimeout(() => composerRef.current?.focus(), 100); }}
                 />
               </div>
             )}
