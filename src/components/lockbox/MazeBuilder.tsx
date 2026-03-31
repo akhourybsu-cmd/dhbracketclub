@@ -91,7 +91,7 @@ export function MazeBuilder({ onSave, isPending }: Props) {
       <div className="glass-card p-5">
         <h3 className="font-bold text-sm mb-1">Build Your Maze</h3>
         <p className="text-[10px] text-muted-foreground mb-4">
-          Tap a tool, then tap cells. Must have exactly <strong>one safe path</strong> from Start to Goal. Mines are hidden from attackers!
+          Tap a tool, then tap cells. Must have exactly <strong>one safe path</strong> from Start to Goal. Mines are hidden from attackers! Max <strong>{MAX_BOMBS} mines</strong>.
         </p>
 
         {/* Tool palette */}
