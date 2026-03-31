@@ -8,6 +8,7 @@ export interface NotificationPreferences {
   events: boolean;
   drafts: boolean;
   mentions: boolean;
+  lockbox: boolean;
 }
 
 const DEFAULTS: NotificationPreferences = {
@@ -16,6 +17,7 @@ const DEFAULTS: NotificationPreferences = {
   events: true,
   drafts: true,
   mentions: true,
+  lockbox: true,
 };
 
 export function useNotificationPreferences() {
