@@ -20,6 +20,7 @@ const PREF_ITEMS: {
   { key: 'polls', label: 'Polls', description: 'New polls and voting updates', icon: BarChart3 },
   { key: 'events', label: 'Events', description: 'New events and RSVPs', icon: CalendarDays },
   { key: 'drafts', label: 'Drafts', description: 'Draft picks and turn alerts', icon: Bookmark },
+  { key: 'lockbox', label: 'Lockbox', description: 'Lock created, cracked, and daily reminders', icon: Lock },
 ];
 
 export default function NotificationPreferencesSection() {
