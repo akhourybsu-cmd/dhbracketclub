@@ -133,8 +133,8 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
       const imageFiles = Array.from(files).filter(f => {
         if (!f.type.startsWith('image/')) return false;
         if (f.size > MAX_FILE_SIZE) {
-          const { toast } = await import('sonner');
           toast.error(`${f.name} exceeds 10MB limit`);
+          return false;
           return false;
         }
         return true;
