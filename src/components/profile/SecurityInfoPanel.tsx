@@ -81,7 +81,7 @@ const SECURITY_SECTIONS = [
     status: 'Protected',
     summary: 'Your personal data is minimal and never shared with third parties.',
     details: [
-      'We collect only what's needed: email, display name, and your in-app activity.',
+      'We collect only what is needed: email, display name, and your in-app activity.',
       'Your data is never sold, shared, or provided to third-party advertisers.',
       'Profile photos are stored in isolated, user-scoped storage buckets.',
       'You can change your display name and avatar at any time from your profile.',
