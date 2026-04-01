@@ -222,6 +222,9 @@ export default function ProfilePage() {
             { label: 'Polls Voted', value: stats.polls, icon: MessageCircle, color: 'warning' },
             { label: 'Rankings', value: stats.rankings, icon: BarChart3, color: 'accent' },
             { label: 'Events', value: stats.events, icon: CalendarDays, color: 'success' },
+            { label: 'Drafts', value: stats.drafts, icon: Bookmark, color: 'gold' },
+            { label: 'Draft Pts', value: stats.draftPoints, icon: Trophy, color: 'gold' },
+            { label: 'Draft Wins', value: stats.draftWins, icon: Trophy, color: 'primary' },
           ].map(stat => (
             <div key={stat.label} className="text-center">
               <div className="w-9 h-9 rounded-xl mx-auto mb-1.5 flex items-center justify-center" style={{
