@@ -470,6 +470,97 @@ async function enrichFromSportsDB(
   }
 }
 
+// ─── TMDB (Movies, TV, People) ───
+async function enrichFromTMDB(
+  name: string,
+  enrichment: EnrichmentResult,
+  category: Category
+): Promise<EnrichmentResult> {
+  try {
+    const token = Deno.env.get("TMDB_READ_ACCESS_TOKEN");
+    if (!token) return enrichment;
+
+    const query = encodeURIComponent(enrichment.normalized_name || name);
+    const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+
+    if (category === "movie") {
+      const res = await fetch(`https://api.themoviedb.org/3/search/movie?query=${query}&language=en-US&page=1`, { headers });
+      if (!res.ok) return enrichment;
+      const data = await res.json();
+      const movie = data.results?.[0];
+      if (!movie) return enrichment;
+
+      if (movie.poster_path) {
+        enrichment.image_url = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
+        enrichment.thumbnail_url = `https://image.tmdb.org/t/p/w200${movie.poster_path}`;
+        enrichment.source_provider = "tmdb";
+        enrichment.confidence = Math.max(enrichment.confidence, 0.92);
+        enrichment.status = "matched";
+      }
+      enrichment.matched_name = movie.title || enrichment.matched_name;
+      enrichment.metadata = {
+        ...enrichment.metadata,
+        year: movie.release_date ? new Date(movie.release_date).getFullYear() : enrichment.metadata.year,
+        genre_ids: movie.genre_ids,
+        tmdb_id: movie.id,
+        overview: movie.overview?.substring(0, 200),
+        vote_average: movie.vote_average,
+        backdrop_path: movie.backdrop_path ? `https://image.tmdb.org/t/p/w780${movie.backdrop_path}` : undefined,
+      };
+    } else if (category === "tv") {
+      const res = await fetch(`https://api.themoviedb.org/3/search/tv?query=${query}&language=en-US&page=1`, { headers });
+      if (!res.ok) return enrichment;
+      const data = await res.json();
+      const show = data.results?.[0];
+      if (!show) return enrichment;
+
+      if (show.poster_path) {
+        enrichment.image_url = `https://image.tmdb.org/t/p/w500${show.poster_path}`;
+        enrichment.thumbnail_url = `https://image.tmdb.org/t/p/w200${show.poster_path}`;
+        enrichment.source_provider = "tmdb";
+        enrichment.confidence = Math.max(enrichment.confidence, 0.92);
+        enrichment.status = "matched";
+      }
+      enrichment.matched_name = show.name || enrichment.matched_name;
+      enrichment.metadata = {
+        ...enrichment.metadata,
+        year: show.first_air_date ? new Date(show.first_air_date).getFullYear() : enrichment.metadata.year,
+        genre_ids: show.genre_ids,
+        tmdb_id: show.id,
+        overview: show.overview?.substring(0, 200),
+        vote_average: show.vote_average,
+        backdrop_path: show.backdrop_path ? `https://image.tmdb.org/t/p/w780${show.backdrop_path}` : undefined,
+      };
+    } else if (category === "person") {
+      const res = await fetch(`https://api.themoviedb.org/3/search/person?query=${query}&language=en-US&page=1`, { headers });
+      if (!res.ok) return enrichment;
+      const data = await res.json();
+      const person = data.results?.[0];
+      if (!person) return enrichment;
+
+      if (person.profile_path) {
+        enrichment.image_url = `https://image.tmdb.org/t/p/w500${person.profile_path}`;
+        enrichment.thumbnail_url = `https://image.tmdb.org/t/p/w200${person.profile_path}`;
+        enrichment.source_provider = "tmdb";
+        enrichment.confidence = Math.max(enrichment.confidence, 0.9);
+        enrichment.status = "matched";
+      }
+      enrichment.matched_name = person.name || enrichment.matched_name;
+      enrichment.metadata = {
+        ...enrichment.metadata,
+        known_for_department: person.known_for_department,
+        tmdb_id: person.id,
+        known_for: person.known_for?.slice(0, 3).map((k: any) => k.title || k.name).filter(Boolean),
+      };
+    }
+
+    return enrichment;
+  } catch (err) {
+    console.error("TMDB enrichment error:", err);
+    return enrichment;
+  }
+}
+
 // ─── Wikipedia / Wikimedia (universal fallback for images) ───
 async function enrichFromWikipedia(
   name: string,
