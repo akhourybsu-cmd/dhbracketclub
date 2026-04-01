@@ -610,8 +610,8 @@ export default function DraftDetailPage() {
               {/* Trophy Podium */}
               <div className="glass-card p-4 mb-4">
                 <div className="flex items-center justify-center gap-1 mb-3">
-                  <Trophy className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/60">AI Rankings</p>
+                   <Trophy className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
+                   <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/60">Draft Rankings</p>
                 </div>
                 <div className="flex items-end justify-center gap-3">
                   {(() => {
