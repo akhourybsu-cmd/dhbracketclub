@@ -208,11 +208,8 @@ function MessageBubbleInner({
           }
           setSwiped(false);
         }}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        onTouchMove={handleTouchMove}
         onContextMenu={handleContextMenu}
-        onClick={handleTapTimestamp}
+        onClick={handleTap}
       >
         {/* Swipe reply icon */}
         <motion.div
