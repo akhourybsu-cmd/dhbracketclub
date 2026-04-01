@@ -42,8 +42,9 @@ export function usePickSuggestion(topic: string, category: string | null, existi
       if (controller.signal.aborted) return;
       if (error) throw error;
 
-      if (data && (data.corrected_text || data.is_irrelevant || data.is_duplicate)) {
-        setSuggestion(data);
+      const correctedText = data?.corrected_text && data.corrected_text !== "null" ? data.corrected_text : null;
+      if (data && (correctedText || data.is_irrelevant || data.is_duplicate)) {
+        setSuggestion({ ...data, corrected_text: correctedText });
       } else {
         setSuggestion(null);
       }
