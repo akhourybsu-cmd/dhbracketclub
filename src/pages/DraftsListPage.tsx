@@ -191,6 +191,7 @@ export default function DraftsListPage() {
           {drafts.map((d, i) => {
             const count = participantCounts.get(d.id) || 0;
             const sc = statusConfig[d.status] || statusConfig.setup;
+            const winner = draftWinners.get(d.id);
             return (
               <motion.div key={d.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 + i * 0.04 }}>
                 <Link to={`/drafts/${d.id}`} className="block group">
