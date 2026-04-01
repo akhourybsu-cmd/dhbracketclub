@@ -48,7 +48,7 @@ function MetadataSubtitle({ enrichment }: { enrichment?: ItemEnrichment }) {
   if (!validParts.length) return null;
 
   return (
-    <span className="text-[10px] text-muted-foreground/60 font-medium truncate block mt-0.5">
+    <span className="text-[10px] text-muted-foreground/60 font-medium block mt-0.5 break-words">
       {validParts.join(' · ')}
     </span>
   );
@@ -146,7 +146,7 @@ export default function EnrichedItemCard({
       {/* Content */}
       <div className="flex-1 min-w-0">
         <span className={cn(
-          "text-[13px] font-semibold truncate block",
+          "text-[13px] font-semibold block break-words",
           rank === 1 && showRank && "text-gold"
         )}>
           {enrichment?.matched_name || label}
