@@ -1,50 +1,36 @@
 
 
-## Image Selection for Draft Picks
+## Fix Shared Media Duplicates and Add Management
 
-### What This Does
-When a draft pick is enriched, the system will fetch **multiple image candidates** from APIs instead of just the first result. Users can then:
-1. **After picking**: See a selection dialog to confirm/choose the right image
-2. **Post-draft**: Tap any pick's image to swap it from the available alternatives
+### Problems Identified
+1. **Duplicate inserts**: Links get inserted into `message_link_previews` in two places — once in `ChatPage.tsx` on send, and again in `LinkPreviewCard.tsx` when the preview renders. This causes 2-9x duplicates per link.
+2. **No delete capability**: The RLS policy only allows deleting previews for the message author. There's no UI to remove items from the shared list.
+3. **New channels work fine** for link detection (the code is channel-agnostic), but the duplicate issue makes it appear broken.
 
 ### Plan
 
-#### 1. Edge Function: Return multiple image candidates
-**File**: `supabase/functions/enrich-draft-picks/index.ts`
+#### 1. Database: Add unique constraint and clean up duplicates
+- Add a migration with a unique constraint on `(message_id, url)` to prevent future duplicates
+- Before adding the constraint, delete duplicate rows keeping only the most complete one (with title/description)
+- Add an UPDATE RLS policy so users can manage previews on their own messages
+- Add a broader DELETE policy so any authenticated user can remove shared media entries
 
-- Modify `enrichFromiTunes`, `enrichFromDeezer`, `enrichFromMusicBrainz`, `enrichFromSportsDB`, `enrichFromOpenLibrary`, and `enrichFromWikipedia` to collect up to 5 alternative images (from the `limit=3` results already fetched, plus cross-source results)
-- Store alternatives in `metadata.image_candidates` as an array: `[{ url, thumbnail, source, label }]`
-- The primary image stays as-is (first/best match), but alternatives are preserved for user selection
+#### 2. Prevent duplicate inserts in code
+**`src/pages/ChatPage.tsx`**: Remove the fire-and-forget insert calls for YouTube/Spotify/image previews on send. The `LinkPreviewCard` component already handles fetching and caching previews when they render — this is the authoritative source.
 
-#### 2. New Component: `ImagePickerDialog`
-**File**: `src/components/draft/ImagePickerDialog.tsx` (new)
+**`src/components/chat/LinkPreviewCard.tsx`**: Add `ON CONFLICT DO NOTHING` (via `.upsert()` with `onConflict`) to all insert calls, so even if something slips through, no duplicates are created.
 
-- A dialog/sheet showing a grid of image thumbnails from `enrichment.metadata.image_candidates`
-- User taps one to select it as the primary image
-- On confirm, updates the `item_enrichments` row with the chosen `image_url` and `thumbnail_url`
-- Shows the current pick name and selected image highlighted
+#### 3. Deduplicate in SharedMediaPage query
+**`src/pages/SharedMediaPage.tsx`**: After fetching, deduplicate results by `(url, message_id)` client-side as a safety net. Also add a delete button (trash icon) on each media card that calls `supabase.from('message_link_previews').delete().eq('id', item.id)` and removes it from local state.
 
-#### 3. Draft Detail Page: Wire up image tapping
-**File**: `src/pages/DraftDetailPage.tsx`
+#### 4. Add swipe-to-delete or trash icon on MediaItemCard
+**`src/pages/SharedMediaPage.tsx`**: Add a small trash button on each card. On tap, delete the preview row and remove from the list. Wrap the card content so the external link still works but the delete button is separate.
 
-- Add state for `imagePickerPick` (the pick being edited)
-- Pass an `onClick` handler to `EnrichedItemCard` for picks that have `image_candidates` in their enrichment metadata
-- When user selects a new image in the dialog, update the enrichment in the database and refresh local state
-- Show a small camera/swap icon overlay on images that have alternatives available
-
-#### 4. EnrichedItemCard: Visual indicator for swappable images
-**File**: `src/components/EnrichedItemCard.tsx`
-
-- When `onClick` is provided and enrichment has `image_candidates`, show a subtle swap icon overlay on hover/tap on the image thumbnail
-
-### Database
-No schema changes needed — `image_candidates` fits in the existing `metadata` JSONB column. The existing UPDATE RLS policy already allows draft pick owners to update their enrichments.
-
-### Files
+### Files Changed
 | File | Change |
 |------|--------|
-| `supabase/functions/enrich-draft-picks/index.ts` | Collect multiple image candidates from each API source |
-| `src/components/draft/ImagePickerDialog.tsx` | New dialog for choosing from image alternatives |
-| `src/pages/DraftDetailPage.tsx` | Add image picker state and wire onClick to enriched cards |
-| `src/components/EnrichedItemCard.tsx` | Add swap icon overlay when alternatives exist |
+| Migration SQL | Deduplicate existing rows, add unique constraint on `(message_id, url)`, add DELETE policy for all authenticated users |
+| `src/pages/ChatPage.tsx` | Remove duplicate link preview inserts on message send |
+| `src/components/chat/LinkPreviewCard.tsx` | Use upsert with `onConflict: 'message_id,url'` instead of plain insert |
+| `src/pages/SharedMediaPage.tsx` | Client-side dedup + add delete button on each media card |
 
