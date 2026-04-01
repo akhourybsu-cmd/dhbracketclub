@@ -512,7 +512,7 @@ export default function ChatPage() {
 
         <div className="flex flex-1 min-h-0">
           {/* Message area — hide on mobile when thread/pinned is open */}
-          <div className={cn("flex flex-col flex-1 min-w-0", showSidePanel && "hidden lg:flex")}>
+          <div className={cn("flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden", showSidePanel && "hidden lg:flex")}>
             {showPinned && !threadParent ? (
               <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-4">
                 <div className="flex items-center justify-between mb-4">
