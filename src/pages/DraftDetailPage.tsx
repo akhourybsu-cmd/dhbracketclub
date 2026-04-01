@@ -605,41 +605,43 @@ export default function DraftDetailPage() {
                   <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/60">AI Rankings</p>
                 </div>
                 <div className="flex items-end justify-center gap-3">
-                  {draftResults.slice(0, 3).map((result, idx) => {
-                    const participant = participants.find(p => p.user_id === result.user_id);
+                  {(() => {
+                    const top3 = draftResults.slice(0, Math.min(3, draftResults.length));
                     const colors = ['hsl(var(--gold))', 'hsl(var(--silver))', 'hsl(var(--bronze))'];
                     const heights = ['h-24', 'h-20', 'h-16'];
-                    const order = [1, 0, 2]; // 2nd, 1st, 3rd visual order
-                    const displayIdx = order[idx];
-                    if (displayIdx === undefined) return null;
-                    const r = draftResults[displayIdx];
-                    const p = participants.find(pp => pp.user_id === r?.user_id);
-                    if (!r) return null;
-                    return (
-                      <motion.div
-                        key={r.user_id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: displayIdx * 0.15 }}
-                        className="flex flex-col items-center flex-1 max-w-[100px]"
-                      >
-                        <div className="text-[10px] font-bold mb-1 truncate w-full text-center">
-                          {p?.profiles?.display_name || 'Unknown'}
-                        </div>
-                        <div
-                          className={cn("w-full rounded-t-xl flex flex-col items-center justify-end pb-2", heights[displayIdx])}
-                          style={{ background: `${colors[displayIdx]}20`, borderBottom: `3px solid ${colors[displayIdx]}` }}
+                    const medals = ['🥇', '🥈', '🥉'];
+                    // Visual order: 2nd, 1st, 3rd (podium style)
+                    const visualOrder = top3.length >= 3 ? [top3[1], top3[0], top3[2]] : top3;
+                    return visualOrder.map((r) => {
+                      if (!r) return null;
+                      const rIdx = r.rank - 1; // 0-based rank index for colors
+                      const p = participants.find(pp => pp.user_id === r.user_id);
+                      return (
+                        <motion.div
+                          key={r.user_id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: rIdx * 0.15 }}
+                          className="flex flex-col items-center flex-1 max-w-[100px]"
                         >
-                          <Award className="w-5 h-5 mb-0.5" style={{ color: colors[displayIdx] }} />
-                          <span className="text-lg font-extrabold" style={{ color: colors[displayIdx] }}>
-                            {r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : '🥉'}
-                          </span>
-                          <span className="text-[10px] font-bold text-muted-foreground">{Number(r.total_score).toFixed(1)}</span>
-                          <span className="text-[9px] text-muted-foreground/60">+{r.points_awarded} pts</span>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
+                          <div className="text-[10px] font-bold mb-1 truncate w-full text-center">
+                            {p?.profiles?.display_name || 'Unknown'}
+                          </div>
+                          <div
+                            className={cn("w-full rounded-t-xl flex flex-col items-center justify-end pb-2", heights[rIdx] || 'h-16')}
+                            style={{ background: `${colors[rIdx] || colors[2]}20`, borderBottom: `3px solid ${colors[rIdx] || colors[2]}` }}
+                          >
+                            <Award className="w-5 h-5 mb-0.5" style={{ color: colors[rIdx] || colors[2] }} />
+                            <span className="text-lg font-extrabold" style={{ color: colors[rIdx] || colors[2] }}>
+                              {medals[rIdx] || `#${r.rank}`}
+                            </span>
+                            <span className="text-[10px] font-bold text-muted-foreground">{Number(r.total_score).toFixed(1)}</span>
+                            <span className="text-[9px] text-muted-foreground/60">+{r.points_awarded} pts</span>
+                          </div>
+                        </motion.div>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
 
