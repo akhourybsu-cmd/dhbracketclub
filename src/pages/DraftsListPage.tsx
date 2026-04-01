@@ -140,6 +140,28 @@ export default function DraftsListPage() {
         </Link>
       </div>
 
+      {/* Cumulative Draft Stats */}
+      {myDraftStats.draftsRated > 0 && (
+        <div className="glass-card p-4 mb-4">
+          <div className="flex items-center justify-around">
+            <div className="text-center">
+              <p className="text-lg font-extrabold leading-none">{myDraftStats.totalPoints}</p>
+              <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Total Pts</p>
+            </div>
+            <div className="w-px h-8 bg-border/30" />
+            <div className="text-center">
+              <p className="text-lg font-extrabold leading-none">{myDraftStats.wins}</p>
+              <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Wins</p>
+            </div>
+            <div className="w-px h-8 bg-border/30" />
+            <div className="text-center">
+              <p className="text-lg font-extrabold leading-none">{myDraftStats.draftsRated}</p>
+              <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Rated</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="space-y-2.5">
           {[1, 2].map(i => (
