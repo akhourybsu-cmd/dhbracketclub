@@ -176,7 +176,8 @@ function SpotifyPreview({ link, messageId }: { link: ParsedLink; messageId: stri
     return () => { cancelled = true; };
   }, [link.url, link.embedType, link.embedId, messageId]);
 
-  if (!link.embedType || !link.embedId) return <PlainLink url={link.url} />;
+  const VALID_EMBED_TYPES = ['track', 'album', 'playlist', 'artist', 'episode', 'show'];
+  if (!link.embedType || !link.embedId || !VALID_EMBED_TYPES.includes(link.embedType)) return <PlainLink url={link.url} />;
 
   const embedUrl = `https://open.spotify.com/embed/${link.embedType}/${link.embedId}?utm_source=generator&theme=0`;
   const isCompact = link.embedType === 'track';
