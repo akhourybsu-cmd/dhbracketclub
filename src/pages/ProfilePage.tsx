@@ -347,8 +347,11 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* Notification Preferences */}
       <NotificationPreferencesSection />
+
+      {/* Security & Privacy */}
+      <SecurityInfoPanel />
+
 
       {/* DH branding */}
       <div className="flex items-center justify-center gap-2 py-4 mb-2">
