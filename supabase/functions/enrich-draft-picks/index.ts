@@ -515,6 +515,142 @@ async function enrichFromSportsDB(
   }
 }
 
+// ─── TMDB (Movies, TV, People) ───
+async function enrichFromTMDB(
+  name: string,
+  enrichment: EnrichmentResult,
+  category: Category
+): Promise<EnrichmentResult> {
+  try {
+    const token = Deno.env.get("TMDB_READ_ACCESS_TOKEN");
+    if (!token) return enrichment;
+
+    const query = encodeURIComponent(enrichment.normalized_name || name);
+    const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+    const candidates: ImageCandidate[] = (enrichment.metadata.image_candidates as ImageCandidate[] || []);
+
+    if (category === "movie") {
+      const res = await fetch(`https://api.themoviedb.org/3/search/movie?query=${query}&language=en-US&page=1`, { headers });
+      if (!res.ok) return enrichment;
+      const data = await res.json();
+      const results = data.results || [];
+
+      for (const m of results.slice(0, 5)) {
+        if (m.poster_path) {
+          candidates.push({
+            url: `https://image.tmdb.org/t/p/w500${m.poster_path}`,
+            thumbnail: `https://image.tmdb.org/t/p/w200${m.poster_path}`,
+            source: "tmdb",
+            label: m.title || name,
+          });
+        }
+      }
+
+      const movie = results[0];
+      if (movie?.poster_path) {
+        enrichment.image_url = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
+        enrichment.thumbnail_url = `https://image.tmdb.org/t/p/w200${movie.poster_path}`;
+        enrichment.source_provider = "tmdb";
+        enrichment.confidence = Math.max(enrichment.confidence, 0.92);
+        enrichment.status = "matched";
+      }
+      if (movie) {
+        enrichment.matched_name = movie.title || enrichment.matched_name;
+        enrichment.metadata = {
+          ...enrichment.metadata,
+          year: movie.release_date ? new Date(movie.release_date).getFullYear() : enrichment.metadata.year,
+          tmdb_id: movie.id,
+          overview: movie.overview?.substring(0, 200),
+          vote_average: movie.vote_average,
+          backdrop_path: movie.backdrop_path ? `https://image.tmdb.org/t/p/w780${movie.backdrop_path}` : undefined,
+          image_candidates: candidates,
+        };
+      }
+    } else if (category === "tv") {
+      const res = await fetch(`https://api.themoviedb.org/3/search/tv?query=${query}&language=en-US&page=1`, { headers });
+      if (!res.ok) return enrichment;
+      const data = await res.json();
+      const results = data.results || [];
+
+      for (const s of results.slice(0, 5)) {
+        if (s.poster_path) {
+          candidates.push({
+            url: `https://image.tmdb.org/t/p/w500${s.poster_path}`,
+            thumbnail: `https://image.tmdb.org/t/p/w200${s.poster_path}`,
+            source: "tmdb",
+            label: s.name || name,
+          });
+        }
+      }
+
+      const show = results[0];
+      if (show?.poster_path) {
+        enrichment.image_url = `https://image.tmdb.org/t/p/w500${show.poster_path}`;
+        enrichment.thumbnail_url = `https://image.tmdb.org/t/p/w200${show.poster_path}`;
+        enrichment.source_provider = "tmdb";
+        enrichment.confidence = Math.max(enrichment.confidence, 0.92);
+        enrichment.status = "matched";
+      }
+      if (show) {
+        enrichment.matched_name = show.name || enrichment.matched_name;
+        enrichment.metadata = {
+          ...enrichment.metadata,
+          year: show.first_air_date ? new Date(show.first_air_date).getFullYear() : enrichment.metadata.year,
+          tmdb_id: show.id,
+          overview: show.overview?.substring(0, 200),
+          vote_average: show.vote_average,
+          backdrop_path: show.backdrop_path ? `https://image.tmdb.org/t/p/w780${show.backdrop_path}` : undefined,
+          image_candidates: candidates,
+        };
+      }
+    } else if (category === "person") {
+      const res = await fetch(`https://api.themoviedb.org/3/search/person?query=${query}&language=en-US&page=1`, { headers });
+      if (!res.ok) return enrichment;
+      const data = await res.json();
+      const results = data.results || [];
+
+      for (const p of results.slice(0, 5)) {
+        if (p.profile_path) {
+          candidates.push({
+            url: `https://image.tmdb.org/t/p/w500${p.profile_path}`,
+            thumbnail: `https://image.tmdb.org/t/p/w200${p.profile_path}`,
+            source: "tmdb",
+            label: p.name || name,
+          });
+        }
+      }
+
+      const person = results[0];
+      if (person?.profile_path) {
+        enrichment.image_url = `https://image.tmdb.org/t/p/w500${person.profile_path}`;
+        enrichment.thumbnail_url = `https://image.tmdb.org/t/p/w200${person.profile_path}`;
+        enrichment.source_provider = "tmdb";
+        enrichment.confidence = Math.max(enrichment.confidence, 0.9);
+        enrichment.status = "matched";
+      }
+      if (person) {
+        enrichment.matched_name = person.name || enrichment.matched_name;
+        enrichment.metadata = {
+          ...enrichment.metadata,
+          known_for_department: person.known_for_department,
+          tmdb_id: person.id,
+          known_for: person.known_for?.slice(0, 3).map((k: any) => k.title || k.name).filter(Boolean),
+          image_candidates: candidates,
+        };
+      }
+    }
+
+    if (candidates.length) {
+      enrichment.metadata = { ...enrichment.metadata, image_candidates: candidates };
+    }
+
+    return enrichment;
+  } catch (err) {
+    console.error("TMDB enrichment error:", err);
+    return enrichment;
+  }
+}
+
 // ─── Wikipedia / Wikimedia (universal fallback for images) ───
 async function enrichFromWikipedia(
   name: string,
@@ -572,7 +708,9 @@ async function enrichItem(
       break;
     case "movie":
     case "tv":
-      result = await enrichFromiTunes(name, result, category);
+      // TMDB first (primary), iTunes as fallback
+      result = await enrichFromTMDB(name, result, category);
+      if (!result.image_url) result = await enrichFromiTunes(name, result, category);
       break;
     case "music":
       result = await enrichFromiTunes(name, result, category);
@@ -584,6 +722,9 @@ async function enrichItem(
       break;
     case "sport":
       result = await enrichFromSportsDB(name, result);
+      break;
+    case "person":
+      result = await enrichFromTMDB(name, result, category);
       break;
     default:
       break;
