@@ -213,6 +213,14 @@ export default function DraftsListPage() {
                             <span className="text-[10px] text-muted-foreground/70 flex items-center gap-0.5 font-medium">
                               <Users className="w-2.5 h-2.5" /> {count}
                             </span>
+                            {winner && (
+                              <>
+                                <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/15" />
+                                <span className="text-[10px] flex items-center gap-0.5 font-semibold" style={{ color: 'hsl(var(--gold))' }}>
+                                  <Trophy className="w-2.5 h-2.5" /> {winner.display_name}
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
