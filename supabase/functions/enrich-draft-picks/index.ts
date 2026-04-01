@@ -708,7 +708,9 @@ async function enrichItem(
       break;
     case "movie":
     case "tv":
-      result = await enrichFromiTunes(name, result, category);
+      // TMDB first (primary), iTunes as fallback
+      result = await enrichFromTMDB(name, result, category);
+      if (!result.image_url) result = await enrichFromiTunes(name, result, category);
       break;
     case "music":
       result = await enrichFromiTunes(name, result, category);
@@ -720,6 +722,9 @@ async function enrichItem(
       break;
     case "sport":
       result = await enrichFromSportsDB(name, result);
+      break;
+    case "person":
+      result = await enrichFromTMDB(name, result, category);
       break;
     default:
       break;
