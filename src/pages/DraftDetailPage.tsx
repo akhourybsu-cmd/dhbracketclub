@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bookmark, ArrowLeft, Users, Play, Send, Trophy, RefreshCw, Sparkles, MoreVertical, Pencil, Trash2, X, Star, ChevronDown, ChevronUp, Award } from 'lucide-react';
+import { Bookmark, ArrowLeft, Users, Play, Send, Trophy, RefreshCw, Sparkles, MoreVertical, Pencil, Trash2, X, Star, ChevronDown, ChevronUp, Award, AlertTriangle, Check } from 'lucide-react';
+import { usePickSuggestion } from '@/hooks/usePickSuggestion';
 import { cn } from '@/lib/utils';
 import { useDraftUpdates } from '@/hooks/useRealtimeSubscription';
 import { useItemEnrichments, useEnrichDraftPicks } from '@/hooks/useItemEnrichments';
@@ -74,6 +75,13 @@ export default function DraftDetailPage() {
   const pickIds = picks.map(p => p.id);
   const { enrichments, loading: enrichmentsLoading, fetchEnrichments } = useItemEnrichments(pickIds, 'draft_pick');
   const { enriching, enrichDraftPicks } = useEnrichDraftPicks();
+
+  const existingPickTexts = picks.map(p => p.pick_text);
+  const { suggestion, checking: suggestionChecking, debouncedCheck, clearSuggestion } = usePickSuggestion(
+    draft?.topic || '',
+    draft?.category || null,
+    existingPickTexts
+  );
 
   const fetchData = useCallback(async () => {
     if (!draftId || !user) return;
@@ -212,6 +220,7 @@ export default function DraftDetailPage() {
       }
 
       setPickText('');
+      clearSuggestion();
       toast.success('Pick made! 🔥');
 
       // Notify the next picker it's their turn
@@ -519,18 +528,83 @@ export default function DraftDetailPage() {
 
           {/* Pick input */}
           {isMyTurn && (
-            <div className="flex gap-2 mb-5">
-              <Input
-                value={pickText}
-                onChange={e => setPickText(e.target.value)}
-                placeholder="Enter your pick…"
-                maxLength={100}
-                className="form-input flex-1"
-                onKeyDown={e => e.key === 'Enter' && pickText.trim() && handleMakePick()}
-              />
-              <Button onClick={handleMakePick} disabled={submitting || !pickText.trim()} className="h-11 px-4 rounded-xl font-bold btn-press">
-                <Send className="w-4 h-4" />
-              </Button>
+            <div className="mb-5">
+              <div className="flex gap-2">
+                <Input
+                  value={pickText}
+                  onChange={e => {
+                    setPickText(e.target.value);
+                    debouncedCheck(e.target.value);
+                  }}
+                  placeholder="Enter your pick…"
+                  maxLength={100}
+                  className="form-input flex-1"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && pickText.trim()) {
+                      handleMakePick();
+                    }
+                  }}
+                />
+                <Button onClick={handleMakePick} disabled={submitting || !pickText.trim()} className="h-11 px-4 rounded-xl font-bold btn-press">
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Spell-check / relevance suggestion */}
+              <AnimatePresence>
+                {suggestion && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -4, height: 0 }}
+                    animate={{ opacity: 1, y: 0, height: 'auto' }}
+                    exit={{ opacity: 0, y: -4, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    {suggestion.corrected_text && (
+                      <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20 text-xs">
+                        <Sparkles className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                        <span className="text-foreground/80 flex-1">
+                          Did you mean <button 
+                            onClick={() => { 
+                              setPickText(suggestion.corrected_text!); 
+                              clearSuggestion(); 
+                            }}
+                            className="font-bold text-primary hover:underline"
+                          >
+                            {suggestion.corrected_text}
+                          </button>?
+                        </span>
+                        <button onClick={clearSuggestion} className="text-muted-foreground/50 hover:text-foreground transition-colors">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+
+                    {suggestion.is_duplicate && (
+                      <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-xs">
+                        <AlertTriangle className="w-3.5 h-3.5 text-yellow-500 flex-shrink-0" />
+                        <span className="text-foreground/80 flex-1">
+                          {suggestion.relevance_note || 'This pick may already have been taken.'}
+                        </span>
+                        <button onClick={clearSuggestion} className="text-muted-foreground/50 hover:text-foreground transition-colors">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+
+                    {suggestion.is_irrelevant && !suggestion.is_duplicate && (
+                      <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-xl bg-orange-500/10 border border-orange-500/20 text-xs">
+                        <AlertTriangle className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
+                        <span className="text-foreground/80 flex-1">
+                          {suggestion.relevance_note || `This might not be relevant to "${draft?.topic}".`}
+                        </span>
+                        <button onClick={clearSuggestion} className="text-muted-foreground/50 hover:text-foreground transition-colors">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
 
