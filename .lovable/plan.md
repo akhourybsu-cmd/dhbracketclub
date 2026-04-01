@@ -1,4 +1,5 @@
 
+
 ## AI-Powered Draft Rating & Results System
 
 ### Overview
@@ -20,55 +21,47 @@ CREATE TABLE public.draft_results (
   UNIQUE (draft_id, user_id)
 );
 ALTER TABLE public.draft_results ENABLE ROW LEVEL SECURITY;
--- Viewable by authenticated
--- Insertable via edge function (service role) or by draft creator
 ```
 
-`pick_ratings` JSON structure per pick:
+RLS: viewable by authenticated users, insertable/updatable by draft creator.
+
+`pick_ratings` stores per-pick AI scores:
 ```json
-[
-  { "pick_id": "...", "pick_text": "...", "score": 8.5, "explanation": "..." }
-]
+[{ "pick_id": "...", "pick_text": "...", "score": 8.5, "explanation": "Strong choice because..." }]
 ```
 
-Points awarded: 1st place = N points (N = participant count), 2nd = N-1, etc.
+Points awarded: 1st = N pts (N = participant count), 2nd = N-1, down to last = 1 pt.
 
 ### 2. New Edge Function — `rate-draft`
 
-**File:** `supabase/functions/rate-draft/index.ts`
+- Receives `{ draft_id }`
+- Fetches draft topic, participants, picks via service role
+- Calls Lovable AI (Gemini) with structured tool calling to rate each pick 1-10, explain why, rank participants, and summarize each person's draft
+- Upserts results into `draft_results`
+- Returns the full report
 
-- Receives `{ draft_id }` in the request body
-- Fetches draft topic, participants, and all picks from the database (service role)
-- Sends picks to Lovable AI (Gemini) with a prompt asking it to:
-  - Rate each pick 1-10 based on quality, creativity, relevance to the topic, and value
-  - Provide a short explanation for each rating
-  - Rank participants by total score
-  - Write a brief summary for each participant
-- Uses tool calling to extract structured output (scores, explanations, rankings)
-- Inserts results into `draft_results` table
-- Returns the results to the frontend
+### 3. New Hook — `src/hooks/useDraftResults.ts`
 
-### 3. Frontend Changes — `DraftDetailPage.tsx`
+- Queries `draft_results` for the draft
+- Mutation to invoke the `rate-draft` edge function
+- Loading/error state management
 
-- When draft status becomes `complete`, auto-trigger the rating edge function (once, if no results exist yet)
-- Add a new "AI Report" section below the current completion view:
-  - Trophy podium showing 1st/2nd/3rd with scores
-  - Each participant's card expands to show per-pick ratings (score badge + explanation)
-  - Overall summary text from the AI
-  - Loading state with sparkle animation while AI is generating
-- Add a "Regenerate Report" button for the draft creator
+### 4. UI Changes — `DraftDetailPage.tsx`
 
-### 4. Hook — `useDraftResults.ts`
-
-- Fetches existing results from `draft_results` for the draft
-- Mutation to call the `rate-draft` edge function
-- Manages loading/error states
+In the "Draft Complete" section, add:
+- Auto-trigger AI rating on first load if no results exist
+- Trophy podium (1st/2nd/3rd) with scores and point awards
+- Expandable participant cards showing per-pick ratings (score badge + explanation)
+- AI summary text per participant
+- Loading shimmer while generating
+- "Regenerate Report" button for draft creator
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `supabase/functions/rate-draft/index.ts` | New edge function — AI rating logic |
-| `src/hooks/useDraftResults.ts` | New hook — fetch/trigger draft results |
+| Migration | New `draft_results` table + RLS policies |
+| `supabase/functions/rate-draft/index.ts` | New — AI rating edge function |
+| `src/hooks/useDraftResults.ts` | New — fetch/trigger results hook |
 | `src/pages/DraftDetailPage.tsx` | Add AI report section to completed drafts |
-| Migration | New `draft_results` table with RLS |
+
