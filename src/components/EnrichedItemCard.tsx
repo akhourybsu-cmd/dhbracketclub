@@ -146,7 +146,7 @@ export default function EnrichedItemCard({
       {/* Content */}
       <div className="flex-1 min-w-0">
         <span className={cn(
-          "text-[13px] font-semibold truncate block",
+          "text-[13px] font-semibold block break-words",
           rank === 1 && showRank && "text-gold"
         )}>
           {enrichment?.matched_name || label}
