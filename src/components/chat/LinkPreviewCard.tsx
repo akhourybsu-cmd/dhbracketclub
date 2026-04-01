@@ -248,8 +248,8 @@ function GenericLinkPreview({ link, messageId }: { link: ParsedLink; messageId: 
         setPreview(data);
         setLoading(false);
 
-        // Cache the result (fire and forget)
-        supabase.from('message_link_previews' as any).insert({
+        // Cache the result (fire and forget, upsert to avoid duplicates)
+        (supabase as any).from('message_link_previews').upsert({
           message_id: messageId,
           url: link.url,
           content_type: 'link',
@@ -257,7 +257,7 @@ function GenericLinkPreview({ link, messageId }: { link: ParsedLink; messageId: 
           description: data.description,
           image_url: data.image_url,
           site_name: data.site_name,
-        }).then(() => {});
+        }, { onConflict: 'message_id,url' }).then(() => {});
       } catch {
         if (!cancelled) {
           setFailed(true);

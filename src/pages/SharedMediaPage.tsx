@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
-import { Link2, Image as ImageIcon, Play, Music, Globe, ExternalLink, Loader2, Filter } from 'lucide-react';
+import { Link2, Image as ImageIcon, Play, Music, Globe, ExternalLink, Loader2, Filter, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { UserAvatar } from '@/components/chat/UserAvatar';
+import { toast } from 'sonner';
 import {
   Select,
   SelectContent,
@@ -55,7 +56,6 @@ export default function SharedMediaPage() {
     setLoading(true);
 
     try {
-      // Fetch link previews
       let query = supabase
         .from('message_link_previews')
         .select('*')
@@ -73,7 +73,6 @@ export default function SharedMediaPage() {
         return;
       }
 
-      // Fetch associated messages to get channel_id and user info
       const messageIds = [...new Set(previews.map(p => p.message_id))];
       const { data: messagesData } = await supabase
         .from('messages')
@@ -83,7 +82,6 @@ export default function SharedMediaPage() {
       const msgMap = new Map<string, any>();
       (messagesData || []).forEach((m: any) => msgMap.set(m.id, m));
 
-      // Fetch channel names
       const channelIds = [...new Set((messagesData || []).map((m: any) => m.channel_id).filter(Boolean))];
       const { data: chData } = channelIds.length > 0
         ? await supabase.from('channels').select('id, name').in('id', channelIds)
@@ -107,6 +105,15 @@ export default function SharedMediaPage() {
         result = result.filter(item => item.channel_id === filterChannel);
       }
 
+      // Client-side dedup by (message_id, url) as safety net
+      const seen = new Set<string>();
+      result = result.filter(item => {
+        const key = `${item.message_id}:${item.url}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
       setItems(result);
     } catch (err) {
       console.error('SharedMedia fetch error:', err);
@@ -124,6 +131,16 @@ export default function SharedMediaPage() {
       if (data) setChannels(data);
     });
   }, []);
+
+  const handleDelete = async (itemId: string) => {
+    const { error } = await supabase.from('message_link_previews').delete().eq('id', itemId);
+    if (error) {
+      toast.error('Failed to remove');
+    } else {
+      setItems(prev => prev.filter(i => i.id !== itemId));
+      toast.success('Removed from shared');
+    }
+  };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -196,7 +213,7 @@ export default function SharedMediaPage() {
       ) : (
         <div className="space-y-2">
           {items.map(item => (
-            <MediaItemCard key={item.id} item={item} getTypeIcon={getTypeIcon} />
+            <MediaItemCard key={item.id} item={item} getTypeIcon={getTypeIcon} onDelete={handleDelete} />
           ))}
         </div>
       )}
@@ -204,74 +221,85 @@ export default function SharedMediaPage() {
   );
 }
 
-function MediaItemCard({ item, getTypeIcon }: { item: MediaItem; getTypeIcon: (type: string) => React.ReactNode }) {
+function MediaItemCard({ item, getTypeIcon, onDelete }: { item: MediaItem; getTypeIcon: (type: string) => React.ReactNode; onDelete: (id: string) => void }) {
   let hostname = '';
   try { hostname = new URL(item.url).hostname.replace(/^www\./, ''); } catch {}
 
   return (
-    <a
-      href={item.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="block glass-card p-3.5 hover:bg-muted/15 transition-colors group"
-    >
-      <div className="flex gap-3 relative z-10">
-        {/* Thumbnail */}
-        {item.content_type === 'image' ? (
-          <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-muted/20">
-            <img src={item.url} alt="" className="w-full h-full object-cover" loading="lazy" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-          </div>
-        ) : item.content_type === 'youtube' && item.embed_id ? (
-          <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-black/30 relative">
-            <img src={`https://img.youtube.com/vi/${item.embed_id}/mqdefault.jpg`} alt="" className="w-full h-full object-cover" loading="lazy" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-6 h-6 rounded-full bg-[#FF0000] flex items-center justify-center">
-                <Play className="w-3 h-3 text-white fill-white ml-px" />
+    <div className="glass-card p-3.5 hover:bg-muted/15 transition-colors group relative">
+      <a
+        href={item.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block"
+      >
+        <div className="flex gap-3 relative z-10">
+          {/* Thumbnail */}
+          {item.content_type === 'image' ? (
+            <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-muted/20">
+              <img src={item.url} alt="" className="w-full h-full object-cover" loading="lazy" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            </div>
+          ) : item.content_type === 'youtube' && item.embed_id ? (
+            <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-black/30 relative">
+              <img src={`https://img.youtube.com/vi/${item.embed_id}/mqdefault.jpg`} alt="" className="w-full h-full object-cover" loading="lazy" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-6 h-6 rounded-full bg-[#FF0000] flex items-center justify-center">
+                  <Play className="w-3 h-3 text-white fill-white ml-px" />
+                </div>
               </div>
             </div>
-          </div>
-        ) : item.image_url ? (
-          <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-muted/20">
-            <img src={item.image_url} alt="" className="w-full h-full object-cover" loading="lazy" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-          </div>
-        ) : (
-          <div className="w-16 h-16 rounded-lg flex-shrink-0 bg-muted/12 flex items-center justify-center">
-            {getTypeIcon(item.content_type)}
-          </div>
-        )}
-
-        {/* Content */}
-        <div className="flex-1 min-w-0 space-y-0.5">
-          <p className="text-[12px] font-semibold text-foreground/85 leading-tight line-clamp-1 group-hover:text-primary transition-colors">
-            {item.title || hostname || 'Link'}
-          </p>
-          {item.description && (
-            <p className="text-[10px] text-muted-foreground/50 leading-snug line-clamp-1">{item.description}</p>
-          )}
-          <div className="flex items-center gap-2 mt-1">
-            <span className="flex items-center gap-1 text-[9px] text-muted-foreground/40">
+          ) : item.image_url ? (
+            <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-muted/20">
+              <img src={item.image_url} alt="" className="w-full h-full object-cover" loading="lazy" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            </div>
+          ) : (
+            <div className="w-16 h-16 rounded-lg flex-shrink-0 bg-muted/12 flex items-center justify-center">
               {getTypeIcon(item.content_type)}
-              {hostname}
-            </span>
-            {item.channel_name && (
-              <>
-                <span className="text-[8px] text-muted-foreground/30">•</span>
-                <span className="text-[9px] text-muted-foreground/40">#{item.channel_name}</span>
-              </>
-            )}
-            <span className="text-[8px] text-muted-foreground/30">•</span>
-            <span className="text-[9px] text-muted-foreground/35">{format(new Date(item.created_at), 'MMM d')}</span>
-          </div>
-          {item.sender_name && (
-            <div className="flex items-center gap-1.5 mt-1">
-              <UserAvatar userId={item.user_id || ''} name={item.sender_name} avatarUrl={item.sender_avatar} size={14} />
-              <span className="text-[9px] text-muted-foreground/40 font-medium">{item.sender_name}</span>
             </div>
           )}
-        </div>
 
-        <ExternalLink className="w-3.5 h-3.5 text-muted-foreground/20 group-hover:text-muted-foreground/50 transition-colors flex-shrink-0 mt-0.5" />
-      </div>
-    </a>
+          {/* Content */}
+          <div className="flex-1 min-w-0 space-y-0.5">
+            <p className="text-[12px] font-semibold text-foreground/85 leading-tight line-clamp-1 group-hover:text-primary transition-colors">
+              {item.title || hostname || 'Link'}
+            </p>
+            {item.description && (
+              <p className="text-[10px] text-muted-foreground/50 leading-snug line-clamp-1">{item.description}</p>
+            )}
+            <div className="flex items-center gap-2 mt-1">
+              <span className="flex items-center gap-1 text-[9px] text-muted-foreground/40">
+                {getTypeIcon(item.content_type)}
+                {hostname}
+              </span>
+              {item.channel_name && (
+                <>
+                  <span className="text-[8px] text-muted-foreground/30">•</span>
+                  <span className="text-[9px] text-muted-foreground/40">#{item.channel_name}</span>
+                </>
+              )}
+              <span className="text-[8px] text-muted-foreground/30">•</span>
+              <span className="text-[9px] text-muted-foreground/35">{format(new Date(item.created_at), 'MMM d')}</span>
+            </div>
+            {item.sender_name && (
+              <div className="flex items-center gap-1.5 mt-1">
+                <UserAvatar userId={item.user_id || ''} name={item.sender_name} avatarUrl={item.sender_avatar} size={14} />
+                <span className="text-[9px] text-muted-foreground/40 font-medium">{item.sender_name}</span>
+              </div>
+            )}
+          </div>
+
+          <ExternalLink className="w-3.5 h-3.5 text-muted-foreground/20 group-hover:text-muted-foreground/50 transition-colors flex-shrink-0 mt-0.5" />
+        </div>
+      </a>
+
+      {/* Delete button */}
+      <button
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(item.id); }}
+        className="absolute top-2.5 right-2.5 p-1.5 rounded-lg bg-destructive/10 text-destructive/60 hover:bg-destructive/20 hover:text-destructive opacity-0 group-hover:opacity-100 transition-all z-20"
+        title="Remove from shared"
+      >
+        <Trash2 className="w-3 h-3" />
+      </button>
+    </div>
   );
 }
