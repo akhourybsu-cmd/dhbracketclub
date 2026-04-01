@@ -13,6 +13,7 @@ import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { formatDistanceToNow } from 'date-fns';
 import NotificationPreferencesSection from '@/components/profile/NotificationPreferences';
+import SecurityInfoPanel from '@/components/profile/SecurityInfoPanel';
 
 export default function ProfilePage() {
   const { theme, setTheme } = useTheme();
@@ -346,8 +347,11 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* Notification Preferences */}
       <NotificationPreferencesSection />
+
+      {/* Security & Privacy */}
+      <SecurityInfoPanel />
+
 
       {/* DH branding */}
       <div className="flex items-center justify-center gap-2 py-4 mb-2">
