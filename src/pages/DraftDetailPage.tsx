@@ -581,6 +581,176 @@ export default function DraftDetailPage() {
             <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Draft Complete 🎉</p>
           </div>
 
+          {/* AI Report Section */}
+          {resultsGenerating ? (
+            <div className="glass-card p-6 mb-5">
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+                <p className="text-sm font-bold text-primary">AI is analyzing picks…</p>
+              </div>
+              <div className="space-y-3">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="h-12 w-full rounded-xl" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : hasResults ? (
+            <div className="mb-5">
+              {/* Trophy Podium */}
+              <div className="glass-card p-4 mb-4">
+                <div className="flex items-center justify-center gap-1 mb-3">
+                  <Trophy className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/60">AI Rankings</p>
+                </div>
+                <div className="flex items-end justify-center gap-3">
+                  {draftResults.slice(0, 3).map((result, idx) => {
+                    const participant = participants.find(p => p.user_id === result.user_id);
+                    const colors = ['hsl(var(--gold))', 'hsl(var(--silver))', 'hsl(var(--bronze))'];
+                    const heights = ['h-24', 'h-20', 'h-16'];
+                    const order = [1, 0, 2]; // 2nd, 1st, 3rd visual order
+                    const displayIdx = order[idx];
+                    if (displayIdx === undefined) return null;
+                    const r = draftResults[displayIdx];
+                    const p = participants.find(pp => pp.user_id === r?.user_id);
+                    if (!r) return null;
+                    return (
+                      <motion.div
+                        key={r.user_id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: displayIdx * 0.15 }}
+                        className="flex flex-col items-center flex-1 max-w-[100px]"
+                      >
+                        <div className="text-[10px] font-bold mb-1 truncate w-full text-center">
+                          {p?.profiles?.display_name || 'Unknown'}
+                        </div>
+                        <div
+                          className={cn("w-full rounded-t-xl flex flex-col items-center justify-end pb-2", heights[displayIdx])}
+                          style={{ background: `${colors[displayIdx]}20`, borderBottom: `3px solid ${colors[displayIdx]}` }}
+                        >
+                          <Award className="w-5 h-5 mb-0.5" style={{ color: colors[displayIdx] }} />
+                          <span className="text-lg font-extrabold" style={{ color: colors[displayIdx] }}>
+                            {r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : '🥉'}
+                          </span>
+                          <span className="text-[10px] font-bold text-muted-foreground">{Number(r.total_score).toFixed(1)}</span>
+                          <span className="text-[9px] text-muted-foreground/60">+{r.points_awarded} pts</span>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Detailed Results */}
+              <div className="space-y-3">
+                {draftResults.map((result, idx) => {
+                  const participant = participants.find(p => p.user_id === result.user_id);
+                  const isExpanded = expandedResultUser === result.user_id;
+                  const pickRatings = (result.pick_ratings || []) as { pick_id: string; pick_text: string; score: number; explanation: string }[];
+
+                  return (
+                    <motion.div
+                      key={result.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      className="glass-card overflow-hidden"
+                    >
+                      <button
+                        className="w-full px-4 py-3 flex items-center gap-2 text-left"
+                        onClick={() => setExpandedResultUser(isExpanded ? null : result.user_id)}
+                      >
+                        <div className={cn(
+                          "w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-extrabold flex-shrink-0",
+                          idx === 0 && "bg-gold/15 text-gold",
+                          idx === 1 && "bg-silver/15 text-silver",
+                          idx === 2 && "bg-bronze/15 text-bronze",
+                          idx > 2 && "bg-muted/50 text-muted-foreground",
+                        )}>
+                          {result.rank}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[13px] font-bold block truncate">{participant?.profiles?.display_name || 'Unknown'}</span>
+                          <span className="text-[10px] text-muted-foreground/60">
+                            Score: {Number(result.total_score).toFixed(1)} • +{result.points_awarded} pts
+                          </span>
+                        </div>
+                        {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground/60 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground/60 flex-shrink-0" />}
+                      </button>
+
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            {result.summary && (
+                              <div className="px-4 py-2 border-t border-border/25">
+                                <p className="text-[11px] text-muted-foreground italic">{result.summary}</p>
+                              </div>
+                            )}
+                            <div className="divide-y divide-border/15 border-t border-border/25">
+                              {pickRatings.map((pr) => (
+                                <div key={pr.pick_id} className="px-4 py-2.5 flex items-start gap-3">
+                                  <div className={cn(
+                                    "flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-[12px] font-extrabold",
+                                    pr.score >= 8 && "bg-success/15 text-success",
+                                    pr.score >= 6 && pr.score < 8 && "bg-primary/15 text-primary",
+                                    pr.score >= 4 && pr.score < 6 && "bg-warning/15 text-warning",
+                                    pr.score < 4 && "bg-destructive/15 text-destructive",
+                                  )}>
+                                    {pr.score.toFixed(1)}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-[12px] font-semibold">{pr.pick_text}</p>
+                                    <p className="text-[10px] text-muted-foreground/70 mt-0.5">{pr.explanation}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {/* Regenerate button */}
+              {isCreator && (
+                <Button
+                  onClick={generateResults}
+                  variant="outline"
+                  className="w-full mt-4 h-10 rounded-xl text-[12px] font-semibold gap-2"
+                  disabled={resultsGenerating}
+                >
+                  <RefreshCw className={cn("w-3.5 h-3.5", resultsGenerating && "animate-spin")} />
+                  Regenerate AI Report
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="glass-card p-5 mb-5 text-center">
+              <Sparkles className="w-8 h-8 text-primary mx-auto mb-2" />
+              <p className="text-[13px] font-bold mb-1">AI Draft Report</p>
+              <p className="text-[11px] text-muted-foreground/60 mb-3">Get AI-powered ratings for every pick and see who drafted best.</p>
+              {isCreator ? (
+                <Button onClick={generateResults} className="h-10 rounded-xl font-bold btn-press gap-2 text-[12px]" disabled={resultsGenerating}>
+                  <Sparkles className="w-4 h-4" />
+                  Generate AI Report
+                </Button>
+              ) : (
+                <p className="text-[10px] text-muted-foreground/60">Waiting for the host to generate the report…</p>
+              )}
+            </div>
+          )}
+
+          {/* Original pick lists by participant */}
           <div className="space-y-3">
             {[...participants].sort((a, b) => a.pick_order - b.pick_order).map((p, idx) => {
               const userPicks = picksByUser.get(p.user_id) || [];
