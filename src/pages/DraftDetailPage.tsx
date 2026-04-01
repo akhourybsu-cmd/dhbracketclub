@@ -442,7 +442,7 @@ export default function DraftDetailPage() {
                 </div>
               ))}
             </div>
-            <p className="text-[10px] text-muted-foreground/60 mt-3">Share this draft link to invite others. Snake order follows the list above.</p>
+            <p className="text-[10px] text-muted-foreground/60 mt-3">Share this draft link to invite others. Order will be randomized when the draft starts.</p>
           </div>
 
           {!isParticipant && user && (
