@@ -757,7 +757,7 @@ export default function DraftDetailPage() {
                   disabled={resultsGenerating}
                 >
                   <RefreshCw className={cn("w-3.5 h-3.5", resultsGenerating && "animate-spin")} />
-                  Regenerate AI Report
+                  Regenerate Report
                 </Button>
               )}
             </div>
