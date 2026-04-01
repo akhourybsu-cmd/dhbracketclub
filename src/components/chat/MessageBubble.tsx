@@ -115,7 +115,6 @@ function MessageBubbleInner({
   onStartEditing, onDeleteMessage, onSaveEdit,
   editingMessageId, editContent, onEditContentChange, onCancelEdit,
 }: MessageBubbleProps) {
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showOverlay, setShowOverlay] = useState(false);
   const [showTimestamp, setShowTimestamp] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -147,31 +146,16 @@ function MessageBubbleInner({
 
   const isBeingEdited = editingMessageId === msg.id;
 
-  const handleTouchStart = useCallback(() => {
-    if (isBeingEdited) return;
-    longPressTimer.current = setTimeout(() => {
-      navigator.vibrate?.(10);
-      setShowOverlay(true);
-    }, 500);
-  }, [isBeingEdited]);
-
-  const handleTouchEnd = useCallback(() => {
-    if (longPressTimer.current) clearTimeout(longPressTimer.current);
-  }, []);
-
-  const handleTouchMove = useCallback(() => {
-    if (longPressTimer.current) clearTimeout(longPressTimer.current);
-  }, []);
-
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     if (isBeingEdited) return;
     e.preventDefault();
     setShowOverlay(true);
   }, [isBeingEdited]);
 
-  const handleTapTimestamp = useCallback(() => {
-    if (sameAuthor) setShowTimestamp(prev => !prev);
-  }, [sameAuthor]);
+  const handleTap = useCallback(() => {
+    if (isBeingEdited) return;
+    setShowOverlay(prev => !prev);
+  }, [isBeingEdited]);
 
   const handleReaction = useCallback((emoji: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -224,11 +208,8 @@ function MessageBubbleInner({
           }
           setSwiped(false);
         }}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        onTouchMove={handleTouchMove}
         onContextMenu={handleContextMenu}
-        onClick={handleTapTimestamp}
+        onClick={handleTap}
       >
         {/* Swipe reply icon */}
         <motion.div
