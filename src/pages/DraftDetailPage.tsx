@@ -764,12 +764,12 @@ export default function DraftDetailPage() {
           ) : (
             <div className="glass-card p-5 mb-5 text-center">
               <Sparkles className="w-8 h-8 text-primary mx-auto mb-2" />
-              <p className="text-[13px] font-bold mb-1">AI Draft Report</p>
-              <p className="text-[11px] text-muted-foreground/60 mb-3">Get AI-powered ratings for every pick and see who drafted best.</p>
+              <p className="text-[13px] font-bold mb-1">Draft Report</p>
+              <p className="text-[11px] text-muted-foreground/60 mb-3">Ratings for every pick — see who drafted best.</p>
               {isCreator ? (
                 <Button onClick={generateResults} className="h-10 rounded-xl font-bold btn-press gap-2 text-[12px]" disabled={resultsGenerating}>
                   <Sparkles className="w-4 h-4" />
-                  Generate AI Report
+                  Generate Report
                 </Button>
               ) : (
                 <p className="text-[10px] text-muted-foreground/60">Waiting for the host to generate the report…</p>
