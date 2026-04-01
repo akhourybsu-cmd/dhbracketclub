@@ -99,7 +99,7 @@ const SECURITY_SECTIONS = [
       'All messages are transmitted over encrypted connections (TLS).',
       'Row-Level Security ensures only authenticated members can read messages.',
       'Only the original author can edit or delete their own messages — no one else can modify what you wrote.',
-      'Message pinning uses a separate, secure server-side function so it doesn't grant broader edit access.',
+      'Message pinning uses a separate, secure server-side function so it does not grant broader edit access.',
       'Image uploads are validated for type and size (max 10MB) before acceptance.',
       'Link previews are fetched server-side with protections against internal network probing (SSRF protection).',
       'Note: Messages are not end-to-end encrypted. The server can read message content to provide features like search, link previews, push notifications, and shared media. This is standard for apps like Slack, Discord, and iMessage (non-E2EE mode).',
