@@ -220,6 +220,7 @@ export default function DraftDetailPage() {
       }
 
       setPickText('');
+      clearSuggestion();
       toast.success('Pick made! 🔥');
 
       // Notify the next picker it's their turn
