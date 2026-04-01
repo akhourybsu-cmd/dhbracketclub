@@ -125,9 +125,19 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
     }, [value, mentionStart, onChange]);
 
     // Image handling
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
     const handleFilesSelected = (files: FileList | null) => {
       if (!files) return;
-      const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/')).slice(0, 4 - pendingImages.length);
+      const imageFiles = Array.from(files).filter(f => {
+        if (!f.type.startsWith('image/')) return false;
+        if (f.size > MAX_FILE_SIZE) {
+          const { toast } = await import('sonner');
+          toast.error(`${f.name} exceeds 10MB limit`);
+          return false;
+        }
+        return true;
+      }).slice(0, 4 - pendingImages.length);
       const newPending = imageFiles.map(file => ({
         file,
         previewUrl: URL.createObjectURL(file),

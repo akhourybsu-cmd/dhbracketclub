@@ -29,7 +29,7 @@ export function useChatActions(userId: string | undefined) {
     if (!userId) return;
     play('tap');
     const wasPinned = msg.is_pinned;
-    const { error } = await supabase.from('messages').update({ is_pinned: !wasPinned }).eq('id', msg.id);
+    const { error } = await supabase.rpc('toggle_message_pin', { p_message_id: msg.id });
     if (error) {
       toast.error('Failed to pin message');
     } else {
