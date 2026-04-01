@@ -76,6 +76,13 @@ export default function DraftDetailPage() {
   const { enrichments, loading: enrichmentsLoading, fetchEnrichments } = useItemEnrichments(pickIds, 'draft_pick');
   const { enriching, enrichDraftPicks } = useEnrichDraftPicks();
 
+  const existingPickTexts = picks.map(p => p.pick_text);
+  const { suggestion, checking: suggestionChecking, debouncedCheck, clearSuggestion } = usePickSuggestion(
+    draft?.topic || '',
+    draft?.category || null,
+    existingPickTexts
+  );
+
   const fetchData = useCallback(async () => {
     if (!draftId || !user) return;
 
