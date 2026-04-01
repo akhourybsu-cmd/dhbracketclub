@@ -165,10 +165,10 @@ function SpotifyPreview({ link, messageId }: { link: ParsedLink; messageId: stri
         if (cancelled) return;
         if (data?.title) {
           setTitle(data.title);
-          supabase.from('message_link_previews' as any).insert({
+          (supabase as any).from('message_link_previews').upsert({
             message_id: messageId, url: link.url, content_type: 'spotify',
             title: data.title, description: data.description, image_url: data.image_url, site_name: data.site_name,
-          }).then(() => {});
+          }, { onConflict: 'message_id,url' }).then(() => {});
         }
       } catch {}
     }
