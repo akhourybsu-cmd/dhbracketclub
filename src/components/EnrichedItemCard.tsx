@@ -48,7 +48,7 @@ function MetadataSubtitle({ enrichment }: { enrichment?: ItemEnrichment }) {
   if (!validParts.length) return null;
 
   return (
-    <span className="text-[10px] text-muted-foreground/60 font-medium truncate block mt-0.5">
+    <span className="text-[10px] text-muted-foreground/60 font-medium block mt-0.5 break-words">
       {validParts.join(' · ')}
     </span>
   );
