@@ -619,10 +619,11 @@ async function enrichItem(
       break;
     case "movie":
     case "tv":
-      result = await enrichFromiTunes(name, result, category);
+      // TMDB first (primary), iTunes as fallback
+      result = await enrichFromTMDB(name, result, category);
+      if (!result.image_url) result = await enrichFromiTunes(name, result, category);
       break;
     case "music":
-      // Try iTunes first, then Deezer, then MusicBrainz/Cover Art Archive
       result = await enrichFromiTunes(name, result, category);
       if (!result.image_url) result = await enrichFromDeezer(name, result);
       if (!result.image_url) result = await enrichFromMusicBrainz(name, result);
@@ -632,6 +633,9 @@ async function enrichItem(
       break;
     case "sport":
       result = await enrichFromSportsDB(name, result);
+      break;
+    case "person":
+      result = await enrichFromTMDB(name, result, category);
       break;
     default:
       break;
