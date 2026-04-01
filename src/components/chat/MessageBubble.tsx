@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-mo
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import {
-  Pin, Reply, SmilePlus, Trash2, Pencil, Check, X, MessageSquare, Loader2,
+  Pin, Reply, Trash2, Pencil, Check, X, MessageSquare, Loader2,
 } from 'lucide-react';
 import { UserAvatar, getUserColor } from './UserAvatar';
 import type { Message } from './types';
@@ -32,7 +32,6 @@ function stripImageUrls(text: string): string {
 const MENTION_RE = /@([\w\s]+?)(?=\s@|\s|$)/g;
 
 function renderContent(text: string, currentUserId?: string, currentDisplayName?: string) {
-  // First split by URLs
   const urlParts = text.split(URL_RE);
   if (urlParts.length === 1) return renderMentions(text, currentDisplayName);
   return urlParts.map((part, i) =>
@@ -115,13 +114,11 @@ function MessageBubbleInner({
   onStartEditing, onDeleteMessage, onSaveEdit,
   editingMessageId, editContent, onEditContentChange, onCancelEdit,
 }: MessageBubbleProps) {
-  const [reactionOpen, setReactionOpen] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [showMobileActions, setShowMobileActions] = useState(false);
+  const [showOverlay, setShowOverlay] = useState(false);
   const [showTimestamp, setShowTimestamp] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const editRef = useRef<HTMLTextAreaElement>(null);
-  const reactionRef = useRef<HTMLDivElement>(null);
 
   // Swipe-to-reply
   const dragX = useMotionValue(0);
@@ -137,24 +134,15 @@ function MessageBubbleInner({
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   }, [editContent, editingMessageId, msg.id]);
 
-  // Close reaction picker on outside click / Escape
+  // Close overlay on Escape
   useEffect(() => {
-    if (!reactionOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (reactionRef.current && !reactionRef.current.contains(e.target as Node)) {
-        setReactionOpen(false);
-      }
-    };
+    if (!showOverlay) return;
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setReactionOpen(false);
+      if (e.key === 'Escape') setShowOverlay(false);
     };
-    document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleEsc);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEsc);
-    };
-  }, [reactionOpen]);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [showOverlay]);
 
   const isBeingEdited = editingMessageId === msg.id;
 
@@ -162,7 +150,7 @@ function MessageBubbleInner({
     if (isBeingEdited) return;
     longPressTimer.current = setTimeout(() => {
       navigator.vibrate?.(10);
-      setShowMobileActions(true);
+      setShowOverlay(true);
     }, 500);
   }, [isBeingEdited]);
 
@@ -174,6 +162,12 @@ function MessageBubbleInner({
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
   }, []);
 
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    if (isBeingEdited) return;
+    e.preventDefault();
+    setShowOverlay(true);
+  }, [isBeingEdited]);
+
   const handleTapTimestamp = useCallback(() => {
     if (sameAuthor) setShowTimestamp(prev => !prev);
   }, [sameAuthor]);
@@ -181,21 +175,19 @@ function MessageBubbleInner({
   const handleReaction = useCallback((emoji: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     onToggleReaction(msg.id, emoji);
-    setReactionOpen(false);
-    setShowMobileActions(false);
+    setShowOverlay(false);
   }, [msg.id, onToggleReaction]);
 
   const confirmDelete = () => {
     onDeleteMessage(msg.id);
     setShowDeleteConfirm(false);
-    setShowMobileActions(false);
+    setShowOverlay(false);
   };
 
   const showGroupedAvatar = sameAuthor && !nextSameAuthor;
 
   const imageUrls = extractImageUrls(msg.content);
   const parsedLinks = useMemo(() => parseMessageLinks(msg.content), [msg.content]);
-  // Only show link preview cards for non-image links (images are handled by existing inline preview)
   const previewLinks = parsedLinks.filter(l => l.contentType !== 'image');
 
   return (
@@ -234,9 +226,10 @@ function MessageBubbleInner({
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onTouchMove={handleTouchMove}
+        onContextMenu={handleContextMenu}
         onClick={handleTapTimestamp}
       >
-        {/* Swipe reply icon (inside the message, left edge) */}
+        {/* Swipe reply icon */}
         <motion.div
           className="absolute left-0 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center pointer-events-none"
           style={{ opacity: replyIconOpacity, scale: replyIconScale }}
@@ -300,7 +293,6 @@ function MessageBubbleInner({
                 {renderContent(stripImageUrls(msg.content), currentUserId, currentDisplayName)}
                 {msg.edited_at && <span className="text-[9px] text-muted-foreground/70 ml-1.5">(edited)</span>}
               </p>
-              {/* Rich link/media previews */}
               {previewLinks.length > 0 && !msg._optimistic && (
                 <div className="space-y-1.5">
                   {previewLinks.map((link, i) => (
@@ -308,7 +300,6 @@ function MessageBubbleInner({
                   ))}
                 </div>
               )}
-              {/* Inline image previews */}
               {imageUrls.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {imageUrls.map((url, i) => (
@@ -332,102 +323,94 @@ function MessageBubbleInner({
             </div>
           )}
 
-          {/* Reactions row */}
+          {/* Reactions row — existing badges only, no add button */}
           {msg.reactions && msg.reactions.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1.5">
               {msg.reactions.map(r => (
-                  <button
-                    key={r.emoji}
-                    onClick={(e) => { e.stopPropagation(); handleReaction(r.emoji); }}
-                    className={cn(
-                      "inline-flex items-center gap-1 h-6 px-1.5 rounded-md text-[11px] border transition-all duration-150 active:scale-90",
-                      r.user_reacted
-                        ? "border-primary/25 bg-primary/8 text-primary scale-[1.02]"
-                        : "border-border/15 bg-muted/20 text-muted-foreground/70 hover:border-border/30 hover:bg-muted/35"
-                    )}
-                  >
+                <button
+                  key={r.emoji}
+                  onClick={(e) => { e.stopPropagation(); handleReaction(r.emoji); }}
+                  className={cn(
+                    "inline-flex items-center gap-1 h-6 px-1.5 rounded-md text-[11px] border transition-all duration-150 active:scale-90",
+                    r.user_reacted
+                      ? "border-primary/25 bg-primary/8 text-primary scale-[1.02]"
+                      : "border-border/15 bg-muted/20 text-muted-foreground/70 hover:border-border/30 hover:bg-muted/35"
+                  )}
+                >
                   {r.emoji} <span className="font-bold text-[10px]">{r.count}</span>
                 </button>
               ))}
-              <button
-                onClick={(e) => { e.stopPropagation(); setReactionOpen(!reactionOpen); }}
-                className="w-6 h-6 rounded-md border border-border/25 bg-muted/10 flex items-center justify-center hover:bg-muted/50 transition-colors"
-              >
-                <SmilePlus className="w-3 h-3 text-muted-foreground/70" />
-              </button>
             </div>
           )}
 
-          {/* Floating action bar (desktop hover) — hidden while editing */}
-          {!isBeingEdited && <div className="absolute -top-3 right-2 hidden group-hover:flex items-center gap-0.5 bg-background/95 border border-border/20 rounded-lg px-0.5 py-0.5 shadow-lg backdrop-blur-md z-30">
-            {QUICK_EMOJIS.slice(0, 4).map(emoji => (
-              <button key={emoji} onClick={(e) => handleReaction(emoji, e)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 text-sm transition-colors active:scale-90">
-                {emoji}
-              </button>
-            ))}
-            <div className="w-px h-4 bg-border/15 mx-0.5" />
-            <button onClick={(e) => { e.stopPropagation(); onOpenThread(msg); }} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 transition-colors" title="Reply in thread">
-              <Reply className="w-3.5 h-3.5 text-muted-foreground/70" />
-            </button>
-            <button onClick={(e) => { e.stopPropagation(); onTogglePin(msg); }} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 transition-colors" title={msg.is_pinned ? 'Unpin' : 'Pin'}>
-              <Pin className={cn("w-3.5 h-3.5", msg.is_pinned ? "text-premium-warm" : "text-muted-foreground/60")} />
-            </button>
-            {isOwn && (
-              <>
-                <button onClick={(e) => { e.stopPropagation(); onStartEditing(msg); }} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted/50 transition-colors" title="Edit">
-                  <Pencil className="w-3.5 h-3.5 text-muted-foreground/60" />
-                </button>
-                <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-destructive/10 transition-colors" title="Delete">
-                  <Trash2 className="w-3.5 h-3.5 text-muted-foreground/70 hover:text-destructive" />
-                </button>
-              </>
-            )}
-          </div>}
-
-          {/* Mobile long-press action sheet */}
+          {/* Long-press / right-click overlay */}
           <AnimatePresence>
-            {showMobileActions && (
+            {showOverlay && (
               <>
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="fixed inset-0 bg-black/30 z-40"
-                  onClick={() => setShowMobileActions(false)}
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowOverlay(false)}
                 />
                 <motion.div
-                  initial={{ opacity: 0, y: 100 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 100 }}
-                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                  className="fixed bottom-0 left-0 right-0 bg-background border-t border-border/15 rounded-t-2xl p-4 shadow-2xl z-50"
-                  style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))', paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))', paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))' }}
+                  initial={{ opacity: 0, scale: 0.92 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.92 }}
+                  transition={{ type: 'spring', damping: 28, stiffness: 400 }}
+                  className="absolute left-0 right-0 top-0 z-50 mx-auto max-w-[320px] rounded-xl bg-background/95 backdrop-blur-lg border border-border/20 shadow-2xl p-3"
                 >
-                  <div className="w-10 h-1 rounded-full bg-muted-foreground/20 mx-auto mb-3" />
-                  <div className="flex items-center gap-1 mb-3 px-1 overflow-x-auto">
+                  {/* Close button */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowOverlay(false); }}
+                    className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-muted/30 hover:bg-muted/60 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5 text-muted-foreground" />
+                  </button>
+
+                  {/* Emoji row */}
+                  <div className="flex items-center gap-0.5 mb-2 pr-8">
                     {QUICK_EMOJIS.map(emoji => (
                       <button
                         key={emoji}
-                        onClick={() => handleReaction(emoji)}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-muted/50 text-lg transition-colors active:scale-90 flex-shrink-0"
+                        onClick={(e) => handleReaction(emoji, e)}
+                        className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-muted/50 text-lg transition-colors active:scale-90 flex-shrink-0"
                       >
                         {emoji}
                       </button>
                     ))}
                   </div>
+
+                  {/* Divider */}
+                  <div className="h-px bg-border/15 mb-1.5" />
+
+                  {/* Action buttons */}
                   <div className="space-y-0.5">
-                    <button onClick={() => { onOpenThread(msg); setShowMobileActions(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-muted/50 text-left text-sm font-medium text-foreground/80 active:bg-muted/70">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onOpenThread(msg); setShowOverlay(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 text-left text-[13px] font-medium text-foreground/80 active:bg-muted/70 transition-colors"
+                    >
                       <Reply className="w-4 h-4 text-muted-foreground/70" /> Reply in thread
                     </button>
-                    <button onClick={() => { onTogglePin(msg); setShowMobileActions(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-muted/50 text-left text-sm font-medium text-foreground/80 active:bg-muted/70">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onTogglePin(msg); setShowOverlay(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 text-left text-[13px] font-medium text-foreground/80 active:bg-muted/70 transition-colors"
+                    >
                       <Pin className="w-4 h-4 text-muted-foreground/70" /> {msg.is_pinned ? 'Unpin' : 'Pin'}
                     </button>
                     {isOwn && (
                       <>
-                        <button onClick={() => { onStartEditing(msg); setShowMobileActions(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-muted/50 text-left text-sm font-medium text-foreground/80 active:bg-muted/70">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onStartEditing(msg); setShowOverlay(false); }}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 text-left text-[13px] font-medium text-foreground/80 active:bg-muted/70 transition-colors"
+                        >
                           <Pencil className="w-4 h-4 text-muted-foreground/70" /> Edit
                         </button>
-                        <button onClick={() => { setShowDeleteConfirm(true); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-destructive/10 text-left text-sm font-medium text-destructive active:bg-destructive/20">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-destructive/10 text-left text-[13px] font-medium text-destructive active:bg-destructive/20 transition-colors"
+                        >
                           <Trash2 className="w-4 h-4" /> Delete
                         </button>
                       </>
@@ -435,26 +418,6 @@ function MessageBubbleInner({
                   </div>
                 </motion.div>
               </>
-            )}
-          </AnimatePresence>
-
-          {/* Reaction picker (inline) */}
-          <AnimatePresence>
-            {reactionOpen && (
-              <motion.div
-                ref={reactionRef}
-                initial={{ opacity: 0, y: 4, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 4, scale: 0.95 }}
-                transition={{ duration: 0.12 }}
-                className="flex items-center gap-0.5 mt-2 bg-surface-elevated border border-border/15 rounded-xl px-1.5 py-1.5 shadow-xl w-fit z-30 relative"
-              >
-                {QUICK_EMOJIS.map(emoji => (
-                  <button key={emoji} onClick={(e) => handleReaction(emoji, e)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 text-base transition-colors active:scale-90">
-                    {emoji}
-                  </button>
-                ))}
-              </motion.div>
             )}
           </AnimatePresence>
 
