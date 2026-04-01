@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, Fragment, memo, useMemo } from 'react';
+import ReactDOM from 'react-dom';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -343,39 +344,47 @@ function MessageBubbleInner({
             </div>
           )}
 
-          {/* Long-press / right-click overlay */}
-          <AnimatePresence>
-            {showOverlay && (
-              <>
+          {/* Long-press / right-click overlay — fixed centered modal for mobile */}
+          {showOverlay && ReactDOM.createPortal(
+            <AnimatePresence>
+              <motion.div
+                key="overlay-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                style={{ touchAction: 'none' }}
+                onClick={() => setShowOverlay(false)}
+              >
                 <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-40"
-                  onClick={() => setShowOverlay(false)}
-                />
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.92 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.92 }}
-                  transition={{ type: 'spring', damping: 28, stiffness: 400 }}
-                  className="absolute left-0 right-0 top-0 z-50 mx-auto max-w-[320px] rounded-xl bg-background/95 backdrop-blur-lg border border-border/20 shadow-2xl p-3"
+                  key="overlay-card"
+                  initial={{ opacity: 0, scale: 0.88, y: 12 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.88, y: 12 }}
+                  transition={{ type: 'spring', damping: 26, stiffness: 380 }}
+                  className="w-[calc(100%-2rem)] max-w-[340px] rounded-2xl bg-background/95 backdrop-blur-lg border border-border/20 shadow-2xl p-4"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   {/* Close button */}
                   <button
                     onClick={(e) => { e.stopPropagation(); setShowOverlay(false); }}
-                    className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-muted/30 hover:bg-muted/60 transition-colors"
+                    className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-muted/30 hover:bg-muted/60 transition-colors active:scale-90"
                   >
-                    <X className="w-3.5 h-3.5 text-muted-foreground" />
+                    <X className="w-4 h-4 text-muted-foreground" />
                   </button>
 
+                  {/* Message preview */}
+                  <p className="text-[12px] text-muted-foreground/70 line-clamp-2 mb-3 pr-9 leading-relaxed">
+                    {msg.content}
+                  </p>
+
                   {/* Emoji row */}
-                  <div className="flex items-center gap-0.5 mb-2 pr-8">
+                  <div className="flex items-center gap-1 mb-3">
                     {QUICK_EMOJIS.map(emoji => (
                       <button
                         key={emoji}
                         onClick={(e) => handleReaction(emoji, e)}
-                        className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-muted/50 text-lg transition-colors active:scale-90 flex-shrink-0"
+                        className="w-11 h-11 flex items-center justify-center rounded-xl hover:bg-muted/50 text-xl transition-colors active:scale-90 flex-shrink-0"
                       >
                         {emoji}
                       </button>
@@ -383,19 +392,19 @@ function MessageBubbleInner({
                   </div>
 
                   {/* Divider */}
-                  <div className="h-px bg-border/15 mb-1.5" />
+                  <div className="h-px bg-border/15 mb-2" />
 
                   {/* Action buttons */}
                   <div className="space-y-0.5">
                     <button
                       onClick={(e) => { e.stopPropagation(); onOpenThread(msg); setShowOverlay(false); }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 text-left text-[13px] font-medium text-foreground/80 active:bg-muted/70 transition-colors"
+                      className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-muted/50 text-left text-[13px] font-medium text-foreground/80 active:bg-muted/70 transition-colors"
                     >
                       <Reply className="w-4 h-4 text-muted-foreground/70" /> Reply in thread
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); onTogglePin(msg); setShowOverlay(false); }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 text-left text-[13px] font-medium text-foreground/80 active:bg-muted/70 transition-colors"
+                      className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-muted/50 text-left text-[13px] font-medium text-foreground/80 active:bg-muted/70 transition-colors"
                     >
                       <Pin className="w-4 h-4 text-muted-foreground/70" /> {msg.is_pinned ? 'Unpin' : 'Pin'}
                     </button>
@@ -403,13 +412,13 @@ function MessageBubbleInner({
                       <>
                         <button
                           onClick={(e) => { e.stopPropagation(); onStartEditing(msg); setShowOverlay(false); }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 text-left text-[13px] font-medium text-foreground/80 active:bg-muted/70 transition-colors"
+                          className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-muted/50 text-left text-[13px] font-medium text-foreground/80 active:bg-muted/70 transition-colors"
                         >
                           <Pencil className="w-4 h-4 text-muted-foreground/70" /> Edit
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-destructive/10 text-left text-[13px] font-medium text-destructive active:bg-destructive/20 transition-colors"
+                          className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-destructive/10 text-left text-[13px] font-medium text-destructive active:bg-destructive/20 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" /> Delete
                         </button>
@@ -417,9 +426,10 @@ function MessageBubbleInner({
                     )}
                   </div>
                 </motion.div>
-              </>
-            )}
-          </AnimatePresence>
+              </motion.div>
+            </AnimatePresence>,
+            document.body
+          )}
 
           {/* Thread indicator */}
           {(msg.reply_count || 0) > 0 && (
