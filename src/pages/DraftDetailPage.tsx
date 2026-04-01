@@ -595,7 +595,7 @@ export default function DraftDetailPage() {
             <div className="glass-card p-6 mb-5">
               <div className="flex items-center justify-center gap-2 mb-4">
                 <Sparkles className="w-5 h-5 text-primary animate-pulse" />
-                <p className="text-sm font-bold text-primary">AI is analyzing picks…</p>
+                <p className="text-sm font-bold text-primary">Generating draft report…</p>
               </div>
               <div className="space-y-3">
                 {[1, 2, 3].map(i => (
