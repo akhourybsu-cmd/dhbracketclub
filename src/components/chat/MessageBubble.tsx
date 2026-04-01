@@ -324,92 +324,63 @@ function MessageBubbleInner({
             </div>
           )}
 
-          {/* Long-press / right-click overlay — fixed centered modal for mobile */}
-          {showOverlay && ReactDOM.createPortal(
-            <AnimatePresence>
+          {/* Inline reaction/action bar */}
+          <AnimatePresence>
+            {showOverlay && (
               <motion.div
-                key="overlay-backdrop"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                style={{ touchAction: 'none' }}
-                onClick={() => setShowOverlay(false)}
+                key="inline-bar"
+                initial={{ opacity: 0, scale: 0.9, y: 6 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 6 }}
+                transition={{ type: 'spring', damping: 26, stiffness: 380 }}
+                className="absolute -top-11 left-0 z-30 flex items-center gap-0.5 px-1.5 py-1 bg-background/95 backdrop-blur-lg border border-border/20 shadow-lg rounded-xl"
+                onClick={(e) => e.stopPropagation()}
               >
-                <motion.div
-                  key="overlay-card"
-                  initial={{ opacity: 0, scale: 0.88, y: 12 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.88, y: 12 }}
-                  transition={{ type: 'spring', damping: 26, stiffness: 380 }}
-                  className="w-[calc(100%-2rem)] max-w-[340px] rounded-2xl bg-background/95 backdrop-blur-lg border border-border/20 shadow-2xl p-4"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {/* Close button */}
+                {QUICK_EMOJIS.map(emoji => (
                   <button
-                    onClick={(e) => { e.stopPropagation(); setShowOverlay(false); }}
-                    className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-muted/30 hover:bg-muted/60 transition-colors active:scale-90"
+                    key={emoji}
+                    onClick={(e) => handleReaction(emoji, e)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 text-base transition-colors active:scale-90 flex-shrink-0"
                   >
-                    <X className="w-4 h-4 text-muted-foreground" />
+                    {emoji}
                   </button>
-
-                  {/* Message preview */}
-                  <p className="text-[12px] text-muted-foreground/70 line-clamp-2 mb-3 pr-9 leading-relaxed">
-                    {msg.content}
-                  </p>
-
-                  {/* Emoji row */}
-                  <div className="flex items-center gap-1 mb-3">
-                    {QUICK_EMOJIS.map(emoji => (
-                      <button
-                        key={emoji}
-                        onClick={(e) => handleReaction(emoji, e)}
-                        className="w-11 h-11 flex items-center justify-center rounded-xl hover:bg-muted/50 text-xl transition-colors active:scale-90 flex-shrink-0"
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Divider */}
-                  <div className="h-px bg-border/15 mb-2" />
-
-                  {/* Action buttons */}
-                  <div className="space-y-0.5">
+                ))}
+                <div className="w-px h-5 bg-border/20 mx-0.5" />
+                <button
+                  onClick={(e) => { e.stopPropagation(); onOpenThread(msg); setShowOverlay(false); }}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 transition-colors active:scale-90"
+                  title="Reply"
+                >
+                  <Reply className="w-3.5 h-3.5 text-muted-foreground/70" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onTogglePin(msg); setShowOverlay(false); }}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 transition-colors active:scale-90"
+                  title={msg.is_pinned ? 'Unpin' : 'Pin'}
+                >
+                  <Pin className="w-3.5 h-3.5 text-muted-foreground/70" />
+                </button>
+                {isOwn && (
+                  <>
                     <button
-                      onClick={(e) => { e.stopPropagation(); onOpenThread(msg); setShowOverlay(false); }}
-                      className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-muted/50 text-left text-[13px] font-medium text-foreground/80 active:bg-muted/70 transition-colors"
+                      onClick={(e) => { e.stopPropagation(); onStartEditing(msg); setShowOverlay(false); }}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 transition-colors active:scale-90"
+                      title="Edit"
                     >
-                      <Reply className="w-4 h-4 text-muted-foreground/70" /> Reply in thread
+                      <Pencil className="w-3.5 h-3.5 text-muted-foreground/70" />
                     </button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); onTogglePin(msg); setShowOverlay(false); }}
-                      className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-muted/50 text-left text-[13px] font-medium text-foreground/80 active:bg-muted/70 transition-colors"
+                      onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); setShowOverlay(false); }}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-destructive/10 transition-colors active:scale-90"
+                      title="Delete"
                     >
-                      <Pin className="w-4 h-4 text-muted-foreground/70" /> {msg.is_pinned ? 'Unpin' : 'Pin'}
+                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
                     </button>
-                    {isOwn && (
-                      <>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onStartEditing(msg); setShowOverlay(false); }}
-                          className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-muted/50 text-left text-[13px] font-medium text-foreground/80 active:bg-muted/70 transition-colors"
-                        >
-                          <Pencil className="w-4 h-4 text-muted-foreground/70" /> Edit
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}
-                          className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-destructive/10 text-left text-[13px] font-medium text-destructive active:bg-destructive/20 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" /> Delete
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </motion.div>
+                  </>
+                )}
               </motion.div>
-            </AnimatePresence>,
-            document.body
-          )}
+            )}
+          </AnimatePresence>
 
           {/* Thread indicator */}
           {(msg.reply_count || 0) > 0 && (
