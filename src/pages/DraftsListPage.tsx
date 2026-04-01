@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Bookmark, Plus, ArrowRight, Users, Play } from 'lucide-react';
+import { Bookmark, Plus, ArrowRight, Users, Play, Trophy, Award } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
@@ -12,6 +12,8 @@ export default function DraftsListPage() {
   const { user } = useAuth();
   const [drafts, setDrafts] = useState<any[]>([]);
   const [participantCounts, setParticipantCounts] = useState<Map<string, number>>(new Map());
+  const [draftWinners, setDraftWinners] = useState<Map<string, { user_id: string; display_name: string }>>(new Map());
+  const [myDraftStats, setMyDraftStats] = useState({ totalPoints: 0, wins: 0, draftsRated: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -62,6 +64,45 @@ export default function DraftsListPage() {
             await supabase.from('drafts').update({ status: 'complete' }).eq('id', id);
           }
           setDrafts(updatedData);
+
+          // Fetch draft results for winner badges and user stats
+          if (draftIds.length > 0) {
+            const { data: allResults } = await supabase
+              .from('draft_results' as any)
+              .select('draft_id, user_id, rank, points_awarded')
+              .in('draft_id', draftIds);
+
+            if (allResults) {
+              const winners = new Map<string, { user_id: string; display_name: string }>();
+              for (const r of allResults as any[]) {
+                if (r.rank === 1) {
+                  const part = parts?.find((p: any) => p.draft_id === r.draft_id);
+                  // We'll get display name from participants data
+                  winners.set(r.draft_id, { user_id: r.user_id, display_name: '' });
+                }
+              }
+              // Get display names for winners
+              const winnerIds = [...new Set([...winners.values()].map(w => w.user_id))];
+              if (winnerIds.length > 0) {
+                const { data: winnerProfiles } = await supabase.from('profiles').select('id, display_name').in('id', winnerIds);
+                if (winnerProfiles) {
+                  const profileMap = new Map(winnerProfiles.map(p => [p.id, p.display_name]));
+                  for (const [draftId, winner] of winners) {
+                    winner.display_name = profileMap.get(winner.user_id) || 'Unknown';
+                  }
+                }
+              }
+              setDraftWinners(winners);
+
+              // My stats
+              const myResults = (allResults as any[]).filter((r: any) => r.user_id === user?.id);
+              setMyDraftStats({
+                totalPoints: myResults.reduce((s: number, r: any) => s + (r.points_awarded || 0), 0),
+                wins: myResults.filter((r: any) => r.rank === 1).length,
+                draftsRated: myResults.length,
+              });
+            }
+          }
         } else {
           setDrafts(data);
         }
@@ -99,6 +140,28 @@ export default function DraftsListPage() {
         </Link>
       </div>
 
+      {/* Cumulative Draft Stats */}
+      {myDraftStats.draftsRated > 0 && (
+        <div className="glass-card p-4 mb-4">
+          <div className="flex items-center justify-around">
+            <div className="text-center">
+              <p className="text-lg font-extrabold leading-none">{myDraftStats.totalPoints}</p>
+              <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Total Pts</p>
+            </div>
+            <div className="w-px h-8 bg-border/30" />
+            <div className="text-center">
+              <p className="text-lg font-extrabold leading-none">{myDraftStats.wins}</p>
+              <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Wins</p>
+            </div>
+            <div className="w-px h-8 bg-border/30" />
+            <div className="text-center">
+              <p className="text-lg font-extrabold leading-none">{myDraftStats.draftsRated}</p>
+              <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Rated</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="space-y-2.5">
           {[1, 2].map(i => (
@@ -128,6 +191,7 @@ export default function DraftsListPage() {
           {drafts.map((d, i) => {
             const count = participantCounts.get(d.id) || 0;
             const sc = statusConfig[d.status] || statusConfig.setup;
+            const winner = draftWinners.get(d.id);
             return (
               <motion.div key={d.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 + i * 0.04 }}>
                 <Link to={`/drafts/${d.id}`} className="block group">
@@ -149,6 +213,14 @@ export default function DraftsListPage() {
                             <span className="text-[10px] text-muted-foreground/70 flex items-center gap-0.5 font-medium">
                               <Users className="w-2.5 h-2.5" /> {count}
                             </span>
+                            {winner && (
+                              <>
+                                <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/15" />
+                                <span className="text-[10px] flex items-center gap-0.5 font-semibold" style={{ color: 'hsl(var(--gold))' }}>
+                                  <Trophy className="w-2.5 h-2.5" /> {winner.display_name}
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>

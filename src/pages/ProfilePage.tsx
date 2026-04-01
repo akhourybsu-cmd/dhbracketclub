@@ -25,29 +25,35 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const { play, soundEnabled, toggleSound } = useSoundEffect();
   const { isSupported: pushSupported, isSubscribed: pushSubscribed, loading: pushLoading, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe } = usePushNotifications();
-  const [stats, setStats] = useState({ polls: 0, rankings: 0, events: 0, messages: 0, drafts: 0 });
+  const [stats, setStats] = useState({ polls: 0, rankings: 0, events: 0, messages: 0, drafts: 0, draftPoints: 0, draftWins: 0 });
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
     const fetchProfile = async () => {
-      const [{ data: profile }, { data: pollVotes }, { data: rankSubs }, { data: rsvps }, { data: activity }] = await Promise.all([
+      const [{ data: profile }, { data: pollVotes }, { data: rankSubs }, { data: rsvps }, { data: activity }, { data: draftResultsData }] = await Promise.all([
         supabase.from('profiles').select('display_name, avatar_url').eq('id', user.id).single(),
         supabase.from('poll_votes').select('id').eq('user_id', user.id),
         supabase.from('ranking_submissions').select('id').eq('user_id', user.id),
         supabase.from('event_rsvps').select('id').eq('user_id', user.id).eq('status', 'going'),
         supabase.from('activity_feed').select('*, profiles:actor_user_id(display_name)').eq('actor_user_id', user.id).order('created_at', { ascending: false }).limit(5),
+        supabase.from('draft_results' as any).select('points_awarded, rank').eq('user_id', user.id),
       ]);
       if (profile) {
         setDisplayName(profile.display_name);
         setAvatarUrl(profile.avatar_url);
       }
+      const drResults = (draftResultsData || []) as any[];
+      const totalDraftPts = drResults.reduce((sum: number, r: any) => sum + (r.points_awarded || 0), 0);
+      const draftWins = drResults.filter((r: any) => r.rank === 1).length;
       setStats({
         polls: pollVotes?.length || 0,
         rankings: rankSubs?.length || 0,
         events: rsvps?.length || 0,
         messages: 0,
-        drafts: 0,
+        drafts: drResults.length,
+        draftPoints: totalDraftPts,
+        draftWins,
       });
       if (activity) setRecentActivity(activity);
     };
@@ -216,6 +222,9 @@ export default function ProfilePage() {
             { label: 'Polls Voted', value: stats.polls, icon: MessageCircle, color: 'warning' },
             { label: 'Rankings', value: stats.rankings, icon: BarChart3, color: 'accent' },
             { label: 'Events', value: stats.events, icon: CalendarDays, color: 'success' },
+            { label: 'Drafts', value: stats.drafts, icon: Bookmark, color: 'gold' },
+            { label: 'Draft Pts', value: stats.draftPoints, icon: Trophy, color: 'gold' },
+            { label: 'Draft Wins', value: stats.draftWins, icon: Trophy, color: 'primary' },
           ].map(stat => (
             <div key={stat.label} className="text-center">
               <div className="w-9 h-9 rounded-xl mx-auto mb-1.5 flex items-center justify-center" style={{
