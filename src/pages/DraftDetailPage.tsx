@@ -693,6 +693,20 @@ export default function DraftDetailPage() {
                         {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground/60 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground/60 flex-shrink-0" />}
                       </button>
 
+                      {/* Best & Worst picks preview */}
+                      {!isExpanded && bestPick && (
+                        <div className="px-4 pb-3 flex flex-wrap gap-2 text-[10px]">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-success/10 text-success font-semibold">
+                            <Star className="w-3 h-3" /> Best: {bestPick.pick_text} ({bestPick.score.toFixed(1)})
+                          </span>
+                          {worstPick && worstPick.pick_id !== bestPick.pick_id && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-destructive/10 text-destructive font-semibold">
+                              ↓ Worst: {worstPick.pick_text} ({worstPick.score.toFixed(1)})
+                            </span>
+                          )}
+                        </div>
+                      )}
+
                       <AnimatePresence>
                         {isExpanded && (
                           <motion.div
