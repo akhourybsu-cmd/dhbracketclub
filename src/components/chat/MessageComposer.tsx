@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback, useState, forwardRef, useImperativeHandle } from 'react';
+import { toast } from 'sonner';
 import { Send, Plus, Image, Camera, X, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
