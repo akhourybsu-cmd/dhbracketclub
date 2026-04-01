@@ -69,6 +69,8 @@ export default function DraftDetailPage() {
   const [expandedResultUser, setExpandedResultUser] = useState<string | null>(null);
 
   const { results: draftResults, loading: resultsLoading, generating: resultsGenerating, hasResults, generateResults } = useDraftResults(draftId);
+
+  const [autoTriggered, setAutoTriggered] = useState(false);
   const pickIds = picks.map(p => p.id);
   const { enrichments, loading: enrichmentsLoading, fetchEnrichments } = useItemEnrichments(pickIds, 'draft_pick');
   const { enriching, enrichDraftPicks } = useEnrichDraftPicks();
@@ -99,6 +101,14 @@ export default function DraftDetailPage() {
 
   const isCreator = draft?.created_by === user?.id;
   const isParticipant = participants.some(p => p.user_id === user?.id);
+
+  // Auto-generate report when draft is complete and no results exist
+  useEffect(() => {
+    if (draft?.status === 'complete' && !hasResults && !resultsLoading && !resultsGenerating && !autoTriggered && isCreator) {
+      setAutoTriggered(true);
+      generateResults();
+    }
+  }, [draft?.status, hasResults, resultsLoading, resultsGenerating, autoTriggered, isCreator, generateResults]);
 
   // Snake draft order logic
   const getExpectedPicker = useCallback(() => {
@@ -586,7 +596,7 @@ export default function DraftDetailPage() {
             <div className="glass-card p-6 mb-5">
               <div className="flex items-center justify-center gap-2 mb-4">
                 <Sparkles className="w-5 h-5 text-primary animate-pulse" />
-                <p className="text-sm font-bold text-primary">AI is analyzing picks…</p>
+                <p className="text-sm font-bold text-primary">Generating draft report…</p>
               </div>
               <div className="space-y-3">
                 {[1, 2, 3].map(i => (
@@ -601,8 +611,8 @@ export default function DraftDetailPage() {
               {/* Trophy Podium */}
               <div className="glass-card p-4 mb-4">
                 <div className="flex items-center justify-center gap-1 mb-3">
-                  <Trophy className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/60">AI Rankings</p>
+                   <Trophy className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
+                   <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/60">Draft Rankings</p>
                 </div>
                 <div className="flex items-end justify-center gap-3">
                   {(() => {
@@ -651,6 +661,8 @@ export default function DraftDetailPage() {
                   const participant = participants.find(p => p.user_id === result.user_id);
                   const isExpanded = expandedResultUser === result.user_id;
                   const pickRatings = (result.pick_ratings || []) as { pick_id: string; pick_text: string; score: number; explanation: string }[];
+                  const bestPick = pickRatings.length > 0 ? pickRatings.reduce((a, b) => a.score >= b.score ? a : b) : null;
+                  const worstPick = pickRatings.length > 1 ? pickRatings.reduce((a, b) => a.score <= b.score ? a : b) : null;
 
                   return (
                     <motion.div
@@ -681,6 +693,20 @@ export default function DraftDetailPage() {
                         </div>
                         {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground/60 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground/60 flex-shrink-0" />}
                       </button>
+
+                      {/* Best & Worst picks preview */}
+                      {!isExpanded && bestPick && (
+                        <div className="px-4 pb-3 flex flex-wrap gap-2 text-[10px]">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-success/10 text-success font-semibold">
+                            <Star className="w-3 h-3" /> Best: {bestPick.pick_text} ({bestPick.score.toFixed(1)})
+                          </span>
+                          {worstPick && worstPick.pick_id !== bestPick.pick_id && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-destructive/10 text-destructive font-semibold">
+                              ↓ Worst: {worstPick.pick_text} ({worstPick.score.toFixed(1)})
+                            </span>
+                          )}
+                        </div>
+                      )}
 
                       <AnimatePresence>
                         {isExpanded && (
@@ -732,19 +758,19 @@ export default function DraftDetailPage() {
                   disabled={resultsGenerating}
                 >
                   <RefreshCw className={cn("w-3.5 h-3.5", resultsGenerating && "animate-spin")} />
-                  Regenerate AI Report
+                  Regenerate Report
                 </Button>
               )}
             </div>
           ) : (
             <div className="glass-card p-5 mb-5 text-center">
               <Sparkles className="w-8 h-8 text-primary mx-auto mb-2" />
-              <p className="text-[13px] font-bold mb-1">AI Draft Report</p>
-              <p className="text-[11px] text-muted-foreground/60 mb-3">Get AI-powered ratings for every pick and see who drafted best.</p>
+              <p className="text-[13px] font-bold mb-1">Draft Report</p>
+              <p className="text-[11px] text-muted-foreground/60 mb-3">Ratings for every pick — see who drafted best.</p>
               {isCreator ? (
                 <Button onClick={generateResults} className="h-10 rounded-xl font-bold btn-press gap-2 text-[12px]" disabled={resultsGenerating}>
                   <Sparkles className="w-4 h-4" />
-                  Generate AI Report
+                  Generate Report
                 </Button>
               ) : (
                 <p className="text-[10px] text-muted-foreground/60">Waiting for the host to generate the report…</p>

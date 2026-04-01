@@ -67,7 +67,7 @@ export function useDraftResults(draftId: string | undefined) {
         return;
       }
 
-      toast.success('AI Report generated! 🏆');
+      toast.success('Draft Report generated! 🏆');
       await fetchResults();
     } catch (err: any) {
       const msg = err?.message || 'Failed to generate report';
