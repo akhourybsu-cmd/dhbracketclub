@@ -133,7 +133,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       {/* Main Content */}
       <main className={cn(
         "flex-1 lg:pb-0 lg:pl-64 overflow-x-hidden min-w-0",
-        isChatRoute ? "pb-0" : "pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))]"
+        isChatRoute ? "pb-0 overflow-hidden" : "pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))]"
       )}>
         {location.pathname === '/chat' ? (
           children
