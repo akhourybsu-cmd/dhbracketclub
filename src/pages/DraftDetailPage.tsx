@@ -102,6 +102,14 @@ export default function DraftDetailPage() {
   const isCreator = draft?.created_by === user?.id;
   const isParticipant = participants.some(p => p.user_id === user?.id);
 
+  // Auto-generate report when draft is complete and no results exist
+  useEffect(() => {
+    if (draft?.status === 'complete' && !hasResults && !resultsLoading && !resultsGenerating && !autoTriggered && isCreator) {
+      setAutoTriggered(true);
+      generateResults();
+    }
+  }, [draft?.status, hasResults, resultsLoading, resultsGenerating, autoTriggered, isCreator, generateResults]);
+
   // Snake draft order logic
   const getExpectedPicker = useCallback(() => {
     if (!draft || participants.length === 0) return null;
