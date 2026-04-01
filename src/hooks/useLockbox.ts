@@ -439,11 +439,41 @@ export function usePlayerStats(userId: string | undefined) {
   });
 }
 
+// ── Trigger finalization for stale days ──
+async function triggerFinalization() {
+  try {
+    await supabase.functions.invoke('finalize-lockbox-day', { body: {} });
+  } catch (e) {
+    console.warn('Failed to trigger lockbox finalization:', e);
+  }
+}
+
 // ── Computed Leaderboard (from locks + attempts when scores aren't written yet) ──
 export function useComputedLeaderboard(dayId: string | undefined) {
   const allLocks = useAllDayLocks(dayId);
   const allAttempts = useAllDayAttempts(dayId);
   const scores = useDayScores(dayId);
+  const qc = useQueryClient();
+
+  // Client-side fallback: if day has ended but no scores exist, trigger finalization
+  const hasTriggered = { current: false };
+  if (dayId && scores.data && scores.data.length === 0 && allLocks.data && allLocks.data.length > 0 && !hasTriggered.current) {
+    // Check if day has ended by looking at lock data — if we have locks but no scores,
+    // and this isn't the current day, trigger finalization
+    const bounds = getDayBounds();
+    supabase.from('lockbox_weeks').select('ends_at, status, week_number, year').eq('id', dayId).single().then(({ data: dayData }) => {
+      if (dayData && dayData.status === 'active' && new Date(dayData.ends_at) < new Date()) {
+        if (!(dayData.week_number === bounds.week_number && dayData.year === bounds.year)) {
+          hasTriggered.current = true;
+          triggerFinalization().then(() => {
+            qc.invalidateQueries({ queryKey: ['lockbox-scores', dayId] });
+            qc.invalidateQueries({ queryKey: ['lockbox-past-days'] });
+            qc.invalidateQueries({ queryKey: ['lockbox-player-stats'] });
+          });
+        }
+      }
+    });
+  }
 
   const leaderboard = (() => {
     if (scores.data && scores.data.length > 0) return null;
