@@ -570,7 +570,7 @@ export default function ChatPage() {
                   scrollToBottomTrigger={scrollToBottomTrigger}
                 />
                 {!searchResults && (
-                  <div className="flex-shrink-0 border-t border-border/15 bg-background/80 backdrop-blur-sm">
+                  <div className="flex-shrink-0 border-t border-border/15 bg-background/80 backdrop-blur-sm z-10">
                     {typingUsers.length > 0 && (
                       <div className="px-4 sm:px-5 pt-1.5 pb-0.5">
                         <span className="text-[10px] text-muted-foreground/60 font-medium italic animate-pulse">
