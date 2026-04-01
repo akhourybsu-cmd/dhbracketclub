@@ -115,7 +115,6 @@ function MessageBubbleInner({
   onStartEditing, onDeleteMessage, onSaveEdit,
   editingMessageId, editContent, onEditContentChange, onCancelEdit,
 }: MessageBubbleProps) {
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showOverlay, setShowOverlay] = useState(false);
   const [showTimestamp, setShowTimestamp] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
