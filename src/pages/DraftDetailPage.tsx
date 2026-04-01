@@ -69,6 +69,15 @@ export default function DraftDetailPage() {
   const [expandedResultUser, setExpandedResultUser] = useState<string | null>(null);
 
   const { results: draftResults, loading: resultsLoading, generating: resultsGenerating, hasResults, generateResults } = useDraftResults(draftId);
+
+  // Auto-generate report when draft is complete and no results exist
+  const [autoTriggered, setAutoTriggered] = useState(false);
+  useEffect(() => {
+    if (draft?.status === 'complete' && !hasResults && !resultsLoading && !resultsGenerating && !autoTriggered && isCreator) {
+      setAutoTriggered(true);
+      generateResults();
+    }
+  }, [draft?.status, hasResults, resultsLoading, resultsGenerating, autoTriggered, isCreator, generateResults]);
   const pickIds = picks.map(p => p.id);
   const { enrichments, loading: enrichmentsLoading, fetchEnrichments } = useItemEnrichments(pickIds, 'draft_pick');
   const { enriching, enrichDraftPicks } = useEnrichDraftPicks();
