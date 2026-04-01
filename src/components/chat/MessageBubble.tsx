@@ -146,31 +146,16 @@ function MessageBubbleInner({
 
   const isBeingEdited = editingMessageId === msg.id;
 
-  const handleTouchStart = useCallback(() => {
-    if (isBeingEdited) return;
-    longPressTimer.current = setTimeout(() => {
-      navigator.vibrate?.(10);
-      setShowOverlay(true);
-    }, 500);
-  }, [isBeingEdited]);
-
-  const handleTouchEnd = useCallback(() => {
-    if (longPressTimer.current) clearTimeout(longPressTimer.current);
-  }, []);
-
-  const handleTouchMove = useCallback(() => {
-    if (longPressTimer.current) clearTimeout(longPressTimer.current);
-  }, []);
-
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     if (isBeingEdited) return;
     e.preventDefault();
     setShowOverlay(true);
   }, [isBeingEdited]);
 
-  const handleTapTimestamp = useCallback(() => {
-    if (sameAuthor) setShowTimestamp(prev => !prev);
-  }, [sameAuthor]);
+  const handleTap = useCallback(() => {
+    if (isBeingEdited) return;
+    setShowOverlay(prev => !prev);
+  }, [isBeingEdited]);
 
   const handleReaction = useCallback((emoji: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
