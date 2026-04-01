@@ -1,36 +1,31 @@
 
 
-## Fix Shared Media Duplicates and Add Management
+## Make Chat Channel Header Sticky
 
-### Problems Identified
-1. **Duplicate inserts**: Links get inserted into `message_link_previews` in two places — once in `ChatPage.tsx` on send, and again in `LinkPreviewCard.tsx` when the preview renders. This causes 2-9x duplicates per link.
-2. **No delete capability**: The RLS policy only allows deleting previews for the message author. There's no UI to remove items from the shared list.
-3. **New channels work fine** for link detection (the code is channel-agnostic), but the duplicate issue makes it appear broken.
+### Problem
+The channel header bar (with the back button, channel name, search, pins) can scroll out of view on mobile, forcing users to scroll back up to access navigation controls.
 
-### Plan
+### Root Cause
+While the chat layout uses `flex flex-col` with `flex-shrink-0` on the header, the parent `main` element in `AppLayout` has no overflow constraint, which can allow the entire chat container to be scrollable within the page — particularly on mobile when content exceeds the viewport.
 
-#### 1. Database: Add unique constraint and clean up duplicates
-- Add a migration with a unique constraint on `(message_id, url)` to prevent future duplicates
-- Before adding the constraint, delete duplicate rows keeping only the most complete one (with title/description)
-- Add an UPDATE RLS policy so users can manage previews on their own messages
-- Add a broader DELETE policy so any authenticated user can remove shared media entries
+### Changes
 
-#### 2. Prevent duplicate inserts in code
-**`src/pages/ChatPage.tsx`**: Remove the fire-and-forget insert calls for YouTube/Spotify/image previews on send. The `LinkPreviewCard` component already handles fetching and caching previews when they render — this is the authoritative source.
+**1. `src/pages/ChatPage.tsx`** — Add `sticky top-0 z-10` to the channel header div (line 473) so it pins to the top even if an outer container scrolls.
 
-**`src/components/chat/LinkPreviewCard.tsx`**: Add `ON CONFLICT DO NOTHING` (via `.upsert()` with `onConflict`) to all insert calls, so even if something slips through, no duplicates are created.
+```diff
+- <div className="flex items-center gap-2.5 py-3 border-b border-border/20 flex-shrink-0" ...>
++ <div className="flex items-center gap-2.5 py-3 border-b border-border/20 flex-shrink-0 sticky top-0 z-10" ...>
+```
 
-#### 3. Deduplicate in SharedMediaPage query
-**`src/pages/SharedMediaPage.tsx`**: After fetching, deduplicate results by `(url, message_id)` client-side as a safety net. Also add a delete button (trash icon) on each media card that calls `supabase.from('message_link_previews').delete().eq('id', item.id)` and removes it from local state.
+**2. `src/components/AppLayout.tsx`** — Add `overflow-hidden` to the `main` element specifically for chat routes, preventing double-scrollbar issues.
 
-#### 4. Add swipe-to-delete or trash icon on MediaItemCard
-**`src/pages/SharedMediaPage.tsx`**: Add a small trash button on each card. On tap, delete the preview row and remove from the list. Wrap the card content so the external link still works but the delete button is separate.
+```diff
+  <main className={cn(
+    "flex-1 lg:pb-0 lg:pl-64 overflow-x-hidden min-w-0",
+-   isChatRoute ? "pb-0" : "pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))]"
++   isChatRoute ? "pb-0 overflow-hidden" : "pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))]"
+  )}>
+```
 
-### Files Changed
-| File | Change |
-|------|--------|
-| Migration SQL | Deduplicate existing rows, add unique constraint on `(message_id, url)`, add DELETE policy for all authenticated users |
-| `src/pages/ChatPage.tsx` | Remove duplicate link preview inserts on message send |
-| `src/components/chat/LinkPreviewCard.tsx` | Use upsert with `onConflict: 'message_id,url'` instead of plain insert |
-| `src/pages/SharedMediaPage.tsx` | Client-side dedup + add delete button on each media card |
+These two changes ensure the header always stays visible regardless of scroll position or viewport resizing.
 
