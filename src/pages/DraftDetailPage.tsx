@@ -127,15 +127,28 @@ export default function DraftDetailPage() {
     }
     setStarting(true);
     try {
-      const sorted = [...participants].sort((a, b) => a.pick_order - b.pick_order);
+      // Randomize participant order (Fisher-Yates shuffle)
+      const shuffled = [...participants];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+
+      // Update pick_order for each participant
+      await Promise.all(
+        shuffled.map((p, idx) =>
+          supabase.from('draft_participants').update({ pick_order: idx + 1 }).eq('id', p.id)
+        )
+      );
+
       const { error } = await supabase.from('drafts').update({
         status: 'in_progress',
         current_round: 1,
         current_pick_number: 1,
-        current_pick_user_id: sorted[0].user_id,
+        current_pick_user_id: shuffled[0].user_id,
       }).eq('id', draftId);
       if (error) throw error;
-      toast.success('Draft started! 🎉');
+      toast.success('Draft started! Order randomized 🎲');
       fetchData();
     } catch (err: any) {
       toast.error(err.message || 'Failed to start');
@@ -429,7 +442,7 @@ export default function DraftDetailPage() {
                 </div>
               ))}
             </div>
-            <p className="text-[10px] text-muted-foreground/60 mt-3">Share this draft link to invite others. Snake order follows the list above.</p>
+            <p className="text-[10px] text-muted-foreground/60 mt-3">Share this draft link to invite others. Order will be randomized when the draft starts.</p>
           </div>
 
           {!isParticipant && user && (
