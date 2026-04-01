@@ -1,50 +1,39 @@
 
 
-## Replace Reaction Bar with Long-Press Overlay
+## Mobile-Optimize the Long-Press Reaction Overlay
 
 ### Problem
-The current chat has multiple overlapping reaction UIs: a desktop hover toolbar, an inline SmilePlus picker below reactions, and a mobile bottom-sheet action menu. These feel intrusive and redundant. The user wants a single, unified **press-and-hold** interaction that opens a reaction/action overlay directly on top of the message.
-
-### Design
-
-**New interaction model:**
-- **Long-press (mobile) or right-click (desktop)** on any message opens an overlay panel that appears directly over/beside the message bubble
-- The overlay contains: a row of quick emoji reactions, plus action buttons (Reply, Pin, Edit, Delete)
-- A visible **X button** in the top-right corner of the overlay to dismiss it
-- Tapping the backdrop also dismisses
-- Selecting a reaction auto-dismisses the overlay
-
-**Removed elements:**
-- Desktop hover action bar (the floating bar that appears on `group-hover` above messages)
-- Inline SmilePlus button after existing reaction badges (the `+` emoji picker button in the reactions row)
-- Separate inline reaction picker (`reactionOpen` state and its popover)
-- Bottom-sheet mobile action menu (replaced by the new overlay)
-
-**Kept:**
-- Existing reaction badge row (showing counts of reactions already placed — tapping these still toggles your reaction directly)
-- Swipe-to-reply gesture
-- Thread indicator
-- Delete confirmation dialog
-- Edit mode
+The current overlay uses `position: absolute` within the message content div, which on mobile can clip, overflow outside the scroll container, or position awkwardly relative to the message. The backdrop is transparent (no visual dimming), making it unclear the overlay is modal. The long-press also conflicts with the swipe-to-reply drag gesture.
 
 ### Changes
 
 **`src/components/chat/MessageBubble.tsx`**
-1. Remove `reactionOpen` state and the inline reaction picker (`AnimatePresence` block with `reactionRef`)
-2. Remove the desktop hover action bar (`group-hover:flex` div with z-30)
-3. Replace the bottom-sheet mobile action menu with a new **overlay card** that:
-   - Is positioned absolutely over the message bubble (centered, with a semi-transparent backdrop)
-   - Contains emoji row + action buttons in a compact card layout
-   - Has an X button in the corner
-   - Uses the same `showMobileActions` state (triggered by long-press on mobile, or right-click/context-menu on desktop)
-4. Remove the SmilePlus button from the reactions row (keep only the reaction count badges)
-5. Add `onContextMenu` handler for desktop right-click to open the same overlay
-6. Clean up unused refs (`reactionRef`) and state (`reactionOpen`)
 
-**`src/components/chat/types.ts`** — No changes needed
+1. **Move overlay to a fixed-position centered modal** instead of `absolute` within the message content:
+   - Use `fixed inset-0 z-50` with a semi-transparent dark backdrop (`bg-black/40`) for clear visual separation
+   - Center the overlay card vertically and horizontally using flexbox on the backdrop
+   - This ensures it's always fully visible on mobile regardless of scroll position or message location
+
+2. **Increase touch targets for mobile**:
+   - Bump emoji buttons from `w-9 h-9` to `w-11 h-11` with `text-xl` for easier tapping
+   - Increase action button padding from `py-2.5` to `py-3`
+   - Make the X close button larger: `w-8 h-8`
+
+3. **Add touch-action: none to the overlay** to prevent scroll-through while the overlay is open
+
+4. **Prevent long-press from firing during swipe**: Cancel the long-press timer if drag movement exceeds a small threshold (already handled by `handleTouchMove`, but verify the drag gesture doesn't interfere)
+
+5. **Add subtle backdrop blur** to the dimmed background for a polished mobile feel
+
+6. **Show a preview of the message text** at the top of the overlay (truncated to 2 lines) so users confirm which message they're acting on
+
+### Technical Details
+
+The key change is moving from `absolute` positioning (which depends on parent `overflow` and can be clipped by the scroll container) to a `fixed` full-screen modal pattern. The backdrop gets `bg-black/40 backdrop-blur-sm` for visual clarity. The overlay card itself becomes `fixed` centered with `max-w-[340px] w-[calc(100%-2rem)]` to respect mobile margins. Safe-area insets are respected via existing body-level styles.
 
 ### Files Changed
+
 | File | Change |
 |------|--------|
-| `src/components/chat/MessageBubble.tsx` | Replace hover bar + bottom sheet + inline picker with single long-press/right-click overlay card with X button |
+| `src/components/chat/MessageBubble.tsx` | Convert overlay from absolute to fixed centered modal, enlarge touch targets, add dimmed backdrop, add message preview |
 
