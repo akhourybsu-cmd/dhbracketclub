@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bookmark, ArrowLeft, Users, Play, Send, Trophy, RefreshCw, Sparkles, MoreVertical, Pencil, Trash2, X } from 'lucide-react';
+import { Bookmark, ArrowLeft, Users, Play, Send, Trophy, RefreshCw, Sparkles, MoreVertical, Pencil, Trash2, X, Star, ChevronDown, ChevronUp, Award } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDraftUpdates } from '@/hooks/useRealtimeSubscription';
 import { useItemEnrichments, useEnrichDraftPicks } from '@/hooks/useItemEnrichments';
