@@ -35,7 +35,7 @@ const SECURITY_SECTIONS = [
     color: 'primary',
     title: 'Access Control & Permissions',
     status: 'Enforced',
-    summary: 'Row-Level Security (RLS) ensures you can only access data you're authorized to see.',
+    summary: 'Row-Level Security (RLS) ensures you can only access data you are authorized to see.',
     details: [
       'Every database table has Row-Level Security policies that restrict reads and writes to authorized users only.',
       'You can only edit your own profile, brackets, and messages — no one else can modify your data.',
