@@ -1,59 +1,50 @@
 
 
-## Fix Lockbox Score Persistence & Day Finalization
+## Replace Reaction Bar with Long-Press Overlay
 
 ### Problem
+The current chat has multiple overlapping reaction UIs: a desktop hover toolbar, an inline SmilePlus picker below reactions, and a mobile bottom-sheet action menu. These feel intrusive and redundant. The user wants a single, unified **press-and-hold** interaction that opens a reaction/action overlay directly on top of the message.
 
-Scores are **never written** to the `lockbox_scores` table. The leaderboard works in real-time via computed data from `lockbox_attempts` + `lockbox_locks`, but when the day ends:
+### Design
 
-- **History** shows "No scores recorded" for past days
-- **Player stats** (lifetime totals, daily wins, top-3 finishes) are always empty/zero
-- **Past days** are never marked as `complete`
-- **Rankings** are never persisted
+**New interaction model:**
+- **Long-press (mobile) or right-click (desktop)** on any message opens an overlay panel that appears directly over/beside the message bubble
+- The overlay contains: a row of quick emoji reactions, plus action buttons (Reply, Pin, Edit, Delete)
+- A visible **X button** in the top-right corner of the overlay to dismiss it
+- Tapping the backdrop also dismisses
+- Selecting a reaction auto-dismisses the overlay
 
-### Solution
+**Removed elements:**
+- Desktop hover action bar (the floating bar that appears on `group-hover` above messages)
+- Inline SmilePlus button after existing reaction badges (the `+` emoji picker button in the reactions row)
+- Separate inline reaction picker (`reactionOpen` state and its popover)
+- Bottom-sheet mobile action menu (replaced by the new overlay)
 
-Create a **score finalization edge function** (`finalize-lockbox-day`) that runs daily via cron and also add a **client-side fallback** that finalizes when users view stale days.
-
----
+**Kept:**
+- Existing reaction badge row (showing counts of reactions already placed — tapping these still toggles your reaction directly)
+- Swipe-to-reply gesture
+- Thread indicator
+- Delete confirmation dialog
+- Edit mode
 
 ### Changes
 
-#### 1. New Edge Function: `supabase/functions/finalize-lockbox-day/index.ts`
-- Find yesterday's `lockbox_weeks` row (or any `active` day whose `ends_at` has passed)
-- Query all locks + solved attempts for that day
-- Compute each player's crack points, defense points, best-crack bonuses, and total
-- Rank players by total points (with tiebreakers)
-- Upsert rows into `lockbox_scores` with `user_id`, `week_id`, `crack_points`, `defense_points`, `total_points`, `rank`
-- Update the `lockbox_weeks` row to `status = 'complete'`
+**`src/components/chat/MessageBubble.tsx`**
+1. Remove `reactionOpen` state and the inline reaction picker (`AnimatePresence` block with `reactionRef`)
+2. Remove the desktop hover action bar (`group-hover:flex` div with z-30)
+3. Replace the bottom-sheet mobile action menu with a new **overlay card** that:
+   - Is positioned absolutely over the message bubble (centered, with a semi-transparent backdrop)
+   - Contains emoji row + action buttons in a compact card layout
+   - Has an X button in the corner
+   - Uses the same `showMobileActions` state (triggered by long-press on mobile, or right-click/context-menu on desktop)
+4. Remove the SmilePlus button from the reactions row (keep only the reaction count badges)
+5. Add `onContextMenu` handler for desktop right-click to open the same overlay
+6. Clean up unused refs (`reactionRef`) and state (`reactionOpen`)
 
-#### 2. Database Migration
-- Add an UPDATE policy on `lockbox_weeks` for service role (or use service role key in edge function — already bypasses RLS)
-- No schema changes needed — existing tables support everything
-
-#### 3. Schedule Cron Job
-- Use `pg_cron` + `pg_net` to invoke `finalize-lockbox-day` daily at 00:05 UTC (5 minutes after day reset)
-
-#### 4. Client-side Fallback: `src/hooks/useLockbox.ts`
-- In `useComputedLeaderboard`: when `scores.data` is empty AND the day's `ends_at` has passed, call the finalization edge function once, then refetch scores
-- This handles cases where the cron missed or the function failed
-
-#### 5. Update `usePastDays` to Include Status
-- Already fetches `status` — no change needed, but history will now show "COMPLETE" correctly since finalization sets the status
+**`src/components/chat/types.ts`** — No changes needed
 
 ### Files Changed
-
 | File | Change |
 |------|--------|
-| `supabase/functions/finalize-lockbox-day/index.ts` | New — computes & persists daily scores |
-| `src/hooks/useLockbox.ts` | Add client-side finalization fallback in `useComputedLeaderboard` |
-| Migration SQL | Cron job schedule for daily finalization |
-
-### Technical Details
-
-The finalization logic reuses the same scoring functions from `lockboxScoring.ts` but implemented server-side:
-- Base 6 pts per crack + efficiency bonus (up to +4) + best-crack bonus (+2)
-- Defense: 8 pts uncracked, or +3/+2/+1/+0 scaled by best crack attempts
-- Rank by total points → locks cracked → avg attempts (tiebreaker)
-- Uses service role key to bypass RLS for writes
+| `src/components/chat/MessageBubble.tsx` | Replace hover bar + bottom sheet + inline picker with single long-press/right-click overlay card with X button |
 
