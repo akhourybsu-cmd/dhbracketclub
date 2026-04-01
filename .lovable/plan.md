@@ -1,33 +1,74 @@
 
+## AI-Powered Draft Rating & Results System
 
-## Convert Overlay from Fixed Modal to Inline Bar
+### Overview
+When a draft completes, the system automatically calls an AI edge function to analyze all picks, score each participant's selections, generate explanations, rank participants 1st/2nd/3rd+, and award points. Results are stored in a new table and displayed on the draft detail page.
 
-### Problem
-The current reaction overlay is a full-screen fixed modal with backdrop dimming — the user wants it to be a compact bar that appears directly over the message bubble itself, toggled by a single tap.
+### 1. New Database Table — `draft_results`
 
-### Changes — `src/components/chat/MessageBubble.tsx`
+```sql
+CREATE TABLE public.draft_results (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  draft_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  rank integer NOT NULL,
+  total_score numeric NOT NULL DEFAULT 0,
+  pick_ratings jsonb NOT NULL DEFAULT '[]',
+  summary text,
+  points_awarded integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (draft_id, user_id)
+);
+ALTER TABLE public.draft_results ENABLE ROW LEVEL SECURITY;
+-- Viewable by authenticated
+-- Insertable via edge function (service role) or by draft creator
+```
 
-1. **Remove the portal**: Stop using `ReactDOM.createPortal` to render into `document.body`. Render the overlay inline within the message's content `div` instead.
+`pick_ratings` JSON structure per pick:
+```json
+[
+  { "pick_id": "...", "pick_text": "...", "score": 8.5, "explanation": "..." }
+]
+```
 
-2. **Replace the fixed modal with an absolute-positioned bar**:
-   - Remove the full-screen backdrop (`fixed inset-0 bg-black/40 backdrop-blur-sm`)
-   - Remove the large card layout (message preview, divider, vertical action list, X button)
-   - Replace with a compact horizontal bar positioned `absolute` above the message content (e.g. `absolute -top-10 left-0 right-0 z-30`)
-   - The bar contains: the emoji row (smaller, `w-8 h-8` buttons) and compact icon-only action buttons (Reply, Pin, Edit, Delete) all in a single horizontal flex row
-   - Styled as a small rounded pill/card with `bg-background/95 backdrop-blur border shadow-lg rounded-xl px-2 py-1`
+Points awarded: 1st place = N points (N = participant count), 2nd = N-1, etc.
 
-3. **Keep single-tap toggle**: `onClick={handleTap}` still toggles `showOverlay` on/off — tap message to show bar, tap again to dismiss. No backdrop needed since it's just a small bar.
+### 2. New Edge Function — `rate-draft`
 
-4. **Keep `onContextMenu`** for desktop right-click.
+**File:** `supabase/functions/rate-draft/index.ts`
 
-5. **Clean up**: Remove `ReactDOM` import (no longer needed for portal).
+- Receives `{ draft_id }` in the request body
+- Fetches draft topic, participants, and all picks from the database (service role)
+- Sends picks to Lovable AI (Gemini) with a prompt asking it to:
+  - Rate each pick 1-10 based on quality, creativity, relevance to the topic, and value
+  - Provide a short explanation for each rating
+  - Rank participants by total score
+  - Write a brief summary for each participant
+- Uses tool calling to extract structured output (scores, explanations, rankings)
+- Inserts results into `draft_results` table
+- Returns the results to the frontend
 
-### Result
-A slim inline reaction/action bar floats directly above the tapped message — no dimming, no modal, no portal. Tap to open, tap to close.
+### 3. Frontend Changes — `DraftDetailPage.tsx`
+
+- When draft status becomes `complete`, auto-trigger the rating edge function (once, if no results exist yet)
+- Add a new "AI Report" section below the current completion view:
+  - Trophy podium showing 1st/2nd/3rd with scores
+  - Each participant's card expands to show per-pick ratings (score badge + explanation)
+  - Overall summary text from the AI
+  - Loading state with sparkle animation while AI is generating
+- Add a "Regenerate Report" button for the draft creator
+
+### 4. Hook — `useDraftResults.ts`
+
+- Fetches existing results from `draft_results` for the draft
+- Mutation to call the `rate-draft` edge function
+- Manages loading/error states
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/chat/MessageBubble.tsx` | Replace portal-based fixed modal with inline absolute-positioned bar over message |
-
+| `supabase/functions/rate-draft/index.ts` | New edge function — AI rating logic |
+| `src/hooks/useDraftResults.ts` | New hook — fetch/trigger draft results |
+| `src/pages/DraftDetailPage.tsx` | Add AI report section to completed drafts |
+| Migration | New `draft_results` table with RLS |
