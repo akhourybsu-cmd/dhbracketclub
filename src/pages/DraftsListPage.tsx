@@ -12,6 +12,8 @@ export default function DraftsListPage() {
   const { user } = useAuth();
   const [drafts, setDrafts] = useState<any[]>([]);
   const [participantCounts, setParticipantCounts] = useState<Map<string, number>>(new Map());
+  const [draftWinners, setDraftWinners] = useState<Map<string, { user_id: string; display_name: string }>>(new Map());
+  const [myDraftStats, setMyDraftStats] = useState({ totalPoints: 0, wins: 0, draftsRated: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
