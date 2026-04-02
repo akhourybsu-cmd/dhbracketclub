@@ -2,7 +2,7 @@ type DraftTurnParticipant = {
   user_id: string;
   pick_order: number;
   profiles?: {
-    display_name: string;
+    display_name?: string;
   } | null;
 };
 
@@ -12,9 +12,7 @@ type DraftTurnState = {
   current_pick_user_id?: string | null;
   current_pick_number?: number | null;
   current_round?: number | null;
-  current_pick_profiles?: {
-    display_name: string;
-  } | null;
+  current_pick_profiles?: unknown;
 };
 
 export function getDerivedDraftTurn<T extends DraftTurnState>(
@@ -56,7 +54,7 @@ export function getDerivedDraftTurn<T extends DraftTurnState>(
     current_pick_number: totalPicks + 1,
     current_round: roundIndex + 1,
     current_pick_profiles: nextPicker?.profiles
-      ? { display_name: nextPicker.profiles.display_name }
+      ? { display_name: nextPicker.profiles.display_name || 'Someone' }
       : null,
   };
 }
