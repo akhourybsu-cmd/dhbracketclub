@@ -63,6 +63,8 @@ export default function DraftDetailPage() {
   const [enrichingPickIds, setEnrichingPickIds] = useState<Set<string>>(new Set());
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [pickToRemove, setPickToRemove] = useState<Pick | null>(null);
+  const [removingPick, setRemovingPick] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editTopic, setEditTopic] = useState('');
   const [saving, setSaving] = useState(false);
@@ -324,6 +326,75 @@ export default function DraftDetailPage() {
       toast.error(err.message || 'Failed to update');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRemovePick = async () => {
+    if (!pickToRemove || !draftId || !user) return;
+    const pick = pickToRemove;
+    const canRemove = user.id === pick.user_id || isCreator;
+    if (!canRemove) return;
+
+    setRemovingPick(true);
+    try {
+      // 1. Delete enrichment for this pick
+      await supabase.from('item_enrichments').delete().eq('item_id', pick.id);
+
+      // 2. Delete the pick
+      const { error: delErr } = await supabase.from('draft_picks').delete().eq('id', pick.id);
+      if (delErr) throw delErr;
+
+      // 3. Renumber subsequent picks
+      const subsequentPicks = picks
+        .filter(p => p.pick_number > pick.pick_number)
+        .sort((a, b) => a.pick_number - b.pick_number);
+
+      for (const sp of subsequentPicks) {
+        const newNum = sp.pick_number - 1;
+        const newRound = Math.floor((newNum - 1) / participants.length) + 1;
+        await supabase.from('draft_picks').update({
+          pick_number: newNum,
+          round: newRound,
+        }).eq('id', sp.id);
+      }
+
+      // 4. Recalculate draft state — rewind to the removed pick's slot
+      const newTotal = picks.length - 1;
+      const newCurrentPickNumber = pick.pick_number; // this slot is now empty
+      const totalExpected = participants.length * draft.num_rounds;
+
+      if (newTotal >= totalExpected) {
+        // Still complete even after removal
+        await supabase.from('drafts').update({
+          current_pick_number: newCurrentPickNumber,
+          current_round: Math.floor((newCurrentPickNumber - 1) / participants.length) + 1,
+        }).eq('id', draftId);
+      } else {
+        // Calculate who should pick at this slot
+        const pickIdx = newCurrentPickNumber - 1; // 0-based
+        const round = Math.floor(pickIdx / participants.length);
+        const posInRound = pickIdx % participants.length;
+        const orderIdx = round % 2 === 0 ? posInRound : participants.length - 1 - posInRound;
+        const sorted = [...participants].sort((a, b) => a.pick_order - b.pick_order);
+        const repicker = sorted[orderIdx];
+
+        await supabase.from('drafts').update({
+          status: 'in_progress',
+          current_pick_number: newCurrentPickNumber,
+          current_round: round + 1,
+          current_pick_user_id: repicker?.user_id || null,
+        }).eq('id', draftId);
+
+        const repickerName = repicker?.profiles?.display_name || 'the player';
+        toast.success(`Pick removed. It's now ${repickerName}'s turn to repick.`);
+      }
+
+      setPickToRemove(null);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to remove pick');
+    } finally {
+      setRemovingPick(false);
     }
   };
 
@@ -650,10 +721,21 @@ export default function DraftDetailPage() {
                               ? () => setImagePickerPick(pick)
                               : undefined}
                             actions={
-                              <span className="text-[10px] text-muted-foreground/60 flex-shrink-0 text-right">
-                                <span className="block font-medium">{pick.profiles?.display_name}</span>
-                                <span className="font-mono">Rd {pick.round}</span>
-                              </span>
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <span className="text-[10px] text-muted-foreground/60 text-right">
+                                  <span className="block font-medium">{pick.profiles?.display_name}</span>
+                                  <span className="font-mono">Rd {pick.round}</span>
+                                </span>
+                                {(isCreator || pick.user_id === user?.id) && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setPickToRemove(pick); }}
+                                    className="p-1 rounded-md text-muted-foreground/30 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                                    title="Remove pick"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </div>
                             }
                           />
                         )}
@@ -901,9 +983,20 @@ export default function DraftDetailPage() {
                             ? () => setImagePickerPick(pick)
                             : undefined}
                           actions={
-                            <span className="text-[10px] font-mono text-muted-foreground/70 flex-shrink-0">
-                              Rd {pick.round}
-                            </span>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <span className="text-[10px] font-mono text-muted-foreground/70">
+                                Rd {pick.round}
+                              </span>
+                              {isCreator && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setPickToRemove(pick); }}
+                                  className="p-1 rounded-md text-muted-foreground/30 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                                  title="Remove pick"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
                           }
                         />
                       );
@@ -929,6 +1022,25 @@ export default function DraftDetailPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {deleting ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Remove pick confirmation */}
+      <AlertDialog open={!!pickToRemove} onOpenChange={(open) => { if (!open) setPickToRemove(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove this pick?</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{pickToRemove?.pick_text}" by {pickToRemove?.profiles?.display_name} will be removed.
+              {isInProgress && !isDraftComplete && ' They will get to repick in this slot.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRemovePick} disabled={removingPick} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {removingPick ? 'Removing…' : 'Remove Pick'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
