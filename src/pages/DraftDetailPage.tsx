@@ -16,6 +16,7 @@ import ShareButton from '@/components/ShareButton';
 import ImagePickerDialog from '@/components/draft/ImagePickerDialog';
 import { useDraftResults } from '@/hooks/useDraftResults';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getDerivedDraftTurn } from '@/lib/draftTurn';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -120,24 +121,18 @@ export default function DraftDetailPage() {
     }
   }, [draft?.status, hasResults, resultsLoading, resultsGenerating, autoTriggered, isCreator, generateResults]);
 
-  // Snake draft order logic
-  const getExpectedPicker = useCallback(() => {
-    if (!draft || participants.length === 0) return null;
-    const totalPicks = picks.length;
-    const numParticipants = participants.length;
-    if (numParticipants === 0) return null;
-
-    const round = Math.floor(totalPicks / numParticipants);
-    const posInRound = totalPicks % numParticipants;
-
-    const orderIdx = round % 2 === 0 ? posInRound : numParticipants - 1 - posInRound;
-    const sorted = [...participants].sort((a, b) => a.pick_order - b.pick_order);
-    return sorted[orderIdx] || null;
-  }, [draft, participants, picks]);
-
-  const currentPicker = getExpectedPicker();
-  const isMyTurn = currentPicker?.user_id === user?.id;
-  const currentRound = participants.length > 0 ? Math.floor(picks.length / participants.length) + 1 : 1;
+  // Derive turn state from pick count + participant order (single source of truth)
+  const derivedTurn = getDerivedDraftTurn(
+    draft || { num_rounds: 1 },
+    participants,
+    picks.length
+  );
+  const currentPicker = derivedTurn.current_pick_user_id
+    ? participants.find(p => p.user_id === derivedTurn.current_pick_user_id) || null
+    : null;
+  const isMyTurn = derivedTurn.current_pick_user_id === user?.id;
+  const currentRound = derivedTurn.current_round ?? 1;
+  const currentPickNumber = derivedTurn.current_pick_number ?? (picks.length + 1);
   const isDraftComplete = draft?.status === 'complete' || (draft && participants.length > 0 && currentRound > draft.num_rounds);
   const isInProgress = draft?.status === 'in_progress';
   const isSetup = draft?.status === 'setup';
@@ -511,6 +506,7 @@ export default function DraftDetailPage() {
           <div className="stat-card py-2 flex-1">
             <Trophy className="w-3 h-3 text-primary" />
             <span className="stat-value text-xs">{currentRound > draft.num_rounds ? draft.num_rounds : currentRound}</span>
+
             <span className="stat-label">Round</span>
           </div>
         </div>
@@ -594,13 +590,13 @@ export default function DraftDetailPage() {
               {isMyTurn ? (
                 <>
                   <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'hsl(var(--gold))' }}>Your Turn</p>
-                  <p className="text-[13px] font-bold">Round {currentRound} • Pick #{picks.length + 1}</p>
-                </>
-              ) : (
-                <>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 mb-1">Waiting for</p>
-                  <p className="text-[13px] font-bold">{currentPicker?.profiles?.display_name || 'Unknown'}</p>
-                  <p className="text-[10px] text-muted-foreground/60 mt-0.5">Round {currentRound} • Pick #{picks.length + 1}</p>
+                   <p className="text-[13px] font-bold">Round {currentRound} • Pick #{currentPickNumber}</p>
+                 </>
+               ) : (
+                 <>
+                   <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 mb-1">Waiting for</p>
+                   <p className="text-[13px] font-bold">{currentPicker?.profiles?.display_name || 'Unknown'}</p>
+                   <p className="text-[10px] text-muted-foreground/60 mt-0.5">Round {currentRound} • Pick #{currentPickNumber}</p>
                 </>
               )}
             </div>
