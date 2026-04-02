@@ -912,7 +912,7 @@ serve(async (req) => {
           status: "placeholder" as const,
         };
 
-        const enriched = await enrichItem(category, pick.pick_text, aiResult);
+        const enriched = await enrichItem(category, pick.pick_text, aiResult, draft.topic);
 
         return {
           item_id: pick.id,
