@@ -121,24 +121,18 @@ export default function DraftDetailPage() {
     }
   }, [draft?.status, hasResults, resultsLoading, resultsGenerating, autoTriggered, isCreator, generateResults]);
 
-  // Snake draft order logic
-  const getExpectedPicker = useCallback(() => {
-    if (!draft || participants.length === 0) return null;
-    const totalPicks = picks.length;
-    const numParticipants = participants.length;
-    if (numParticipants === 0) return null;
-
-    const round = Math.floor(totalPicks / numParticipants);
-    const posInRound = totalPicks % numParticipants;
-
-    const orderIdx = round % 2 === 0 ? posInRound : numParticipants - 1 - posInRound;
-    const sorted = [...participants].sort((a, b) => a.pick_order - b.pick_order);
-    return sorted[orderIdx] || null;
-  }, [draft, participants, picks]);
-
-  const currentPicker = getExpectedPicker();
-  const isMyTurn = currentPicker?.user_id === user?.id;
-  const currentRound = participants.length > 0 ? Math.floor(picks.length / participants.length) + 1 : 1;
+  // Derive turn state from pick count + participant order (single source of truth)
+  const derivedTurn = getDerivedDraftTurn(
+    draft || { num_rounds: 1 },
+    participants,
+    picks.length
+  );
+  const currentPicker = derivedTurn.current_pick_user_id
+    ? participants.find(p => p.user_id === derivedTurn.current_pick_user_id) || null
+    : null;
+  const isMyTurn = derivedTurn.current_pick_user_id === user?.id;
+  const currentRound = derivedTurn.current_round ?? 1;
+  const currentPickNumber = derivedTurn.current_pick_number ?? (picks.length + 1);
   const isDraftComplete = draft?.status === 'complete' || (draft && participants.length > 0 && currentRound > draft.num_rounds);
   const isInProgress = draft?.status === 'in_progress';
   const isSetup = draft?.status === 'setup';
