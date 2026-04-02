@@ -378,19 +378,20 @@ export default function ChatPage() {
     }
   };
 
-  const handleUpdateChannel = async (channelId: string, updates: Partial<Pick<Channel, 'name' | 'description' | 'icon' | 'category_id' | 'is_default'>>) => {
-    if (!user) return;
+  const handleUpdateChannel = async (channelId: string, updates: Partial<Pick<Channel, 'name' | 'description' | 'icon' | 'category_id' | 'is_default'>>): Promise<boolean> => {
+    if (!user) return false;
     const { error } = await supabase.from('channels').update(updates).eq('id', channelId);
     if (error) {
       toast.error('Failed to update channel');
-    } else {
-      play('success');
-      toast.success('Channel updated');
-      setChannels(prev => prev.map(ch => ch.id === channelId ? { ...ch, ...updates } : ch));
-      if (selectedChannel?.id === channelId) {
-        setSelectedChannel(prev => prev ? { ...prev, ...updates } as Channel : prev);
-      }
+      return false;
     }
+    play('success');
+    toast.success('Channel updated');
+    setChannels(prev => prev.map(ch => ch.id === channelId ? { ...ch, ...updates } : ch));
+    if (selectedChannel?.id === channelId) {
+      setSelectedChannel(prev => prev ? { ...prev, ...updates } as Channel : prev);
+    }
+    return true;
   };
 
   const handleDeleteChannel = async (channelId: string) => {
