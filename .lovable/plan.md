@@ -1,67 +1,76 @@
 
 
-## AI-Powered Draft Rating & Results System
+## Plan: Duplicate Prevention & Enrichment Accuracy Fixes
 
-### Overview
-When a draft completes, the system automatically calls an AI edge function to analyze all picks, score each participant's selections, generate explanations, rank participants 1st/2nd/3rd+, and award points. Results are stored in a new table and displayed on the draft detail page.
+### Problems Identified
 
-### 1. New Database Table — `draft_results`
+1. **No hard duplicate block** — The current system uses AI to *suggest* a pick might be a duplicate, but nothing stops the user from submitting it anyway. Duplicates can slip through if the AI check hasn't returned yet or the user ignores the warning.
 
-```sql
-CREATE TABLE public.draft_results (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  draft_id uuid NOT NULL,
-  user_id uuid NOT NULL,
-  rank integer NOT NULL,
-  total_score numeric NOT NULL DEFAULT 0,
-  pick_ratings jsonb NOT NULL DEFAULT '[]',
-  summary text,
-  points_awarded integer NOT NULL DEFAULT 0,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (draft_id, user_id)
-);
-ALTER TABLE public.draft_results ENABLE ROW LEVEL SECURITY;
+2. **Enrichment mismatch for bands** — When enriching "top bands of the nineties," the system is matching band names to albums/songs instead of the bands themselves. The enrichment function likely searches iTunes or similar sources and picks the first result (an album) rather than the artist.
+
+3. **Data fix needed** — "World of Warcraft" needs to be corrected to "Warcraft" in the video game franchises draft.
+
+---
+
+### Changes
+
+**1. Hard duplicate prevention on pick submission** (`DraftDetailPage.tsx`)
+
+- Add a client-side check in `handleMakePick` that compares the new pick against all existing picks using case-insensitive, trimmed matching
+- If a duplicate is detected, show a toast error and block submission — no database call made
+- This is the primary safeguard; the AI suggestion remains as an early warning while typing
+
+**2. Server-side duplicate guard** (`check-draft-pick/index.ts`)
+
+- Add a deterministic (non-AI) duplicate check before calling the AI — compare `pick_text` against `existing_picks` using normalized string matching (lowercase, trimmed, stripped punctuation)
+- If a deterministic match is found, return `is_duplicate: true` immediately without burning an AI call
+- Keep the AI duplicate detection as a fuzzy secondary layer for near-duplicates (e.g., "Green Day" vs "Greenday")
+
+**3. Fix enrichment category context** (`enrich-draft-picks/index.ts`)
+
+- When the draft category is "music" and the topic references "bands" or "artists," bias the enrichment search toward artist results rather than album/song results
+- For iTunes: use `entity=musicArtist` instead of default when the topic suggests bands/artists
+- For Deezer: search the `/artist` endpoint instead of `/search`
+- This prevents album art from appearing instead of band photos
+
+**4. Data correction** — Update the "World of Warcraft" pick text to "Warcraft" in the database
+
+---
+
+### Technical Details
+
+**Client-side duplicate check:**
+```typescript
+// In handleMakePick, before the insert:
+const normalized = pickText.trim().toLowerCase();
+const isDuplicate = picks.some(p => p.pick_text.trim().toLowerCase() === normalized);
+if (isDuplicate) {
+  toast.error('This has already been picked!');
+  setSubmitting(false);
+  return;
+}
 ```
 
-RLS: viewable by authenticated users, insertable/updatable by draft creator.
-
-`pick_ratings` stores per-pick AI scores:
-```json
-[{ "pick_id": "...", "pick_text": "...", "score": 8.5, "explanation": "Strong choice because..." }]
+**Deterministic server-side check** in `check-draft-pick`:
+```typescript
+const normalizedPick = pick_text.trim().toLowerCase().replace(/[^a-z0-9\s]/g, '');
+const normalizedExisting = existingList.map(p => p.trim().toLowerCase().replace(/[^a-z0-9\s]/g, ''));
+if (normalizedExisting.includes(normalizedPick)) {
+  return { corrected_text: null, is_duplicate: true, is_irrelevant: false, relevance_note: "Already picked" };
+}
 ```
 
-Points awarded: 1st = N pts (N = participant count), 2nd = N-1, down to last = 1 pt.
-
-### 2. New Edge Function — `rate-draft`
-
-- Receives `{ draft_id }`
-- Fetches draft topic, participants, picks via service role
-- Calls Lovable AI (Gemini) with structured tool calling to rate each pick 1-10, explain why, rank participants, and summarize each person's draft
-- Upserts results into `draft_results`
-- Returns the full report
-
-### 3. New Hook — `src/hooks/useDraftResults.ts`
-
-- Queries `draft_results` for the draft
-- Mutation to invoke the `rate-draft` edge function
-- Loading/error state management
-
-### 4. UI Changes — `DraftDetailPage.tsx`
-
-In the "Draft Complete" section, add:
-- Auto-trigger AI rating on first load if no results exist
-- Trophy podium (1st/2nd/3rd) with scores and point awards
-- Expandable participant cards showing per-pick ratings (score badge + explanation)
-- AI summary text per participant
-- Loading shimmer while generating
-- "Regenerate Report" button for draft creator
+**Enrichment music fix** in `enrich-draft-picks`:
+- Detect when topic contains "band", "artist", "musician", "group" keywords
+- Override iTunes search entity to `musicArtist`
+- Use artist images instead of album artwork
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| Migration | New `draft_results` table + RLS policies |
-| `supabase/functions/rate-draft/index.ts` | New — AI rating edge function |
-| `src/hooks/useDraftResults.ts` | New — fetch/trigger results hook |
-| `src/pages/DraftDetailPage.tsx` | Add AI report section to completed drafts |
+| `src/pages/DraftDetailPage.tsx` | Add hard duplicate block in `handleMakePick` |
+| `supabase/functions/check-draft-pick/index.ts` | Add deterministic duplicate check before AI call |
+| `supabase/functions/enrich-draft-picks/index.ts` | Fix music enrichment to prefer artist results for band/artist topics |
+| Database update | Correct "World of Warcraft" → "Warcraft" in the relevant draft pick |
 
