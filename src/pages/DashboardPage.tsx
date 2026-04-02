@@ -157,7 +157,7 @@ export default function DashboardPage() {
       const [{ data: rankData }, { data: pollData }, { data: draftData }, { data: activityData }, { data: eventsData }] = await Promise.all([
         supabase.from('rankings').select('*, competitions(title, status)').order('created_at', { ascending: false }).limit(5),
         supabase.from('polls').select('*, competitions(title, status)').order('created_at', { ascending: false }).limit(5),
-        supabase.from('drafts').select('*, competitions(title, status)').order('created_at', { ascending: false }).limit(5),
+        supabase.from('drafts').select('*, competitions(title, status), current_pick_profiles:current_pick_user_id(display_name)').order('created_at', { ascending: false }).limit(5),
         supabase.from('activity_feed').select('*, profiles:actor_user_id(display_name)').order('created_at', { ascending: false }).limit(10),
         supabase.from('events').select('*, profiles:created_by(display_name)').gte('starts_at', new Date().toISOString()).order('starts_at', { ascending: true }).limit(3),
       ]);
