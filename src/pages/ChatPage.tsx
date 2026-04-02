@@ -168,8 +168,13 @@ export default function ChatPage() {
       setChannelMeta(meta);
 
       if (!selectedChannel) {
-        const def = (chs as Channel[]).find(c => c.is_default) || chs[0];
-        if (def) { setSelectedChannel(def as Channel); setShowChannelList(false); }
+        let target: Channel | undefined;
+        try {
+          const savedId = localStorage.getItem('last_chat_channel_id');
+          if (savedId) target = (chs as Channel[]).find(c => c.id === savedId);
+        } catch {}
+        if (!target) target = (chs as Channel[]).find(c => c.is_default) || (chs[0] as Channel);
+        if (target) { setSelectedChannel(target); setShowChannelList(false); }
       }
     }
     setLoading(false);
@@ -373,19 +378,20 @@ export default function ChatPage() {
     }
   };
 
-  const handleUpdateChannel = async (channelId: string, updates: Partial<Pick<Channel, 'name' | 'description' | 'icon' | 'category_id' | 'is_default'>>) => {
-    if (!user) return;
+  const handleUpdateChannel = async (channelId: string, updates: Partial<Pick<Channel, 'name' | 'description' | 'icon' | 'category_id' | 'is_default'>>): Promise<boolean> => {
+    if (!user) return false;
     const { error } = await supabase.from('channels').update(updates).eq('id', channelId);
     if (error) {
       toast.error('Failed to update channel');
-    } else {
-      play('success');
-      toast.success('Channel updated');
-      setChannels(prev => prev.map(ch => ch.id === channelId ? { ...ch, ...updates } : ch));
-      if (selectedChannel?.id === channelId) {
-        setSelectedChannel(prev => prev ? { ...prev, ...updates } as Channel : prev);
-      }
+      return false;
     }
+    play('success');
+    toast.success('Channel updated');
+    setChannels(prev => prev.map(ch => ch.id === channelId ? { ...ch, ...updates } : ch));
+    if (selectedChannel?.id === channelId) {
+      setSelectedChannel(prev => prev ? { ...prev, ...updates } as Channel : prev);
+    }
+    return true;
   };
 
   const handleDeleteChannel = async (channelId: string) => {
@@ -435,6 +441,7 @@ export default function ChatPage() {
   const selectChannel = (ch: Channel) => {
     setSelectedChannel(ch);
     setMessages([]);
+    try { localStorage.setItem('last_chat_channel_id', ch.id); } catch {}
     setShowChannelList(false);
     setThreadParent(null);
     setShowPinned(false);

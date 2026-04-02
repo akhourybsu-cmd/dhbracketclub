@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,7 +21,7 @@ interface ChannelSettingsDialogProps {
   categories: Category[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpdate: (channelId: string, updates: Partial<Pick<Channel, 'name' | 'description' | 'icon' | 'category_id' | 'is_default'>>) => void;
+  onUpdate: (channelId: string, updates: Partial<Pick<Channel, 'name' | 'description' | 'icon' | 'category_id' | 'is_default'>>) => Promise<boolean>;
   onDelete: (channelId: string) => void;
 }
 
@@ -33,11 +33,19 @@ export function ChannelSettingsDialog({ channel, categories, open, onOpenChange,
   const [isDefault, setIsDefault] = useState(channel.is_default);
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    setName(channel.name);
+    setDescription(channel.description || '');
+    setIcon(channel.icon || '');
+    setCategoryId(channel.category_id || '');
+    setIsDefault(channel.is_default);
+  }, [channel.id]);
+
   const handleSave = async () => {
     if (!name.trim()) return;
     setSaving(true);
     const sanitizedName = name.trim().toLowerCase().replace(/\s+/g, '-');
-    onUpdate(channel.id, {
+    const success = await onUpdate(channel.id, {
       name: sanitizedName,
       description: description.trim() || null,
       icon: icon || null,
@@ -45,7 +53,7 @@ export function ChannelSettingsDialog({ channel, categories, open, onOpenChange,
       is_default: isDefault,
     });
     setSaving(false);
-    onOpenChange(false);
+    if (success) onOpenChange(false);
   };
 
   return (
