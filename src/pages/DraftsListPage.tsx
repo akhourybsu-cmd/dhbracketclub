@@ -21,7 +21,7 @@ export default function DraftsListPage() {
     const fetch = async () => {
       const { data } = await supabase
         .from('drafts')
-        .select('*, competitions(title, status), profiles:created_by(display_name)')
+        .select('*, competitions(title, status), profiles:created_by(display_name), current_pick_profiles:current_pick_user_id(display_name)')
         .order('created_at', { ascending: false });
 
       if (data) {
