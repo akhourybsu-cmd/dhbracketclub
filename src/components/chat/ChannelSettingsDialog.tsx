@@ -21,7 +21,7 @@ interface ChannelSettingsDialogProps {
   categories: Category[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpdate: (channelId: string, updates: Partial<Pick<Channel, 'name' | 'description' | 'icon' | 'category_id' | 'is_default'>>) => void;
+  onUpdate: (channelId: string, updates: Partial<Pick<Channel, 'name' | 'description' | 'icon' | 'category_id' | 'is_default'>>) => Promise<boolean>;
   onDelete: (channelId: string) => void;
 }
 
