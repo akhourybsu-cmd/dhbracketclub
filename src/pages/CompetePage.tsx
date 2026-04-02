@@ -97,16 +97,20 @@ function LockboxCompeteCard() {
 }
 
 export default function CompetePage() {
+  const { user } = useAuth();
   const [counts, setCounts] = useState<Record<string, number>>({});
+  const [activeDrafts, setActiveDrafts] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchCounts = async () => {
-      const [{ count: r }, { count: p }, { count: d }] = await Promise.all([
+      const [{ count: r }, { count: p }, { count: d }, { data: inProgressDrafts }] = await Promise.all([
         supabase.from('rankings').select('*', { count: 'exact', head: true }).eq('status', 'open'),
         supabase.from('polls').select('*', { count: 'exact', head: true }).eq('status', 'open'),
         supabase.from('drafts').select('*', { count: 'exact', head: true }).neq('status', 'complete'),
+        supabase.from('drafts').select('topic, current_pick_user_id, current_pick_profiles:current_pick_user_id(display_name)').eq('status', 'in_progress').limit(3),
       ]);
       setCounts({ rankings: r || 0, polls: p || 0, drafts: d || 0 });
+      if (inProgressDrafts) setActiveDrafts(inProgressDrafts);
     };
     fetchCounts();
   }, []);
