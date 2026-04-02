@@ -788,6 +788,11 @@ async function enrichItem(
     result = await enrichFromWikipedia(name, result, category);
   }
 
+  // Pexels fallback: if still no image, try Pexels stock photos
+  if (!result.image_url) {
+    result = await enrichFromPexels(name, result, category);
+  }
+
   return result;
 }
 
