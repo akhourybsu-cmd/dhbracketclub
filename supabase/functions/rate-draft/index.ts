@@ -93,15 +93,47 @@ serve(async (req) => {
       return `Participant: ${name} (user_id: ${uid})\n${pickList}`;
     }).join("\n\n");
 
-    const prompt = `You are an expert judge for a draft competition. The topic is: "${draft.topic}"${draft.category ? ` (Category: ${draft.category})` : ""}.
+    const prompt = `You are an expert strategic draft analyst for DH Bracket Club. The draft topic is: "${draft.topic}"${draft.category ? ` (Category: ${draft.category})` : ""}.
 
-Each participant drafted picks in a snake-style draft. Rate each individual pick on a scale of 1-10 based on:
-- Quality and desirability relative to the topic
-- Creativity and uniqueness
-- Value relative to when it was picked (earlier picks should be stronger choices)
-- Overall fit with the participant's other selections
+This was a snake-style draft. Evaluate every pick using the following CORE EVALUATION FRAMEWORK. Adapt your reasoning to the specific category while applying the same consistent logic.
 
-Then rank all participants from best to worst based on their total scores.
+=== EVALUATION FACTORS (apply all 8 to every pick) ===
+
+1. CATEGORY FIT — Does the pick clearly belong in this category? Weak fit hurts; clear fit supports.
+2. STANDALONE STRENGTH — How strong is this pick on its own within the category? Consider recognition, impact, quality, memorability, and respect within the topic.
+3. DRAFT TIMING / SLOT VALUE — Was this pick taken at the right time? A strong item taken too early is penalized. A mid-tier item taken late at good value can be praised. Consider what round/slot it was drafted in.
+4. SCARCITY / REPLACEABILITY — Is this pick hard to replace later, or are many similar alternatives available? Scarce, hard-to-replace picks get a boost.
+5. BOARD SYNERGY — Does this pick complement the drafter's other selections? Does it add balance, variety, identity, or cohesion? Redundant picks are downgraded.
+6. UPSIDE vs SAFETY — Is this a reliable consensus pick or a risky swing? Safe picks are rewarded for reliability. Risky picks are only rewarded if there's a clear upside argument; otherwise penalized.
+7. DISTINCTIVENESS — Does this pick help the drafter stand out in a smart, defensible way? Distinctiveness is a bonus, not a replacement for quality. Do not reward randomness.
+8. ALTERNATIVE COST — Were there clearly stronger or more efficient options likely available at that slot? If better options were obviously available with no board-based justification, downgrade. If the pick makes strategic sense for the board, it can still be judged well.
+
+=== GOOD PICK ===
+A pick is strong if most of: clear category fit, strong standalone quality, good timing, meaningful scarcity/value, good board synergy, clear strategic purpose, easy to defend in 1-2 sentences.
+
+=== WEAK PICK ===
+A pick is weak if one or more of: questionable category fit, low standalone quality, taken too early, easily replaceable, redundant, clearly weaker than likely alternatives, risky without upside, hard to justify strategically.
+
+=== BEST PICK (per person) ===
+Do NOT simply pick the most famous item. Identify the pick that best combines: quality + timing + value at slot + board impact + strategic fit. It should feel like the smartest or most valuable selection that person made.
+
+=== WORST PICK (per person) ===
+Do NOT simply pick the least famous item. Identify the pick that most combines: weak value for slot + weak category fit + low board impact + low scarcity + poor comparison to likely alternatives. It should feel like the least efficient or least helpful choice on that person's board.
+
+=== FEEDBACK STYLE ===
+For each pick's explanation, address:
+1. What the pick does well
+2. Whether the timing was good, early, late, or mixed
+3. How it fits the drafter's overall board
+4. Any weakness, risk, or limitation
+
+Be strategic, specific, consistent, readable, and confident but not overly harsh. Avoid vague generic praise, random unexplained criticism, over-rewarding popularity alone, over-penalizing niche picks that are strategically sound, and contradicting yourself across similar picks.
+
+=== SCORING ===
+Rate each pick on a scale of 1-10. Then rank all participants from best to worst based on their total scores.
+
+=== SUMMARY (per person) ===
+Write a 2-3 sentence summary of each participant's draft performance. Mention their best pick, worst pick, overall board identity, and strategic approach.
 
 Here are all participants and their picks:
 
