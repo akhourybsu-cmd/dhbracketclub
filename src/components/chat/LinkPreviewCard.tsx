@@ -59,6 +59,7 @@ function ImagePreview({ url }: { url: string }) {
             !loaded && "hidden"
           )}
           loading="lazy"
+          decoding="async"
           onLoad={() => setLoaded(true)}
           onError={() => setError(true)}
         />
@@ -120,6 +121,7 @@ function YouTubePreview({ link, messageId }: { link: ParsedLink; messageId: stri
             alt="YouTube video"
             className="w-full aspect-video object-cover transition-transform duration-200 group-hover:scale-[1.02]"
             loading="lazy"
+            decoding="async"
           />
           {/* Play button overlay */}
           <div className="absolute inset-0 flex items-center justify-center">
@@ -302,6 +304,7 @@ function GenericLinkPreview({ link, messageId }: { link: ParsedLink; messageId: 
             alt=""
             className="w-full h-[140px] object-cover"
             loading="lazy"
+            decoding="async"
             onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
         )}
