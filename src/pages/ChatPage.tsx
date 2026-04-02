@@ -15,6 +15,7 @@ import { MessageList } from '@/components/chat/MessageList';
 import { MessageComposer, type MessageComposerHandle, type MentionMember } from '@/components/chat/MessageComposer';
 import { ThreadPanel } from '@/components/chat/ThreadPanel';
 import { UserAvatar } from '@/components/chat/UserAvatar';
+import { ChannelSettingsDialog } from '@/components/chat/ChannelSettingsDialog';
 import { CHANNEL_EMOJI } from '@/components/chat/types';
 import type { Channel, Category, ChannelMeta, Message } from '@/components/chat/types';
 
