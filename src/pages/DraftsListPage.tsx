@@ -21,7 +21,7 @@ export default function DraftsListPage() {
     const fetch = async () => {
       const { data } = await supabase
         .from('drafts')
-        .select('*, competitions(title, status), profiles:created_by(display_name)')
+        .select('*, competitions(title, status), profiles:created_by(display_name), current_pick_profiles:current_pick_user_id(display_name)')
         .order('created_at', { ascending: false });
 
       if (data) {
@@ -222,6 +222,11 @@ export default function DraftsListPage() {
                               </>
                             )}
                           </div>
+                          {d.status === 'in_progress' && d.current_pick_user_id && (
+                            <p className="text-[10px] font-semibold mt-0.5" style={{ color: d.current_pick_user_id === user?.id ? 'hsl(var(--gold))' : 'hsl(var(--success))' }}>
+                              🎯 {d.current_pick_user_id === user?.id ? 'Your pick!' : `${(d as any).current_pick_profiles?.display_name || 'Someone'}'s pick`}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">

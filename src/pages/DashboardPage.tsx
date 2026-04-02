@@ -157,7 +157,7 @@ export default function DashboardPage() {
       const [{ data: rankData }, { data: pollData }, { data: draftData }, { data: activityData }, { data: eventsData }] = await Promise.all([
         supabase.from('rankings').select('*, competitions(title, status)').order('created_at', { ascending: false }).limit(5),
         supabase.from('polls').select('*, competitions(title, status)').order('created_at', { ascending: false }).limit(5),
-        supabase.from('drafts').select('*, competitions(title, status)').order('created_at', { ascending: false }).limit(5),
+        supabase.from('drafts').select('*, competitions(title, status), current_pick_profiles:current_pick_user_id(display_name)').order('created_at', { ascending: false }).limit(5),
         supabase.from('activity_feed').select('*, profiles:actor_user_id(display_name)').order('created_at', { ascending: false }).limit(10),
         supabase.from('events').select('*, profiles:created_by(display_name)').gte('starts_at', new Date().toISOString()).order('starts_at', { ascending: true }).limit(3),
       ]);
@@ -582,6 +582,11 @@ export default function DashboardPage() {
                         <p className="text-[10px] text-muted-foreground/70 font-medium">
                           {d.num_rounds} rounds • {d.status === 'in_progress' ? 'In Progress' : d.status === 'setup' ? 'Setup' : 'Complete'}
                         </p>
+                        {d.status === 'in_progress' && d.current_pick_user_id && (
+                          <p className="text-[10px] font-semibold mt-0.5" style={{ color: d.current_pick_user_id === user?.id ? 'hsl(var(--gold))' : 'hsl(var(--success))' }}>
+                            🎯 {d.current_pick_user_id === user?.id ? 'Your pick!' : `${d.current_pick_profiles?.display_name || 'Someone'}'s pick`}
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         <span className={cn(

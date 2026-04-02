@@ -97,16 +97,20 @@ function LockboxCompeteCard() {
 }
 
 export default function CompetePage() {
+  const { user } = useAuth();
   const [counts, setCounts] = useState<Record<string, number>>({});
+  const [activeDrafts, setActiveDrafts] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchCounts = async () => {
-      const [{ count: r }, { count: p }, { count: d }] = await Promise.all([
+      const [{ count: r }, { count: p }, { count: d }, { data: inProgressDrafts }] = await Promise.all([
         supabase.from('rankings').select('*', { count: 'exact', head: true }).eq('status', 'open'),
         supabase.from('polls').select('*', { count: 'exact', head: true }).eq('status', 'open'),
         supabase.from('drafts').select('*', { count: 'exact', head: true }).neq('status', 'complete'),
+        supabase.from('drafts').select('topic, current_pick_user_id, current_pick_profiles:current_pick_user_id(display_name)').eq('status', 'in_progress').limit(3),
       ]);
       setCounts({ rankings: r || 0, polls: p || 0, drafts: d || 0 });
+      if (inProgressDrafts) setActiveDrafts(inProgressDrafts);
     };
     fetchCounts();
   }, []);
@@ -152,6 +156,11 @@ export default function CompetePage() {
                           )}
                         </div>
                         <p className="text-[11px] text-muted-foreground/70">{mod.description}</p>
+                        {mod.countTable === 'drafts' && activeDrafts.length > 0 && activeDrafts[0].current_pick_user_id && (
+                          <p className="text-[10px] font-semibold mt-0.5" style={{ color: activeDrafts[0].current_pick_user_id === user?.id ? 'hsl(var(--gold))' : 'hsl(var(--success))' }}>
+                            🎯 {activeDrafts[0].current_pick_user_id === user?.id ? 'Your pick!' : `${activeDrafts[0].current_pick_profiles?.display_name || 'Someone'}'s pick`}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="flex gap-2">
