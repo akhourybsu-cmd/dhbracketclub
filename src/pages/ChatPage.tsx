@@ -435,6 +435,7 @@ export default function ChatPage() {
   const selectChannel = (ch: Channel) => {
     setSelectedChannel(ch);
     setMessages([]);
+    try { localStorage.setItem('last_chat_channel_id', ch.id); } catch {}
     setShowChannelList(false);
     setThreadParent(null);
     setShowPinned(false);
