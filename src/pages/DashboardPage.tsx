@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { usePwaInstall } from '@/hooks/usePwaInstall';
 import dhMonogram from '@/assets/dh-monogram.png';
 import { formatDistanceToNow, format, isPast, isToday, isTomorrow, isThisWeek } from 'date-fns';
-import { useActivityFeedUpdates } from '@/hooks/useRealtimeSubscription';
+import { useActivityFeedUpdates, useDraftListUpdates } from '@/hooks/useRealtimeSubscription';
 
 const MODULE_ICONS: Record<string, any> = {
   bracket_pool: Trophy,
@@ -186,6 +186,14 @@ export default function DashboardPage() {
     if (!user) return;
     supabase.from('activity_feed').select('*, profiles:actor_user_id(display_name)').order('created_at', { ascending: false }).limit(10).then(({ data }) => {
       if (data) setActivity(data);
+    });
+  });
+
+  // Realtime: refresh drafts when pick status changes
+  useDraftListUpdates(() => {
+    if (!user) return;
+    supabase.from('drafts').select('*, competitions(title, status), current_pick_profiles:current_pick_user_id(display_name)').order('created_at', { ascending: false }).limit(5).then(({ data }) => {
+      if (data) setDrafts(data);
     });
   });
 

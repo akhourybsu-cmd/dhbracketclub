@@ -201,6 +201,23 @@ export function useRankingUpdates(
 }
 
 /**
+ * Subscribe to draft list updates (any draft status/pick changes).
+ */
+export function useDraftListUpdates(
+  onUpdate: () => void,
+  enabled = true
+) {
+  return useRealtimeSubscription({
+    channelName: 'draft-list-updates',
+    configs: [
+      { table: 'drafts', event: 'UPDATE' },
+    ],
+    onPayload: onUpdate,
+    enabled,
+  });
+}
+
+/**
  * Subscribe to activity feed updates.
  */
 export function useActivityFeedUpdates(

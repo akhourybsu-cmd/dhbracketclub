@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCurrentDay, useMyLock, useDayLocks } from '@/hooks/useLockbox';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDraftListUpdates } from '@/hooks/useRealtimeSubscription';
 
 // Non-lockbox modules
 const modules = [
@@ -114,6 +115,13 @@ export default function CompetePage() {
     };
     fetchCounts();
   }, []);
+
+  // Realtime: refresh draft indicators when picks happen
+  useDraftListUpdates(() => {
+    supabase.from('drafts').select('topic, current_pick_user_id, current_pick_profiles:current_pick_user_id(display_name)').eq('status', 'in_progress').limit(3).then(({ data }) => {
+      if (data) setActiveDrafts(data);
+    });
+  });
 
   return (
     <div className="pb-6">
