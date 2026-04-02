@@ -63,6 +63,8 @@ export default function DraftDetailPage() {
   const [enrichingPickIds, setEnrichingPickIds] = useState<Set<string>>(new Set());
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [pickToRemove, setPickToRemove] = useState<Pick | null>(null);
+  const [removingPick, setRemovingPick] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editTopic, setEditTopic] = useState('');
   const [saving, setSaving] = useState(false);
