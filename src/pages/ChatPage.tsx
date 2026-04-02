@@ -168,8 +168,13 @@ export default function ChatPage() {
       setChannelMeta(meta);
 
       if (!selectedChannel) {
-        const def = (chs as Channel[]).find(c => c.is_default) || chs[0];
-        if (def) { setSelectedChannel(def as Channel); setShowChannelList(false); }
+        let target: Channel | undefined;
+        try {
+          const savedId = localStorage.getItem('last_chat_channel_id');
+          if (savedId) target = (chs as Channel[]).find(c => c.id === savedId);
+        } catch {}
+        if (!target) target = (chs as Channel[]).find(c => c.is_default) || (chs[0] as Channel);
+        if (target) { setSelectedChannel(target); setShowChannelList(false); }
       }
     }
     setLoading(false);
