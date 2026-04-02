@@ -121,6 +121,7 @@ function YouTubePreview({ link, messageId }: { link: ParsedLink; messageId: stri
             alt="YouTube video"
             className="w-full aspect-video object-cover transition-transform duration-200 group-hover:scale-[1.02]"
             loading="lazy"
+            decoding="async"
           />
           {/* Play button overlay */}
           <div className="absolute inset-0 flex items-center justify-center">
