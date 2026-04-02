@@ -304,6 +304,7 @@ function GenericLinkPreview({ link, messageId }: { link: ParsedLink; messageId: 
             alt=""
             className="w-full h-[140px] object-cover"
             loading="lazy"
+            decoding="async"
             onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
         )}

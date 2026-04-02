@@ -112,6 +112,7 @@ export default function EnrichedItemCard({
             src={imageUrl!}
             alt={label}
             className="w-full h-full object-cover"
+            decoding="async"
             loading="lazy"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none';

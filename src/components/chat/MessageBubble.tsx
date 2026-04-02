@@ -290,6 +290,7 @@ function MessageBubbleInner({
                         alt="Shared image"
                         className="rounded-xl max-w-[280px] max-h-[220px] object-cover border border-border/15"
                         loading="lazy"
+                        decoding="async"
                         onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
                       />
                     </a>
