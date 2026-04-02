@@ -384,6 +384,7 @@ export default function ChatPage() {
 
   const selectChannel = (ch: Channel) => {
     setSelectedChannel(ch);
+    setMessages([]);
     setShowChannelList(false);
     setThreadParent(null);
     setShowPinned(false);
