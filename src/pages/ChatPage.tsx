@@ -547,6 +547,11 @@ export default function ChatPage() {
               <Pin className="w-4 h-4" />
             </button>
           )}
+          {selectedChannel && (
+            <button onClick={() => setSettingsChannel(selectedChannel)} className="p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground/60 transition-colors" title="Channel Settings">
+              <Settings className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Search bar */}
