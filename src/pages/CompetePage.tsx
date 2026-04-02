@@ -103,25 +103,48 @@ export default function CompetePage() {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [activeDrafts, setActiveDrafts] = useState<any[]>([]);
 
-  useEffect(() => {
-    const fetchCounts = async () => {
-      const [{ count: r }, { count: p }, { count: d }, { data: inProgressDrafts }] = await Promise.all([
-        supabase.from('rankings').select('*', { count: 'exact', head: true }).eq('status', 'open'),
-        supabase.from('polls').select('*', { count: 'exact', head: true }).eq('status', 'open'),
-        supabase.from('drafts').select('*', { count: 'exact', head: true }).neq('status', 'complete'),
-        supabase.from('drafts').select('topic, current_pick_user_id, current_pick_profiles:current_pick_user_id(display_name)').eq('status', 'in_progress').limit(3),
-      ]);
-      setCounts({ rankings: r || 0, polls: p || 0, drafts: d || 0 });
-      if (inProgressDrafts) setActiveDrafts(inProgressDrafts);
-    };
-    fetchCounts();
+  const hydrateActiveDrafts = useCallback(async (draftRows: any[]) => {
+    if (!draftRows?.length) {
+      setActiveDrafts([]);
+      return;
+    }
+    const draftIds = draftRows.map(d => d.id);
+    const [{ data: parts }, { data: picks }] = await Promise.all([
+      supabase.from('draft_participants').select('draft_id, user_id, pick_order, profiles:user_id(display_name)').in('draft_id', draftIds),
+      supabase.from('draft_picks').select('draft_id').in('draft_id', draftIds),
+    ]);
+    const pickCounts = new Map<string, number>();
+    picks?.forEach(p => pickCounts.set(p.draft_id, (pickCounts.get(p.draft_id) || 0) + 1));
+    const partsByDraft = new Map<string, any[]>();
+    parts?.forEach(p => {
+      const arr = partsByDraft.get(p.draft_id) || [];
+      arr.push(p);
+      partsByDraft.set(p.draft_id, arr);
+    });
+    setActiveDrafts(draftRows.map(d => ({
+      ...d,
+      ...getDerivedDraftTurn(d, partsByDraft.get(d.id) || [], pickCounts.get(d.id) || 0),
+    })));
   }, []);
+
+  const fetchCounts = useCallback(async () => {
+    const [{ count: r }, { count: p }, { count: d }, { data: inProgressDrafts }] = await Promise.all([
+      supabase.from('rankings').select('*', { count: 'exact', head: true }).eq('status', 'open'),
+      supabase.from('polls').select('*', { count: 'exact', head: true }).eq('status', 'open'),
+      supabase.from('drafts').select('*', { count: 'exact', head: true }).neq('status', 'complete'),
+      supabase.from('drafts').select('id, topic, status, num_rounds, current_pick_user_id').eq('status', 'in_progress').limit(3),
+    ]);
+    setCounts({ rankings: r || 0, polls: p || 0, drafts: d || 0 });
+    await hydrateActiveDrafts(inProgressDrafts || []);
+  }, [hydrateActiveDrafts]);
+
+  useEffect(() => {
+    fetchCounts();
+  }, [fetchCounts]);
 
   // Realtime: refresh draft indicators when picks happen
   useDraftListUpdates(() => {
-    supabase.from('drafts').select('topic, current_pick_user_id, current_pick_profiles:current_pick_user_id(display_name)').eq('status', 'in_progress').limit(3).then(({ data }) => {
-      if (data) setActiveDrafts(data);
-    });
+    fetchCounts();
   });
 
   return (

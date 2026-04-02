@@ -590,13 +590,13 @@ export default function DraftDetailPage() {
               {isMyTurn ? (
                 <>
                   <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'hsl(var(--gold))' }}>Your Turn</p>
-                  <p className="text-[13px] font-bold">Round {currentRound} • Pick #{picks.length + 1}</p>
-                </>
-              ) : (
-                <>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 mb-1">Waiting for</p>
-                  <p className="text-[13px] font-bold">{currentPicker?.profiles?.display_name || 'Unknown'}</p>
-                  <p className="text-[10px] text-muted-foreground/60 mt-0.5">Round {currentRound} • Pick #{picks.length + 1}</p>
+                   <p className="text-[13px] font-bold">Round {currentRound} • Pick #{currentPickNumber}</p>
+                 </>
+               ) : (
+                 <>
+                   <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 mb-1">Waiting for</p>
+                   <p className="text-[13px] font-bold">{currentPicker?.profiles?.display_name || 'Unknown'}</p>
+                   <p className="text-[10px] text-muted-foreground/60 mt-0.5">Round {currentRound} • Pick #{currentPickNumber}</p>
                 </>
               )}
             </div>
