@@ -672,6 +672,16 @@ export default function ChatPage() {
           </AnimatePresence>
         </div>
       </div>
+      {settingsChannel && (
+        <ChannelSettingsDialog
+          channel={settingsChannel}
+          categories={categories}
+          open={!!settingsChannel}
+          onOpenChange={(open) => { if (!open) setSettingsChannel(null); }}
+          onUpdate={handleUpdateChannel}
+          onDelete={handleDeleteChannel}
+        />
+      )}
     </div>
   );
 }
