@@ -156,6 +156,11 @@ export default function CompetePage() {
                           )}
                         </div>
                         <p className="text-[11px] text-muted-foreground/70">{mod.description}</p>
+                        {mod.countTable === 'drafts' && activeDrafts.length > 0 && activeDrafts[0].current_pick_user_id && (
+                          <p className="text-[10px] font-semibold mt-0.5" style={{ color: activeDrafts[0].current_pick_user_id === user?.id ? 'hsl(var(--gold))' : 'hsl(var(--success))' }}>
+                            🎯 {activeDrafts[0].current_pick_user_id === user?.id ? 'Your pick!' : `${activeDrafts[0].current_pick_profiles?.display_name || 'Someone'}'s pick`}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="flex gap-2">
