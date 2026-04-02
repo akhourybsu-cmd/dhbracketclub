@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,6 +7,7 @@ import { Bookmark, Plus, ArrowRight, Users, Play, Trophy, Award } from 'lucide-r
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
+import { useDraftListUpdates } from '@/hooks/useRealtimeSubscription';
 
 export default function DraftsListPage() {
   const { user } = useAuth();

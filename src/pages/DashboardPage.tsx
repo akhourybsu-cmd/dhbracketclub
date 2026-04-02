@@ -189,6 +189,14 @@ export default function DashboardPage() {
     });
   });
 
+  // Realtime: refresh drafts when pick status changes
+  useDraftListUpdates(() => {
+    if (!user) return;
+    supabase.from('drafts').select('*, competitions(title, status), current_pick_profiles:current_pick_user_id(display_name)').order('created_at', { ascending: false }).limit(5).then(({ data }) => {
+      if (data) setDrafts(data);
+    });
+  });
+
   const isLocked = (lt: string) => new Date(lt) <= new Date();
 
   const getGreeting = () => {
