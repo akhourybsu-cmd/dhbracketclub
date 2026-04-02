@@ -59,6 +59,7 @@ function ImagePreview({ url }: { url: string }) {
             !loaded && "hidden"
           )}
           loading="lazy"
+          decoding="async"
           onLoad={() => setLoaded(true)}
           onError={() => setError(true)}
         />
