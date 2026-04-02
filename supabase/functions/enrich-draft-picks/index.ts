@@ -235,15 +235,23 @@ async function enrichFromOpenLibrary(
   }
 }
 
+// Helper to detect if topic is about bands/artists
+function topicIsBandOrArtist(topic: string): boolean {
+  const lower = topic.toLowerCase();
+  return /\b(band|bands|artist|artists|musician|musicians|group|groups|singer|singers)\b/.test(lower);
+}
+
 // ─── iTunes Search API (Movies, TV, Music) — free, no API key ───
 async function enrichFromiTunes(
   name: string,
   enrichment: EnrichmentResult,
-  category: Category
+  category: Category,
+  topic?: string
 ): Promise<EnrichmentResult> {
   try {
+    const isBandTopic = topic ? topicIsBandOrArtist(topic) : false;
     const mediaType = category === "movie" ? "movie" : category === "tv" ? "tvShow" : "music";
-    const entity = category === "movie" ? "movie" : category === "tv" ? "tvSeason" : "album";
+    const entity = category === "movie" ? "movie" : category === "tv" ? "tvSeason" : (isBandTopic ? "musicArtist" : "album");
     const query = encodeURIComponent(enrichment.normalized_name || name);
     const url = `https://itunes.apple.com/search?term=${query}&media=${mediaType}&entity=${entity}&limit=5`;
 
