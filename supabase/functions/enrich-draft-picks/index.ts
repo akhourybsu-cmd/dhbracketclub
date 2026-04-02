@@ -338,29 +338,41 @@ async function enrichFromDeezer(
     if (!items.length) return enrichment;
 
     const candidates: ImageCandidate[] = [];
-    for (const a of albums.slice(0, 5)) {
-      if (a.cover_xl || a.cover_big) {
-        candidates.push({
-          url: a.cover_xl || a.cover_big,
-          thumbnail: a.cover_medium || a.cover_small || a.cover_xl || a.cover_big,
-          source: "deezer",
-          label: a.title || name,
-        });
-      }
-    }
+    const first = items[0];
 
-    const album = albums[0];
-    if (album.cover_xl || album.cover_big) {
-      enrichment.image_url = album.cover_xl || album.cover_big;
-      enrichment.thumbnail_url = album.cover_medium || album.cover_small || enrichment.image_url;
-      enrichment.source_provider = "deezer";
-      enrichment.confidence = Math.max(enrichment.confidence, 0.85);
-      enrichment.status = "matched";
+    if (isBandTopic) {
+      // Artist endpoint returns: picture_xl, picture_big, picture_medium, name
+      for (const a of items.slice(0, 5)) {
+        const img = a.picture_xl || a.picture_big;
+        if (img) candidates.push({ url: img, thumbnail: a.picture_medium || img, source: "deezer", label: a.name || name });
+      }
+      if (first?.picture_xl || first?.picture_big) {
+        enrichment.image_url = first.picture_xl || first.picture_big;
+        enrichment.thumbnail_url = first.picture_medium || enrichment.image_url;
+        enrichment.source_provider = "deezer";
+        enrichment.confidence = Math.max(enrichment.confidence, 0.85);
+        enrichment.status = "matched";
+      }
+      enrichment.matched_name = first.name || enrichment.matched_name;
+    } else {
+      // Album endpoint
+      for (const a of items.slice(0, 5)) {
+        if (a.cover_xl || a.cover_big) {
+          candidates.push({ url: a.cover_xl || a.cover_big, thumbnail: a.cover_medium || a.cover_small || a.cover_xl || a.cover_big, source: "deezer", label: a.title || name });
+        }
+      }
+      if (first?.cover_xl || first?.cover_big) {
+        enrichment.image_url = first.cover_xl || first.cover_big;
+        enrichment.thumbnail_url = first.cover_medium || first.cover_small || enrichment.image_url;
+        enrichment.source_provider = "deezer";
+        enrichment.confidence = Math.max(enrichment.confidence, 0.85);
+        enrichment.status = "matched";
+      }
+      enrichment.matched_name = first.title || enrichment.matched_name;
+      enrichment.metadata = { ...enrichment.metadata, artist: first.artist?.name || enrichment.metadata.artist };
     }
-    enrichment.matched_name = album.title || enrichment.matched_name;
     enrichment.metadata = {
       ...enrichment.metadata,
-      artist: album.artist?.name || enrichment.metadata.artist,
       image_candidates: [...(enrichment.metadata.image_candidates as ImageCandidate[] || []), ...candidates],
     };
     return enrichment;
