@@ -397,6 +397,8 @@ export default function DraftDetailPage() {
       setRemovingPick(false);
     }
   };
+
+  if (loading) {
     return (
       <div className="loading-spinner">
         <div className="loading-spinner-ring" />
