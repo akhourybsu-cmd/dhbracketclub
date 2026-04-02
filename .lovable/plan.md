@@ -1,86 +1,37 @@
-# Chat System Audit & Channel Management Upgrade
 
-## Issues Found
 
-### 1. Cross-channel message bleed
+# Fix Chat Channel Persistence & Settings State Sync
 
-When switching channels, the old channel's messages remain visible until the new fetch completes. The `selectChannel` function resets thread/search/edit state but does **not** clear `messages`. This means for a brief moment (or longer on slow connections), users see messages from the previous channel. The realtime subscription also has a transition window where late-arriving events from the old channel could insert into the new view.
+## Problems
 
-### 2. Limited channel editing
+1. **Channel resets to General on every visit** — `selectedChannel` starts as `null` and defaults to the `is_default` channel. No memory of the last visited channel.
 
-Currently channels only support **rename** and **drag-to-reorder**. There is no way to edit description, change category, set an icon/emoji, delete a channel, or manage any channel-level settings.
-
-### 3. No channel settings/management UI
-
-There is no settings panel or detail view for channels. Users cannot configure notifications per-channel, view member activity, clear history, archive, or perform other management tasks.
+2. **Settings dialog shows stale data** — `ChannelSettingsDialog` initializes form fields with `useState(channel.name)` which only runs on first mount. Opening settings for a different channel shows the previous channel's values.
 
 ---
 
 ## Plan
 
-### Step 1: Fix cross-channel message contamination
+### Step 1: Persist last-visited channel in localStorage
 
-- In `selectChannel`, immediately call `setMessages([])` to clear the message list before the new fetch begins
-- This ensures zero frames of stale content from another channel
-- Also reset `hasMore` state to prevent stale "load more" triggers
+In `ChatPage.tsx`:
+- On channel selection (`selectChannel`), save `channelId` to `localStorage` under key `last_chat_channel_id`.
+- On initial load (inside `fetchChannels`), when `!selectedChannel`, check localStorage first. If a saved ID matches a fetched channel, select it instead of the default.
 
-### Step 2: Build a Channel Settings dialog
+### Step 2: Fix ChannelSettingsDialog state sync
 
-Create a new `ChannelSettingsDialog` component (`src/components/chat/ChannelSettingsDialog.tsx`) that opens from a gear/settings icon in both the channel list row and the message view header. It will contain:
+In `ChannelSettingsDialog.tsx`:
+- Add a `useEffect` that watches the `channel` prop and resets all local state (`name`, `description`, `icon`, `categoryId`, `isDefault`) whenever the channel changes. This ensures opening settings for a different channel always shows the correct current values.
 
-**Edit tab:**
+### Step 3: Ensure handleUpdateChannel awaits properly
 
-- Channel name (text input)
-- Description (textarea)
-- Emoji/icon picker (grid of common emojis to choose from)
-- Category assignment (dropdown of existing categories)
-- Default channel toggle (checkbox)
-
-**Danger zone:**
-
-- Delete channel (with confirmation dialog, cascades messages/reactions/read states)
-
-### Step 3: Add channel header actions
-
-In the message view header bar (the sticky bar showing channel name), add:
-
-- A settings gear icon that opens the Channel Settings dialog
-- Move the existing pin and search icons into a cleaner grouped layout
-
-### Step 4: Update ChannelList with settings access
-
-- Replace the pencil-only edit button with a more/settings icon that opens the full Channel Settings dialog
-- Keep drag-to-reorder as-is
-
-### Step 5: Wire up backend operations
-
-New handler functions in `ChatPage.tsx`:
-
-- `handleUpdateChannel(channelId, updates)` — updates name, description, icon, category_id, is_default
-- `handleDeleteChannel(channelId)` — deletes channel and cascade-removes messages; navigates to default channel
-- Update the `CHANNEL_EMOJI` lookup to check `channel.icon` field first, falling back to the hardcoded map
-
-### Step 6: Category management
-
-- Add ability to create/rename/delete categories from within the channel settings or channel list header
-- Simple inline UI similar to existing channel creation
+The `handleSave` in the dialog calls `onUpdate` but doesn't `await` it, so `setSaving(false)` fires immediately. Change `onUpdate` callback to return a Promise and await it in `handleSave` so the saving indicator works correctly and the dialog closes only after persistence succeeds.
 
 ---
 
 ## Technical Details
 
-**Files to create:**
-
-- `src/components/chat/ChannelSettingsDialog.tsx` — full settings dialog with edit fields and delete action
-
 **Files to modify:**
+- `src/pages/ChatPage.tsx` — localStorage read/write for channel persistence
+- `src/components/chat/ChannelSettingsDialog.tsx` — useEffect to sync state from channel prop; await onUpdate
 
-- `src/pages/ChatPage.tsx` — clear messages on channel switch; add update/delete handlers; pass settings props
-- `src/components/chat/ChannelList.tsx` — replace pencil icon with settings trigger; support category management
-- `src/components/chat/types.ts` — no schema changes needed (channels table already has description, icon, category_id fields)
-
-**No database migration needed** — the `channels` table already has `name`, `description`, `icon`, `category_id`, `is_default`, and `position` columns. Deletion will cascade via existing foreign key relationships on `messages` → `channel_id`.
-
-&nbsp;
-
-In addition create a read only channel that updates with any fixes to the chat worth noting 
