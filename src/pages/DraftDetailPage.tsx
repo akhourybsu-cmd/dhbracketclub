@@ -1027,6 +1027,25 @@ export default function DraftDetailPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Remove pick confirmation */}
+      <AlertDialog open={!!pickToRemove} onOpenChange={(open) => { if (!open) setPickToRemove(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove this pick?</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{pickToRemove?.pick_text}" by {pickToRemove?.profiles?.display_name} will be removed.
+              {isInProgress && !isDraftComplete && ' They will get to repick in this slot.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRemovePick} disabled={removingPick} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {removingPick ? 'Removing…' : 'Remove Pick'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Image picker dialog */}
       {imagePickerPick && enrichments.get(imagePickerPick.id) && (
         <ImagePickerDialog
