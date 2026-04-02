@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { usePwaInstall } from '@/hooks/usePwaInstall';
 import dhMonogram from '@/assets/dh-monogram.png';
 import { formatDistanceToNow, format, isPast, isToday, isTomorrow, isThisWeek } from 'date-fns';
-import { useActivityFeedUpdates } from '@/hooks/useRealtimeSubscription';
+import { useActivityFeedUpdates, useDraftListUpdates } from '@/hooks/useRealtimeSubscription';
 
 const MODULE_ICONS: Record<string, any> = {
   bracket_pool: Trophy,
