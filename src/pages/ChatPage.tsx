@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 import { AnimatePresence } from 'framer-motion';
-import { Hash, ChevronLeft, Pin, Search, X, Link2 } from 'lucide-react';
+import { Hash, ChevronLeft, Pin, Search, X, Link2, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
