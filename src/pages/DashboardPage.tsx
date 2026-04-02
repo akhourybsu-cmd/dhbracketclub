@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES } from '@/lib/bracketUtils';
+import { getDerivedDraftTurn } from '@/lib/draftTurn';
 import { cn } from '@/lib/utils';
 import { usePwaInstall } from '@/hooks/usePwaInstall';
 import dhMonogram from '@/assets/dh-monogram.png';
@@ -72,10 +73,48 @@ export default function DashboardPage() {
   const [activity, setActivity] = useState<any[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
 
-  useEffect(() => {
+  const hydrateDrafts = useCallback(async (draftRows: any[]) => {
+    if (!draftRows?.length) {
+      setDrafts([]);
+      return;
+    }
+
+    const draftIds = draftRows.map((draft) => draft.id);
+    const [{ data: participantData }, { data: pickData }] = await Promise.all([
+      supabase
+        .from('draft_participants')
+        .select('draft_id, user_id, pick_order, profiles:user_id(display_name)')
+        .in('draft_id', draftIds),
+      supabase.from('draft_picks').select('draft_id').in('draft_id', draftIds),
+    ]);
+
+    const pickCounts = new Map<string, number>();
+    pickData?.forEach((pick) => {
+      pickCounts.set(pick.draft_id, (pickCounts.get(pick.draft_id) || 0) + 1);
+    });
+
+    const participantsByDraft = new Map<string, any[]>();
+    participantData?.forEach((participant) => {
+      const existing = participantsByDraft.get(participant.draft_id) || [];
+      existing.push(participant);
+      participantsByDraft.set(participant.draft_id, existing);
+    });
+
+    setDrafts(
+      draftRows.map((draft) => ({
+        ...draft,
+        ...getDerivedDraftTurn(
+          draft,
+          participantsByDraft.get(draft.id) || [],
+          pickCounts.get(draft.id) || 0
+        ),
+      }))
+    );
+  }, []);
+
+  const fetchData = useCallback(async () => {
     if (!user) return;
 
-    const fetchData = async () => {
       // Profile
       const { data: profile } = await supabase.from('profiles').select('display_name, avatar_url').eq('id', user.id).single();
       if (profile) {
@@ -172,14 +211,16 @@ export default function DashboardPage() {
           return p;
         }));
       }
-      if (draftData) setDrafts(draftData);
+      await hydrateDrafts(draftData || []);
       if (activityData) setActivity(activityData);
       if (eventsData) setUpcomingEvents(eventsData);
 
       setLoading(false);
-    };
+    }, [user, hydrateDrafts]);
+
+  useEffect(() => {
     fetchData();
-  }, [user]);
+  }, [fetchData]);
 
   // Realtime: refresh activity feed when new events come in
   useActivityFeedUpdates(() => {
@@ -192,10 +233,8 @@ export default function DashboardPage() {
   // Realtime: refresh drafts when pick status changes
   useDraftListUpdates(() => {
     if (!user) return;
-    supabase.from('drafts').select('*, competitions(title, status), current_pick_profiles:current_pick_user_id(display_name)').order('created_at', { ascending: false }).limit(5).then(({ data }) => {
-      if (data) setDrafts(data);
-    });
-  });
+    fetchData();
+  }, !!user);
 
   const isLocked = (lt: string) => new Date(lt) <= new Date();
 

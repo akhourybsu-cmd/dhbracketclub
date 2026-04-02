@@ -211,6 +211,8 @@ export function useDraftListUpdates(
     channelName: 'draft-list-updates',
     configs: [
       { table: 'drafts', event: 'UPDATE' },
+      { table: 'draft_picks', event: '*' },
+      { table: 'draft_participants', event: '*' },
     ],
     onPayload: onUpdate,
     enabled,

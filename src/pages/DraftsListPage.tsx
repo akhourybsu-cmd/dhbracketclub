@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Bookmark, Plus, ArrowRight, Users, Play, Trophy, Award } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { getDerivedDraftTurn } from '@/lib/draftTurn';
 import { formatDistanceToNow } from 'date-fns';
 import { useDraftListUpdates } from '@/hooks/useRealtimeSubscription';
 
@@ -17,9 +18,8 @@ export default function DraftsListPage() {
   const [myDraftStats, setMyDraftStats] = useState({ totalPoints: 0, wins: 0, draftsRated: 0 });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchDrafts = useCallback(async () => {
     if (!user) return;
-    const fetch = async () => {
       const { data } = await supabase
         .from('drafts')
         .select('*, competitions(title, status), profiles:created_by(display_name), current_pick_profiles:current_pick_user_id(display_name)')
@@ -30,13 +30,19 @@ export default function DraftsListPage() {
 
         if (draftIds.length > 0) {
           const [{ data: parts }, { data: picks }] = await Promise.all([
-            supabase.from('draft_participants').select('draft_id').in('draft_id', draftIds),
+            supabase.from('draft_participants').select('draft_id, user_id, pick_order, profiles:user_id(display_name)').in('draft_id', draftIds),
             supabase.from('draft_picks').select('draft_id').in('draft_id', draftIds),
           ]);
 
+          const participantsByDraft = new Map<string, any[]>();
           if (parts) {
             const counts = new Map<string, number>();
-            parts.forEach(p => counts.set(p.draft_id, (counts.get(p.draft_id) || 0) + 1));
+            parts.forEach(p => {
+              counts.set(p.draft_id, (counts.get(p.draft_id) || 0) + 1);
+              const existing = participantsByDraft.get(p.draft_id) || [];
+              existing.push(p);
+              participantsByDraft.set(p.draft_id, existing);
+            });
             setParticipantCounts(counts);
           }
 
@@ -64,7 +70,14 @@ export default function DraftsListPage() {
           for (const id of fixIds) {
             await supabase.from('drafts').update({ status: 'complete' }).eq('id', id);
           }
-          setDrafts(updatedData);
+          setDrafts(updatedData.map(d => ({
+            ...d,
+            ...getDerivedDraftTurn(
+              d,
+              participantsByDraft.get(d.id) || [],
+              pickCounts.get(d.id) || 0
+            ),
+          })));
 
           // Fetch draft results for winner badges and user stats
           if (draftIds.length > 0) {
@@ -109,28 +122,14 @@ export default function DraftsListPage() {
         }
       }
       setLoading(false);
-    };
-    fetch();
   }, [user]);
 
+  useEffect(() => {
+    fetchDrafts();
+  }, [fetchDrafts]);
+
   // Realtime: refresh draft current_pick indicators when picks happen
-  useDraftListUpdates(useCallback(() => {
-    if (!user) return;
-    supabase.from('drafts')
-      .select('id, status, current_pick_user_id, current_pick_number, current_round, current_pick_profiles:current_pick_user_id(display_name)')
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        if (data) {
-          setDrafts(prev => prev.map(d => {
-            const updated = data.find(u => u.id === d.id);
-            if (updated) {
-              return { ...d, status: updated.status, current_pick_user_id: updated.current_pick_user_id, current_pick_number: updated.current_pick_number, current_round: updated.current_round, current_pick_profiles: updated.current_pick_profiles };
-            }
-            return d;
-          }));
-        }
-      });
-  }, [user]));
+  useDraftListUpdates(fetchDrafts, !!user);
 
   const statusConfig: Record<string, { label: string; cls: string }> = {
     setup: { label: 'Setup', cls: 'bg-muted text-muted-foreground' },
