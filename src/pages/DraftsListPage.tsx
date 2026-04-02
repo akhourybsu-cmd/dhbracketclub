@@ -113,6 +113,25 @@ export default function DraftsListPage() {
     fetch();
   }, [user]);
 
+  // Realtime: refresh draft current_pick indicators when picks happen
+  useDraftListUpdates(useCallback(() => {
+    if (!user) return;
+    supabase.from('drafts')
+      .select('id, status, current_pick_user_id, current_pick_number, current_round, current_pick_profiles:current_pick_user_id(display_name)')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (data) {
+          setDrafts(prev => prev.map(d => {
+            const updated = data.find(u => u.id === d.id);
+            if (updated) {
+              return { ...d, status: updated.status, current_pick_user_id: updated.current_pick_user_id, current_pick_number: updated.current_pick_number, current_round: updated.current_round, current_pick_profiles: updated.current_pick_profiles };
+            }
+            return d;
+          }));
+        }
+      });
+  }, [user]));
+
   const statusConfig: Record<string, { label: string; cls: string }> = {
     setup: { label: 'Setup', cls: 'bg-muted text-muted-foreground' },
     in_progress: { label: 'In Progress', cls: 'bg-success/10 text-success' },
