@@ -235,15 +235,23 @@ async function enrichFromOpenLibrary(
   }
 }
 
+// Helper to detect if topic is about bands/artists
+function topicIsBandOrArtist(topic: string): boolean {
+  const lower = topic.toLowerCase();
+  return /\b(band|bands|artist|artists|musician|musicians|group|groups|singer|singers)\b/.test(lower);
+}
+
 // ─── iTunes Search API (Movies, TV, Music) — free, no API key ───
 async function enrichFromiTunes(
   name: string,
   enrichment: EnrichmentResult,
-  category: Category
+  category: Category,
+  topic?: string
 ): Promise<EnrichmentResult> {
   try {
+    const isBandTopic = topic ? topicIsBandOrArtist(topic) : false;
     const mediaType = category === "movie" ? "movie" : category === "tv" ? "tvShow" : "music";
-    const entity = category === "movie" ? "movie" : category === "tv" ? "tvSeason" : "album";
+    const entity = category === "movie" ? "movie" : category === "tv" ? "tvSeason" : (isBandTopic ? "musicArtist" : "album");
     const query = encodeURIComponent(enrichment.normalized_name || name);
     const url = `https://itunes.apple.com/search?term=${query}&media=${mediaType}&entity=${entity}&limit=5`;
 
@@ -316,40 +324,55 @@ async function enrichFromiTunes(
 // ─── Deezer API (Music) — free, no API key ───
 async function enrichFromDeezer(
   name: string,
-  enrichment: EnrichmentResult
+  enrichment: EnrichmentResult,
+  topic?: string
 ): Promise<EnrichmentResult> {
   try {
+    const isBandTopic = topic ? topicIsBandOrArtist(topic) : false;
     const query = encodeURIComponent(enrichment.normalized_name || name);
-    const res = await fetch(`https://api.deezer.com/search/album?q=${query}&limit=5`);
+    const endpoint = isBandTopic ? "artist" : "album";
+    const res = await fetch(`https://api.deezer.com/search/${endpoint}?q=${query}&limit=5`);
     if (!res.ok) return enrichment;
     const data = await res.json();
-    const albums = data.data || [];
-    if (!albums.length) return enrichment;
+    const items = data.data || [];
+    if (!items.length) return enrichment;
 
     const candidates: ImageCandidate[] = [];
-    for (const a of albums.slice(0, 5)) {
-      if (a.cover_xl || a.cover_big) {
-        candidates.push({
-          url: a.cover_xl || a.cover_big,
-          thumbnail: a.cover_medium || a.cover_small || a.cover_xl || a.cover_big,
-          source: "deezer",
-          label: a.title || name,
-        });
-      }
-    }
+    const first = items[0];
 
-    const album = albums[0];
-    if (album.cover_xl || album.cover_big) {
-      enrichment.image_url = album.cover_xl || album.cover_big;
-      enrichment.thumbnail_url = album.cover_medium || album.cover_small || enrichment.image_url;
-      enrichment.source_provider = "deezer";
-      enrichment.confidence = Math.max(enrichment.confidence, 0.85);
-      enrichment.status = "matched";
+    if (isBandTopic) {
+      // Artist endpoint returns: picture_xl, picture_big, picture_medium, name
+      for (const a of items.slice(0, 5)) {
+        const img = a.picture_xl || a.picture_big;
+        if (img) candidates.push({ url: img, thumbnail: a.picture_medium || img, source: "deezer", label: a.name || name });
+      }
+      if (first?.picture_xl || first?.picture_big) {
+        enrichment.image_url = first.picture_xl || first.picture_big;
+        enrichment.thumbnail_url = first.picture_medium || enrichment.image_url;
+        enrichment.source_provider = "deezer";
+        enrichment.confidence = Math.max(enrichment.confidence, 0.85);
+        enrichment.status = "matched";
+      }
+      enrichment.matched_name = first.name || enrichment.matched_name;
+    } else {
+      // Album endpoint
+      for (const a of items.slice(0, 5)) {
+        if (a.cover_xl || a.cover_big) {
+          candidates.push({ url: a.cover_xl || a.cover_big, thumbnail: a.cover_medium || a.cover_small || a.cover_xl || a.cover_big, source: "deezer", label: a.title || name });
+        }
+      }
+      if (first?.cover_xl || first?.cover_big) {
+        enrichment.image_url = first.cover_xl || first.cover_big;
+        enrichment.thumbnail_url = first.cover_medium || first.cover_small || enrichment.image_url;
+        enrichment.source_provider = "deezer";
+        enrichment.confidence = Math.max(enrichment.confidence, 0.85);
+        enrichment.status = "matched";
+      }
+      enrichment.matched_name = first.title || enrichment.matched_name;
+      enrichment.metadata = { ...enrichment.metadata, artist: first.artist?.name || enrichment.metadata.artist };
     }
-    enrichment.matched_name = album.title || enrichment.matched_name;
     enrichment.metadata = {
       ...enrichment.metadata,
-      artist: album.artist?.name || enrichment.metadata.artist,
       image_candidates: [...(enrichment.metadata.image_candidates as ImageCandidate[] || []), ...candidates],
     };
     return enrichment;
@@ -752,7 +775,8 @@ async function enrichFromWikipedia(
 async function enrichItem(
   category: Category,
   name: string,
-  aiResult: EnrichmentResult
+  aiResult: EnrichmentResult,
+  topic?: string
 ): Promise<EnrichmentResult> {
   let result = { ...aiResult };
   switch (category) {
@@ -763,11 +787,11 @@ async function enrichItem(
     case "tv":
       // TMDB first (primary), iTunes as fallback
       result = await enrichFromTMDB(name, result, category);
-      if (!result.image_url) result = await enrichFromiTunes(name, result, category);
+      if (!result.image_url) result = await enrichFromiTunes(name, result, category, topic);
       break;
     case "music":
-      result = await enrichFromiTunes(name, result, category);
-      if (!result.image_url) result = await enrichFromDeezer(name, result);
+      result = await enrichFromiTunes(name, result, category, topic);
+      if (!result.image_url) result = await enrichFromDeezer(name, result, topic);
       if (!result.image_url) result = await enrichFromMusicBrainz(name, result);
       break;
     case "food":
@@ -900,7 +924,7 @@ serve(async (req) => {
           status: "placeholder" as const,
         };
 
-        const enriched = await enrichItem(category, pick.pick_text, aiResult);
+        const enriched = await enrichItem(category, pick.pick_text, aiResult, draft.topic);
 
         return {
           item_id: pick.id,

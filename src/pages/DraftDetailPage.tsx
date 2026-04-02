@@ -181,6 +181,15 @@ export default function DraftDetailPage() {
 
   const handleMakePick = async () => {
     if (!user || !draftId || !pickText.trim() || !isMyTurn) return;
+
+    // Hard duplicate check (case-insensitive)
+    const normalized = pickText.trim().toLowerCase();
+    const isDuplicate = picks.some(p => p.pick_text.trim().toLowerCase() === normalized);
+    if (isDuplicate) {
+      toast.error('This has already been picked!');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const pickNumber = picks.length + 1;
