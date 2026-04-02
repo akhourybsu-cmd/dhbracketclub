@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 import { AnimatePresence } from 'framer-motion';
-import { Hash, ChevronLeft, Pin, Search, X, Link2 } from 'lucide-react';
+import { Hash, ChevronLeft, Pin, Search, X, Link2, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -15,6 +15,7 @@ import { MessageList } from '@/components/chat/MessageList';
 import { MessageComposer, type MessageComposerHandle, type MentionMember } from '@/components/chat/MessageComposer';
 import { ThreadPanel } from '@/components/chat/ThreadPanel';
 import { UserAvatar } from '@/components/chat/UserAvatar';
+import { ChannelSettingsDialog } from '@/components/chat/ChannelSettingsDialog';
 import { CHANNEL_EMOJI } from '@/components/chat/types';
 import type { Channel, Category, ChannelMeta, Message } from '@/components/chat/types';
 
@@ -95,6 +96,9 @@ export default function ChatPage() {
 
   // Last read timestamp for unread divider
   const [lastReadAt, setLastReadAt] = useState<string | null>(null);
+
+  // Channel settings dialog
+  const [settingsChannel, setSettingsChannel] = useState<Channel | null>(null);
 
   // ═══ HOOKS ═══
   const {
@@ -369,6 +373,52 @@ export default function ChatPage() {
     }
   };
 
+  const handleUpdateChannel = async (channelId: string, updates: Partial<Pick<Channel, 'name' | 'description' | 'icon' | 'category_id' | 'is_default'>>) => {
+    if (!user) return;
+    const { error } = await supabase.from('channels').update(updates).eq('id', channelId);
+    if (error) {
+      toast.error('Failed to update channel');
+    } else {
+      play('success');
+      toast.success('Channel updated');
+      setChannels(prev => prev.map(ch => ch.id === channelId ? { ...ch, ...updates } : ch));
+      if (selectedChannel?.id === channelId) {
+        setSelectedChannel(prev => prev ? { ...prev, ...updates } as Channel : prev);
+      }
+    }
+  };
+
+  const handleDeleteChannel = async (channelId: string) => {
+    if (!user) return;
+    // Delete messages first (cascade may not cover all), then the channel
+    await supabase.from('messages').delete().eq('channel_id', channelId);
+    const { error } = await supabase.from('channels').delete().eq('id', channelId);
+    if (error) {
+      toast.error('Failed to delete channel');
+    } else {
+      play('success');
+      toast.success('Channel deleted');
+      setChannels(prev => prev.filter(ch => ch.id !== channelId));
+      if (selectedChannel?.id === channelId) {
+        const remaining = channels.filter(ch => ch.id !== channelId);
+        const def = remaining.find(c => c.is_default) || remaining[0] || null;
+        setSelectedChannel(def);
+        if (!def) setShowChannelList(true);
+      }
+    }
+  };
+
+  const handleCreateCategory = async (name: string) => {
+    if (!user) return;
+    const { error } = await supabase.from('channel_categories').insert({ name, position: categories.length });
+    if (error) {
+      toast.error('Failed to create category');
+    } else {
+      play('success');
+      fetchChannels();
+    }
+  };
+
   const handleReorderChannels = async (categoryId: string, reordered: Channel[]) => {
     setChannels(prev => {
       const others = prev.filter(ch => ch.category_id !== categoryId);
@@ -384,6 +434,7 @@ export default function ChatPage() {
 
   const selectChannel = (ch: Channel) => {
     setSelectedChannel(ch);
+    setMessages([]);
     setShowChannelList(false);
     setThreadParent(null);
     setShowPinned(false);
@@ -440,6 +491,8 @@ export default function ChatPage() {
             onCreateChannel={handleCreateChannel}
             onEditChannel={handleEditChannel}
             onReorderChannels={handleReorderChannels}
+            onOpenSettings={setSettingsChannel}
+            onCreateCategory={handleCreateCategory}
           />
         </div>
         <div className="hidden lg:flex flex-1 items-center justify-center text-muted-foreground/50 text-sm">
@@ -464,6 +517,8 @@ export default function ChatPage() {
           onCreateChannel={handleCreateChannel}
           onEditChannel={handleEditChannel}
           onReorderChannels={handleReorderChannels}
+          onOpenSettings={setSettingsChannel}
+          onCreateCategory={handleCreateCategory}
         />
       </div>
 
@@ -490,6 +545,11 @@ export default function ChatPage() {
           {pinnedCount > 0 && (
             <button onClick={loadPinnedMessages} className={cn("p-1.5 rounded-lg transition-colors", showPinned ? "bg-premium-warm/15 text-premium-warm" : "hover:bg-muted/50 text-muted-foreground/60")}>
               <Pin className="w-4 h-4" />
+            </button>
+          )}
+          {selectedChannel && (
+            <button onClick={() => setSettingsChannel(selectedChannel)} className="p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground/60 transition-colors" title="Channel Settings">
+              <Settings className="w-4 h-4" />
             </button>
           )}
         </div>
@@ -612,6 +672,16 @@ export default function ChatPage() {
           </AnimatePresence>
         </div>
       </div>
+      {settingsChannel && (
+        <ChannelSettingsDialog
+          channel={settingsChannel}
+          categories={categories}
+          open={!!settingsChannel}
+          onOpenChange={(open) => { if (!open) setSettingsChannel(null); }}
+          onUpdate={handleUpdateChannel}
+          onDelete={handleDeleteChannel}
+        />
+      )}
     </div>
   );
 }

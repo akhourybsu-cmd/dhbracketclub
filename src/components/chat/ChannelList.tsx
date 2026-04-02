@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { Hash, Plus, Pencil, GripVertical, Check, X } from 'lucide-react';
+import { Hash, Plus, Settings, GripVertical, Check, X, FolderPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, isToday } from 'date-fns';
 import { Input } from '@/components/ui/input';
@@ -18,18 +18,20 @@ interface ChannelListProps {
   onCreateChannel: (name: string, categoryId: string) => void;
   onEditChannel?: (channelId: string, newName: string) => void;
   onReorderChannels?: (categoryId: string, reordered: Channel[]) => void;
+  onOpenSettings?: (channel: Channel) => void;
+  onCreateCategory?: (name: string) => void;
 }
 
 export function ChannelList({
   channels, categories, channelMeta, selectedChannel,
   loading, onSelectChannel, onCreateChannel, onEditChannel, onReorderChannels,
+  onOpenSettings, onCreateCategory,
 }: ChannelListProps) {
   const [showNewChannel, setShowNewChannel] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
   const [newChannelCategory, setNewChannelCategory] = useState('');
-  const [editingChannelId, setEditingChannelId] = useState<string | null>(null);
-  const [editName, setEditName] = useState('');
-  const editInputRef = useRef<HTMLInputElement>(null);
+  const [showNewCategory, setShowNewCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   const groupedChannels = categories.map(cat => ({
     ...cat,
@@ -43,23 +45,16 @@ export function ChannelList({
     setShowNewChannel(false);
   };
 
-  const startEdit = (ch: Channel) => {
-    setEditingChannelId(ch.id);
-    setEditName(ch.name);
-    setTimeout(() => editInputRef.current?.focus(), 50);
+  const handleCreateCat = () => {
+    if (!newCategoryName.trim() || !onCreateCategory) return;
+    onCreateCategory(newCategoryName.trim());
+    setNewCategoryName('');
+    setShowNewCategory(false);
   };
 
-  const confirmEdit = () => {
-    if (editingChannelId && editName.trim() && onEditChannel) {
-      onEditChannel(editingChannelId, editName.trim().toLowerCase().replace(/\s+/g, '-'));
-    }
-    setEditingChannelId(null);
-    setEditName('');
-  };
-
-  const cancelEdit = () => {
-    setEditingChannelId(null);
-    setEditName('');
+  const getChannelEmoji = (ch: Channel) => {
+    if (ch.icon && ch.icon !== 'hash') return ch.icon;
+    return CHANNEL_EMOJI[ch.name] || '#';
   };
 
   return (
@@ -70,10 +65,33 @@ export function ChannelList({
             <h1 className="text-xl font-extrabold tracking-tight">Chat</h1>
             <p className="text-[10px] text-muted-foreground/60 font-medium mt-0.5">DH conversations</p>
           </div>
-          <Button size="sm" variant="ghost" onClick={() => setShowNewChannel(true)} className="h-8 w-8 p-0 rounded-xl">
-            <Plus className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            {onCreateCategory && (
+              <Button size="sm" variant="ghost" onClick={() => setShowNewCategory(true)} className="h-8 w-8 p-0 rounded-xl" title="New Category">
+                <FolderPlus className="w-4 h-4" />
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => setShowNewChannel(true)} className="h-8 w-8 p-0 rounded-xl" title="New Channel">
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
+
+        {/* New Category inline form */}
+        <AnimatePresence>
+          {showNewCategory && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden mb-4">
+              <div className="glass-card p-4 space-y-3">
+                <h3 className="text-xs font-bold">New Category</h3>
+                <Input placeholder="Category name" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} className="h-9 text-sm" />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleCreateCat} disabled={!newCategoryName.trim()} className="flex-1 h-8 text-xs font-bold">Create</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setShowNewCategory(false)} className="h-8 text-xs">Cancel</Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <AnimatePresence>
           {showNewChannel && (
@@ -106,8 +124,7 @@ export function ChannelList({
                 >
                   {group.channels.map((ch, i) => {
                     const meta = channelMeta.get(ch.id);
-                    const emoji = CHANNEL_EMOJI[ch.name] || '#';
-                    const isEditing = editingChannelId === ch.id;
+                    const emoji = getChannelEmoji(ch);
 
                     return (
                       <Reorder.Item
@@ -117,10 +134,9 @@ export function ChannelList({
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.025 }}
                         className="list-none"
-                        dragListener={!isEditing}
                       >
                         <div
-                          onClick={() => !isEditing && onSelectChannel(ch)}
+                          onClick={() => onSelectChannel(ch)}
                           className={cn(
                             "w-full flex items-center gap-2.5 px-3 py-3 rounded-xl text-left transition-all duration-150 cursor-pointer group",
                             "hover:bg-muted/50 active:bg-muted/60 active:scale-[0.99]",
@@ -141,63 +157,40 @@ export function ChannelList({
                           </div>
 
                           <div className="min-w-0 flex-1">
-                            {isEditing ? (
-                              <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
-                                <Input
-                                  ref={editInputRef}
-                                  value={editName}
-                                  onChange={e => setEditName(e.target.value)}
-                                  onKeyDown={e => {
-                                    if (e.key === 'Enter') confirmEdit();
-                                    if (e.key === 'Escape') cancelEdit();
-                                  }}
-                                  className="h-7 text-[13px] px-2 py-0"
-                                />
-                                <button onClick={confirmEdit} className="p-1 rounded-md hover:bg-primary/15 text-primary transition-colors">
-                                  <Check className="w-3.5 h-3.5" />
-                                </button>
-                                <button onClick={cancelEdit} className="p-1 rounded-md hover:bg-muted/50 text-muted-foreground transition-colors">
-                                  <X className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className={cn(
+                                "text-[13px] tracking-tight truncate",
+                                meta?.unread ? "font-bold text-foreground" : "font-semibold text-foreground/80"
+                              )}>
+                                {ch.name}
+                              </span>
+                              {meta?.unread && <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />}
+                            </div>
+                            {meta?.lastMessage ? (
+                              <p className={cn(
+                                "text-[11px] truncate mt-0.5",
+                                meta.unread ? "text-foreground/65 font-medium" : "text-muted-foreground/70"
+                              )}>
+                                {meta.lastAuthor && <span className="font-semibold">{meta.lastAuthor}: </span>}
+                                {meta.lastMessage}
+                              </p>
                             ) : (
-                              <>
-                                <div className="flex items-center gap-1.5">
-                                  <span className={cn(
-                                    "text-[13px] tracking-tight truncate",
-                                    meta?.unread ? "font-bold text-foreground" : "font-semibold text-foreground/80"
-                                  )}>
-                                    {ch.name}
-                                  </span>
-                                  {meta?.unread && <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />}
-                                </div>
-                                {meta?.lastMessage ? (
-                                  <p className={cn(
-                                    "text-[11px] truncate mt-0.5",
-                                    meta.unread ? "text-foreground/65 font-medium" : "text-muted-foreground/70"
-                                  )}>
-                                    {meta.lastAuthor && <span className="font-semibold">{meta.lastAuthor}: </span>}
-                                    {meta.lastMessage}
-                                  </p>
-                                ) : (
-                                  <p className="text-[10px] text-muted-foreground/70 mt-0.5 italic">{ch.description || 'No messages yet'}</p>
-                                )}
-                              </>
+                              <p className="text-[10px] text-muted-foreground/70 mt-0.5 italic">{ch.description || 'No messages yet'}</p>
                             )}
                           </div>
 
-                          {/* Edit button + timestamp */}
+                          {/* Settings + timestamp */}
                           <div className="flex items-center gap-1 flex-shrink-0 self-start mt-1">
-                            {!isEditing && onEditChannel && (
+                            {onOpenSettings && (
                               <button
-                                onClick={e => { e.stopPropagation(); startEdit(ch); }}
+                                onClick={e => { e.stopPropagation(); onOpenSettings(ch); }}
                                 className="p-1 rounded-md opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-muted/50 transition-all"
-                                title="Edit channel name"
+                                title="Channel settings"
                               >
-                                <Pencil className="w-3 h-3 text-muted-foreground" />
+                                <Settings className="w-3 h-3 text-muted-foreground" />
                               </button>
                             )}
-                            {meta?.lastMessageAt && !isEditing && (
+                            {meta?.lastMessageAt && (
                               <span className="text-[9px] text-muted-foreground/70 font-medium">
                                 {isToday(new Date(meta.lastMessageAt)) ? format(new Date(meta.lastMessageAt), 'h:mm a') : format(new Date(meta.lastMessageAt), 'MMM d')}
                               </span>
