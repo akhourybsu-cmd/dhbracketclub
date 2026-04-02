@@ -373,6 +373,52 @@ export default function ChatPage() {
     }
   };
 
+  const handleUpdateChannel = async (channelId: string, updates: Partial<Pick<Channel, 'name' | 'description' | 'icon' | 'category_id' | 'is_default'>>) => {
+    if (!user) return;
+    const { error } = await supabase.from('channels').update(updates).eq('id', channelId);
+    if (error) {
+      toast.error('Failed to update channel');
+    } else {
+      play('success');
+      toast.success('Channel updated');
+      setChannels(prev => prev.map(ch => ch.id === channelId ? { ...ch, ...updates } : ch));
+      if (selectedChannel?.id === channelId) {
+        setSelectedChannel(prev => prev ? { ...prev, ...updates } as Channel : prev);
+      }
+    }
+  };
+
+  const handleDeleteChannel = async (channelId: string) => {
+    if (!user) return;
+    // Delete messages first (cascade may not cover all), then the channel
+    await supabase.from('messages').delete().eq('channel_id', channelId);
+    const { error } = await supabase.from('channels').delete().eq('id', channelId);
+    if (error) {
+      toast.error('Failed to delete channel');
+    } else {
+      play('success');
+      toast.success('Channel deleted');
+      setChannels(prev => prev.filter(ch => ch.id !== channelId));
+      if (selectedChannel?.id === channelId) {
+        const remaining = channels.filter(ch => ch.id !== channelId);
+        const def = remaining.find(c => c.is_default) || remaining[0] || null;
+        setSelectedChannel(def);
+        if (!def) setShowChannelList(true);
+      }
+    }
+  };
+
+  const handleCreateCategory = async (name: string) => {
+    if (!user) return;
+    const { error } = await supabase.from('channel_categories').insert({ name, position: categories.length });
+    if (error) {
+      toast.error('Failed to create category');
+    } else {
+      play('success');
+      fetchChannels();
+    }
+  };
+
   const handleReorderChannels = async (categoryId: string, reordered: Channel[]) => {
     setChannels(prev => {
       const others = prev.filter(ch => ch.category_id !== categoryId);
