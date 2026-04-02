@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCurrentDay, useMyLock, useDayLocks } from '@/hooks/useLockbox';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDraftListUpdates } from '@/hooks/useRealtimeSubscription';
 
 // Non-lockbox modules
 const modules = [
