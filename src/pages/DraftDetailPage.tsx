@@ -506,6 +506,7 @@ export default function DraftDetailPage() {
           <div className="stat-card py-2 flex-1">
             <Trophy className="w-3 h-3 text-primary" />
             <span className="stat-value text-xs">{currentRound > draft.num_rounds ? draft.num_rounds : currentRound}</span>
+
             <span className="stat-label">Round</span>
           </div>
         </div>
