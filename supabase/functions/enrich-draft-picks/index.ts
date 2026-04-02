@@ -324,15 +324,18 @@ async function enrichFromiTunes(
 // ─── Deezer API (Music) — free, no API key ───
 async function enrichFromDeezer(
   name: string,
-  enrichment: EnrichmentResult
+  enrichment: EnrichmentResult,
+  topic?: string
 ): Promise<EnrichmentResult> {
   try {
+    const isBandTopic = topic ? topicIsBandOrArtist(topic) : false;
     const query = encodeURIComponent(enrichment.normalized_name || name);
-    const res = await fetch(`https://api.deezer.com/search/album?q=${query}&limit=5`);
+    const endpoint = isBandTopic ? "artist" : "album";
+    const res = await fetch(`https://api.deezer.com/search/${endpoint}?q=${query}&limit=5`);
     if (!res.ok) return enrichment;
     const data = await res.json();
-    const albums = data.data || [];
-    if (!albums.length) return enrichment;
+    const items = data.data || [];
+    if (!items.length) return enrichment;
 
     const candidates: ImageCandidate[] = [];
     for (const a of albums.slice(0, 5)) {
