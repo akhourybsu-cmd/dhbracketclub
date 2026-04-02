@@ -517,6 +517,8 @@ export default function ChatPage() {
           onCreateChannel={handleCreateChannel}
           onEditChannel={handleEditChannel}
           onReorderChannels={handleReorderChannels}
+          onOpenSettings={setSettingsChannel}
+          onCreateCategory={handleCreateCategory}
         />
       </div>
 
