@@ -763,7 +763,8 @@ async function enrichFromWikipedia(
 async function enrichItem(
   category: Category,
   name: string,
-  aiResult: EnrichmentResult
+  aiResult: EnrichmentResult,
+  topic?: string
 ): Promise<EnrichmentResult> {
   let result = { ...aiResult };
   switch (category) {
@@ -774,11 +775,11 @@ async function enrichItem(
     case "tv":
       // TMDB first (primary), iTunes as fallback
       result = await enrichFromTMDB(name, result, category);
-      if (!result.image_url) result = await enrichFromiTunes(name, result, category);
+      if (!result.image_url) result = await enrichFromiTunes(name, result, category, topic);
       break;
     case "music":
-      result = await enrichFromiTunes(name, result, category);
-      if (!result.image_url) result = await enrichFromDeezer(name, result);
+      result = await enrichFromiTunes(name, result, category, topic);
+      if (!result.image_url) result = await enrichFromDeezer(name, result, topic);
       if (!result.image_url) result = await enrichFromMusicBrainz(name, result);
       break;
     case "food":
