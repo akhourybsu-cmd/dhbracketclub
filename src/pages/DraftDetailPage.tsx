@@ -983,9 +983,20 @@ export default function DraftDetailPage() {
                             ? () => setImagePickerPick(pick)
                             : undefined}
                           actions={
-                            <span className="text-[10px] font-mono text-muted-foreground/70 flex-shrink-0">
-                              Rd {pick.round}
-                            </span>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <span className="text-[10px] font-mono text-muted-foreground/70">
+                                Rd {pick.round}
+                              </span>
+                              {isCreator && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setPickToRemove(pick); }}
+                                  className="p-1 rounded-md text-muted-foreground/30 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                                  title="Remove pick"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
                           }
                         />
                       );
