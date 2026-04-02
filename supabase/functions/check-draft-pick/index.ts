@@ -30,6 +30,20 @@ serve(async (req) => {
 
     const existingList = Array.isArray(existing_picks) ? existing_picks.slice(0, 50) : [];
 
+    // Deterministic duplicate check before AI call — saves AI credits
+    const normalizedPick = pick_text.trim().toLowerCase().replace(/[^a-z0-9\s]/g, '');
+    const normalizedExisting = existingList.map((p: string) => p.trim().toLowerCase().replace(/[^a-z0-9\s]/g, ''));
+    if (normalizedExisting.includes(normalizedPick)) {
+      return new Response(JSON.stringify({
+        corrected_text: null,
+        is_duplicate: true,
+        is_irrelevant: false,
+        relevance_note: "This has already been picked",
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const prompt = `You are a spell-check and relevance assistant for a draft game about "${topic}"${category ? ` (category: ${category})` : ""}.
 
 The user typed: "${pick_text.trim()}"
