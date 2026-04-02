@@ -561,6 +561,46 @@ async function enrichFromTMDB(
   }
 }
 
+// ─── Pexels (universal fallback for high-quality stock photos) ───
+async function enrichFromPexels(
+  name: string,
+  enrichment: EnrichmentResult,
+  category: Category
+): Promise<EnrichmentResult> {
+  try {
+    const apiKey = Deno.env.get("PEXELS_API_KEY");
+    if (!apiKey) return enrichment;
+
+    const categoryHint = category === "food" ? " dish food" : category === "place" ? " landmark" : category === "sport" ? " sport" : category === "animal" ? " animal" : "";
+    const query = encodeURIComponent((enrichment.normalized_name || name) + categoryHint);
+    const res = await fetch(`https://api.pexels.com/v1/search?query=${query}&per_page=5&orientation=landscape`, {
+      headers: { Authorization: apiKey },
+    });
+    if (!res.ok) return enrichment;
+    const data = await res.json();
+    const photos = data.photos || [];
+    if (!photos.length) return enrichment;
+
+    const photo = photos[0];
+    if (photo.src) {
+      enrichment.image_url = photo.src.large || photo.src.original;
+      enrichment.thumbnail_url = photo.src.medium || photo.src.small;
+      enrichment.source_provider = "pexels";
+      enrichment.confidence = Math.max(enrichment.confidence, 0.7);
+      enrichment.status = enrichment.status === "placeholder" ? "low_confidence" : enrichment.status;
+    }
+    enrichment.metadata = {
+      ...enrichment.metadata,
+      pexels_photographer: photo.photographer,
+      pexels_photo_url: photo.url,
+    };
+    return enrichment;
+  } catch (err) {
+    console.error("Pexels enrichment error:", err);
+    return enrichment;
+  }
+}
+
 // ─── Wikipedia / Wikimedia (universal fallback for images) ───
 async function enrichFromWikipedia(
   name: string,
