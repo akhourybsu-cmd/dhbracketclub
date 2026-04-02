@@ -491,6 +491,8 @@ export default function ChatPage() {
             onCreateChannel={handleCreateChannel}
             onEditChannel={handleEditChannel}
             onReorderChannels={handleReorderChannels}
+            onOpenSettings={setSettingsChannel}
+            onCreateCategory={handleCreateCategory}
           />
         </div>
         <div className="hidden lg:flex flex-1 items-center justify-center text-muted-foreground/50 text-sm">
