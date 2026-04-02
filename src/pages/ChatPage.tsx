@@ -97,6 +97,9 @@ export default function ChatPage() {
   // Last read timestamp for unread divider
   const [lastReadAt, setLastReadAt] = useState<string | null>(null);
 
+  // Channel settings dialog
+  const [settingsChannel, setSettingsChannel] = useState<Channel | null>(null);
+
   // ═══ HOOKS ═══
   const {
     messages, setMessages, hasMore, loadingMore, fetchMessages, loadOlderMessages,
