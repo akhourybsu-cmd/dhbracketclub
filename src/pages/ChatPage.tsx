@@ -632,6 +632,7 @@ export default function ChatPage() {
             ) : (
               <>
                 <MessageList
+                  key={selectedChannel?.id || 'none'}
                   messages={searchResults || messages}
                   selectedChannel={selectedChannel}
                   userId={user?.id}
