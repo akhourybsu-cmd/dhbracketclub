@@ -8,6 +8,8 @@ export function useChatMessages(userId: string | undefined) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  // Track the active channel to discard stale fetch results
+  const activeChannelRef = useRef<string | null>(null);
 
   const enrichMessages = useCallback(async (rawMsgs: any[]): Promise<Message[]> => {
     if (rawMsgs.length === 0 || !userId) return [];
