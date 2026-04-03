@@ -555,7 +555,7 @@ export default function ChatPage() {
             <ChevronLeft className="w-5 h-5 text-muted-foreground/60" />
           </button>
           <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/10 text-sm">
-            {CHANNEL_EMOJI[selectedChannel?.name || ''] || <Hash className="w-3.5 h-3.5 text-primary/80" />}
+            {(selectedChannel?.icon && selectedChannel.icon !== 'hash') ? selectedChannel.icon : (CHANNEL_EMOJI[selectedChannel?.name || ''] || <Hash className="w-3.5 h-3.5 text-primary/80" />)}
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="font-bold text-[14px] tracking-tight">{selectedChannel?.name}</h2>
