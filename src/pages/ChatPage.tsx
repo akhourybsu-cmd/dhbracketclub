@@ -439,18 +439,28 @@ export default function ChatPage() {
   };
 
   const selectChannel = (ch: Channel) => {
+    if (ch.id === selectedChannel?.id) {
+      // Already on this channel — just close mobile list
+      setShowChannelList(false);
+      return;
+    }
+    // Immediately update selected channel & header
     setSelectedChannel(ch);
+    // Clear all channel-specific state atomically
     setMessages([]);
-    try { localStorage.setItem('last_chat_channel_id', ch.id); } catch {}
-    setShowChannelList(false);
     setThreadParent(null);
+    setThreadMessages([]);
+    setThreadReply('');
     setShowPinned(false);
+    setPinnedMessages([]);
     setLastReadAt(null);
     setShowSearch(false);
     setSearchQuery('');
     setSearchResults(null);
     cancelEdit();
     setNewMessage('');
+    try { localStorage.setItem('last_chat_channel_id', ch.id); } catch {}
+    setShowChannelList(false);
     play('tap');
     const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
     if (isDesktop) {
