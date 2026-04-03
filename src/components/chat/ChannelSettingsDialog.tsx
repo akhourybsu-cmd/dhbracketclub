@@ -33,13 +33,15 @@ export function ChannelSettingsDialog({ channel, categories, open, onOpenChange,
   const [isDefault, setIsDefault] = useState(channel.is_default);
   const [saving, setSaving] = useState(false);
 
+  // Reset form state whenever the channel changes OR dialog opens
   useEffect(() => {
+    if (!open) return;
     setName(channel.name);
     setDescription(channel.description || '');
     setIcon(channel.icon || '');
     setCategoryId(channel.category_id || '');
     setIsDefault(channel.is_default);
-  }, [channel.id]);
+  }, [channel.id, open]);
 
   const handleSave = async () => {
     if (!name.trim()) return;

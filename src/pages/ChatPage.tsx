@@ -128,6 +128,9 @@ export default function ChatPage() {
   );
 
   /* ═══ FETCH CHANNELS ═══ */
+  const selectedChannelRef = useRef<Channel | null>(null);
+  selectedChannelRef.current = selectedChannel;
+
   const fetchChannels = useCallback(async () => {
     if (!user) return;
     const [{ data: cats }, { data: chs }] = await Promise.all([
@@ -167,7 +170,8 @@ export default function ChatPage() {
       chIds.forEach((id: string) => { if (!meta.has(id)) meta.set(id, { unread: false }); });
       setChannelMeta(meta);
 
-      if (!selectedChannel) {
+      // Only auto-select on initial load (no channel selected yet)
+      if (!selectedChannelRef.current) {
         let target: Channel | undefined;
         try {
           const savedId = localStorage.getItem('last_chat_channel_id');
@@ -175,10 +179,14 @@ export default function ChatPage() {
         } catch {}
         if (!target) target = (chs as Channel[]).find(c => c.is_default) || (chs[0] as Channel);
         if (target) { setSelectedChannel(target); setShowChannelList(false); }
+      } else {
+        // If the currently selected channel still exists, refresh its data from the fetch
+        const refreshed = (chs as Channel[]).find(c => c.id === selectedChannelRef.current!.id);
+        if (refreshed) setSelectedChannel(refreshed);
       }
     }
     setLoading(false);
-  }, [user, selectedChannel]);
+  }, [user]);
 
   useEffect(() => { fetchChannels(); }, [fetchChannels]);
 
@@ -439,18 +447,28 @@ export default function ChatPage() {
   };
 
   const selectChannel = (ch: Channel) => {
+    if (ch.id === selectedChannel?.id) {
+      // Already on this channel — just close mobile list
+      setShowChannelList(false);
+      return;
+    }
+    // Immediately update selected channel & header
     setSelectedChannel(ch);
+    // Clear all channel-specific state atomically
     setMessages([]);
-    try { localStorage.setItem('last_chat_channel_id', ch.id); } catch {}
-    setShowChannelList(false);
     setThreadParent(null);
+    setThreadMessages([]);
+    setThreadReply('');
     setShowPinned(false);
+    setPinnedMessages([]);
     setLastReadAt(null);
     setShowSearch(false);
     setSearchQuery('');
     setSearchResults(null);
     cancelEdit();
     setNewMessage('');
+    try { localStorage.setItem('last_chat_channel_id', ch.id); } catch {}
+    setShowChannelList(false);
     play('tap');
     const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
     if (isDesktop) {
@@ -533,11 +551,11 @@ export default function ChatPage() {
       <div className="flex flex-col flex-1 min-w-0">
         {/* Header */}
         <div className="flex items-center gap-2.5 py-3 border-b border-border/20 flex-shrink-0 sticky top-0 z-10" style={{ background: 'hsl(var(--background) / 0.8)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0px))', paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))', paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))' }}>
-          <button onClick={() => { setShowChannelList(true); setThreadParent(null); setShowPinned(false); }} className="p-1.5 -ml-0.5 rounded-lg hover:bg-muted/50 transition-colors lg:hidden">
+          <button onClick={() => { setShowChannelList(true); setThreadParent(null); setThreadMessages([]); setShowPinned(false); }} className="p-1.5 -ml-0.5 rounded-lg hover:bg-muted/50 transition-colors lg:hidden">
             <ChevronLeft className="w-5 h-5 text-muted-foreground/60" />
           </button>
           <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/10 text-sm">
-            {CHANNEL_EMOJI[selectedChannel?.name || ''] || <Hash className="w-3.5 h-3.5 text-primary/80" />}
+            {(selectedChannel?.icon && selectedChannel.icon !== 'hash') ? selectedChannel.icon : (CHANNEL_EMOJI[selectedChannel?.name || ''] || <Hash className="w-3.5 h-3.5 text-primary/80" />)}
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="font-bold text-[14px] tracking-tight">{selectedChannel?.name}</h2>
@@ -614,6 +632,7 @@ export default function ChatPage() {
             ) : (
               <>
                 <MessageList
+                  key={selectedChannel?.id || 'none'}
                   messages={searchResults || messages}
                   selectedChannel={selectedChannel}
                   userId={user?.id}

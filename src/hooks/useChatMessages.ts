@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Message } from '@/components/chat/types';
 
@@ -8,6 +8,8 @@ export function useChatMessages(userId: string | undefined) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  // Track the active channel to discard stale fetch results
+  const activeChannelRef = useRef<string | null>(null);
 
   const enrichMessages = useCallback(async (rawMsgs: any[]): Promise<Message[]> => {
     if (rawMsgs.length === 0 || !userId) return [];
@@ -41,8 +43,15 @@ export function useChatMessages(userId: string | undefined) {
     }));
   }, [userId]);
 
+  const setActiveChannel = useCallback((channelId: string) => {
+    activeChannelRef.current = channelId;
+  }, []);
+
   const fetchMessages = useCallback(async (channelId: string, before?: string) => {
     if (!userId) return;
+    // Track which channel this fetch is for
+    if (!before) activeChannelRef.current = channelId;
+
     let query = supabase
       .from('messages')
       .select('*, profiles:user_id(display_name, avatar_url)')
@@ -55,6 +64,9 @@ export function useChatMessages(userId: string | undefined) {
 
     const { data } = await query;
     if (!data) return;
+
+    // Discard result if user switched channels while this was in flight
+    if (activeChannelRef.current !== channelId) return;
 
     const reversed = [...data].reverse();
     const enriched = await enrichMessages(reversed);
