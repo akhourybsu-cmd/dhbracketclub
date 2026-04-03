@@ -128,6 +128,9 @@ export default function ChatPage() {
   );
 
   /* ═══ FETCH CHANNELS ═══ */
+  const selectedChannelRef = useRef<Channel | null>(null);
+  selectedChannelRef.current = selectedChannel;
+
   const fetchChannels = useCallback(async () => {
     if (!user) return;
     const [{ data: cats }, { data: chs }] = await Promise.all([
@@ -167,7 +170,8 @@ export default function ChatPage() {
       chIds.forEach((id: string) => { if (!meta.has(id)) meta.set(id, { unread: false }); });
       setChannelMeta(meta);
 
-      if (!selectedChannel) {
+      // Only auto-select on initial load (no channel selected yet)
+      if (!selectedChannelRef.current) {
         let target: Channel | undefined;
         try {
           const savedId = localStorage.getItem('last_chat_channel_id');
@@ -175,10 +179,14 @@ export default function ChatPage() {
         } catch {}
         if (!target) target = (chs as Channel[]).find(c => c.is_default) || (chs[0] as Channel);
         if (target) { setSelectedChannel(target); setShowChannelList(false); }
+      } else {
+        // If the currently selected channel still exists, refresh its data from the fetch
+        const refreshed = (chs as Channel[]).find(c => c.id === selectedChannelRef.current!.id);
+        if (refreshed) setSelectedChannel(refreshed);
       }
     }
     setLoading(false);
-  }, [user, selectedChannel]);
+  }, [user]);
 
   useEffect(() => { fetchChannels(); }, [fetchChannels]);
 
