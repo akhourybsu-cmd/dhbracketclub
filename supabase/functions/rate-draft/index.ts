@@ -55,9 +55,10 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Draft not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Only creator can trigger
-    if (draft.created_by !== userId) {
-      return new Response(JSON.stringify({ error: "Only the draft creator can generate the report" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Any participant or the creator can trigger report generation
+    const isParticipant = participants?.some((p: any) => p.user_id === userId);
+    if (draft.created_by !== userId && !isParticipant) {
+      return new Response(JSON.stringify({ error: "Only draft participants can generate the report" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (draft.status !== "complete") {
