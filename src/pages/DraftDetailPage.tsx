@@ -210,6 +210,9 @@ export default function DraftDetailPage() {
           target_id: draftId,
           metadata: { topic: draft?.topic },
         });
+        // Auto-generate report immediately
+        setAutoTriggered(true);
+        generateResults();
       } else {
         const nextTotal = pickNumber;
         const nextRound = Math.floor(nextTotal / participants.length);
