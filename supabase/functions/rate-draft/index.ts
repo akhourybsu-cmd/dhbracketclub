@@ -55,17 +55,11 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Draft not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Any participant or the creator can trigger report generation
-    const isParticipant = participants?.some((p: any) => p.user_id === userId);
-    if (draft.created_by !== userId && !isParticipant) {
-      return new Response(JSON.stringify({ error: "Only draft participants can generate the report" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
     if (draft.status !== "complete") {
       return new Response(JSON.stringify({ error: "Draft is not complete" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Fetch participants and picks (moved before auth check so we can verify participant status)
+    // Fetch participants and picks
     const [{ data: participants }, { data: picks }] = await Promise.all([
       admin.from("draft_participants").select("*, profiles:user_id(display_name)").eq("draft_id", draft_id).order("pick_order"),
       admin.from("draft_picks").select("*").eq("draft_id", draft_id).order("pick_number"),
@@ -73,6 +67,12 @@ serve(async (req) => {
 
     if (!participants?.length || !picks?.length) {
       return new Response(JSON.stringify({ error: "No participants or picks found" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Any participant or the creator can trigger report generation
+    const isParticipant = participants.some((p: any) => p.user_id === userId);
+    if (draft.created_by !== userId && !isParticipant) {
+      return new Response(JSON.stringify({ error: "Only draft participants can generate the report" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Build prompt
