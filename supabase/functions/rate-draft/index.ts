@@ -65,7 +65,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Draft is not complete" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Fetch participants and picks
+    // Fetch participants and picks (moved before auth check so we can verify participant status)
     const [{ data: participants }, { data: picks }] = await Promise.all([
       admin.from("draft_participants").select("*, profiles:user_id(display_name)").eq("draft_id", draft_id).order("pick_order"),
       admin.from("draft_picks").select("*").eq("draft_id", draft_id).order("pick_number"),
