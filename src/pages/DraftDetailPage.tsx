@@ -927,18 +927,15 @@ export default function DraftDetailPage() {
               )}
             </div>
           ) : (
-            <div className="glass-card p-5 mb-5 text-center">
-              <Sparkles className="w-8 h-8 text-primary mx-auto mb-2" />
-              <p className="text-[13px] font-bold mb-1">Draft Report</p>
-              <p className="text-[11px] text-muted-foreground/60 mb-3">Ratings for every pick — see who drafted best.</p>
-              {isCreator ? (
-                <Button onClick={generateResults} className="h-10 rounded-xl font-bold btn-press gap-2 text-[12px]" disabled={resultsGenerating}>
-                  <Sparkles className="w-4 h-4" />
-                  Generate Report
-                </Button>
-              ) : (
-                <p className="text-[10px] text-muted-foreground/60">Waiting for the host to generate the report…</p>
-              )}
+            <div className="glass-card p-6 mb-5 text-center">
+              <Sparkles className="w-8 h-8 text-primary mx-auto mb-2 animate-pulse" />
+              <p className="text-[13px] font-bold mb-1">Generating Draft Report…</p>
+              <p className="text-[11px] text-muted-foreground/60 mb-3">AI is analyzing every pick. This takes a moment.</p>
+              <div className="space-y-2">
+                {[1, 2, 3].map(i => (
+                  <Skeleton key={i} className="h-10 w-full rounded-xl" />
+                ))}
+              </div>
             </div>
           )}
 
