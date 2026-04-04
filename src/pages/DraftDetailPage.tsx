@@ -113,13 +113,13 @@ export default function DraftDetailPage() {
   const isCreator = draft?.created_by === user?.id;
   const isParticipant = participants.some(p => p.user_id === user?.id);
 
-  // Auto-generate report when draft is complete and no results exist
+  // Auto-generate report when draft is complete and no results exist (any participant can trigger)
   useEffect(() => {
-    if (draft?.status === 'complete' && !hasResults && !resultsLoading && !resultsGenerating && !autoTriggered && isCreator) {
+    if (draft?.status === 'complete' && !hasResults && !resultsLoading && !resultsGenerating && !autoTriggered && isParticipant) {
       setAutoTriggered(true);
       generateResults();
     }
-  }, [draft?.status, hasResults, resultsLoading, resultsGenerating, autoTriggered, isCreator, generateResults]);
+  }, [draft?.status, hasResults, resultsLoading, resultsGenerating, autoTriggered, isParticipant, generateResults]);
 
   // Derive turn state from pick count + participant order (single source of truth)
   const derivedTurn = getDerivedDraftTurn(
@@ -210,6 +210,9 @@ export default function DraftDetailPage() {
           target_id: draftId,
           metadata: { topic: draft?.topic },
         });
+        // Auto-generate report immediately
+        setAutoTriggered(true);
+        generateResults();
       } else {
         const nextTotal = pickNumber;
         const nextRound = Math.floor(nextTotal / participants.length);
