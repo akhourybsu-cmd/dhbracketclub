@@ -867,6 +867,31 @@ export default function DraftDetailPage() {
                 </div>
               </div>
 
+              {/* MVP Pick highlight */}
+              {mvpPick && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="rounded-xl px-4 py-3 mb-4 flex items-center gap-3"
+                  style={{
+                    background: 'linear-gradient(135deg, hsl(var(--gold) / 0.12), hsl(var(--gold) / 0.04))',
+                    border: '2px solid hsl(var(--gold) / 0.3)',
+                  }}
+                >
+                  <Star className="w-5 h-5 flex-shrink-0" style={{ color: 'hsl(var(--gold))' }} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'hsl(var(--gold))' }}>MVP Pick</p>
+                    <p className="text-[13px] font-extrabold truncate">{mvpPick.pickText}</p>
+                    <p className="text-[10px] text-muted-foreground/70">
+                      {mvpPick.score.toFixed(1)} — {participants.find(p => p.user_id === mvpPick.userId)?.profiles?.display_name || 'Unknown'}
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Draft Stats Card */}
+              <DraftStatsCard picks={picks} results={draftResults} participants={participants} />
+
               {/* Detailed Results */}
               <div className="space-y-3">
                 {draftResults.map((result, idx) => {
