@@ -18,6 +18,9 @@ export default function DraftsListPage() {
   const [draftWinners, setDraftWinners] = useState<Map<string, { user_id: string; display_name: string }>>(new Map());
   const [myDraftStats, setMyDraftStats] = useState({ totalPoints: 0, wins: 0, draftsRated: 0, podiums: 0, bestFinish: 0, avgScore: 0 });
   const [loading, setLoading] = useState(true);
+  const { season } = useCurrentSeason();
+  const { entries: seasonEntries } = useSeasonEntries(season?.id);
+  const seasonDraftIds = new Set(seasonEntries.map(e => e.draft_id));
 
   const fetchDrafts = useCallback(async () => {
     if (!user) return;
