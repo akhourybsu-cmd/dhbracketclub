@@ -125,7 +125,7 @@ function SeasonHeaderCard({ season }: { season: any }) {
             </div>
             <div className="w-px h-6 bg-border/20" />
             <div className="text-center">
-              <p className="text-sm font-bold">Top 4</p>
+              <p className="text-sm font-bold">All 5</p>
               <p className="text-[9px] text-muted-foreground/60">Playoffs</p>
             </div>
           </div>
