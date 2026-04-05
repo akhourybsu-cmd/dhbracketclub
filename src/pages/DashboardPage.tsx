@@ -571,16 +571,7 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
-      {/* ═══ Active Rankings ═══ */}
-      {rankings.length > 0 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.34 }}>
-          <div className="section-divider mb-3">
-            <h2 className="section-header mb-0">
-              <BarChart3 className="w-3.5 h-3.5 inline-block mr-1.5" style={{ color: 'hsl(var(--accent))' }} />
-              Rankings
-            </h2>
-            <Link to="/rankings" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors">View All</Link>
-          </div>
+      {/* Rankings & Polls archived — accessible via Compete > More */}
           <div className="space-y-2 mb-7">
             {rankings.slice(0, 3).map((r: any, i: number) => {
               const isClosed = r.status === 'closed';
