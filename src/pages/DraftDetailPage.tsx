@@ -1049,14 +1049,8 @@ export default function DraftDetailPage() {
                   className="glass-card overflow-hidden"
                 >
                   <div className="px-4 py-3 border-b border-border/25 flex items-center gap-2 relative z-10">
-                    <div className={cn(
-                      "w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-extrabold",
-                      idx === 0 && "bg-gold/15 text-gold",
-                      idx === 1 && "bg-silver/15 text-silver",
-                      idx === 2 && "bg-bronze/15 text-bronze",
-                      idx > 2 && "bg-muted/50 text-muted-foreground",
-                    )}>
-                      {idx + 1}
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-extrabold bg-muted/50 text-muted-foreground">
+                      {p.pick_order}
                     </div>
                     <span className="text-[13px] font-bold">{p.profiles?.display_name || 'Unknown'}</span>
                     <span className="text-[10px] text-muted-foreground/60 ml-auto font-mono">{userPicks.length} picks</span>
