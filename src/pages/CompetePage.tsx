@@ -12,9 +12,9 @@ import { getDerivedDraftTurn } from '@/lib/draftTurn';
 // Non-lockbox modules
 const modules = [
   { path: '/brackets', label: 'Brackets', description: 'March Madness pools & bracket challenges', icon: Trophy, color: 'primary', create: '/pools/create', countTable: 'pools' as const },
+  { path: '/drafts', label: 'Drafts', description: 'Snake drafts on any topic', icon: Bookmark, color: 'gold', create: '/drafts/create', countTable: 'drafts' as const },
   { path: '/rankings', label: 'Rankings', description: 'Rank anything — movies, food, takes', icon: BarChart3, color: 'accent', create: '/rankings/create', countTable: 'rankings' as const },
   { path: '/polls', label: 'Polls', description: 'Quick votes and group decisions', icon: MessageCircle, color: 'warning', create: '/polls/create', countTable: 'polls' as const },
-  { path: '/drafts', label: 'Drafts', description: 'Snake drafts on any topic', icon: Bookmark, color: 'gold', create: '/drafts/create', countTable: 'drafts' as const },
 ];
 
 function LockboxCompeteCard() {

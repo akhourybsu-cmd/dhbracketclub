@@ -52,6 +52,7 @@ interface Pick {
   pick_text: string;
   pick_number: number;
   round: number;
+  picked_at?: string;
   profiles?: { display_name: string };
 }
 

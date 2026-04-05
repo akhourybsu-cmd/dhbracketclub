@@ -83,7 +83,7 @@ export default function DraftsListPage() {
           if (draftIds.length > 0) {
             const { data: allResults } = await supabase
               .from('draft_results' as any)
-              .select('draft_id, user_id, rank, points_awarded')
+              .select('draft_id, user_id, rank, points_awarded, total_score')
               .in('draft_id', draftIds);
 
             if (allResults) {
