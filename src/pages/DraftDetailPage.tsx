@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bookmark, ArrowLeft, Users, Play, Send, Trophy, RefreshCw, Sparkles, MoreVertical, Pencil, Trash2, X, Star, ChevronDown, ChevronUp, Award, AlertTriangle, Check } from 'lucide-react';
+import { Bookmark, ArrowLeft, Users, Play, Send, Trophy, RefreshCw, Sparkles, MoreVertical, Pencil, Trash2, X, Star, ChevronDown, ChevronUp, Award, AlertTriangle, Check, Flame } from 'lucide-react';
 import { usePickSuggestion } from '@/hooks/usePickSuggestion';
 import { cn } from '@/lib/utils';
 import { useDraftUpdates } from '@/hooks/useRealtimeSubscription';
@@ -17,6 +17,11 @@ import ImagePickerDialog from '@/components/draft/ImagePickerDialog';
 import { useDraftResults } from '@/hooks/useDraftResults';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getDerivedDraftTurn } from '@/lib/draftTurn';
+import { Confetti } from '@/components/Confetti';
+import { OnTheClockTimer } from '@/components/draft/OnTheClockTimer';
+import { PickAnnouncement } from '@/components/draft/PickAnnouncement';
+import { DraftStatsCard } from '@/components/draft/DraftStatsCard';
+import { findMvpPick, findScoringStreaks, computePickTimings, formatDuration } from '@/lib/draftStats';
 import {
   DropdownMenu,
   DropdownMenuContent,
