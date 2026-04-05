@@ -584,6 +584,31 @@ export default function DraftDetailPage() {
             <span className="stat-label">Round</span>
           </div>
         </div>
+
+        {/* Season badge / commissioner action */}
+        {seasonEntry ? (
+          <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded-lg" style={{ background: 'hsl(var(--gold) / 0.08)', border: '1px solid hsl(var(--gold) / 0.15)' }}>
+            <Award className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(var(--gold))' }} />
+            <span className="text-[11px] font-bold" style={{ color: 'hsl(var(--gold))' }}>Season Draft #{seasonEntry.week_number}</span>
+          </div>
+        ) : isCommissioner && season ? (
+          <button
+            onClick={async () => {
+              setSeasonActionBusy(true);
+              try {
+                const num = await addDraftToSeason(season.id, draftId!);
+                toast.success(`Added as Season Draft #${num}`);
+                refetchSeasonEntries();
+              } catch (err: any) { toast.error(err.message); }
+              finally { setSeasonActionBusy(false); }
+            }}
+            disabled={seasonActionBusy}
+            className="flex items-center gap-2 mt-2 px-3 py-2 rounded-lg text-[11px] font-bold transition-colors btn-press w-full justify-center"
+            style={{ background: 'hsl(var(--gold) / 0.1)', color: 'hsl(var(--gold))', border: '1px dashed hsl(var(--gold) / 0.3)' }}
+          >
+            <Award className="w-4 h-4" /> {seasonActionBusy ? 'Adding…' : 'Add to Season'}
+          </button>
+        ) : null}
       </motion.div>
 
       {/* Enrichment loading state */}
