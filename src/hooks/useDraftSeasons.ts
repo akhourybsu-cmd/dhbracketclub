@@ -10,9 +10,9 @@ export interface DraftSeason {
   starts_at: string;
   ends_at: string;
   status: string;
-  regular_season_weeks: number; // kept for backward compat
-  regular_season_drafts: number; // NEW: draft-count target (default 12)
-  playoff_weeks: number;
+  regular_season_weeks: number; // DB column kept for backward compat
+  regular_season_drafts: number; // draft-count target (default 12)
+  playoff_weeks: number; // DB column kept for backward compat
   best_of: number;
 }
 
@@ -39,7 +39,7 @@ export interface SeasonEntry {
   id: string;
   season_id: string;
   draft_id: string;
-  week_number: number; // used as sequential draft_number
+  week_number: number; // DB column name — represents sequential draft number
   is_playoff: boolean;
   season_points_awarded: Record<string, number>;
   drafts?: { topic: string; status: string };
