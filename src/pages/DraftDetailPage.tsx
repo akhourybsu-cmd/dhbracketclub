@@ -118,9 +118,10 @@ export default function DraftDetailPage() {
   useEffect(() => { if (picks.length) fetchEnrichments(); }, [picks.length, fetchEnrichments]);
 
   // Detect new picks for announcement banner
+  const prevPickCountRef = useRef(0);
   useEffect(() => {
-    if (picks.length > prevPickCount.current && prevPickCount.current > 0) {
-      const latestPick = [...picks].sort((a, b) => b.pick_number - a.pick_number)[0];
+    if (picks.length > prevPickCountRef.current && prevPickCountRef.current > 0) {
+      const latestPick = picks[picks.length - 1]; // picks are ordered by pick_number
       if (latestPick && latestPick.user_id !== user?.id) {
         setAnnouncement({
           displayName: latestPick.profiles?.display_name || 'Someone',
@@ -130,8 +131,8 @@ export default function DraftDetailPage() {
         });
       }
     }
-    prevPickCount.current = picks.length;
-  }, [picks.length, picks, user?.id]);
+    prevPickCountRef.current = picks.length;
+  }, [picks.length, user?.id]);
 
   // Realtime: auto-refresh on picks, participants, or draft status changes
   const { status: realtimeStatus } = useDraftUpdates(draftId, fetchData);
