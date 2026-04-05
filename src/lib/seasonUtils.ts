@@ -12,7 +12,7 @@ export function getSeasonDisplayName(label: string, year: number): string {
 }
 
 export function getSeasonEmoji(label: string): string {
-  const emojis: Record<string, string> = { winter: '❄️', spring: '🌸', summer: '☀️', fall: '🍂' };
+  const emojis: Record<string, string> = { winter: '❄️', spring: '⚡', summer: '☀️', fall: '🍂' };
   return emojis[label] || '🏆';
 }
 
