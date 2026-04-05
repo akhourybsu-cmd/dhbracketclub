@@ -452,8 +452,14 @@ export default function DraftDetailPage() {
     picksByUser.set(p.user_id, list);
   });
 
+  // Computed stats for results
+  const mvpPick = hasResults ? findMvpPick(draftResults) : null;
+  const streaks = hasResults ? findScoringStreaks(draftResults, picks) : new Map();
+  const timings = computePickTimings(picks);
+
   return (
     <div className="max-w-md mx-auto">
+      <Confetti active={showConfetti} />
       <Link to="/drafts" className="back-link">
         <ArrowLeft /> Back to Drafts
       </Link>
