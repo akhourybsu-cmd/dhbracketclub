@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
-  Plus, Users, ArrowRight, Trophy, BarChart3, Shield, Download, X,
+  Plus, Users, ArrowRight, Trophy, BarChart3, Shield, Download, X, Swords,
   MessageCircle, Bookmark, Zap, CalendarDays, Clock, MapPin, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
