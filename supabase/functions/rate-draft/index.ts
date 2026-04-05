@@ -228,22 +228,22 @@ Use the rate_draft_results tool to return your structured analysis.`;
       return new Response(JSON.stringify({ error: "AI returned empty results" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Calculate points: 1st = N, 2nd = N-1, etc.
+    // Re-rank by total_score (highest first) — don't trust AI-assigned ranks
     const numParticipants = participants.length;
-    const sortedResults = [...results].sort((a: any, b: any) => a.rank - b.rank);
+    const sortedResults = [...results].sort((a: any, b: any) => b.total_score - a.total_score);
 
     // Delete existing results for regeneration
     await admin.from("draft_results").delete().eq("draft_id", draft_id);
 
-    // Insert results
-    const inserts = sortedResults.map((r: any) => ({
+    // Insert results with corrected ranks based on total_score
+    const inserts = sortedResults.map((r: any, idx: number) => ({
       draft_id,
       user_id: r.user_id,
-      rank: r.rank,
+      rank: idx + 1,
       total_score: r.total_score,
       pick_ratings: r.pick_ratings,
       summary: r.summary,
-      points_awarded: Math.max(1, numParticipants - r.rank + 1),
+      points_awarded: Math.max(1, numParticipants - idx),
     }));
 
     const { error: insertErr } = await admin.from("draft_results").insert(inserts);
