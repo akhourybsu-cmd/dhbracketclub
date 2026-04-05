@@ -6,6 +6,7 @@ import {
   Calendar, Award, TrendingUp, Users, Archive, Crown, Target, Flame, Medal, ChevronDown, X
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { useCurrentDay, useMyLock, useDayLocks } from '@/hooks/useLockbox';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
