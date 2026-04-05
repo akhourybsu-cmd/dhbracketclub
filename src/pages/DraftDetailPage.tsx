@@ -87,7 +87,13 @@ export default function DraftDetailPage() {
   const [showConfetti, setShowConfetti] = useState(false);
   const confettiShown = useRef(false);
   const [announcement, setAnnouncement] = useState<{ displayName: string; pickText: string; round: number; pickNumber: number } | null>(null);
-  
+  const [seasonActionBusy, setSeasonActionBusy] = useState(false);
+
+  const { season } = useCurrentSeason();
+  const { entries: seasonEntries, refetch: refetchSeasonEntries } = useSeasonEntries(season?.id);
+  const isCommissioner = useIsCommissioner(season);
+  const seasonEntry = seasonEntries.find(e => e.draft_id === draftId);
+
 
   const { results: draftResults, loading: resultsLoading, generating: resultsGenerating, hasResults, generateResults } = useDraftResults(draftId);
 
