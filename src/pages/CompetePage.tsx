@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   Trophy, BarChart3, MessageCircle, Bookmark, ChevronRight, Plus, Swords, Lock, Shield,
-  Calendar, Award, TrendingUp, Users, Archive, Crown, Target, Flame, Medal, ChevronDown
+  Calendar, Award, TrendingUp, Users, Archive, Crown, Target, Flame, Medal, ChevronDown, X
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentDay, useMyLock, useDayLocks } from '@/hooks/useLockbox';
