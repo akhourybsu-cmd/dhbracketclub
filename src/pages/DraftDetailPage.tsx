@@ -327,8 +327,10 @@ export default function DraftDetailPage() {
       if (pIds.length > 0) {
         await supabase.from('item_enrichments').delete().in('item_id', pIds);
       }
+      await supabase.from('draft_results' as any).delete().eq('draft_id', draftId);
       await supabase.from('draft_picks').delete().eq('draft_id', draftId);
       await supabase.from('draft_participants').delete().eq('draft_id', draftId);
+      await supabase.from('draft_season_entries' as any).delete().eq('draft_id', draftId);
       const { error } = await supabase.from('drafts').delete().eq('id', draftId);
       if (error) throw error;
       if (draft?.competition_id) {
