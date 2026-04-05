@@ -255,6 +255,12 @@ export default function DraftsListPage() {
                             <span className="text-[10px] text-muted-foreground/70 flex items-center gap-0.5 font-medium">
                               <Users className="w-2.5 h-2.5" /> {count}
                             </span>
+                            {seasonDraftIds.has(d.id) && (
+                              <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/15" />
+                            )}
+                            {seasonDraftIds.has(d.id) && (
+                              <span className="text-[9px] font-bold px-1 py-0.5 rounded" style={{ background: 'hsl(var(--gold) / 0.12)', color: 'hsl(var(--gold))' }}>S</span>
+                            )}
                             {winner && (
                               <>
                                 <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/15" />
