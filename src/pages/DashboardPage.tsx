@@ -245,7 +245,7 @@ export default function DashboardPage() {
     return 'Good evening';
   };
 
-  const totalActive = pools.length + rankings.length + polls.length + drafts.length;
+  const totalActive = pools.length + drafts.length;
 
   if (loading) {
     return (
