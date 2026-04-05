@@ -252,7 +252,14 @@ export async function recalculateSeasonStandings(seasonId: string) {
     .eq('season_id', seasonId)
     .eq('is_playoff', false);
 
-  if (!entries || entries.length === 0) return;
+  if (!entries || entries.length === 0) {
+    // No drafts in season — wipe all standings for this season
+    await supabase
+      .from('draft_season_standings' as any)
+      .delete()
+      .eq('season_id', seasonId);
+    return;
+  }
 
   const draftIds = (entries as any[]).map(e => e.draft_id);
   const { data: results } = await supabase
@@ -260,7 +267,13 @@ export async function recalculateSeasonStandings(seasonId: string) {
     .select('draft_id, user_id, rank, total_score, points_awarded')
     .in('draft_id', draftIds);
 
-  if (!results) return;
+  if (!results || (results as any[]).length === 0) {
+    await supabase
+      .from('draft_season_standings' as any)
+      .delete()
+      .eq('season_id', seasonId);
+    return;
+  }
 
   // Get season config
   const { data: seasonData } = await supabase
@@ -295,7 +308,6 @@ export async function recalculateSeasonStandings(seasonId: string) {
   }> = [];
 
   for (const [userId, drafts] of userResults) {
-    // Sort by season points desc, take best N
     const withPoints = drafts.map(d => ({
       ...d,
       seasonPts: getSeasonPointsForRank(d.rank),
@@ -338,20 +350,24 @@ export async function recalculateSeasonStandings(seasonId: string) {
       rank = i + 1;
     }
     (standingsUpdates[i] as any).rank = rank;
-    // All players get playoff seeds
     (standingsUpdates[i] as any).playoff_seed = i + 1;
   }
 
-  // Upsert standings
+  // Clear old standings then insert fresh — ensures removed-draft users don't linger
+  await supabase
+    .from('draft_season_standings' as any)
+    .delete()
+    .eq('season_id', seasonId);
+
   for (const s of standingsUpdates) {
     await supabase
       .from('draft_season_standings' as any)
-      .upsert(s as any, { onConflict: 'season_id,user_id' });
+      .insert(s as any);
   }
 
   // Update season_points_awarded on entries
   for (const entry of entries as any[]) {
-    const entryResults = (results as any[]).filter(r => r.draft_id === entry.draft_id);
+    const entryResults = (results as any[]).filter(r => r.draft_id === (entry as any).draft_id);
     const pointsMap: Record<string, number> = {};
     for (const r of entryResults) {
       pointsMap[r.user_id] = getSeasonPointsForRank(r.rank);
@@ -359,7 +375,7 @@ export async function recalculateSeasonStandings(seasonId: string) {
     await supabase
       .from('draft_season_entries' as any)
       .update({ season_points_awarded: pointsMap })
-      .eq('draft_id', entry.draft_id);
+      .eq('draft_id', (entry as any).draft_id);
   }
 }
 
