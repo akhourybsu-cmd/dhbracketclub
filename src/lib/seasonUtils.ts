@@ -24,8 +24,9 @@ export function getOrdinalSuffix(n: number): string {
 
 export function getWeekLabel(week: number, totalRegular: number): string {
   if (week <= totalRegular) return `Week ${week}`;
-  if (week === totalRegular + 1) return 'Semifinals';
-  return 'Finals';
+  if (week === totalRegular + 1) return 'Play-In Round';
+  if (week === totalRegular + 2) return 'Semifinals';
+  return 'Championship';
 }
 
 const SEASON_POINTS_TABLE: Record<number, number> = {
