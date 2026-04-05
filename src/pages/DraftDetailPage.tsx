@@ -900,6 +900,8 @@ export default function DraftDetailPage() {
                   const pickRatings = (result.pick_ratings || []) as { pick_id: string; pick_text: string; score: number; explanation: string }[];
                   const bestPick = pickRatings.length > 0 ? pickRatings.reduce((a, b) => a.score >= b.score ? a : b) : null;
                   const worstPick = pickRatings.length > 1 ? pickRatings.reduce((a, b) => a.score <= b.score ? a : b) : null;
+                  const userStreak = streaks.get(result.user_id);
+                  const userAvgTime = timings?.userAvgs.get(result.user_id);
 
                   return (
                     <motion.div
