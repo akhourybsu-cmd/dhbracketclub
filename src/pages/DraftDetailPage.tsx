@@ -80,7 +80,7 @@ export default function DraftDetailPage() {
   const [showConfetti, setShowConfetti] = useState(false);
   const confettiShown = useRef(false);
   const [announcement, setAnnouncement] = useState<{ displayName: string; pickText: string; round: number; pickNumber: number } | null>(null);
-  const prevPickCount = useRef(0);
+  
 
   const { results: draftResults, loading: resultsLoading, generating: resultsGenerating, hasResults, generateResults } = useDraftResults(draftId);
 
@@ -118,9 +118,10 @@ export default function DraftDetailPage() {
   useEffect(() => { if (picks.length) fetchEnrichments(); }, [picks.length, fetchEnrichments]);
 
   // Detect new picks for announcement banner
+  const prevPickCountRef = useRef(0);
   useEffect(() => {
-    if (picks.length > prevPickCount.current && prevPickCount.current > 0) {
-      const latestPick = [...picks].sort((a, b) => b.pick_number - a.pick_number)[0];
+    if (picks.length > prevPickCountRef.current && prevPickCountRef.current > 0) {
+      const latestPick = picks[picks.length - 1]; // picks are ordered by pick_number
       if (latestPick && latestPick.user_id !== user?.id) {
         setAnnouncement({
           displayName: latestPick.profiles?.display_name || 'Someone',
@@ -130,8 +131,8 @@ export default function DraftDetailPage() {
         });
       }
     }
-    prevPickCount.current = picks.length;
-  }, [picks.length, picks, user?.id]);
+    prevPickCountRef.current = picks.length;
+  }, [picks.length, user?.id]);
 
   // Realtime: auto-refresh on picks, participants, or draft status changes
   const { status: realtimeStatus } = useDraftUpdates(draftId, fetchData);
@@ -327,8 +328,10 @@ export default function DraftDetailPage() {
       if (pIds.length > 0) {
         await supabase.from('item_enrichments').delete().in('item_id', pIds);
       }
+      await supabase.from('draft_results' as any).delete().eq('draft_id', draftId);
       await supabase.from('draft_picks').delete().eq('draft_id', draftId);
       await supabase.from('draft_participants').delete().eq('draft_id', draftId);
+      await supabase.from('draft_season_entries' as any).delete().eq('draft_id', draftId);
       const { error } = await supabase.from('drafts').delete().eq('id', draftId);
       if (error) throw error;
       if (draft?.competition_id) {
@@ -1013,13 +1016,24 @@ export default function DraftDetailPage() {
           ) : (
             <div className="glass-card p-6 mb-5 text-center">
               <Sparkles className="w-8 h-8 text-primary mx-auto mb-2 animate-pulse" />
-              <p className="text-[13px] font-bold mb-1">Generating Draft Report…</p>
-              <p className="text-[11px] text-muted-foreground/60 mb-3">AI is analyzing every pick. This takes a moment.</p>
-              <div className="space-y-2">
-                {[1, 2, 3].map(i => (
-                  <Skeleton key={i} className="h-10 w-full rounded-xl" />
-                ))}
-              </div>
+              <p className="text-[13px] font-bold mb-1">
+                {autoTriggered ? 'Generating Draft Report…' : 'Draft Report'}
+              </p>
+              <p className="text-[11px] text-muted-foreground/60 mb-3">
+                {autoTriggered ? 'AI is analyzing every pick. This takes a moment.' : 'The report is being prepared.'}
+              </p>
+              {isParticipant && !autoTriggered && (
+                <Button onClick={() => { setAutoTriggered(true); generateResults(); }} className="rounded-xl font-bold gap-2 btn-press">
+                  <Sparkles className="w-4 h-4" /> Generate Report
+                </Button>
+              )}
+              {autoTriggered && (
+                <div className="space-y-2">
+                  {[1, 2, 3].map(i => (
+                    <Skeleton key={i} className="h-10 w-full rounded-xl" />
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -1036,14 +1050,8 @@ export default function DraftDetailPage() {
                   className="glass-card overflow-hidden"
                 >
                   <div className="px-4 py-3 border-b border-border/25 flex items-center gap-2 relative z-10">
-                    <div className={cn(
-                      "w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-extrabold",
-                      idx === 0 && "bg-gold/15 text-gold",
-                      idx === 1 && "bg-silver/15 text-silver",
-                      idx === 2 && "bg-bronze/15 text-bronze",
-                      idx > 2 && "bg-muted/50 text-muted-foreground",
-                    )}>
-                      {idx + 1}
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-extrabold bg-muted/50 text-muted-foreground">
+                      {p.pick_order}
                     </div>
                     <span className="text-[13px] font-bold">{p.profiles?.display_name || 'Unknown'}</span>
                     <span className="text-[10px] text-muted-foreground/60 ml-auto font-mono">{userPicks.length} picks</span>
