@@ -10,7 +10,8 @@ export interface DraftSeason {
   starts_at: string;
   ends_at: string;
   status: string;
-  regular_season_weeks: number;
+  regular_season_weeks: number; // kept for backward compat
+  regular_season_drafts: number; // NEW: draft-count target (default 12)
   playoff_weeks: number;
   best_of: number;
 }
@@ -38,7 +39,7 @@ export interface SeasonEntry {
   id: string;
   season_id: string;
   draft_id: string;
-  week_number: number;
+  week_number: number; // used as sequential draft_number
   is_playoff: boolean;
   season_points_awarded: Record<string, number>;
   drafts?: { topic: string; status: string };
@@ -70,6 +71,11 @@ const PARTICIPATION_POINTS = 1;
 
 export function getSeasonPointsForRank(rank: number): number {
   return SEASON_POINTS[rank] || PARTICIPATION_POINTS;
+}
+
+/** Get the total number of regular-season drafts for a season (draft-count model) */
+export function getSeasonDraftTarget(season: DraftSeason): number {
+  return season.regular_season_drafts || season.regular_season_weeks || 12;
 }
 
 export function useCurrentSeason() {
@@ -257,11 +263,11 @@ export async function recalculateSeasonStandings(seasonId: string) {
   // Get season config
   const { data: seasonData } = await supabase
     .from('draft_seasons' as any)
-    .select('best_of, regular_season_weeks')
+    .select('best_of, regular_season_drafts, regular_season_weeks')
     .eq('id', seasonId)
     .single();
 
-  const bestOf = (seasonData as any)?.best_of || 6;
+  const bestOf = (seasonData as any)?.best_of || 10;
 
   // Group results by user
   const userResults = new Map<string, Array<{ rank: number; total_score: number; draft_id: string }>>();
@@ -355,13 +361,15 @@ export async function recalculateSeasonStandings(seasonId: string) {
   }
 }
 
-/** Create a new season */
+/** Create a new season (draft-count based) */
 export async function createSeason(params: {
   name: string;
   year: number;
   seasonLabel: string;
   startsAt: string;
   endsAt: string;
+  regularSeasonDrafts?: number;
+  bestOf?: number;
 }) {
   const { data, error } = await supabase
     .from('draft_seasons' as any)
@@ -371,6 +379,9 @@ export async function createSeason(params: {
       season_label: params.seasonLabel,
       starts_at: params.startsAt,
       ends_at: params.endsAt,
+      regular_season_drafts: params.regularSeasonDrafts || 12,
+      regular_season_weeks: params.regularSeasonDrafts || 12, // keep in sync for compat
+      best_of: params.bestOf || 10,
       status: 'regular_season',
     } as any)
     .select()
@@ -380,14 +391,14 @@ export async function createSeason(params: {
   return data;
 }
 
-/** Assign a draft to the current season */
-export async function assignDraftToSeason(seasonId: string, draftId: string, weekNumber: number, isPlayoff = false) {
+/** Assign a draft to the current season (draft_number = sequential position) */
+export async function assignDraftToSeason(seasonId: string, draftId: string, draftNumber: number, isPlayoff = false) {
   const { error } = await supabase
     .from('draft_season_entries' as any)
     .upsert({
       season_id: seasonId,
       draft_id: draftId,
-      week_number: weekNumber,
+      week_number: draftNumber, // column stores sequential draft number
       is_playoff: isPlayoff,
     } as any, { onConflict: 'draft_id' });
 

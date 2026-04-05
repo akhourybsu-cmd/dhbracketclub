@@ -22,11 +22,19 @@ export function getOrdinalSuffix(n: number): string {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
-export function getWeekLabel(week: number, totalRegular: number): string {
-  if (week <= totalRegular) return `Week ${week}`;
-  if (week === totalRegular + 1) return 'Play-In Round';
-  if (week === totalRegular + 2) return 'Semifinals';
+/** Get label for a draft by its sequential number within the season */
+export function getDraftLabel(draftNumber: number, totalRegularDrafts: number): string {
+  if (draftNumber <= totalRegularDrafts) return `Draft ${draftNumber}`;
+  // Playoff drafts
+  const playoffRound = draftNumber - totalRegularDrafts;
+  if (playoffRound === 1) return 'Play-In Round';
+  if (playoffRound === 2) return 'Semifinals';
   return 'Championship';
+}
+
+/** Legacy: kept for backward compatibility */
+export function getWeekLabel(week: number, totalRegular: number): string {
+  return getDraftLabel(week, totalRegular);
 }
 
 const SEASON_POINTS_TABLE: Record<number, number> = {
@@ -39,4 +47,13 @@ export function formatSeasonPoints(rank: number): string {
 
 export function getPlayoffSeedLabel(seed: number): string {
   return `#${seed} Seed`;
+}
+
+/** Get season progress summary text */
+export function getSeasonProgressText(completedDrafts: number, totalDrafts: number, status: string): string {
+  if (status === 'complete') return 'Season Complete';
+  if (status === 'playoffs') return 'Playoffs Live';
+  if (completedDrafts >= totalDrafts) return 'Regular Season Complete';
+  const remaining = totalDrafts - completedDrafts;
+  return `${remaining} draft${remaining === 1 ? '' : 's'} remaining`;
 }
