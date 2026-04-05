@@ -330,8 +330,8 @@ export async function recalculateSeasonStandings(seasonId: string) {
       rank = i + 1;
     }
     (standingsUpdates[i] as any).rank = rank;
-    // Top 4 get playoff seeds
-    (standingsUpdates[i] as any).playoff_seed = i < 4 ? i + 1 : null;
+    // All players get playoff seeds
+    (standingsUpdates[i] as any).playoff_seed = i + 1;
   }
 
   // Upsert standings

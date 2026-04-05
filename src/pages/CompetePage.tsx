@@ -239,6 +239,10 @@ function ThisWeekDraft({ entries, seasonWeeks }: { entries: any[]; seasonWeeks: 
 /* ── Playoff picture ── */
 function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; matches: any[] }) {
   const seeds = standings.filter(s => s.playoff_seed).sort((a, b) => (a.playoff_seed || 99) - (b.playoff_seed || 99));
+  const getName = (seed: number) => {
+    const s = seeds.find(s => s.playoff_seed === seed);
+    return s ? (s.profiles as any)?.display_name || '?' : 'TBD';
+  };
 
   if (seeds.length === 0 && matches.length === 0) {
     return (
@@ -252,6 +256,13 @@ function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; m
     );
   }
 
+  const roundLabels: Record<string, string> = {
+    play_in: 'Play-In',
+    semifinal: 'Semifinal',
+    final: 'Championship',
+    third_place: '3rd Place',
+  };
+
   return (
     <div className="glass-card p-4">
       <h3 className="font-bold text-[13px] flex items-center gap-1.5 mb-3">
@@ -263,7 +274,7 @@ function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; m
         <div className="space-y-2">
           {matches.map(m => (
             <div key={m.id} className="flex items-center gap-2 p-3 rounded-lg bg-muted/30">
-              <span className="text-[10px] font-bold text-muted-foreground w-16 flex-shrink-0 capitalize">{m.round.replace('_', ' ')}</span>
+              <span className="text-[10px] font-bold text-muted-foreground w-20 flex-shrink-0">{roundLabels[m.round] || m.round}</span>
               <div className="flex-1 flex items-center justify-center gap-3">
                 <span className={cn('text-[11px] font-bold', m.winner_user_id === m.user_a ? 'text-gold' : '')}>#{m.seed_a}</span>
                 <span className="text-[9px] text-muted-foreground">vs</span>
@@ -276,29 +287,53 @@ function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; m
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-2">
-          {seeds.map(s => (
-            <div key={s.id} className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30">
-              <span className="text-sm font-extrabold" style={{ color: 'hsl(var(--gold))' }}>#{s.playoff_seed}</span>
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-bold truncate">{(s.profiles as any)?.display_name}</p>
-                <p className="text-[9px] text-muted-foreground">{s.season_points} pts</p>
-              </div>
-            </div>
-          ))}
-          {seeds.length < 4 && Array.from({ length: 4 - seeds.length }).map((_, i) => (
-            <div key={`empty-${i}`} className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/20 border border-dashed border-border/30">
-              <span className="text-sm font-extrabold text-muted-foreground/30">#{seeds.length + i + 1}</span>
-              <p className="text-[10px] text-muted-foreground/40">TBD</p>
-            </div>
-          ))}
-        </div>
-      )}
+        <div className="space-y-3">
+          {/* All 5 seeds */}
+          <div className="space-y-1.5">
+            {seeds.map(s => {
+              const seed = s.playoff_seed!;
+              const badge = seed === 1 ? '🏖️ BYE' : seed <= 3 ? '→ Semis' : '→ Play-In';
+              const badgeCls = seed === 1 ? 'text-gold font-bold' : seed <= 3 ? 'text-success' : 'text-warning';
+              return (
+                <div key={s.id} className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30">
+                  <span className="text-sm font-extrabold w-6 text-center" style={{ color: 'hsl(var(--gold))' }}>#{seed}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-bold truncate">{(s.profiles as any)?.display_name}</p>
+                    <p className="text-[9px] text-muted-foreground">{s.season_points} pts</p>
+                  </div>
+                  <span className={cn('text-[9px] font-semibold', badgeCls)}>{badge}</span>
+                </div>
+              );
+            })}
+          </div>
 
-      {seeds.length >= 2 && matches.length === 0 && (
-        <div className="mt-3 p-2 rounded-lg bg-muted/20 text-center">
-          <p className="text-[10px] text-muted-foreground">
-            Semis: <span className="font-bold">#1</span> vs <span className="font-bold">#4</span> · <span className="font-bold">#2</span> vs <span className="font-bold">#3</span>
+          {/* Bracket preview */}
+          <div className="space-y-1.5 p-3 rounded-lg bg-muted/20">
+            <p className="text-[10px] font-bold text-muted-foreground/80 mb-2">Playoff Bracket</p>
+            <div className="flex items-center gap-2 text-[10px]">
+              <span className="font-bold text-warning">Play-In</span>
+              <span className="text-muted-foreground">#{4} {getName(4)} vs #{5} {getName(5)}</span>
+            </div>
+            <div className="flex items-center gap-2 text-[10px]">
+              <span className="font-bold text-success">Semi 1</span>
+              <span className="text-muted-foreground">#{1} {getName(1)} <span className="text-[8px]">(BYE)</span> vs Play-In winner</span>
+            </div>
+            <div className="flex items-center gap-2 text-[10px]">
+              <span className="font-bold text-success">Semi 2</span>
+              <span className="text-muted-foreground">#{2} {getName(2)} vs #{3} {getName(3)}</span>
+            </div>
+            <div className="flex items-center gap-2 text-[10px]">
+              <span className="font-bold" style={{ color: 'hsl(var(--gold))' }}>Final</span>
+              <span className="text-muted-foreground">Semi winners → Championship</span>
+            </div>
+            <div className="flex items-center gap-2 text-[10px]">
+              <span className="font-bold text-muted-foreground">3rd</span>
+              <span className="text-muted-foreground">Semi losers → 3rd Place Match</span>
+            </div>
+          </div>
+
+          <p className="text-[9px] text-muted-foreground/50 text-center">
+            All 5 players qualify · #1 seed earns a first-round bye
           </p>
         </div>
       )}
