@@ -10,9 +10,9 @@ export interface DraftSeason {
   starts_at: string;
   ends_at: string;
   status: string;
-  regular_season_weeks: number; // kept for backward compat
-  regular_season_drafts: number; // NEW: draft-count target (default 12)
-  playoff_weeks: number;
+  regular_season_weeks: number; // DB column kept for backward compat
+  regular_season_drafts: number; // draft-count target (default 12)
+  playoff_weeks: number; // DB column kept for backward compat
   best_of: number;
 }
 
