@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Bookmark, Plus, ArrowRight, Users, Play, Trophy, Award } from 'lucide-react';
+import { Bookmark, Plus, ArrowRight, Users, Play, Trophy, Award, Target } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { getDerivedDraftTurn } from '@/lib/draftTurn';
@@ -15,7 +15,7 @@ export default function DraftsListPage() {
   const [drafts, setDrafts] = useState<any[]>([]);
   const [participantCounts, setParticipantCounts] = useState<Map<string, number>>(new Map());
   const [draftWinners, setDraftWinners] = useState<Map<string, { user_id: string; display_name: string }>>(new Map());
-  const [myDraftStats, setMyDraftStats] = useState({ totalPoints: 0, wins: 0, draftsRated: 0 });
+  const [myDraftStats, setMyDraftStats] = useState({ totalPoints: 0, wins: 0, draftsRated: 0, podiums: 0, bestFinish: 0, avgScore: 0 });
   const [loading, setLoading] = useState(true);
 
   const fetchDrafts = useCallback(async () => {
@@ -110,10 +110,16 @@ export default function DraftsListPage() {
 
               // My stats
               const myResults = (allResults as any[]).filter((r: any) => r.user_id === user?.id);
+              const podiums = myResults.filter((r: any) => r.rank <= 3).length;
+              const bestFinish = myResults.length > 0 ? Math.min(...myResults.map((r: any) => r.rank)) : 0;
+              const avgScore = myResults.length > 0 ? myResults.reduce((s: number, r: any) => s + (r.total_score || 0), 0) / myResults.length : 0;
               setMyDraftStats({
                 totalPoints: myResults.reduce((s: number, r: any) => s + (r.points_awarded || 0), 0),
                 wins: myResults.filter((r: any) => r.rank === 1).length,
                 draftsRated: myResults.length,
+                podiums,
+                bestFinish,
+                avgScore,
               });
             }
           }
@@ -162,19 +168,33 @@ export default function DraftsListPage() {
       {/* Cumulative Draft Stats */}
       {myDraftStats.draftsRated > 0 && (
         <div className="glass-card p-4 mb-4">
-          <div className="flex items-center justify-around">
+          <div className="grid grid-cols-3 gap-2 mb-3">
             <div className="text-center">
               <p className="text-lg font-extrabold leading-none">{myDraftStats.totalPoints}</p>
               <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Total Pts</p>
             </div>
-            <div className="w-px h-8 bg-border/30" />
             <div className="text-center">
               <p className="text-lg font-extrabold leading-none">{myDraftStats.wins}</p>
               <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Wins</p>
             </div>
-            <div className="w-px h-8 bg-border/30" />
             <div className="text-center">
-              <p className="text-lg font-extrabold leading-none">{myDraftStats.draftsRated}</p>
+              <p className="text-lg font-extrabold leading-none">{myDraftStats.podiums}</p>
+              <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Podiums</p>
+            </div>
+          </div>
+          <div className="border-t border-border/20 pt-2.5 flex items-center justify-around">
+            <div className="text-center">
+              <p className="text-sm font-bold leading-none">{myDraftStats.avgScore.toFixed(1)}</p>
+              <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Avg Score</p>
+            </div>
+            <div className="w-px h-6 bg-border/20" />
+            <div className="text-center">
+              <p className="text-sm font-bold leading-none">{myDraftStats.bestFinish > 0 ? `${myDraftStats.bestFinish}${myDraftStats.bestFinish === 1 ? 'st' : myDraftStats.bestFinish === 2 ? 'nd' : myDraftStats.bestFinish === 3 ? 'rd' : 'th'}` : '—'}</p>
+              <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Best Finish</p>
+            </div>
+            <div className="w-px h-6 bg-border/20" />
+            <div className="text-center">
+              <p className="text-sm font-bold leading-none">{myDraftStats.draftsRated}</p>
               <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Rated</p>
             </div>
           </div>

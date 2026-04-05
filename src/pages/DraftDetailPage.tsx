@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bookmark, ArrowLeft, Users, Play, Send, Trophy, RefreshCw, Sparkles, MoreVertical, Pencil, Trash2, X, Star, ChevronDown, ChevronUp, Award, AlertTriangle, Check } from 'lucide-react';
+import { Bookmark, ArrowLeft, Users, Play, Send, Trophy, RefreshCw, Sparkles, MoreVertical, Pencil, Trash2, X, Star, ChevronDown, ChevronUp, Award, AlertTriangle, Check, Flame } from 'lucide-react';
 import { usePickSuggestion } from '@/hooks/usePickSuggestion';
 import { cn } from '@/lib/utils';
 import { useDraftUpdates } from '@/hooks/useRealtimeSubscription';
@@ -17,6 +17,11 @@ import ImagePickerDialog from '@/components/draft/ImagePickerDialog';
 import { useDraftResults } from '@/hooks/useDraftResults';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getDerivedDraftTurn } from '@/lib/draftTurn';
+import { Confetti } from '@/components/Confetti';
+import { OnTheClockTimer } from '@/components/draft/OnTheClockTimer';
+import { PickAnnouncement } from '@/components/draft/PickAnnouncement';
+import { DraftStatsCard } from '@/components/draft/DraftStatsCard';
+import { findMvpPick, findScoringStreaks, computePickTimings, formatDuration } from '@/lib/draftStats';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -71,6 +76,10 @@ export default function DraftDetailPage() {
   const [saving, setSaving] = useState(false);
   const [imagePickerPick, setImagePickerPick] = useState<Pick | null>(null);
   const [expandedResultUser, setExpandedResultUser] = useState<string | null>(null);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const confettiShown = useRef(false);
+  const [announcement, setAnnouncement] = useState<{ displayName: string; pickText: string; round: number; pickNumber: number } | null>(null);
+  const prevPickCount = useRef(0);
 
   const { results: draftResults, loading: resultsLoading, generating: resultsGenerating, hasResults, generateResults } = useDraftResults(draftId);
 
@@ -107,6 +116,22 @@ export default function DraftDetailPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { if (picks.length) fetchEnrichments(); }, [picks.length, fetchEnrichments]);
 
+  // Detect new picks for announcement banner
+  useEffect(() => {
+    if (picks.length > prevPickCount.current && prevPickCount.current > 0) {
+      const latestPick = [...picks].sort((a, b) => b.pick_number - a.pick_number)[0];
+      if (latestPick && latestPick.user_id !== user?.id) {
+        setAnnouncement({
+          displayName: latestPick.profiles?.display_name || 'Someone',
+          pickText: latestPick.pick_text,
+          round: latestPick.round,
+          pickNumber: latestPick.pick_number,
+        });
+      }
+    }
+    prevPickCount.current = picks.length;
+  }, [picks.length, picks, user?.id]);
+
   // Realtime: auto-refresh on picks, participants, or draft status changes
   const { status: realtimeStatus } = useDraftUpdates(draftId, fetchData);
 
@@ -120,6 +145,16 @@ export default function DraftDetailPage() {
       generateResults();
     }
   }, [draft?.status, hasResults, resultsLoading, resultsGenerating, autoTriggered, isParticipant, generateResults]);
+
+  // Confetti on first results load
+  useEffect(() => {
+    if (hasResults && !confettiShown.current) {
+      confettiShown.current = true;
+      setShowConfetti(true);
+      const timer = setTimeout(() => setShowConfetti(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [hasResults]);
 
   // Derive turn state from pick count + participant order (single source of truth)
   const derivedTurn = getDerivedDraftTurn(
@@ -417,8 +452,14 @@ export default function DraftDetailPage() {
     picksByUser.set(p.user_id, list);
   });
 
+  // Computed stats for results
+  const mvpPick = hasResults ? findMvpPick(draftResults) : null;
+  const streaks = hasResults ? findScoringStreaks(draftResults, picks) : new Map();
+  const timings = computePickTimings(picks);
+
   return (
     <div className="max-w-md mx-auto">
+      <Confetti active={showConfetti} />
       <Link to="/drafts" className="back-link">
         <ArrowLeft /> Back to Drafts
       </Link>
@@ -584,6 +625,9 @@ export default function DraftDetailPage() {
       {/* ═══ Live Draft ═══ */}
       {isInProgress && !isDraftComplete && (
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+          {/* Pick announcement */}
+          <PickAnnouncement pick={announcement} />
+
           {/* Current turn banner */}
           <div className={cn(
             "glass-card p-4 mb-5 text-center",
@@ -594,6 +638,10 @@ export default function DraftDetailPage() {
                 <>
                   <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'hsl(var(--gold))' }}>Your Turn</p>
                    <p className="text-[13px] font-bold">Round {currentRound} • Pick #{currentPickNumber}</p>
+                   <OnTheClockTimer
+                     lastPickAt={picks.length > 0 ? (picks[picks.length - 1] as any)?.picked_at : null}
+                     draftStartedAt={draft?.updated_at}
+                   />
                  </>
                ) : (
                  <>
@@ -819,6 +867,31 @@ export default function DraftDetailPage() {
                 </div>
               </div>
 
+              {/* MVP Pick highlight */}
+              {mvpPick && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="rounded-xl px-4 py-3 mb-4 flex items-center gap-3"
+                  style={{
+                    background: 'linear-gradient(135deg, hsl(var(--gold) / 0.12), hsl(var(--gold) / 0.04))',
+                    border: '2px solid hsl(var(--gold) / 0.3)',
+                  }}
+                >
+                  <Star className="w-5 h-5 flex-shrink-0" style={{ color: 'hsl(var(--gold))' }} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'hsl(var(--gold))' }}>MVP Pick</p>
+                    <p className="text-[13px] font-extrabold truncate">{mvpPick.pickText}</p>
+                    <p className="text-[10px] text-muted-foreground/70">
+                      {mvpPick.score.toFixed(1)} — {participants.find(p => p.user_id === mvpPick.userId)?.profiles?.display_name || 'Unknown'}
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Draft Stats Card */}
+              <DraftStatsCard picks={picks} results={draftResults} participants={participants} />
+
               {/* Detailed Results */}
               <div className="space-y-3">
                 {draftResults.map((result, idx) => {
@@ -827,6 +900,8 @@ export default function DraftDetailPage() {
                   const pickRatings = (result.pick_ratings || []) as { pick_id: string; pick_text: string; score: number; explanation: string }[];
                   const bestPick = pickRatings.length > 0 ? pickRatings.reduce((a, b) => a.score >= b.score ? a : b) : null;
                   const worstPick = pickRatings.length > 1 ? pickRatings.reduce((a, b) => a.score <= b.score ? a : b) : null;
+                  const userStreak = streaks.get(result.user_id);
+                  const userAvgTime = timings?.userAvgs.get(result.user_id);
 
                   return (
                     <motion.div
@@ -850,9 +925,17 @@ export default function DraftDetailPage() {
                           {result.rank}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <span className="text-[13px] font-bold block truncate">{participant?.profiles?.display_name || 'Unknown'}</span>
+                          <span className="text-[13px] font-bold truncate flex items-center gap-1.5">
+                            {participant?.profiles?.display_name || 'Unknown'}
+                            {userStreak && (
+                              <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md" style={{ background: 'hsl(var(--gold) / 0.12)', color: 'hsl(var(--gold))' }}>
+                                <Flame className="w-2.5 h-2.5" /> {userStreak}🔥
+                              </span>
+                            )}
+                          </span>
                           <span className="text-[10px] text-muted-foreground/60">
                             Score: {Number(result.total_score).toFixed(1)} • +{result.points_awarded} pts
+                            {userAvgTime ? ` • ⏱ ${formatDuration(userAvgTime)} avg` : ''}
                           </span>
                         </div>
                         {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground/60 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground/60 flex-shrink-0" />}
