@@ -1015,13 +1015,24 @@ export default function DraftDetailPage() {
           ) : (
             <div className="glass-card p-6 mb-5 text-center">
               <Sparkles className="w-8 h-8 text-primary mx-auto mb-2 animate-pulse" />
-              <p className="text-[13px] font-bold mb-1">Generating Draft Report…</p>
-              <p className="text-[11px] text-muted-foreground/60 mb-3">AI is analyzing every pick. This takes a moment.</p>
-              <div className="space-y-2">
-                {[1, 2, 3].map(i => (
-                  <Skeleton key={i} className="h-10 w-full rounded-xl" />
-                ))}
-              </div>
+              <p className="text-[13px] font-bold mb-1">
+                {autoTriggered ? 'Generating Draft Report…' : 'Draft Report'}
+              </p>
+              <p className="text-[11px] text-muted-foreground/60 mb-3">
+                {autoTriggered ? 'AI is analyzing every pick. This takes a moment.' : 'The report is being prepared.'}
+              </p>
+              {isParticipant && !autoTriggered && (
+                <Button onClick={() => { setAutoTriggered(true); generateResults(); }} className="rounded-xl font-bold gap-2 btn-press">
+                  <Sparkles className="w-4 h-4" /> Generate Report
+                </Button>
+              )}
+              {autoTriggered && (
+                <div className="space-y-2">
+                  {[1, 2, 3].map(i => (
+                    <Skeleton key={i} className="h-10 w-full rounded-xl" />
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
