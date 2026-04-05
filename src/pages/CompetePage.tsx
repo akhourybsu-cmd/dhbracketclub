@@ -129,7 +129,6 @@ function SeasonHeaderCard({ season, entries }: { season: any; entries: any[] }) 
                   <p className="text-[11px] text-muted-foreground/70 mt-0.5">
                     {format(new Date(season.starts_at), 'MMM d')} — {format(new Date(season.ends_at), 'MMM d, yyyy')}
                   </p>
-                </div>
               </div>
               <span className={cn('status-pill flex items-center gap-1.5 text-[10px] px-2.5 py-1', st.cls)}>
                 {isActive && (
