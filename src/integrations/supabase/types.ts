@@ -417,6 +417,69 @@ export type Database = {
           },
         ]
       }
+      draft_playoff_matches: {
+        Row: {
+          created_at: string
+          draft_id: string | null
+          id: string
+          match_number: number
+          round: string
+          season_id: string
+          seed_a: number
+          seed_b: number
+          status: string
+          updated_at: string
+          user_a: string | null
+          user_b: string | null
+          winner_user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          draft_id?: string | null
+          id?: string
+          match_number?: number
+          round: string
+          season_id: string
+          seed_a: number
+          seed_b: number
+          status?: string
+          updated_at?: string
+          user_a?: string | null
+          user_b?: string | null
+          winner_user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          draft_id?: string | null
+          id?: string
+          match_number?: number
+          round?: string
+          season_id?: string
+          seed_a?: number
+          seed_b?: number
+          status?: string
+          updated_at?: string
+          user_a?: string | null
+          user_b?: string | null
+          winner_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "draft_playoff_matches_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draft_playoff_matches_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "draft_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       draft_results: {
         Row: {
           created_at: string
@@ -460,6 +523,161 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      draft_season_entries: {
+        Row: {
+          created_at: string
+          draft_id: string
+          id: string
+          is_playoff: boolean
+          season_id: string
+          season_points_awarded: Json
+          week_number: number
+        }
+        Insert: {
+          created_at?: string
+          draft_id: string
+          id?: string
+          is_playoff?: boolean
+          season_id: string
+          season_points_awarded?: Json
+          week_number: number
+        }
+        Update: {
+          created_at?: string
+          draft_id?: string
+          id?: string
+          is_playoff?: boolean
+          season_id?: string
+          season_points_awarded?: Json
+          week_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "draft_season_entries_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: true
+            referencedRelation: "drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draft_season_entries_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "draft_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      draft_season_standings: {
+        Row: {
+          avg_finish: number
+          avg_score: number
+          best_score: number
+          consistency: number
+          drafts_played: number
+          id: string
+          is_eliminated: boolean
+          playoff_seed: number | null
+          podiums: number
+          rank: number | null
+          season_id: string
+          season_points: number
+          updated_at: string
+          user_id: string
+          wins: number
+          worst_score: number
+        }
+        Insert: {
+          avg_finish?: number
+          avg_score?: number
+          best_score?: number
+          consistency?: number
+          drafts_played?: number
+          id?: string
+          is_eliminated?: boolean
+          playoff_seed?: number | null
+          podiums?: number
+          rank?: number | null
+          season_id: string
+          season_points?: number
+          updated_at?: string
+          user_id: string
+          wins?: number
+          worst_score?: number
+        }
+        Update: {
+          avg_finish?: number
+          avg_score?: number
+          best_score?: number
+          consistency?: number
+          drafts_played?: number
+          id?: string
+          is_eliminated?: boolean
+          playoff_seed?: number | null
+          podiums?: number
+          rank?: number | null
+          season_id?: string
+          season_points?: number
+          updated_at?: string
+          user_id?: string
+          wins?: number
+          worst_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "draft_season_standings_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "draft_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      draft_seasons: {
+        Row: {
+          best_of: number
+          created_at: string
+          ends_at: string
+          id: string
+          name: string
+          playoff_weeks: number
+          regular_season_weeks: number
+          season_label: string
+          starts_at: string
+          status: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          best_of?: number
+          created_at?: string
+          ends_at: string
+          id?: string
+          name: string
+          playoff_weeks?: number
+          regular_season_weeks?: number
+          season_label: string
+          starts_at: string
+          status?: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          best_of?: number
+          created_at?: string
+          ends_at?: string
+          id?: string
+          name?: string
+          playoff_weeks?: number
+          regular_season_weeks?: number
+          season_label?: string
+          starts_at?: string
+          status?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
       }
       drafts: {
         Row: {
