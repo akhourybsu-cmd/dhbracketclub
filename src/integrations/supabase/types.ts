@@ -642,6 +642,7 @@ export type Database = {
           id: string
           name: string
           playoff_weeks: number
+          regular_season_drafts: number
           regular_season_weeks: number
           season_label: string
           starts_at: string
@@ -656,6 +657,7 @@ export type Database = {
           id?: string
           name: string
           playoff_weeks?: number
+          regular_season_drafts?: number
           regular_season_weeks?: number
           season_label: string
           starts_at: string
@@ -670,6 +672,7 @@ export type Database = {
           id?: string
           name?: string
           playoff_weeks?: number
+          regular_season_drafts?: number
           regular_season_weeks?: number
           season_label?: string
           starts_at?: string
