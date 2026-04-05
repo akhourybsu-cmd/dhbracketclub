@@ -73,9 +73,12 @@
     --gradient-hero: radial-gradient(ellipse 80% 50% at 50% -20%, hsl(152 72% 46% / 0.1), transparent);
     --gradient-hero-accent: radial-gradient(ellipse 60% 40% at 80% 10%, hsl(172 66% 50% / 0.06), transparent);
     --gradient-hero-warm: radial-gradient(ellipse 50% 30% at 20% 20%, hsl(28 80% 58% / 0.03), transparent);
+    --gradient-hero-gold: radial-gradient(ellipse 80% 50% at 50% -20%, hsl(45 93% 52% / 0.12), transparent);
+    --gradient-hero-gold-accent: radial-gradient(ellipse 60% 40% at 80% 10%, hsl(45 93% 52% / 0.06), transparent);
     --gradient-card-shine: linear-gradient(135deg, hsl(160 8% 14% / 0.6) 0%, transparent 40%);
     --gradient-card-shine-alt: linear-gradient(315deg, hsl(152 72% 46% / 0.03) 0%, transparent 50%);
     --gradient-arena-edge: linear-gradient(180deg, hsl(152 72% 46% / 0.06) 0%, transparent 40%);
+    --gradient-arena-edge-gold: linear-gradient(180deg, hsl(45 93% 52% / 0.08) 0%, transparent 40%);
     --gradient-arena-floor: linear-gradient(180deg, transparent 60%, hsl(160 10% 3% / 0.4) 100%);
 
     /* ═══ Shadows ═══ */

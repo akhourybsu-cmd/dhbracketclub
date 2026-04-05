@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   Trophy, BarChart3, MessageCircle, Bookmark, ChevronRight, Plus, Swords, Lock, Shield,
-  Calendar, Award, TrendingUp, Users, Archive, Crown, Target, Flame, Medal
+  Calendar, Award, TrendingUp, Users, Archive, Crown, Target, Flame, Medal, ChevronDown
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentDay, useMyLock, useDayLocks } from '@/hooks/useLockbox';
@@ -22,6 +22,7 @@ import {
 import { getSeasonDisplayName, getOrdinalSuffix, getWeekLabel, getSeasonEmoji } from '@/lib/seasonUtils';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
 
 /* ── Lockbox card (unchanged) ── */
 function LockboxCompeteCard() {
@@ -87,47 +88,93 @@ function LockboxCompeteCard() {
   );
 }
 
-/* ── Season header card ── */
-function SeasonHeaderCard({ season }: { season: any }) {
-  const statusLabels: Record<string, { label: string; cls: string }> = {
-    upcoming: { label: 'Upcoming', cls: 'bg-muted text-muted-foreground' },
-    regular_season: { label: 'Regular Season', cls: 'bg-success/10 text-success' },
-    playoffs: { label: 'Playoffs', cls: 'bg-gold/10 text-gold' },
-    complete: { label: 'Complete', cls: 'bg-primary/10 text-primary' },
+/* ══════════════════════════════════════════════════════════
+   SEASON HERO BANNER — elevated with gold glow + progress
+   ══════════════════════════════════════════════════════════ */
+function SeasonHeaderCard({ season, entries }: { season: any; entries: any[] }) {
+  const statusLabels: Record<string, { label: string; cls: string; dotCls: string }> = {
+    upcoming: { label: 'Upcoming', cls: 'bg-muted text-muted-foreground', dotCls: 'bg-muted-foreground' },
+    regular_season: { label: 'Regular Season', cls: 'bg-success/15 text-success border border-success/20', dotCls: 'bg-success' },
+    playoffs: { label: 'Playoffs', cls: 'bg-gold/15 text-gold border border-gold/20', dotCls: 'bg-gold' },
+    complete: { label: 'Complete', cls: 'bg-primary/10 text-primary', dotCls: 'bg-primary' },
   };
   const st = statusLabels[season.status] || statusLabels.upcoming;
+  const isActive = season.status === 'regular_season' || season.status === 'playoffs';
+
+  // Calculate season progress
+  const completedWeeks = entries.filter(e => !e.is_playoff && e.drafts?.status === 'complete').length;
+  const totalWeeks = season.regular_season_weeks;
+  const progressPct = totalWeeks > 0 ? Math.round((completedWeeks / totalWeeks) * 100) : 0;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-      <div className="glass-card arena-edge p-5 relative overflow-hidden">
-        <div className="relative z-10">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">{getSeasonEmoji(season.season_label)}</span>
-              <div>
-                <h2 className="font-extrabold text-lg tracking-tight">{getSeasonDisplayName(season.season_label, season.year)}</h2>
-                <p className="text-[11px] text-muted-foreground/70">
-                  {format(new Date(season.starts_at), 'MMM d')} — {format(new Date(season.ends_at), 'MMM d, yyyy')}
-                </p>
+    <motion.div initial={{ opacity: 0, y: 10, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}>
+      <div className="relative rounded-xl overflow-hidden">
+        {/* Gold glow background layers */}
+        <div className="absolute inset-0 rounded-xl" style={{ background: 'var(--gradient-hero-gold)' }} />
+        <div className="absolute inset-0 rounded-xl" style={{ background: 'var(--gradient-hero-gold-accent)' }} />
+        <div className="glass-card p-0 relative overflow-hidden border-gold/10" style={{
+          backgroundImage: 'var(--gradient-arena-edge-gold)',
+          boxShadow: 'var(--shadow-gold)',
+        }}>
+          <div className="relative z-10 p-5 pb-4">
+            {/* Title row */}
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-2.5">
+                <span className="text-2xl">{getSeasonEmoji(season.season_label)}</span>
+                <div>
+                  <h2 className="font-extrabold text-xl tracking-tight leading-tight">{getSeasonDisplayName(season.season_label, season.year)}</h2>
+                  <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                    {format(new Date(season.starts_at), 'MMM d')} — {format(new Date(season.ends_at), 'MMM d, yyyy')}
+                  </p>
+                </div>
+              </div>
+              <span className={cn('status-pill flex items-center gap-1.5 text-[10px] px-2.5 py-1', st.cls)}>
+                {isActive && (
+                  <span className={cn('w-1.5 h-1.5 rounded-full animate-pulse', st.dotCls)} />
+                )}
+                {st.label}
+              </span>
+            </div>
+
+            {/* Stats row with better separation */}
+            <div className="flex items-center gap-0 mt-4 rounded-lg bg-muted/25 p-2.5">
+              <div className="flex-1 text-center">
+                <p className="text-sm font-extrabold tabular-nums">{season.regular_season_weeks}</p>
+                <p className="text-[8px] text-muted-foreground/60 font-bold uppercase tracking-wider">Reg Weeks</p>
+              </div>
+              <div className="w-px h-7 bg-border/20" />
+              <div className="flex-1 text-center">
+                <p className="text-sm font-extrabold tabular-nums">Best {season.best_of}</p>
+                <p className="text-[8px] text-muted-foreground/60 font-bold uppercase tracking-wider">Count</p>
+              </div>
+              <div className="w-px h-7 bg-border/20" />
+              <div className="flex-1 text-center">
+                <p className="text-sm font-extrabold tabular-nums">All 5</p>
+                <p className="text-[8px] text-muted-foreground/60 font-bold uppercase tracking-wider">Playoffs</p>
               </div>
             </div>
-            <span className={cn('status-pill', st.cls)}>{st.label}</span>
-          </div>
-          <div className="flex items-center gap-4 mt-3">
-            <div className="text-center">
-              <p className="text-sm font-bold">{season.regular_season_weeks}</p>
-              <p className="text-[9px] text-muted-foreground/60">Reg Weeks</p>
-            </div>
-            <div className="w-px h-6 bg-border/20" />
-            <div className="text-center">
-              <p className="text-sm font-bold">Best {season.best_of}</p>
-              <p className="text-[9px] text-muted-foreground/60">Count</p>
-            </div>
-            <div className="w-px h-6 bg-border/20" />
-            <div className="text-center">
-              <p className="text-sm font-bold">All 5</p>
-              <p className="text-[9px] text-muted-foreground/60">Playoffs</p>
-            </div>
+
+            {/* Season progress bar */}
+            {season.status !== 'complete' && (
+              <div className="mt-3.5">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[9px] font-bold text-muted-foreground/70">Season Progress</span>
+                  <span className="text-[9px] font-bold tabular-nums" style={{ color: 'hsl(var(--gold))' }}>
+                    Week {completedWeeks} of {totalWeeks}
+                  </span>
+                </div>
+                <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/40">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${progressPct}%`,
+                      background: 'linear-gradient(90deg, hsl(var(--gold) / 0.7), hsl(var(--gold)))',
+                      boxShadow: '0 0 8px hsl(var(--gold) / 0.3)',
+                    }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -135,7 +182,77 @@ function SeasonHeaderCard({ season }: { season: any }) {
   );
 }
 
-/* ── Standings table ── */
+/* ══════════════════════════════════════════════════════════
+   THIS WEEK'S DRAFT — elevated CTA with gold accent border
+   ══════════════════════════════════════════════════════════ */
+function ThisWeekDraft({ entries, seasonWeeks }: { entries: any[]; seasonWeeks: number }) {
+  const currentWeek = entries.filter(e => !e.is_playoff).length + 1;
+  const thisWeek = entries.find(e => e.week_number === currentWeek);
+  const isLive = thisWeek?.drafts?.status === 'in_progress';
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+      <div className={cn(
+        "glass-card p-4 relative overflow-hidden",
+        isLive && "border-success/20"
+      )} style={{
+        borderLeft: '3px solid hsl(var(--gold))',
+      }}>
+        <div className="flex items-center gap-2 mb-3">
+          <Calendar className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
+          <h3 className="font-bold text-[13px]">{getWeekLabel(currentWeek, seasonWeeks)}</h3>
+          {isLive && (
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/12 text-success text-[9px] font-bold border border-success/15">
+              <span className="live-dot w-1.5 h-1.5" />
+              LIVE
+            </span>
+          )}
+          <span className="text-[9px] text-muted-foreground/60 ml-auto tabular-nums">
+            Week {Math.min(currentWeek, seasonWeeks)} of {seasonWeeks}
+          </span>
+        </div>
+        {thisWeek ? (
+          <Link to={`/drafts/${thisWeek.draft_id}`}>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+              <Bookmark className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(var(--gold))' }} />
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-bold truncate">{thisWeek.drafts?.topic || 'Draft'}</p>
+                <span className={cn(
+                  'status-pill text-[9px] mt-1 inline-flex',
+                  thisWeek.drafts?.status === 'complete' ? 'bg-primary/10 text-primary' :
+                  thisWeek.drafts?.status === 'in_progress' ? 'bg-success/12 text-success' :
+                  'bg-muted text-muted-foreground'
+                )}>
+                  {thisWeek.drafts?.status === 'complete' ? 'Complete' :
+                   thisWeek.drafts?.status === 'in_progress' ? 'In Progress' :
+                   thisWeek.drafts?.status || 'Unknown'}
+                </span>
+              </div>
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60" />
+            </div>
+          </Link>
+        ) : (
+          <div className="text-center py-4">
+            <p className="text-[11px] text-muted-foreground/70 mb-3">No draft assigned yet</p>
+            <Link to="/drafts/create">
+              <button className="w-full h-10 rounded-lg text-[12px] font-bold transition-colors flex items-center justify-center gap-2 btn-press" style={{
+                background: 'hsl(var(--gold) / 0.15)',
+                color: 'hsl(var(--gold))',
+                border: '1px solid hsl(var(--gold) / 0.15)',
+              }}>
+                <Plus className="w-4 h-4" /> Create This Week's Draft
+              </button>
+            </Link>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
+   STANDINGS TABLE — competitive energy with leader treatment
+   ══════════════════════════════════════════════════════════ */
 function StandingsCard({ standings, userId }: { standings: SeasonStanding[]; userId?: string }) {
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -148,121 +265,114 @@ function StandingsCard({ standings, userId }: { standings: SeasonStanding[]; use
     );
   }
 
-  return (
-    <div className="glass-card overflow-hidden">
-      <div className="p-3 border-b border-border/20">
-        <h3 className="font-bold text-[13px] flex items-center gap-1.5">
-          <TrendingUp className="w-3.5 h-3.5" style={{ color: 'hsl(var(--gold))' }} />
-          Season Standings
-        </h3>
-      </div>
-      <div className="divide-y divide-border/10">
-        {standings.map((s, i) => {
-          const isMe = s.user_id === userId;
-          const isExpanded = expanded === s.id;
-          const rankEmoji = s.rank === 1 ? '🥇' : s.rank === 2 ? '🥈' : s.rank === 3 ? '🥉' : null;
-          return (
-            <div key={s.id}>
-              <div
-                className={cn('flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer', isMe && 'bg-gold/5')}
-                onClick={() => setExpanded(isExpanded ? null : s.id)}
-              >
-                <div className="w-6 text-center flex-shrink-0">
-                  {rankEmoji ? (
-                    <span className="text-sm">{rankEmoji}</span>
-                  ) : (
-                    <span className="text-[11px] font-bold text-muted-foreground">{s.rank || i + 1}</span>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className={cn('text-[13px] font-bold truncate', isMe && 'text-gold')}>
-                    {(s.profiles as any)?.display_name || 'Unknown'}
-                    {isMe && <span className="text-[9px] ml-1 text-muted-foreground">(you)</span>}
-                  </p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[9px] text-muted-foreground">{s.drafts_played} drafted</span>
-                    <span className="text-[9px] text-muted-foreground">·</span>
-                    <span className="text-[9px] text-muted-foreground">{s.wins}W {s.podiums}P</span>
-                    <span className="text-[9px] text-muted-foreground">·</span>
-                    <span className="text-[9px] font-semibold text-success">Seed #{s.playoff_seed}</span>
-                  </div>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-extrabold" style={{ color: 'hsl(var(--gold))' }}>{s.season_points}</p>
-                  <p className="text-[8px] text-muted-foreground/60 uppercase font-bold">pts</p>
-                </div>
-              </div>
-              {isExpanded && (
-                <div className="px-4 pb-3 pt-0">
-                  <div className="grid grid-cols-4 gap-2 p-2.5 rounded-lg bg-muted/30">
-                    <div className="text-center">
-                      <p className="text-[12px] font-bold">{s.avg_finish.toFixed(1)}</p>
-                      <p className="text-[8px] text-muted-foreground/60">Avg Finish</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-[12px] font-bold">{s.avg_score.toFixed(1)}</p>
-                      <p className="text-[8px] text-muted-foreground/60">Avg Score</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-[12px] font-bold text-success">{s.best_score.toFixed(1)}</p>
-                      <p className="text-[8px] text-muted-foreground/60">Best</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-[12px] font-bold text-destructive">{s.worst_score.toFixed(1)}</p>
-                      <p className="text-[8px] text-muted-foreground/60">Worst</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/* ── This week's draft ── */
-function ThisWeekDraft({ entries, seasonWeeks }: { entries: any[]; seasonWeeks: number }) {
-  const currentWeek = entries.filter(e => !e.is_playoff).length + 1;
-  const thisWeek = entries.find(e => e.week_number === currentWeek);
+  const leaderPts = standings[0]?.season_points || 0;
 
   return (
-    <div className="glass-card p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <Calendar className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
-        <h3 className="font-bold text-[13px]">{getWeekLabel(currentWeek, seasonWeeks)}</h3>
-        <span className="text-[9px] text-muted-foreground/60 ml-auto">Week {Math.min(currentWeek, seasonWeeks)} of {seasonWeeks}</span>
-      </div>
-      {thisWeek ? (
-        <Link to={`/drafts/${thisWeek.draft_id}`}>
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-            <Bookmark className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(var(--gold))' }} />
-            <div className="flex-1 min-w-0">
-              <p className="text-[12px] font-bold truncate">{thisWeek.drafts?.topic || 'Draft'}</p>
-              <p className="text-[10px] text-muted-foreground capitalize">{thisWeek.drafts?.status || 'unknown'}</p>
-            </div>
-            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60" />
-          </div>
-        </Link>
-      ) : (
-        <div className="text-center py-4">
-          <p className="text-[11px] text-muted-foreground/70 mb-2">No draft assigned yet</p>
-          <Link to="/drafts/create">
-            <button className="h-8 px-4 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1.5 mx-auto" style={{
-              background: 'hsl(var(--gold) / 0.15)',
-              color: 'hsl(var(--gold))',
-            }}>
-              <Plus className="w-3 h-3" /> Create This Week's Draft
-            </button>
-          </Link>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
+      <div className="glass-card overflow-hidden" style={{ boxShadow: 'var(--shadow-elevated)' }}>
+        <div className="p-3.5 border-b border-border/20">
+          <h3 className="font-bold text-[13px] flex items-center gap-1.5">
+            <TrendingUp className="w-3.5 h-3.5" style={{ color: 'hsl(var(--gold))' }} />
+            Season Standings
+          </h3>
         </div>
-      )}
-    </div>
+        <div className="divide-y divide-border/10">
+          {standings.map((s, i) => {
+            const isMe = s.user_id === userId;
+            const isExpanded = expanded === s.id;
+            const rank = s.rank || i + 1;
+            const isPodium = rank <= 3;
+            const gap = rank === 1 ? null : leaderPts - s.season_points;
+
+            // Seed badge colors
+            const seedBg = s.playoff_seed === 1 ? 'hsl(var(--gold))' :
+                           s.playoff_seed === 2 ? 'hsl(var(--silver))' :
+                           s.playoff_seed === 3 ? 'hsl(var(--bronze))' :
+                           'hsl(var(--muted-foreground))';
+
+            return (
+              <div key={s.id}>
+                <div
+                  className={cn(
+                    'flex items-center gap-3 px-4 py-3.5 transition-colors cursor-pointer',
+                    rank === 1 && 'relative',
+                    isMe && !isPodium && 'border-l-2 border-l-gold/40',
+                  )}
+                  style={rank === 1 ? {
+                    background: 'linear-gradient(90deg, hsl(var(--gold) / 0.08), transparent)',
+                  } : undefined}
+                  onClick={() => setExpanded(isExpanded ? null : s.id)}
+                >
+                  {/* Rank / Seed badge */}
+                  <div className="w-7 flex-shrink-0 flex items-center justify-center">
+                    {isPodium ? (
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-extrabold" style={{
+                        background: `${seedBg}20`,
+                        color: seedBg,
+                        border: `1.5px solid ${seedBg}40`,
+                      }}>
+                        {rank}
+                      </div>
+                    ) : (
+                      <span className="text-[12px] font-bold text-muted-foreground">{rank}</span>
+                    )}
+                  </div>
+
+                  {/* Player info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className={cn('text-[13px] font-bold truncate', isMe && 'text-gold', rank === 1 && !isMe && 'text-foreground')}>
+                        {(s.profiles as any)?.display_name || 'Unknown'}
+                      </p>
+                      {isMe && <span className="text-[8px] text-muted-foreground bg-gold/10 px-1 py-0.5 rounded font-bold">YOU</span>}
+                      {rank === 1 && <Crown className="w-3 h-3 flex-shrink-0" style={{ color: 'hsl(var(--gold))' }} />}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[9px] text-muted-foreground">{s.drafts_played} drafted</span>
+                      <span className="text-[9px] text-muted-foreground">·</span>
+                      <span className="text-[9px] text-muted-foreground">{s.wins}W {s.podiums}P</span>
+                    </div>
+                  </div>
+
+                  {/* Points + gap */}
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-sm font-extrabold tabular-nums" style={{ color: 'hsl(var(--gold))' }}>{s.season_points}</p>
+                    {gap !== null ? (
+                      <p className="text-[8px] text-muted-foreground/50 tabular-nums font-bold">-{gap} pts</p>
+                    ) : (
+                      <p className="text-[8px] font-bold uppercase" style={{ color: 'hsl(var(--gold) / 0.6)' }}>Leader</p>
+                    )}
+                  </div>
+                </div>
+                {isExpanded && (
+                  <div className="px-4 pb-3 pt-0">
+                    <div className="grid grid-cols-4 gap-px rounded-lg overflow-hidden bg-border/10">
+                      {[
+                        { v: s.avg_finish.toFixed(1), l: 'Avg Finish' },
+                        { v: s.avg_score.toFixed(1), l: 'Avg Score' },
+                        { v: s.best_score.toFixed(1), l: 'Best', cls: 'text-success' },
+                        { v: s.worst_score.toFixed(1), l: 'Worst', cls: 'text-destructive' },
+                      ].map(stat => (
+                        <div key={stat.l} className="text-center bg-muted/30 p-2.5">
+                          <p className={cn('text-[12px] font-bold tabular-nums', stat.cls)}>{stat.v}</p>
+                          <p className="text-[7px] text-muted-foreground/60 font-bold uppercase tracking-wider">{stat.l}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
-/* ── Playoff picture ── */
+/* ══════════════════════════════════════════════════════════
+   PLAYOFF BRACKET — visual bracket with connector lines
+   ══════════════════════════════════════════════════════════ */
 function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; matches: any[] }) {
   const seeds = standings.filter(s => s.playoff_seed).sort((a, b) => (a.playoff_seed || 99) - (b.playoff_seed || 99));
   const getName = (seed: number) => {
@@ -272,13 +382,15 @@ function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; m
 
   if (seeds.length === 0 && matches.length === 0) {
     return (
-      <div className="glass-card p-4">
-        <h3 className="font-bold text-[13px] flex items-center gap-1.5 mb-3">
-          <Crown className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
-          Playoff Picture
-        </h3>
-        <p className="text-[11px] text-muted-foreground/70 text-center py-4">Complete regular season drafts to determine playoff seeds.</p>
-      </div>
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}>
+        <div className="glass-card p-4">
+          <h3 className="font-bold text-[13px] flex items-center gap-1.5 mb-3">
+            <Crown className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
+            Playoff Picture
+          </h3>
+          <p className="text-[11px] text-muted-foreground/70 text-center py-4">Complete regular season drafts to determine playoff seeds.</p>
+        </div>
+      </motion.div>
     );
   }
 
@@ -290,117 +402,180 @@ function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; m
   };
 
   return (
-    <div className="glass-card p-4">
-      <h3 className="font-bold text-[13px] flex items-center gap-1.5 mb-3">
-        <Crown className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
-        Playoff Picture
-      </h3>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}>
+      <div className="glass-card p-4">
+        <h3 className="font-bold text-[13px] flex items-center gap-1.5 mb-4">
+          <Crown className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
+          Playoff Picture
+        </h3>
 
-      {matches.length > 0 ? (
-        <div className="space-y-2">
-          {matches.map(m => (
-            <div key={m.id} className="flex items-center gap-2 p-3 rounded-lg bg-muted/30">
-              <span className="text-[10px] font-bold text-muted-foreground w-20 flex-shrink-0">{roundLabels[m.round] || m.round}</span>
-              <div className="flex-1 flex items-center justify-center gap-3">
-                <span className={cn('text-[11px] font-bold', m.winner_user_id === m.user_a ? 'text-gold' : '')}>#{m.seed_a}</span>
-                <span className="text-[9px] text-muted-foreground">vs</span>
-                <span className={cn('text-[11px] font-bold', m.winner_user_id === m.user_b ? 'text-gold' : '')}>#{m.seed_b}</span>
-              </div>
-              <span className={cn('status-pill text-[9px]', m.status === 'complete' ? 'bg-primary/10 text-primary' : m.status === 'in_progress' ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground')}>
-                {m.status === 'complete' ? 'Done' : m.status === 'in_progress' ? 'Live' : 'Pending'}
-              </span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {/* All 5 seeds */}
-          <div className="space-y-1.5">
-            {seeds.map(s => {
-              const seed = s.playoff_seed!;
-              const badge = seed === 1 ? '🏖️ BYE' : seed <= 3 ? '→ Semis' : '→ Play-In';
-              const badgeCls = seed === 1 ? 'text-gold font-bold' : seed <= 3 ? 'text-success' : 'text-warning';
-              return (
-                <div key={s.id} className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30">
-                  <span className="text-sm font-extrabold w-6 text-center" style={{ color: 'hsl(var(--gold))' }}>#{seed}</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-bold truncate">{(s.profiles as any)?.display_name}</p>
-                    <p className="text-[9px] text-muted-foreground">{s.season_points} pts</p>
-                  </div>
-                  <span className={cn('text-[9px] font-semibold', badgeCls)}>{badge}</span>
+        {matches.length > 0 ? (
+          <div className="space-y-2">
+            {matches.map(m => (
+              <div key={m.id} className="flex items-center gap-2 p-3 rounded-lg bg-muted/30">
+                <span className="text-[10px] font-bold text-muted-foreground w-20 flex-shrink-0">{roundLabels[m.round] || m.round}</span>
+                <div className="flex-1 flex items-center justify-center gap-3">
+                  <span className={cn('text-[11px] font-bold', m.winner_user_id === m.user_a ? 'text-gold' : '')}>#{m.seed_a}</span>
+                  <span className="text-[9px] text-muted-foreground">vs</span>
+                  <span className={cn('text-[11px] font-bold', m.winner_user_id === m.user_b ? 'text-gold' : '')}>#{m.seed_b}</span>
                 </div>
-              );
-            })}
+                <span className={cn('status-pill text-[9px]', m.status === 'complete' ? 'bg-primary/10 text-primary' : m.status === 'in_progress' ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground')}>
+                  {m.status === 'complete' ? 'Done' : m.status === 'in_progress' ? 'Live' : 'Pending'}
+                </span>
+              </div>
+            ))}
           </div>
+        ) : (
+          <div className="space-y-3">
+            {/* Visual bracket */}
+            <div className="space-y-2">
+              {/* Round labels header */}
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                {['Play-In', 'Semis', 'Finals'].map(r => (
+                  <div key={r} className="text-center">
+                    <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/50">{r}</span>
+                  </div>
+                ))}
+              </div>
 
-          {/* Bracket preview */}
-          <div className="space-y-1.5 p-3 rounded-lg bg-muted/20">
-            <p className="text-[10px] font-bold text-muted-foreground/80 mb-2">Playoff Bracket</p>
-            <div className="flex items-center gap-2 text-[10px]">
-              <span className="font-bold text-warning">Play-In</span>
-              <span className="text-muted-foreground">#{4} {getName(4)} vs #{5} {getName(5)}</span>
+              {/* Bracket path 1: #4 vs #5 → winner vs #1 → Finals */}
+              <div className="grid grid-cols-3 gap-2 items-center">
+                {/* Play-In */}
+                <div className="rounded-lg bg-muted/30 p-2.5 border border-border/10">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-bold">#{4} <span className="text-muted-foreground font-normal">{getName(4)}</span></p>
+                      <p className="text-[10px] font-bold mt-1">#{5} <span className="text-muted-foreground font-normal">{getName(5)}</span></p>
+                    </div>
+                  </div>
+                </div>
+                {/* Semi 1 */}
+                <div className="rounded-lg bg-muted/30 p-2.5 border border-border/10 relative">
+                  <p className="text-[10px] font-bold">#{1} <span className="text-muted-foreground font-normal">{getName(1)}</span></p>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="text-[8px] font-bold px-1.5 py-0.5 rounded" style={{
+                      background: 'hsl(var(--gold) / 0.15)',
+                      color: 'hsl(var(--gold))',
+                    }}>BYE</span>
+                  </div>
+                  <div className="h-px bg-border/20 my-1.5" />
+                  <p className="text-[9px] text-muted-foreground">vs Play-In ✦</p>
+                </div>
+                {/* Finals placeholder */}
+                <div className="rounded-lg p-2.5 border border-gold/15 relative" style={{
+                  background: 'hsl(var(--gold) / 0.05)',
+                }}>
+                  <div className="text-center">
+                    <Trophy className="w-4 h-4 mx-auto mb-1" style={{ color: 'hsl(var(--gold) / 0.5)' }} />
+                    <p className="text-[9px] font-bold" style={{ color: 'hsl(var(--gold))' }}>Championship</p>
+                    <p className="text-[8px] text-muted-foreground mt-0.5">Semi winners</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bracket path 2: #2 vs #3 */}
+              <div className="grid grid-cols-3 gap-2 items-center">
+                <div /> {/* Empty play-in slot */}
+                {/* Semi 2 */}
+                <div className="rounded-lg bg-muted/30 p-2.5 border border-border/10">
+                  <p className="text-[10px] font-bold">#{2} <span className="text-muted-foreground font-normal">{getName(2)}</span></p>
+                  <div className="h-px bg-border/20 my-1.5" />
+                  <p className="text-[10px] font-bold">#{3} <span className="text-muted-foreground font-normal">{getName(3)}</span></p>
+                </div>
+                {/* 3rd place */}
+                <div className="rounded-lg bg-muted/20 p-2.5 border border-border/10">
+                  <div className="text-center">
+                    <Medal className="w-3.5 h-3.5 mx-auto mb-1 text-muted-foreground/40" />
+                    <p className="text-[9px] font-bold text-muted-foreground">3rd Place</p>
+                    <p className="text-[8px] text-muted-foreground/60 mt-0.5">Semi losers</p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-[10px]">
-              <span className="font-bold text-success">Semi 1</span>
-              <span className="text-muted-foreground">#{1} {getName(1)} <span className="text-[8px]">(BYE)</span> vs Play-In winner</span>
-            </div>
-            <div className="flex items-center gap-2 text-[10px]">
-              <span className="font-bold text-success">Semi 2</span>
-              <span className="text-muted-foreground">#{2} {getName(2)} vs #{3} {getName(3)}</span>
-            </div>
-            <div className="flex items-center gap-2 text-[10px]">
-              <span className="font-bold" style={{ color: 'hsl(var(--gold))' }}>Final</span>
-              <span className="text-muted-foreground">Semi winners → Championship</span>
-            </div>
-            <div className="flex items-center gap-2 text-[10px]">
-              <span className="font-bold text-muted-foreground">3rd</span>
-              <span className="text-muted-foreground">Semi losers → 3rd Place Match</span>
-            </div>
+
+            <p className="text-[9px] text-muted-foreground/50 text-center pt-1">
+              All 5 players qualify · #1 seed earns a first-round bye
+            </p>
           </div>
-
-          <p className="text-[9px] text-muted-foreground/50 text-center">
-            All 5 players qualify · #1 seed earns a first-round bye
-          </p>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </motion.div>
   );
 }
 
-/* ── Season history ── */
+/* ══════════════════════════════════════════════════════════
+   SEASON SCHEDULE — collapsible with result indicators
+   ══════════════════════════════════════════════════════════ */
 function SeasonWeekHistory({ entries }: { entries: any[] }) {
   const regularEntries = entries.filter(e => !e.is_playoff);
+  const [isOpen, setIsOpen] = useState(regularEntries.length <= 4);
+
   if (regularEntries.length === 0) return null;
 
+  const displayEntries = isOpen ? regularEntries : regularEntries.slice(0, 3);
+
   return (
-    <div className="glass-card overflow-hidden">
-      <div className="p-3 border-b border-border/20">
-        <h3 className="font-bold text-[13px] flex items-center gap-1.5">
-          <Calendar className="w-3.5 h-3.5" style={{ color: 'hsl(var(--gold))' }} />
-          Season Schedule
-        </h3>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+      <div className="glass-card overflow-hidden bg-card/60">
+        <div className="p-3 border-b border-border/20 flex items-center justify-between">
+          <h3 className="font-bold text-[13px] flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5" style={{ color: 'hsl(var(--gold))' }} />
+            Season Schedule
+          </h3>
+          {regularEntries.length > 3 && (
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="text-[9px] font-bold text-muted-foreground/60 flex items-center gap-0.5 hover:text-muted-foreground transition-colors"
+            >
+              {isOpen ? 'Collapse' : `Show all ${regularEntries.length}`}
+              <ChevronDown className={cn('w-3 h-3 transition-transform', isOpen && 'rotate-180')} />
+            </button>
+          )}
+        </div>
+        <div className="divide-y divide-border/10">
+          {displayEntries.map((e, i) => {
+            const isComplete = e.drafts?.status === 'complete';
+            const isActive = e.drafts?.status === 'in_progress';
+            return (
+              <Link key={e.id} to={`/drafts/${e.draft_id}`} className="block">
+                <div className={cn(
+                  'flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors',
+                  i % 2 === 1 && 'bg-muted/8',
+                )}>
+                  {/* Week indicator with status */}
+                  <div className={cn(
+                    'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
+                    isComplete ? 'bg-success/12' : isActive ? 'bg-gold/12' : 'bg-muted/50',
+                  )}>
+                    {isComplete ? (
+                      <span className="text-[10px]">✓</span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-muted-foreground">{e.week_number}</span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-bold truncate">{e.drafts?.topic || 'Draft'}</p>
+                    <span className={cn(
+                      'text-[9px] font-semibold',
+                      isComplete ? 'text-primary' : isActive ? 'text-success' : 'text-muted-foreground',
+                    )}>
+                      {isComplete ? 'Complete' : isActive ? 'In Progress' : e.drafts?.status || 'unknown'}
+                    </span>
+                  </div>
+                  <ChevronRight className="w-3 h-3 text-muted-foreground/50" />
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       </div>
-      <div className="divide-y divide-border/10">
-        {regularEntries.map(e => (
-          <Link key={e.id} to={`/drafts/${e.draft_id}`} className="block">
-            <div className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-muted/50 flex-shrink-0">
-                <span className="text-[10px] font-bold text-muted-foreground">{e.week_number}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-bold truncate">{e.drafts?.topic || 'Draft'}</p>
-                <p className="text-[10px] text-muted-foreground capitalize">{e.drafts?.status || 'unknown'}</p>
-              </div>
-              <ChevronRight className="w-3 h-3 text-muted-foreground/50" />
-            </div>
-          </Link>
-        ))}
-      </div>
-    </div>
+    </motion.div>
   );
 }
 
-/* ── Lifetime stats ── */
+/* ══════════════════════════════════════════════════════════
+   LIFETIME STATS — with championship highlight
+   ══════════════════════════════════════════════════════════ */
 function LifetimeStatsCard({ userId }: { userId?: string }) {
   const { stats, loading } = useLifetimeStats(userId);
 
@@ -416,20 +591,25 @@ function LifetimeStatsCard({ userId }: { userId?: string }) {
   ];
 
   return (
-    <div className="glass-card p-4">
-      <h3 className="font-bold text-[13px] flex items-center gap-1.5 mb-3">
-        <Medal className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
-        Lifetime Stats
-      </h3>
-      <div className="grid grid-cols-3 gap-3">
-        {items.map(item => (
-          <div key={item.label} className="text-center">
-            <p className={cn('text-lg font-extrabold leading-none', item.highlight && 'text-gold')}>{item.value}</p>
-            <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">{item.label}</p>
-          </div>
-        ))}
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}>
+      <div className="glass-card p-4 bg-card/60">
+        <h3 className="font-bold text-[13px] flex items-center gap-1.5 mb-3">
+          <Medal className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
+          Lifetime Stats
+        </h3>
+        <div className="grid grid-cols-3 gap-3">
+          {items.map(item => (
+            <div key={item.label} className={cn(
+              'text-center rounded-lg p-2',
+              item.highlight && 'ring-1 ring-gold/20',
+            )} style={item.highlight ? { background: 'hsl(var(--gold) / 0.06)' } : undefined}>
+              <p className={cn('text-lg font-extrabold leading-none tabular-nums', item.highlight && 'text-gold')}>{item.value}</p>
+              <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">{item.label}</p>
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -504,7 +684,6 @@ function NoSeasonState() {
         </div>
       </div>
 
-      {/* Quick link to all drafts */}
       <Link to="/drafts">
         <div className="glass-card p-4 flex items-center gap-3 hover:bg-muted/30 transition-colors">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{
@@ -523,7 +702,7 @@ function NoSeasonState() {
   );
 }
 
-/* ══════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════ */
 export default function CompetePage() {
   const { user } = useAuth();
   const { season, loading: seasonLoading } = useCurrentSeason();
@@ -565,29 +744,31 @@ export default function CompetePage() {
               </div>
             ) : season ? (
               <>
-                <SeasonHeaderCard season={season} />
+                <SeasonHeaderCard season={season} entries={entries} />
                 <ThisWeekDraft entries={entries} seasonWeeks={season.regular_season_weeks} />
                 <StandingsCard standings={standings} userId={user?.id} />
                 <PlayoffPicture standings={standings} matches={matches} />
                 <SeasonWeekHistory entries={entries} />
                 <LifetimeStatsCard userId={user?.id} />
 
-                {/* Quick actions */}
-                <div className="flex gap-2">
-                  <Link to="/drafts" className="flex-1">
-                    <button className="w-full h-9 rounded-lg bg-muted/50 text-[11px] font-bold text-foreground/80 transition-colors flex items-center justify-center gap-1.5">
-                      All Drafts <ChevronRight className="w-3 h-3" />
-                    </button>
-                  </Link>
-                  <Link to="/drafts/create">
-                    <button className="h-9 px-4 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1.5" style={{
-                      background: 'hsl(var(--gold) / 0.15)',
-                      color: 'hsl(var(--gold))',
-                    }}>
-                      <Plus className="w-3 h-3" /> New Draft
-                    </button>
-                  </Link>
-                </div>
+                {/* Quick actions — wrapped in a card */}
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
+                  <div className="glass-card p-3 bg-card/60 flex gap-2">
+                    <Link to="/drafts" className="flex-1">
+                      <button className="w-full h-9 rounded-lg bg-muted/50 text-[11px] font-bold text-foreground/80 transition-colors flex items-center justify-center gap-1.5 btn-press">
+                        All Drafts <ChevronRight className="w-3 h-3" />
+                      </button>
+                    </Link>
+                    <Link to="/drafts/create">
+                      <button className="h-9 px-4 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1.5 btn-press" style={{
+                        background: 'hsl(var(--gold) / 0.15)',
+                        color: 'hsl(var(--gold))',
+                      }}>
+                        <Plus className="w-3 h-3" /> New Draft
+                      </button>
+                    </Link>
+                  </div>
+                </motion.div>
               </>
             ) : (
               <NoSeasonState />
