@@ -146,6 +146,16 @@ export default function DraftDetailPage() {
     }
   }, [draft?.status, hasResults, resultsLoading, resultsGenerating, autoTriggered, isParticipant, generateResults]);
 
+  // Confetti on first results load
+  useEffect(() => {
+    if (hasResults && !confettiShown.current) {
+      confettiShown.current = true;
+      setShowConfetti(true);
+      const timer = setTimeout(() => setShowConfetti(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [hasResults]);
+
   // Derive turn state from pick count + participant order (single source of truth)
   const derivedTurn = getDerivedDraftTurn(
     draft || { num_rounds: 1 },
