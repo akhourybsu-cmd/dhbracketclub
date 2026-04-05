@@ -116,6 +116,22 @@ export default function DraftDetailPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { if (picks.length) fetchEnrichments(); }, [picks.length, fetchEnrichments]);
 
+  // Detect new picks for announcement banner
+  useEffect(() => {
+    if (picks.length > prevPickCount.current && prevPickCount.current > 0) {
+      const latestPick = [...picks].sort((a, b) => b.pick_number - a.pick_number)[0];
+      if (latestPick && latestPick.user_id !== user?.id) {
+        setAnnouncement({
+          displayName: latestPick.profiles?.display_name || 'Someone',
+          pickText: latestPick.pick_text,
+          round: latestPick.round,
+          pickNumber: latestPick.pick_number,
+        });
+      }
+    }
+    prevPickCount.current = picks.length;
+  }, [picks.length, picks, user?.id]);
+
   // Realtime: auto-refresh on picks, participants, or draft status changes
   const { status: realtimeStatus } = useDraftUpdates(draftId, fetchData);
 
