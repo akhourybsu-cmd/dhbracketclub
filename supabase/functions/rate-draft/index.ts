@@ -228,9 +228,44 @@ Use the rate_draft_results tool to return your structured analysis.`;
       return new Response(JSON.stringify({ error: "AI returned empty results" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Re-rank by total_score (highest first) — don't trust AI-assigned ranks
+    // Re-rank using multi-factor tiebreaker — don't trust AI-assigned ranks
     const numParticipants = participants.length;
-    const sortedResults = [...results].sort((a: any, b: any) => b.total_score - a.total_score);
+
+    // Build a map of each user's last pick timestamp for the final tiebreaker
+    const lastPickTime = new Map<string, string>();
+    for (const pick of picks) {
+      const prev = lastPickTime.get(pick.user_id);
+      if (!prev || pick.picked_at > prev) lastPickTime.set(pick.user_id, pick.picked_at);
+    }
+
+    const tiebreakMetrics = (r: any) => {
+      const scores: number[] = (r.pick_ratings || []).map((p: any) => p.score);
+      if (scores.length === 0) return { max: 0, elite: 0, min: 0, avg: 0 };
+      return {
+        max: Math.max(...scores),
+        elite: scores.filter((s: number) => s >= 8).length,
+        min: Math.min(...scores),
+        avg: scores.reduce((a: number, b: number) => a + b, 0) / scores.length,
+      };
+    };
+
+    const sortedResults = [...results].sort((a: any, b: any) => {
+      // 0. Total score (primary)
+      if (b.total_score !== a.total_score) return b.total_score - a.total_score;
+      const mA = tiebreakMetrics(a), mB = tiebreakMetrics(b);
+      // 1. Highest single-pick score
+      if (mB.max !== mA.max) return mB.max - mA.max;
+      // 2. Count of elite picks (≥ 8)
+      if (mB.elite !== mA.elite) return mB.elite - mA.elite;
+      // 3. Highest lowest-pick score (consistency)
+      if (mB.min !== mA.min) return mB.min - mA.min;
+      // 4. Average pick score
+      if (mB.avg !== mA.avg) return mB.avg - mA.avg;
+      // 5. Earlier final pick wins
+      const tA = lastPickTime.get(a.user_id) || "";
+      const tB = lastPickTime.get(b.user_id) || "";
+      return tA < tB ? -1 : tA > tB ? 1 : 0;
+    });
 
     // Delete existing results for regeneration
     await admin.from("draft_results").delete().eq("draft_id", draft_id);
