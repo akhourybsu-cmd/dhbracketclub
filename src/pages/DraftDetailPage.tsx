@@ -544,6 +544,19 @@ export default function DraftDetailPage() {
                   <DropdownMenuItem onClick={() => setEditing(true)}>
                     <Pencil className="w-3.5 h-3.5 mr-2" /> Edit Topic
                   </DropdownMenuItem>
+                  {isCommissioner && seasonEntry && (
+                    <DropdownMenuItem onClick={async () => {
+                      setSeasonActionBusy(true);
+                      try {
+                        await removeDraftFromSeason(draftId!);
+                        toast.success('Removed from season');
+                        refetchSeasonEntries();
+                      } catch (err: any) { toast.error(err.message); }
+                      finally { setSeasonActionBusy(false); }
+                    }}>
+                      <X className="w-3.5 h-3.5 mr-2" /> Remove from Season
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={() => setShowDeleteDialog(true)} className="text-destructive focus:text-destructive">
                     <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete Draft
                   </DropdownMenuItem>
