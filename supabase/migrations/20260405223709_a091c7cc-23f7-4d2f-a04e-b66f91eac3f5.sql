@@ -1,0 +1,1 @@
+UPDATE public.draft_seasons SET name = 'Season 1' WHERE id = 'c62ab880-19f3-4a36-bf60-ba6a3e6318bb';
