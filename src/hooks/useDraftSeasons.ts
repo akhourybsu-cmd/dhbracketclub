@@ -39,7 +39,7 @@ export interface SeasonEntry {
   id: string;
   season_id: string;
   draft_id: string;
-  week_number: number; // used as sequential draft_number
+  week_number: number; // DB column name — represents sequential draft number
   is_playoff: boolean;
   season_points_awarded: Record<string, number>;
   drafts?: { topic: string; status: string };
