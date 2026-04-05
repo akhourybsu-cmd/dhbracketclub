@@ -28,6 +28,7 @@ import {
   useIsCommissioner,
   addDraftToSeason,
   removeDraftFromSeason,
+  recalculateSeasonStandings,
 } from '@/hooks/useDraftSeasons';
 import {
   DropdownMenu,
@@ -549,6 +550,7 @@ export default function DraftDetailPage() {
                       setSeasonActionBusy(true);
                       try {
                         await removeDraftFromSeason(draftId!);
+                        await recalculateSeasonStandings(season!.id);
                         toast.success('Removed from season');
                         refetchSeasonEntries();
                       } catch (err: any) { toast.error(err.message); }
@@ -597,6 +599,7 @@ export default function DraftDetailPage() {
               setSeasonActionBusy(true);
               try {
                 const num = await addDraftToSeason(season.id, draftId!);
+                await recalculateSeasonStandings(season.id);
                 toast.success(`Added as Season Draft #${num}`);
                 refetchSeasonEntries();
               } catch (err: any) { toast.error(err.message); }

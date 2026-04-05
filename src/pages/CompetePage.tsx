@@ -22,6 +22,7 @@ import {
   useUnassignedDrafts,
   addDraftToSeason,
   removeDraftFromSeason,
+  recalculateSeasonStandings,
   getSeasonDraftTarget,
   type SeasonStanding,
 } from '@/hooks/useDraftSeasons';
@@ -539,6 +540,7 @@ function CommissionerPanel({ season, entries, onUpdate }: { season: any; entries
     setBusy(draftId);
     try {
       const num = await addDraftToSeason(season.id, draftId);
+      await recalculateSeasonStandings(season.id);
       toast.success(`Added as Season Draft #${num}`);
       refetchUnassigned();
       onUpdate();
@@ -553,6 +555,7 @@ function CommissionerPanel({ season, entries, onUpdate }: { season: any; entries
     setBusy(draftId);
     try {
       await removeDraftFromSeason(draftId);
+      await recalculateSeasonStandings(season.id);
       toast.success('Removed from season');
       refetchUnassigned();
       onUpdate();
