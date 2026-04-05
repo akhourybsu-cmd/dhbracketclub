@@ -550,6 +550,7 @@ export default function DraftDetailPage() {
                       setSeasonActionBusy(true);
                       try {
                         await removeDraftFromSeason(draftId!);
+                        await recalculateSeasonStandings(season!.id);
                         toast.success('Removed from season');
                         refetchSeasonEntries();
                       } catch (err: any) { toast.error(err.message); }
