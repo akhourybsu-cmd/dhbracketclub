@@ -2,7 +2,7 @@
 
 const SEASON_LABELS: Record<string, string> = {
   winter: '❄️ Winter',
-  spring: '🌸 Spring',
+  spring: '⚡ Spring',
   summer: '☀️ Summer',
   fall: '🍂 Fall',
 };
