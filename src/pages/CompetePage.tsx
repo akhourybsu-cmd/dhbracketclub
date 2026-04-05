@@ -3,9 +3,10 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   Trophy, BarChart3, MessageCircle, Bookmark, ChevronRight, Plus, Swords, Lock, Shield,
-  Calendar, Award, TrendingUp, Users, Archive, Crown, Target, Flame, Medal, ChevronDown
+  Calendar, Award, TrendingUp, Users, Archive, Crown, Target, Flame, Medal, ChevronDown, X
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { useCurrentDay, useMyLock, useDayLocks } from '@/hooks/useLockbox';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,6 +18,10 @@ import {
   useSeasonEntries,
   usePlayoffMatches,
   useLifetimeStats,
+  useIsCommissioner,
+  useUnassignedDrafts,
+  addDraftToSeason,
+  removeDraftFromSeason,
   getSeasonDraftTarget,
   type SeasonStanding,
 } from '@/hooks/useDraftSeasons';
@@ -522,6 +527,129 @@ function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; m
 }
 
 /* ══════════════════════════════════════════════════════════
+   COMMISSIONER PANEL — manage season-eligible drafts
+   ══════════════════════════════════════════════════════════ */
+function CommissionerPanel({ season, entries, onUpdate }: { season: any; entries: any[]; onUpdate: () => void }) {
+  const { drafts: unassigned, loading, refetch: refetchUnassigned } = useUnassignedDrafts(season?.id);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const totalDrafts = getSeasonDraftTarget(season);
+  const regularEntries = entries.filter(e => !e.is_playoff);
+  const slotsFilled = regularEntries.length;
+  const slotsRemaining = Math.max(0, totalDrafts - slotsFilled);
+
+  const handleAdd = async (draftId: string) => {
+    setBusy(draftId);
+    try {
+      const num = await addDraftToSeason(season.id, draftId);
+      toast.success(`Added as Season Draft #${num}`);
+      refetchUnassigned();
+      onUpdate();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to add');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleRemove = async (draftId: string) => {
+    setBusy(draftId);
+    try {
+      await removeDraftFromSeason(draftId);
+      toast.success('Removed from season');
+      refetchUnassigned();
+      onUpdate();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to remove');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
+      <div className="glass-card overflow-hidden border" style={{ borderColor: 'hsl(var(--gold) / 0.2)' }}>
+        <div className="p-3.5 border-b border-border/20 flex items-center justify-between" style={{ background: 'hsl(var(--gold) / 0.05)' }}>
+          <h3 className="font-bold text-[13px] flex items-center gap-1.5">
+            <Shield className="w-3.5 h-3.5" style={{ color: 'hsl(var(--gold))' }} />
+            Commissioner
+          </h3>
+          <span className="text-[10px] font-bold tabular-nums" style={{ color: slotsRemaining > 0 ? 'hsl(var(--gold))' : 'hsl(var(--success))' }}>
+            {slotsFilled} / {totalDrafts} slots filled
+          </span>
+        </div>
+
+        {/* Unassigned drafts */}
+        {unassigned.length > 0 && slotsRemaining > 0 && (
+          <div className="p-3 border-b border-border/10">
+            <p className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider mb-2">Unassigned Drafts</p>
+            <div className="space-y-1.5 max-h-48 overflow-y-auto">
+              {unassigned.map(d => (
+                <div key={d.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+                  <Bookmark className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'hsl(var(--gold) / 0.5)' }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-bold truncate">{d.topic}</p>
+                    <span className={cn(
+                      'text-[9px] font-semibold',
+                      d.status === 'complete' ? 'text-primary' :
+                      d.status === 'in_progress' ? 'text-success' :
+                      'text-muted-foreground'
+                    )}>{d.status}</span>
+                  </div>
+                  <button
+                    onClick={() => handleAdd(d.id)}
+                    disabled={busy === d.id}
+                    className="px-2 py-1 rounded-md text-[9px] font-bold transition-colors flex items-center gap-1 btn-press"
+                    style={{ background: 'hsl(var(--gold) / 0.15)', color: 'hsl(var(--gold))' }}
+                  >
+                    {busy === d.id ? '…' : <><Plus className="w-3 h-3" /> Add</>}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Currently assigned — allow removal */}
+        {regularEntries.length > 0 && (
+          <div className="p-3">
+            <p className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider mb-2">Season Drafts</p>
+            <div className="space-y-1">
+              {regularEntries.map(e => (
+                <div key={e.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/20 transition-colors">
+                  <span className="text-[10px] font-bold text-muted-foreground w-5 text-center">#{e.week_number}</span>
+                  <p className="text-[11px] font-semibold flex-1 truncate">{e.drafts?.topic || 'Draft'}</p>
+                  <span className={cn(
+                    'text-[9px] font-semibold',
+                    e.drafts?.status === 'complete' ? 'text-primary' :
+                    e.drafts?.status === 'in_progress' ? 'text-success' :
+                    'text-muted-foreground'
+                  )}>{e.drafts?.status || '?'}</span>
+                  <button
+                    onClick={() => handleRemove(e.draft_id)}
+                    disabled={busy === e.draft_id}
+                    className="p-1 rounded text-muted-foreground/40 hover:text-destructive transition-colors"
+                    title="Remove from season"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {slotsRemaining === 0 && (
+          <div className="p-3 text-center">
+            <p className="text-[10px] font-bold" style={{ color: 'hsl(var(--success))' }}>✓ All {totalDrafts} season slots are filled</p>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
    DRAFT HISTORY — collapsible with result indicators
    ══════════════════════════════════════════════════════════ */
 function SeasonDraftHistory({ entries, totalDrafts }: { entries: any[]; totalDrafts: number }) {
@@ -727,11 +855,17 @@ function NoSeasonState() {
 export default function CompetePage() {
   const { user } = useAuth();
   const { season, loading: seasonLoading } = useCurrentSeason();
-  const { standings, loading: standingsLoading } = useSeasonStandings(season?.id);
-  const { entries, loading: entriesLoading } = useSeasonEntries(season?.id);
+  const { standings, loading: standingsLoading, refetch: refetchStandings } = useSeasonStandings(season?.id);
+  const { entries, loading: entriesLoading, refetch: refetchEntries } = useSeasonEntries(season?.id);
   const { matches } = usePlayoffMatches(season?.id);
+  const isCommissioner = useIsCommissioner(season);
 
   const totalDrafts = season ? getSeasonDraftTarget(season) : 12;
+
+  const handleSeasonUpdate = useCallback(() => {
+    refetchEntries();
+    refetchStandings();
+  }, [refetchEntries, refetchStandings]);
 
   return (
     <div className="pb-6">
@@ -768,6 +902,7 @@ export default function CompetePage() {
             ) : season ? (
               <>
                 <SeasonHeaderCard season={season} entries={entries} />
+                {isCommissioner && <CommissionerPanel season={season} entries={entries} onUpdate={handleSeasonUpdate} />}
                 <NextDraftCard entries={entries} totalDrafts={totalDrafts} />
                 <StandingsCard standings={standings} userId={user?.id} />
                 <PlayoffPicture standings={standings} matches={matches} />

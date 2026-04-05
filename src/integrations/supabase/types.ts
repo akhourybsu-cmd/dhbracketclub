@@ -644,6 +644,7 @@ export type Database = {
       draft_seasons: {
         Row: {
           best_of: number
+          commissioner_user_id: string | null
           created_at: string
           ends_at: string
           id: string
@@ -659,6 +660,7 @@ export type Database = {
         }
         Insert: {
           best_of?: number
+          commissioner_user_id?: string | null
           created_at?: string
           ends_at: string
           id?: string
@@ -674,6 +676,7 @@ export type Database = {
         }
         Update: {
           best_of?: number
+          commissioner_user_id?: string | null
           created_at?: string
           ends_at?: string
           id?: string
@@ -687,7 +690,15 @@ export type Database = {
           updated_at?: string
           year?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "draft_seasons_commissioner_user_id_fkey"
+            columns: ["commissioner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       drafts: {
         Row: {

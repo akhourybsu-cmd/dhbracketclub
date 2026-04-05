@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { getDerivedDraftTurn } from '@/lib/draftTurn';
 import { formatDistanceToNow } from 'date-fns';
 import { useDraftListUpdates } from '@/hooks/useRealtimeSubscription';
+import { useCurrentSeason, useSeasonEntries } from '@/hooks/useDraftSeasons';
 
 export default function DraftsListPage() {
   const { user } = useAuth();
@@ -17,6 +18,9 @@ export default function DraftsListPage() {
   const [draftWinners, setDraftWinners] = useState<Map<string, { user_id: string; display_name: string }>>(new Map());
   const [myDraftStats, setMyDraftStats] = useState({ totalPoints: 0, wins: 0, draftsRated: 0, podiums: 0, bestFinish: 0, avgScore: 0 });
   const [loading, setLoading] = useState(true);
+  const { season } = useCurrentSeason();
+  const { entries: seasonEntries } = useSeasonEntries(season?.id);
+  const seasonDraftIds = new Set(seasonEntries.map(e => e.draft_id));
 
   const fetchDrafts = useCallback(async () => {
     if (!user) return;
@@ -251,6 +255,12 @@ export default function DraftsListPage() {
                             <span className="text-[10px] text-muted-foreground/70 flex items-center gap-0.5 font-medium">
                               <Users className="w-2.5 h-2.5" /> {count}
                             </span>
+                            {seasonDraftIds.has(d.id) && (
+                              <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/15" />
+                            )}
+                            {seasonDraftIds.has(d.id) && (
+                              <span className="text-[9px] font-bold px-1 py-0.5 rounded" style={{ background: 'hsl(var(--gold) / 0.12)', color: 'hsl(var(--gold))' }}>S</span>
+                            )}
                             {winner && (
                               <>
                                 <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/15" />
