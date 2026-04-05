@@ -555,6 +555,7 @@ function CommissionerPanel({ season, entries, onUpdate }: { season: any; entries
     setBusy(draftId);
     try {
       await removeDraftFromSeason(draftId);
+      await recalculateSeasonStandings(season.id);
       toast.success('Removed from season');
       refetchUnassigned();
       onUpdate();
