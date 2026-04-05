@@ -540,6 +540,7 @@ function CommissionerPanel({ season, entries, onUpdate }: { season: any; entries
     setBusy(draftId);
     try {
       const num = await addDraftToSeason(season.id, draftId);
+      await recalculateSeasonStandings(season.id);
       toast.success(`Added as Season Draft #${num}`);
       refetchUnassigned();
       onUpdate();
