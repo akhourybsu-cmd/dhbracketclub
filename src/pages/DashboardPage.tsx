@@ -371,10 +371,10 @@ export default function DashboardPage() {
         className="grid grid-cols-4 gap-1.5 sm:gap-2 mb-7"
       >
         {[
-          { to: '/pools/create', icon: Trophy, label: 'Bracket', color: 'primary' },
-          { to: '/rankings/create', icon: BarChart3, label: 'Ranking', color: 'accent' },
-          { to: '/polls/create', icon: MessageCircle, label: 'Poll', color: 'warning' },
           { to: '/drafts/create', icon: Bookmark, label: 'Draft', color: 'gold' },
+          { to: '/pools/create', icon: Trophy, label: 'Bracket', color: 'primary' },
+          { to: '/compete', icon: Swords, label: 'League', color: 'gold' },
+          { to: '/lockbox', icon: Shield, label: 'Lockbox', color: 'destructive' },
         ].map((item, i) => (
           <motion.div key={item.to} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 + i * 0.04 }}>
             <Link to={item.to}>
