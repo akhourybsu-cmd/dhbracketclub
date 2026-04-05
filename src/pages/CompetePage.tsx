@@ -137,6 +137,8 @@ function SeasonHeaderCard({ season }: { season: any }) {
 
 /* ── Standings table ── */
 function StandingsCard({ standings, userId }: { standings: SeasonStanding[]; userId?: string }) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+
   if (standings.length === 0) {
     return (
       <div className="glass-card p-6 text-center">
@@ -157,37 +159,61 @@ function StandingsCard({ standings, userId }: { standings: SeasonStanding[]; use
       <div className="divide-y divide-border/10">
         {standings.map((s, i) => {
           const isMe = s.user_id === userId;
+          const isExpanded = expanded === s.id;
           const rankEmoji = s.rank === 1 ? '🥇' : s.rank === 2 ? '🥈' : s.rank === 3 ? '🥉' : null;
           return (
-            <div key={s.id} className={cn('flex items-center gap-3 px-4 py-3 transition-colors', isMe && 'bg-gold/5')}>
-              <div className="w-6 text-center flex-shrink-0">
-                {rankEmoji ? (
-                  <span className="text-sm">{rankEmoji}</span>
-                ) : (
-                  <span className="text-[11px] font-bold text-muted-foreground">{s.rank || i + 1}</span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className={cn('text-[13px] font-bold truncate', isMe && 'text-gold')}>
-                  {(s.profiles as any)?.display_name || 'Unknown'}
-                  {isMe && <span className="text-[9px] ml-1 text-muted-foreground">(you)</span>}
-                </p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[9px] text-muted-foreground">{s.drafts_played} drafted</span>
-                  <span className="text-[9px] text-muted-foreground">·</span>
-                  <span className="text-[9px] text-muted-foreground">{s.wins}W</span>
-                  {s.playoff_seed && (
-                    <>
-                      <span className="text-[9px] text-muted-foreground">·</span>
-                      <span className="text-[9px] font-semibold text-success">🎯 Seed #{s.playoff_seed}</span>
-                    </>
+            <div key={s.id}>
+              <div
+                className={cn('flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer', isMe && 'bg-gold/5')}
+                onClick={() => setExpanded(isExpanded ? null : s.id)}
+              >
+                <div className="w-6 text-center flex-shrink-0">
+                  {rankEmoji ? (
+                    <span className="text-sm">{rankEmoji}</span>
+                  ) : (
+                    <span className="text-[11px] font-bold text-muted-foreground">{s.rank || i + 1}</span>
                   )}
                 </div>
+                <div className="flex-1 min-w-0">
+                  <p className={cn('text-[13px] font-bold truncate', isMe && 'text-gold')}>
+                    {(s.profiles as any)?.display_name || 'Unknown'}
+                    {isMe && <span className="text-[9px] ml-1 text-muted-foreground">(you)</span>}
+                  </p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[9px] text-muted-foreground">{s.drafts_played} drafted</span>
+                    <span className="text-[9px] text-muted-foreground">·</span>
+                    <span className="text-[9px] text-muted-foreground">{s.wins}W {s.podiums}P</span>
+                    <span className="text-[9px] text-muted-foreground">·</span>
+                    <span className="text-[9px] font-semibold text-success">Seed #{s.playoff_seed}</span>
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-sm font-extrabold" style={{ color: 'hsl(var(--gold))' }}>{s.season_points}</p>
+                  <p className="text-[8px] text-muted-foreground/60 uppercase font-bold">pts</p>
+                </div>
               </div>
-              <div className="text-right flex-shrink-0">
-                <p className="text-sm font-extrabold" style={{ color: 'hsl(var(--gold))' }}>{s.season_points}</p>
-                <p className="text-[8px] text-muted-foreground/60 uppercase font-bold">pts</p>
-              </div>
+              {isExpanded && (
+                <div className="px-4 pb-3 pt-0">
+                  <div className="grid grid-cols-4 gap-2 p-2.5 rounded-lg bg-muted/30">
+                    <div className="text-center">
+                      <p className="text-[12px] font-bold">{s.avg_finish.toFixed(1)}</p>
+                      <p className="text-[8px] text-muted-foreground/60">Avg Finish</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[12px] font-bold">{s.avg_score.toFixed(1)}</p>
+                      <p className="text-[8px] text-muted-foreground/60">Avg Score</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[12px] font-bold text-success">{s.best_score.toFixed(1)}</p>
+                      <p className="text-[8px] text-muted-foreground/60">Best</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[12px] font-bold text-destructive">{s.worst_score.toFixed(1)}</p>
+                      <p className="text-[8px] text-muted-foreground/60">Worst</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
