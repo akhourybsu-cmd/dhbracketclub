@@ -632,6 +632,13 @@ export type Database = {
             referencedRelation: "draft_seasons"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "draft_season_standings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       draft_seasons: {
