@@ -399,9 +399,83 @@ export async function assignDraftToSeason(seasonId: string, draftId: string, dra
     .upsert({
       season_id: seasonId,
       draft_id: draftId,
-      week_number: draftNumber, // column stores sequential draft number
+      week_number: draftNumber,
       is_playoff: isPlayoff,
     } as any, { onConflict: 'draft_id' });
+
+  if (error) throw error;
+}
+
+/** Check if the current user is the commissioner for the active season */
+export function useIsCommissioner(season: DraftSeason | null) {
+  const { user } = useAuth();
+  return !!(season && user && season.commissioner_user_id === user.id);
+}
+
+/** Fetch all drafts NOT assigned to any season (candidates for commissioner to add) */
+export function useUnassignedDrafts(seasonId: string | undefined) {
+  const [drafts, setDrafts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetch = useCallback(async () => {
+    if (!seasonId) { setLoading(false); return; }
+
+    // Get all draft IDs already in a season entry
+    const { data: entries } = await supabase
+      .from('draft_season_entries' as any)
+      .select('draft_id')
+      .eq('season_id', seasonId);
+
+    const assignedIds = new Set((entries || []).map((e: any) => e.draft_id));
+
+    // Get all drafts
+    const { data: allDrafts } = await supabase
+      .from('drafts')
+      .select('id, topic, status, created_at, category, num_rounds, profiles:created_by(display_name)')
+      .order('created_at', { ascending: false });
+
+    const unassigned = (allDrafts || []).filter(d => !assignedIds.has(d.id));
+    setDrafts(unassigned);
+    setLoading(false);
+  }, [seasonId]);
+
+  useEffect(() => { fetch(); }, [fetch]);
+
+  return { drafts, loading, refetch: fetch };
+}
+
+/** Commissioner: add a draft to the season with auto-numbered position */
+export async function addDraftToSeason(seasonId: string, draftId: string) {
+  // Get current max week_number for this season
+  const { data: existing } = await supabase
+    .from('draft_season_entries' as any)
+    .select('week_number')
+    .eq('season_id', seasonId)
+    .eq('is_playoff', false)
+    .order('week_number', { ascending: false })
+    .limit(1);
+
+  const nextNumber = existing && existing.length > 0 ? (existing[0] as any).week_number + 1 : 1;
+
+  const { error } = await supabase
+    .from('draft_season_entries' as any)
+    .insert({
+      season_id: seasonId,
+      draft_id: draftId,
+      week_number: nextNumber,
+      is_playoff: false,
+    } as any);
+
+  if (error) throw error;
+  return nextNumber;
+}
+
+/** Commissioner: remove a draft from the season */
+export async function removeDraftFromSeason(draftId: string) {
+  const { error } = await supabase
+    .from('draft_season_entries' as any)
+    .delete()
+    .eq('draft_id', draftId);
 
   if (error) throw error;
 }
