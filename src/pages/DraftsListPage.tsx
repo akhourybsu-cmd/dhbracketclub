@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { getDerivedDraftTurn } from '@/lib/draftTurn';
 import { formatDistanceToNow } from 'date-fns';
 import { useDraftListUpdates } from '@/hooks/useRealtimeSubscription';
+import { useCurrentSeason, useSeasonEntries } from '@/hooks/useDraftSeasons';
 
 export default function DraftsListPage() {
   const { user } = useAuth();
