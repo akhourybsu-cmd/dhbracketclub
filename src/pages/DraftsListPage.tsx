@@ -168,19 +168,33 @@ export default function DraftsListPage() {
       {/* Cumulative Draft Stats */}
       {myDraftStats.draftsRated > 0 && (
         <div className="glass-card p-4 mb-4">
-          <div className="flex items-center justify-around">
+          <div className="grid grid-cols-3 gap-2 mb-3">
             <div className="text-center">
               <p className="text-lg font-extrabold leading-none">{myDraftStats.totalPoints}</p>
               <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Total Pts</p>
             </div>
-            <div className="w-px h-8 bg-border/30" />
             <div className="text-center">
               <p className="text-lg font-extrabold leading-none">{myDraftStats.wins}</p>
               <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Wins</p>
             </div>
-            <div className="w-px h-8 bg-border/30" />
             <div className="text-center">
-              <p className="text-lg font-extrabold leading-none">{myDraftStats.draftsRated}</p>
+              <p className="text-lg font-extrabold leading-none">{myDraftStats.podiums}</p>
+              <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Podiums</p>
+            </div>
+          </div>
+          <div className="border-t border-border/20 pt-2.5 flex items-center justify-around">
+            <div className="text-center">
+              <p className="text-sm font-bold leading-none">{myDraftStats.avgScore.toFixed(1)}</p>
+              <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Avg Score</p>
+            </div>
+            <div className="w-px h-6 bg-border/20" />
+            <div className="text-center">
+              <p className="text-sm font-bold leading-none">{myDraftStats.bestFinish > 0 ? `${myDraftStats.bestFinish}${myDraftStats.bestFinish === 1 ? 'st' : myDraftStats.bestFinish === 2 ? 'nd' : myDraftStats.bestFinish === 3 ? 'rd' : 'th'}` : '—'}</p>
+              <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Best Finish</p>
+            </div>
+            <div className="w-px h-6 bg-border/20" />
+            <div className="text-center">
+              <p className="text-sm font-bold leading-none">{myDraftStats.draftsRated}</p>
               <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Rated</p>
             </div>
           </div>
