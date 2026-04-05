@@ -599,6 +599,7 @@ export default function DraftDetailPage() {
               setSeasonActionBusy(true);
               try {
                 const num = await addDraftToSeason(season.id, draftId!);
+                await recalculateSeasonStandings(season.id);
                 toast.success(`Added as Season Draft #${num}`);
                 refetchSeasonEntries();
               } catch (err: any) { toast.error(err.message); }
