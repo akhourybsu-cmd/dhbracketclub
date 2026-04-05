@@ -855,11 +855,17 @@ function NoSeasonState() {
 export default function CompetePage() {
   const { user } = useAuth();
   const { season, loading: seasonLoading } = useCurrentSeason();
-  const { standings, loading: standingsLoading } = useSeasonStandings(season?.id);
-  const { entries, loading: entriesLoading } = useSeasonEntries(season?.id);
+  const { standings, loading: standingsLoading, refetch: refetchStandings } = useSeasonStandings(season?.id);
+  const { entries, loading: entriesLoading, refetch: refetchEntries } = useSeasonEntries(season?.id);
   const { matches } = usePlayoffMatches(season?.id);
+  const isCommissioner = useIsCommissioner(season);
 
   const totalDrafts = season ? getSeasonDraftTarget(season) : 12;
+
+  const handleSeasonUpdate = useCallback(() => {
+    refetchEntries();
+    refetchStandings();
+  }, [refetchEntries, refetchStandings]);
 
   return (
     <div className="pb-6">
@@ -896,6 +902,7 @@ export default function CompetePage() {
             ) : season ? (
               <>
                 <SeasonHeaderCard season={season} entries={entries} />
+                {isCommissioner && <CommissionerPanel season={season} entries={entries} onUpdate={handleSeasonUpdate} />}
                 <NextDraftCard entries={entries} totalDrafts={totalDrafts} />
                 <StandingsCard standings={standings} userId={user?.id} />
                 <PlayoffPicture standings={standings} matches={matches} />
