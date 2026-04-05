@@ -625,6 +625,9 @@ export default function DraftDetailPage() {
       {/* ═══ Live Draft ═══ */}
       {isInProgress && !isDraftComplete && (
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+          {/* Pick announcement */}
+          <PickAnnouncement pick={announcement} />
+
           {/* Current turn banner */}
           <div className={cn(
             "glass-card p-4 mb-5 text-center",
@@ -635,6 +638,10 @@ export default function DraftDetailPage() {
                 <>
                   <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'hsl(var(--gold))' }}>Your Turn</p>
                    <p className="text-[13px] font-bold">Round {currentRound} • Pick #{currentPickNumber}</p>
+                   <OnTheClockTimer
+                     lastPickAt={picks.length > 0 ? (picks[picks.length - 1] as any)?.picked_at : null}
+                     draftStartedAt={draft?.updated_at}
+                   />
                  </>
                ) : (
                  <>
