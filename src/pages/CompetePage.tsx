@@ -567,7 +567,7 @@ function SeasonDraftHistory({ entries, totalDrafts }: { entries: any[]; totalDra
                     {isComplete ? (
                       <span className="text-[10px]">✓</span>
                     ) : (
-                      <span className="text-[10px] font-bold text-muted-foreground">{e.week_number}</span>
+                      <span className="text-[10px] font-bold text-muted-foreground">#{e.week_number}</span>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
