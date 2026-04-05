@@ -137,20 +137,20 @@ export function useSeasonEntries(seasonId: string | undefined) {
   const [entries, setEntries] = useState<SeasonEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetch = useCallback(async () => {
     if (!seasonId) { setLoading(false); return; }
-    (async () => {
-      const { data } = await supabase
-        .from('draft_season_entries' as any)
-        .select('*, drafts:draft_id(topic, status)')
-        .eq('season_id', seasonId)
-        .order('week_number');
-      setEntries((data || []) as unknown as SeasonEntry[]);
-      setLoading(false);
-    })();
+    const { data } = await supabase
+      .from('draft_season_entries' as any)
+      .select('*, drafts:draft_id(topic, status)')
+      .eq('season_id', seasonId)
+      .order('week_number');
+    setEntries((data || []) as unknown as SeasonEntry[]);
+    setLoading(false);
   }, [seasonId]);
 
-  return { entries, loading };
+  useEffect(() => { fetch(); }, [fetch]);
+
+  return { entries, loading, refetch: fetch };
 }
 
 export function usePlayoffMatches(seasonId: string | undefined) {
