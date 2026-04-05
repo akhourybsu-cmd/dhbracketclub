@@ -1,37 +1,23 @@
 
 
-# Fix Chat Channel Persistence & Settings State Sync
+# Tiebreaker Logic for Draft Rankings
 
-## Problems
+## Current Problem
+When two participants have the same total score, the rank is determined by the arbitrary order the AI returns them — essentially random.
 
-1. **Channel resets to General on every visit** — `selectedChannel` starts as `null` and defaults to the `is_default` channel. No memory of the last visited channel.
+## Proposed Tiebreaker Cascade
+When total scores are tied, apply these rules in order until the tie is broken:
 
-2. **Settings dialog shows stale data** — `ChannelSettingsDialog` initializes form fields with `useState(channel.name)` which only runs on first mount. Opening settings for a different channel shows the previous channel's values.
+1. **Highest single-pick score** — The participant with the better "best pick" wins. This rewards having at least one standout selection.
+2. **Count of elite picks (score ≥ 8)** — More high-quality picks indicates stronger overall drafting.
+3. **Lowest single-pick score (higher is better)** — The participant with the better "worst pick" wins. This rewards consistency and penalizes bad picks.
+4. **Average pick score** — Acts as a fallback normalizer (relevant if pick counts ever differ).
+5. **Earlier final pick** — If still tied, the participant who finished drafting first wins (using `draft_picks.created_at` of their last pick). This is a rare, neutral fallback.
 
----
+## Technical Change
+One file: `supabase/functions/rate-draft/index.ts`
 
-## Plan
+Replace the simple `.sort((a, b) => b.total_score - a.total_score)` with a multi-factor comparator that extracts max score, count of 8+ picks, min score, and average from each participant's `pick_ratings` array. If all factors are still equal, use the `picks` data to compare last-pick timestamps.
 
-### Step 1: Persist last-visited channel in localStorage
-
-In `ChatPage.tsx`:
-- On channel selection (`selectChannel`), save `channelId` to `localStorage` under key `last_chat_channel_id`.
-- On initial load (inside `fetchChannels`), when `!selectedChannel`, check localStorage first. If a saved ID matches a fetched channel, select it instead of the default.
-
-### Step 2: Fix ChannelSettingsDialog state sync
-
-In `ChannelSettingsDialog.tsx`:
-- Add a `useEffect` that watches the `channel` prop and resets all local state (`name`, `description`, `icon`, `categoryId`, `isDefault`) whenever the channel changes. This ensures opening settings for a different channel always shows the correct current values.
-
-### Step 3: Ensure handleUpdateChannel awaits properly
-
-The `handleSave` in the dialog calls `onUpdate` but doesn't `await` it, so `setSaving(false)` fires immediately. Change `onUpdate` callback to return a Promise and await it in `handleSave` so the saving indicator works correctly and the dialog closes only after persistence succeeds.
-
----
-
-## Technical Details
-
-**Files to modify:**
-- `src/pages/ChatPage.tsx` — localStorage read/write for channel persistence
-- `src/components/chat/ChannelSettingsDialog.tsx` — useEffect to sync state from channel prop; await onUpdate
+No database or UI changes needed — ranks and points are already derived from the sorted order.
 
