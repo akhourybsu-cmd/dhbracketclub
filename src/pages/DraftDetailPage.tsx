@@ -80,7 +80,7 @@ export default function DraftDetailPage() {
   const [showConfetti, setShowConfetti] = useState(false);
   const confettiShown = useRef(false);
   const [announcement, setAnnouncement] = useState<{ displayName: string; pickText: string; round: number; pickNumber: number } | null>(null);
-  const prevPickCount = useRef(0);
+  
 
   const { results: draftResults, loading: resultsLoading, generating: resultsGenerating, hasResults, generateResults } = useDraftResults(draftId);
 
