@@ -925,9 +925,17 @@ export default function DraftDetailPage() {
                           {result.rank}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <span className="text-[13px] font-bold block truncate">{participant?.profiles?.display_name || 'Unknown'}</span>
+                          <span className="text-[13px] font-bold truncate flex items-center gap-1.5">
+                            {participant?.profiles?.display_name || 'Unknown'}
+                            {userStreak && (
+                              <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md" style={{ background: 'hsl(var(--gold) / 0.12)', color: 'hsl(var(--gold))' }}>
+                                <Flame className="w-2.5 h-2.5" /> {userStreak}🔥
+                              </span>
+                            )}
+                          </span>
                           <span className="text-[10px] text-muted-foreground/60">
                             Score: {Number(result.total_score).toFixed(1)} • +{result.points_awarded} pts
+                            {userAvgTime ? ` • ⏱ ${formatDuration(userAvgTime)} avg` : ''}
                           </span>
                         </div>
                         {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground/60 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground/60 flex-shrink-0" />}
