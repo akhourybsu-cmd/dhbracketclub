@@ -110,10 +110,16 @@ export default function DraftsListPage() {
 
               // My stats
               const myResults = (allResults as any[]).filter((r: any) => r.user_id === user?.id);
+              const podiums = myResults.filter((r: any) => r.rank <= 3).length;
+              const bestFinish = myResults.length > 0 ? Math.min(...myResults.map((r: any) => r.rank)) : 0;
+              const avgScore = myResults.length > 0 ? myResults.reduce((s: number, r: any) => s + (r.total_score || 0), 0) / myResults.length : 0;
               setMyDraftStats({
                 totalPoints: myResults.reduce((s: number, r: any) => s + (r.points_awarded || 0), 0),
                 wins: myResults.filter((r: any) => r.rank === 1).length,
                 draftsRated: myResults.length,
+                podiums,
+                bestFinish,
+                avgScore,
               });
             }
           }
