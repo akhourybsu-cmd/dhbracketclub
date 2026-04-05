@@ -17,9 +17,10 @@ import {
   useSeasonEntries,
   usePlayoffMatches,
   useLifetimeStats,
+  getSeasonDraftTarget,
   type SeasonStanding,
 } from '@/hooks/useDraftSeasons';
-import { getSeasonDisplayName, getOrdinalSuffix, getWeekLabel, getSeasonEmoji } from '@/lib/seasonUtils';
+import { getSeasonDisplayName, getOrdinalSuffix, getDraftLabel, getSeasonEmoji, getSeasonProgressText } from '@/lib/seasonUtils';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
@@ -89,7 +90,7 @@ function LockboxCompeteCard() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   SEASON HERO BANNER — elevated with gold glow + progress
+   SEASON HERO BANNER — draft-count based progress
    ══════════════════════════════════════════════════════════ */
 function SeasonHeaderCard({ season, entries }: { season: any; entries: any[] }) {
   const statusLabels: Record<string, { label: string; cls: string; dotCls: string }> = {
@@ -101,15 +102,15 @@ function SeasonHeaderCard({ season, entries }: { season: any; entries: any[] }) 
   const st = statusLabels[season.status] || statusLabels.upcoming;
   const isActive = season.status === 'regular_season' || season.status === 'playoffs';
 
-  // Calculate season progress
-  const completedWeeks = entries.filter(e => !e.is_playoff && e.drafts?.status === 'complete').length;
-  const totalWeeks = season.regular_season_weeks;
-  const progressPct = totalWeeks > 0 ? Math.round((completedWeeks / totalWeeks) * 100) : 0;
+  // Draft-count based progress
+  const totalDrafts = getSeasonDraftTarget(season);
+  const completedDrafts = entries.filter(e => !e.is_playoff && e.drafts?.status === 'complete').length;
+  const progressPct = totalDrafts > 0 ? Math.round((completedDrafts / totalDrafts) * 100) : 0;
+  const progressText = getSeasonProgressText(completedDrafts, totalDrafts, season.status);
 
   return (
     <motion.div initial={{ opacity: 0, y: 10, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}>
       <div className="relative rounded-xl overflow-hidden">
-        {/* Gold glow background layers */}
         <div className="absolute inset-0 rounded-xl" style={{ background: 'var(--gradient-hero-gold)' }} />
         <div className="absolute inset-0 rounded-xl" style={{ background: 'var(--gradient-hero-gold-accent)' }} />
         <div className="glass-card p-0 relative overflow-hidden border-gold/10" style={{
@@ -117,7 +118,6 @@ function SeasonHeaderCard({ season, entries }: { season: any; entries: any[] }) 
           boxShadow: 'var(--shadow-gold)',
         }}>
           <div className="relative z-10 p-5 pb-4">
-            {/* Title row */}
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-2.5">
                 <span className="text-2xl">{getSeasonEmoji(season.season_label)}</span>
@@ -136,11 +136,11 @@ function SeasonHeaderCard({ season, entries }: { season: any; entries: any[] }) 
               </span>
             </div>
 
-            {/* Stats row with better separation */}
+            {/* Stats row — draft-count based */}
             <div className="flex items-center gap-0 mt-4 rounded-lg bg-muted/25 p-2.5">
               <div className="flex-1 text-center">
-                <p className="text-sm font-extrabold tabular-nums">{season.regular_season_weeks}</p>
-                <p className="text-[8px] text-muted-foreground/60 font-bold uppercase tracking-wider">Reg Weeks</p>
+                <p className="text-sm font-extrabold tabular-nums">{totalDrafts}</p>
+                <p className="text-[8px] text-muted-foreground/60 font-bold uppercase tracking-wider">Reg Drafts</p>
               </div>
               <div className="w-px h-7 bg-border/20" />
               <div className="flex-1 text-center">
@@ -154,21 +154,23 @@ function SeasonHeaderCard({ season, entries }: { season: any; entries: any[] }) 
               </div>
             </div>
 
-            {/* Season progress bar */}
+            {/* Season progress bar — draft count */}
             {season.status !== 'complete' && (
               <div className="mt-3.5">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[9px] font-bold text-muted-foreground/70">Season Progress</span>
+                  <span className="text-[9px] font-bold text-muted-foreground/70">{progressText}</span>
                   <span className="text-[9px] font-bold tabular-nums" style={{ color: 'hsl(var(--gold))' }}>
-                    Week {completedWeeks} of {totalWeeks}
+                    {season.status === 'playoffs' ? 'Playoffs' : `Draft ${completedDrafts} of ${totalDrafts}`}
                   </span>
                 </div>
                 <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/40">
                   <div
                     className="h-full rounded-full transition-all duration-500"
                     style={{
-                      width: `${progressPct}%`,
-                      background: 'linear-gradient(90deg, hsl(var(--gold) / 0.7), hsl(var(--gold)))',
+                      width: `${season.status === 'playoffs' ? 100 : progressPct}%`,
+                      background: season.status === 'playoffs'
+                        ? 'linear-gradient(90deg, hsl(var(--gold) / 0.7), hsl(var(--gold)))'
+                        : 'linear-gradient(90deg, hsl(var(--gold) / 0.7), hsl(var(--gold)))',
                       boxShadow: '0 0 8px hsl(var(--gold) / 0.3)',
                     }}
                   />
@@ -183,12 +185,23 @@ function SeasonHeaderCard({ season, entries }: { season: any; entries: any[] }) 
 }
 
 /* ══════════════════════════════════════════════════════════
-   THIS WEEK'S DRAFT — elevated CTA with gold accent border
+   NEXT DRAFT — elevated CTA (draft-count aware)
    ══════════════════════════════════════════════════════════ */
-function ThisWeekDraft({ entries, seasonWeeks }: { entries: any[]; seasonWeeks: number }) {
-  const currentWeek = entries.filter(e => !e.is_playoff).length + 1;
-  const thisWeek = entries.find(e => e.week_number === currentWeek);
-  const isLive = thisWeek?.drafts?.status === 'in_progress';
+function NextDraftCard({ entries, totalDrafts }: { entries: any[]; totalDrafts: number }) {
+  const regularEntries = entries.filter(e => !e.is_playoff);
+  const completedCount = regularEntries.filter(e => e.drafts?.status === 'complete').length;
+  const nextDraftNumber = completedCount + 1;
+  const isRegularSeasonComplete = completedCount >= totalDrafts;
+
+  // Find the latest non-complete entry (current draft)
+  const currentEntry = regularEntries.find(e => e.drafts?.status !== 'complete');
+  // Or show the latest entry if all complete
+  const latestEntry = currentEntry || regularEntries[regularEntries.length - 1];
+  const isLive = latestEntry?.drafts?.status === 'in_progress';
+
+  const label = isRegularSeasonComplete
+    ? 'Regular Season Complete'
+    : getDraftLabel(nextDraftNumber, totalDrafts);
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
@@ -199,38 +212,60 @@ function ThisWeekDraft({ entries, seasonWeeks }: { entries: any[]; seasonWeeks: 
         borderLeft: '3px solid hsl(var(--gold))',
       }}>
         <div className="flex items-center gap-2 mb-3">
-          <Calendar className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
-          <h3 className="font-bold text-[13px]">{getWeekLabel(currentWeek, seasonWeeks)}</h3>
+          <Bookmark className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
+          <h3 className="font-bold text-[13px]">{label}</h3>
           {isLive && (
             <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/12 text-success text-[9px] font-bold border border-success/15">
               <span className="live-dot w-1.5 h-1.5" />
               LIVE
             </span>
           )}
-          <span className="text-[9px] text-muted-foreground/60 ml-auto tabular-nums">
-            Week {Math.min(currentWeek, seasonWeeks)} of {seasonWeeks}
-          </span>
+          {!isRegularSeasonComplete && (
+            <span className="text-[9px] text-muted-foreground/60 ml-auto tabular-nums">
+              Draft {Math.min(nextDraftNumber, totalDrafts)} of {totalDrafts}
+            </span>
+          )}
         </div>
-        {thisWeek ? (
-          <Link to={`/drafts/${thisWeek.draft_id}`}>
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-              <Bookmark className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(var(--gold))' }} />
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-bold truncate">{thisWeek.drafts?.topic || 'Draft'}</p>
-                <span className={cn(
-                  'status-pill text-[9px] mt-1 inline-flex',
-                  thisWeek.drafts?.status === 'complete' ? 'bg-primary/10 text-primary' :
-                  thisWeek.drafts?.status === 'in_progress' ? 'bg-success/12 text-success' :
-                  'bg-muted text-muted-foreground'
-                )}>
-                  {thisWeek.drafts?.status === 'complete' ? 'Complete' :
-                   thisWeek.drafts?.status === 'in_progress' ? 'In Progress' :
-                   thisWeek.drafts?.status || 'Unknown'}
-                </span>
+        {latestEntry && !isRegularSeasonComplete ? (
+          latestEntry.drafts?.status !== 'complete' ? (
+            <Link to={`/drafts/${latestEntry.draft_id}`}>
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                <Bookmark className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(var(--gold))' }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-bold truncate">{latestEntry.drafts?.topic || 'Draft'}</p>
+                  <span className={cn(
+                    'status-pill text-[9px] mt-1 inline-flex',
+                    latestEntry.drafts?.status === 'in_progress' ? 'bg-success/12 text-success' :
+                    'bg-muted text-muted-foreground'
+                  )}>
+                    {latestEntry.drafts?.status === 'in_progress' ? 'In Progress' :
+                     latestEntry.drafts?.status || 'Unknown'}
+                  </span>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60" />
               </div>
-              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60" />
+            </Link>
+          ) : (
+            <div className="text-center py-4">
+              <p className="text-[11px] text-muted-foreground/70 mb-3">No draft assigned yet</p>
+              <Link to="/drafts/create">
+                <button className="w-full h-10 rounded-lg text-[12px] font-bold transition-colors flex items-center justify-center gap-2 btn-press" style={{
+                  background: 'hsl(var(--gold) / 0.15)',
+                  color: 'hsl(var(--gold))',
+                  border: '1px solid hsl(var(--gold) / 0.15)',
+                }}>
+                  <Plus className="w-4 h-4" /> Create Draft {nextDraftNumber}
+                </button>
+              </Link>
             </div>
-          </Link>
+          )
+        ) : isRegularSeasonComplete ? (
+          <div className="text-center py-3">
+            <p className="text-[12px] font-bold" style={{ color: 'hsl(var(--gold))' }}>
+              🏆 All {totalDrafts} regular-season drafts complete
+            </p>
+            <p className="text-[10px] text-muted-foreground mt-1">Playoffs are unlocked!</p>
+          </div>
         ) : (
           <div className="text-center py-4">
             <p className="text-[11px] text-muted-foreground/70 mb-3">No draft assigned yet</p>
@@ -240,7 +275,7 @@ function ThisWeekDraft({ entries, seasonWeeks }: { entries: any[]; seasonWeeks: 
                 color: 'hsl(var(--gold))',
                 border: '1px solid hsl(var(--gold) / 0.15)',
               }}>
-                <Plus className="w-4 h-4" /> Create This Week's Draft
+                <Plus className="w-4 h-4" /> Create Draft {nextDraftNumber}
               </button>
             </Link>
           </div>
@@ -284,7 +319,6 @@ function StandingsCard({ standings, userId }: { standings: SeasonStanding[]; use
             const isPodium = rank <= 3;
             const gap = rank === 1 ? null : leaderPts - s.season_points;
 
-            // Seed badge colors
             const seedBg = s.playoff_seed === 1 ? 'hsl(var(--gold))' :
                            s.playoff_seed === 2 ? 'hsl(var(--silver))' :
                            s.playoff_seed === 3 ? 'hsl(var(--bronze))' :
@@ -303,7 +337,6 @@ function StandingsCard({ standings, userId }: { standings: SeasonStanding[]; use
                   } : undefined}
                   onClick={() => setExpanded(isExpanded ? null : s.id)}
                 >
-                  {/* Rank / Seed badge */}
                   <div className="w-7 flex-shrink-0 flex items-center justify-center">
                     {isPodium ? (
                       <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-extrabold" style={{
@@ -318,7 +351,6 @@ function StandingsCard({ standings, userId }: { standings: SeasonStanding[]; use
                     )}
                   </div>
 
-                  {/* Player info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <p className={cn('text-[13px] font-bold truncate', isMe && 'text-gold', rank === 1 && !isMe && 'text-foreground')}>
@@ -334,7 +366,6 @@ function StandingsCard({ standings, userId }: { standings: SeasonStanding[]; use
                     </div>
                   </div>
 
-                  {/* Points + gap */}
                   <div className="text-right flex-shrink-0">
                     <p className="text-sm font-extrabold tabular-nums" style={{ color: 'hsl(var(--gold))' }}>{s.season_points}</p>
                     {gap !== null ? (
@@ -388,7 +419,7 @@ function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; m
             <Crown className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
             Playoff Picture
           </h3>
-          <p className="text-[11px] text-muted-foreground/70 text-center py-4">Complete regular season drafts to determine playoff seeds.</p>
+          <p className="text-[11px] text-muted-foreground/70 text-center py-4">Complete all 12 regular-season drafts to unlock playoffs.</p>
         </div>
       </motion.div>
     );
@@ -427,9 +458,7 @@ function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; m
           </div>
         ) : (
           <div className="space-y-3">
-            {/* Visual bracket */}
             <div className="space-y-2">
-              {/* Round labels header */}
               <div className="grid grid-cols-3 gap-2 mb-3">
                 {['Play-In', 'Semis', 'Finals'].map(r => (
                   <div key={r} className="text-center">
@@ -438,18 +467,11 @@ function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; m
                 ))}
               </div>
 
-              {/* Bracket path 1: #4 vs #5 → winner vs #1 → Finals */}
               <div className="grid grid-cols-3 gap-2 items-center">
-                {/* Play-In */}
                 <div className="rounded-lg bg-muted/30 p-2.5 border border-border/10">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] font-bold">#{4} <span className="text-muted-foreground font-normal">{getName(4)}</span></p>
-                      <p className="text-[10px] font-bold mt-1">#{5} <span className="text-muted-foreground font-normal">{getName(5)}</span></p>
-                    </div>
-                  </div>
+                  <p className="text-[10px] font-bold">#{4} <span className="text-muted-foreground font-normal">{getName(4)}</span></p>
+                  <p className="text-[10px] font-bold mt-1">#{5} <span className="text-muted-foreground font-normal">{getName(5)}</span></p>
                 </div>
-                {/* Semi 1 */}
                 <div className="rounded-lg bg-muted/30 p-2.5 border border-border/10 relative">
                   <p className="text-[10px] font-bold">#{1} <span className="text-muted-foreground font-normal">{getName(1)}</span></p>
                   <div className="flex items-center gap-1 mt-0.5">
@@ -461,7 +483,6 @@ function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; m
                   <div className="h-px bg-border/20 my-1.5" />
                   <p className="text-[9px] text-muted-foreground">vs Play-In ✦</p>
                 </div>
-                {/* Finals placeholder */}
                 <div className="rounded-lg p-2.5 border border-gold/15 relative" style={{
                   background: 'hsl(var(--gold) / 0.05)',
                 }}>
@@ -473,16 +494,13 @@ function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; m
                 </div>
               </div>
 
-              {/* Bracket path 2: #2 vs #3 */}
               <div className="grid grid-cols-3 gap-2 items-center">
-                <div /> {/* Empty play-in slot */}
-                {/* Semi 2 */}
+                <div />
                 <div className="rounded-lg bg-muted/30 p-2.5 border border-border/10">
                   <p className="text-[10px] font-bold">#{2} <span className="text-muted-foreground font-normal">{getName(2)}</span></p>
                   <div className="h-px bg-border/20 my-1.5" />
                   <p className="text-[10px] font-bold">#{3} <span className="text-muted-foreground font-normal">{getName(3)}</span></p>
                 </div>
-                {/* 3rd place */}
                 <div className="rounded-lg bg-muted/20 p-2.5 border border-border/10">
                   <div className="text-center">
                     <Medal className="w-3.5 h-3.5 mx-auto mb-1 text-muted-foreground/40" />
@@ -504,9 +522,9 @@ function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; m
 }
 
 /* ══════════════════════════════════════════════════════════
-   SEASON SCHEDULE — collapsible with result indicators
+   DRAFT HISTORY — collapsible with result indicators
    ══════════════════════════════════════════════════════════ */
-function SeasonWeekHistory({ entries }: { entries: any[] }) {
+function SeasonDraftHistory({ entries, totalDrafts }: { entries: any[]; totalDrafts: number }) {
   const regularEntries = entries.filter(e => !e.is_playoff);
   const [isOpen, setIsOpen] = useState(regularEntries.length <= 4);
 
@@ -520,7 +538,7 @@ function SeasonWeekHistory({ entries }: { entries: any[] }) {
         <div className="p-3 border-b border-border/20 flex items-center justify-between">
           <h3 className="font-bold text-[13px] flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5" style={{ color: 'hsl(var(--gold))' }} />
-            Season Schedule
+            Draft History
           </h3>
           {regularEntries.length > 3 && (
             <button
@@ -542,7 +560,6 @@ function SeasonWeekHistory({ entries }: { entries: any[] }) {
                   'flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors',
                   i % 2 === 1 && 'bg-muted/8',
                 )}>
-                  {/* Week indicator with status */}
                   <div className={cn(
                     'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
                     isComplete ? 'bg-success/12' : isActive ? 'bg-gold/12' : 'bg-muted/50',
@@ -555,12 +572,16 @@ function SeasonWeekHistory({ entries }: { entries: any[] }) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[12px] font-bold truncate">{e.drafts?.topic || 'Draft'}</p>
-                    <span className={cn(
-                      'text-[9px] font-semibold',
-                      isComplete ? 'text-primary' : isActive ? 'text-success' : 'text-muted-foreground',
-                    )}>
-                      {isComplete ? 'Complete' : isActive ? 'In Progress' : e.drafts?.status || 'unknown'}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] text-muted-foreground/50">Draft {e.week_number}</span>
+                      <span className="text-[9px] text-muted-foreground/30">·</span>
+                      <span className={cn(
+                        'text-[9px] font-semibold',
+                        isComplete ? 'text-primary' : isActive ? 'text-success' : 'text-muted-foreground',
+                      )}>
+                        {isComplete ? 'Complete' : isActive ? 'In Progress' : e.drafts?.status || 'unknown'}
+                      </span>
+                    </div>
                   </div>
                   <ChevronRight className="w-3 h-3 text-muted-foreground/50" />
                 </div>
@@ -710,6 +731,8 @@ export default function CompetePage() {
   const { entries, loading: entriesLoading } = useSeasonEntries(season?.id);
   const { matches } = usePlayoffMatches(season?.id);
 
+  const totalDrafts = season ? getSeasonDraftTarget(season) : 12;
+
   return (
     <div className="pb-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -745,13 +768,12 @@ export default function CompetePage() {
             ) : season ? (
               <>
                 <SeasonHeaderCard season={season} entries={entries} />
-                <ThisWeekDraft entries={entries} seasonWeeks={season.regular_season_weeks} />
+                <NextDraftCard entries={entries} totalDrafts={totalDrafts} />
                 <StandingsCard standings={standings} userId={user?.id} />
                 <PlayoffPicture standings={standings} matches={matches} />
-                <SeasonWeekHistory entries={entries} />
+                <SeasonDraftHistory entries={entries} totalDrafts={totalDrafts} />
                 <LifetimeStatsCard userId={user?.id} />
 
-                {/* Quick actions — wrapped in a card */}
                 <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
                   <div className="glass-card p-3 bg-card/60 flex gap-2">
                     <Link to="/drafts" className="flex-1">
