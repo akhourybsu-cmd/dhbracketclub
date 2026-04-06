@@ -487,12 +487,47 @@ export async function addDraftToSeason(seasonId: string, draftId: string) {
   return nextNumber;
 }
 
-/** Commissioner: remove a draft from the season */
+/** Commissioner: remove a draft from the season and renumber remaining entries */
 export async function removeDraftFromSeason(draftId: string) {
+  // Get the season_id before deleting so we can renumber
+  const { data: entry } = await supabase
+    .from('draft_season_entries' as any)
+    .select('season_id')
+    .eq('draft_id', draftId)
+    .single();
+
   const { error } = await supabase
     .from('draft_season_entries' as any)
     .delete()
     .eq('draft_id', draftId);
 
   if (error) throw error;
+
+  // Renumber remaining regular-season entries sequentially
+  if (entry) {
+    await renumberSeasonEntries((entry as any).season_id);
+  }
+}
+
+/** Renumber all regular-season entries sequentially (1, 2, 3…) by current week_number order */
+async function renumberSeasonEntries(seasonId: string) {
+  const { data: remaining } = await supabase
+    .from('draft_season_entries' as any)
+    .select('id, week_number')
+    .eq('season_id', seasonId)
+    .eq('is_playoff', false)
+    .order('week_number');
+
+  if (!remaining) return;
+
+  for (let i = 0; i < (remaining as any[]).length; i++) {
+    const entry = (remaining as any[])[i];
+    const correctNumber = i + 1;
+    if (entry.week_number !== correctNumber) {
+      await supabase
+        .from('draft_season_entries' as any)
+        .update({ week_number: correctNumber } as any)
+        .eq('id', entry.id);
+    }
+  }
 }
