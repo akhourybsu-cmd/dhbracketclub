@@ -1,64 +1,81 @@
 
 
-# Chat Message Layout Refinement
+# Chat Bubble Layout — Left/Right Alignment Refactor
 
 ## Overview
-Refine the existing MessageBubble and MessageList components to improve sender grouping, visual separation, unread markers, and overall feed readability — without redesigning the chat system.
+Transform the chat from a feed-style layout to a conversational bubble layout: current user's messages right-aligned with blue bubbles, other users' messages left-aligned with dark neutral bubbles. Preserve DH Club premium dark styling, grouping logic, and all existing features.
 
 ## Changes
 
-### 1. MessageList.tsx — Spacing & Unread Divider
+### 1. MessageBubble.tsx — Bubble Layout
 
-**Sender block spacing**: Replace the uniform `space-y-0.5` with dynamic margins controlled by the `sameAuthor` flag already computed per message. Between different senders: `mt-5` (~20px). Within same sender: `mt-0.5` (~2px).
+**Right-aligned (own messages):**
+- Wrap content in a bubble with `bg-primary/20 rounded-2xl rounded-br-sm` (blue tint), `max-w-[80%]`, aligned right via `flex justify-end`
+- First message of own block: show timestamp below the last message in the cluster (right-aligned, subtle)
+- Follow-up messages: tighter rounded corners on the connecting side (`rounded-tr-sm`) for visual stacking
+- No avatar or name shown for own messages
+- Pin icon inline after text
 
-**Unread divider upgrade**: The current divider exists but is minimal. Enhance it:
-- Show unread count: "3 New Messages" (computed from `filtered.length - 1 - unreadDividerAfterIdx`)
-- Use a pill-style label centered on a horizontal rule
-- Color: `bg-primary/15 text-primary` (emerald tint, on-brand) instead of current destructive red
-- Add subtle top/bottom padding for breathing room
+**Left-aligned (other users):**
+- Wrap content in a bubble with `bg-muted/25 rounded-2xl rounded-bl-sm`, `max-w-[80%]`, aligned left via `flex justify-start`
+- First message of a sender block: avatar (28px) to the left of the bubble, display name above in sender color, timestamp next to name
+- Follow-up messages: no avatar/name, indented to align with first bubble (`ml-[38px]`), tighter top-corner rounding
+- Last message of block: small avatar (18px) at bottom-left
 
-**Date separators**: Keep existing but reduce visual weight slightly — thinner text, more spacing from message blocks.
+**Bubble corner logic for grouping:**
+- Single message: fully rounded
+- First in group: rounded top, tight bottom-corner on sender side
+- Middle: tight corners on sender side
+- Last in group: tight top-corner on sender side, rounded bottom
 
-### 2. MessageBubble.tsx — Sender Grouping & Visual Treatment
+**Reactions:** Rendered below the bubble, aligned to the bubble's side (left for others, right for own).
 
-**Remove the 3px colored left border** on every message. Replace with:
-- **First message of a sender block**: Show a subtle colored top-accent line (2px, sender color, rounded, ~40px wide) above the author line, plus the avatar + name + timestamp
-- **Follow-up messages**: No accent, no avatar/name — just the content indented to align with the first message's text. Keep the hover-timestamp behavior.
-- **Last message of a block**: Show the mini-avatar (existing `showGroupedAvatar` logic) at 18px
+**Action overlay:** Position above the bubble, shifted to match alignment side.
 
-**Author line refinement**:
-- Name: `text-[13px] font-semibold` (slightly larger, more prominent)
-- Timestamp: `text-[10px] text-muted-foreground/50` (more subdued)
-- Remove pin icon from author line, move it inline after message text
+**Thread indicator:** Below bubble, aligned to bubble side.
 
-**Own-message treatment**: Keep the subtle `bg-primary/[0.04]` background but extend it to cover the entire sender block visually.
+**Swipe-to-reply:** Keep existing, works for both alignments.
 
-### 3. Reactions Spacing
-- Increase `mt-1.5` to `mt-2` on the reactions row
-- Add `mb-1` so reactions don't crowd into the next sender block
-- Keep existing reaction badge styling
+### 2. MessageList.tsx — Minimal Changes
 
-### 4. Thread Indicator
-- Keep as-is, the current treatment is clean
+- Remove the colored top-accent line from sender blocks (no longer needed with bubbles)
+- Keep existing sender grouping logic (`sameAuthor`, `nextSameAuthor`, `senderGap`)
+- Keep the unread divider as-is (emerald pill — already implemented)
+- Keep date separators as-is
+- Pass alignment info is already available via `isOwn` prop
 
-### 5. Content Indentation
-- All messages (first and follow-up) will have text at `pl-[38px]` (already the case)
-- This creates a consistent left-aligned text column that's easy to scan
+### 3. Visual Specs
+
+**Own bubble colors:**
+- Background: `bg-primary/15` (emerald-tinted, on brand)
+- Text: `text-foreground/95`
+- Border radius: `rounded-2xl` with grouped corner adjustments
+
+**Other bubble colors:**
+- Background: `bg-muted/20`
+- Text: `text-foreground/90`
+- Sender name: existing `getUserColor()` 
+
+**Spacing:**
+- Between different senders: `h-3` gap (existing)
+- Within same sender: `py-0.5` (existing)
+- Bubble internal padding: `px-3 py-2`
+
+### 4. Images & Link Previews
+- Render inside the bubble, constrained to bubble width
+- Image max-width reduced to fit bubble (`max-w-[240px]`)
+
+### 5. Edit Mode
+- Edit textarea renders inside the bubble container, maintaining alignment
 
 ## Files Modified
-1. **src/components/chat/MessageBubble.tsx** — Remove left border, add sender-block top accent on first message, refine author line typography, adjust reactions spacing
-2. **src/components/chat/MessageList.tsx** — Dynamic inter-block spacing, enhanced unread divider with count and on-brand styling, minor date separator refinement
+1. **src/components/chat/MessageBubble.tsx** — Major refactor: add bubble containers, left/right alignment, grouped corner rounding, repositioned reactions/actions/threads
+2. **src/components/chat/MessageList.tsx** — Minor: remove top-accent line logic if any remains, ensure grouping props pass correctly
 
-## Summary of Changes
-- **Sender grouping**: Consecutive messages grouped with tight spacing; avatar+name only on first message; larger gap between different senders
-- **Unread divider**: Emerald pill showing "X New Messages" on a subtle horizontal rule
-- **Spacing hierarchy**: 20px between sender blocks, 2px within; reactions get extra bottom margin
-- **Accent treatment**: Colored left border replaced with a short top-accent on the first message of each block — cleaner, less busy
-
-## Edge Cases to Test
-- Single-message sender blocks (should still show avatar + accent)
-- Very long message threads with many senders switching rapidly
-- Unread divider with 0 unread (should not show)
-- Messages with images, link previews, and reactions together
-- Dark mode and light mode appearance
+## Summary
+- **Own messages**: Right-aligned emerald-tinted bubbles, no avatar, timestamp at cluster end
+- **Other messages**: Left-aligned neutral bubbles, avatar + name on first message of block
+- **Grouping**: Tight stacking with connected corner rounding within blocks, larger gaps between blocks
+- **Reactions/replies**: Attached below bubbles, aligned to the correct side
+- **Edge cases to test**: Long messages, images, link previews, edit mode, reactions on both sides, rapid sender switching, mobile keyboard interaction
 
