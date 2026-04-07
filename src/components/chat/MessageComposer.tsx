@@ -3,7 +3,6 @@ import { toast } from 'sonner';
 import { Send, Plus, Image, Camera, X, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { UserAvatar } from './UserAvatar';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -43,12 +42,10 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
     const fileInputRef = useRef<HTMLInputElement>(null);
     const cameraInputRef = useRef<HTMLInputElement>(null);
 
-    // Mention state
     const [mentionQuery, setMentionQuery] = useState<string | null>(null);
     const [mentionIndex, setMentionIndex] = useState(0);
     const [mentionStart, setMentionStart] = useState(0);
 
-    // Attach menu & images
     const [showAttachMenu, setShowAttachMenu] = useState(false);
     const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
     const [uploading, setUploading] = useState(false);
@@ -57,7 +54,6 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
       focus: () => textareaRef.current?.focus(),
     }));
 
-    // Auto-resize textarea
     const resize = useCallback(() => {
       const el = textareaRef.current;
       if (!el) return;
@@ -77,7 +73,6 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
       }
     }, [autoFocus]);
 
-    // Close attach menu on outside click
     useEffect(() => {
       if (!showAttachMenu) return;
       const handler = (e: MouseEvent) => {
@@ -89,7 +84,6 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
       return () => document.removeEventListener('mousedown', handler);
     }, [showAttachMenu]);
 
-    // Detect @ mention trigger
     const detectMention = useCallback(() => {
       const el = textareaRef.current;
       if (!el || members.length === 0) { setMentionQuery(null); return; }
@@ -125,8 +119,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
       });
     }, [value, mentionStart, onChange]);
 
-    // Image handling
-    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
     const handleFilesSelected = (files: FileList | null) => {
       if (!files) return;
@@ -134,7 +127,6 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
         if (!f.type.startsWith('image/')) return false;
         if (f.size > MAX_FILE_SIZE) {
           toast.error(`${f.name} exceeds 10MB limit`);
-          return false;
           return false;
         }
         return true;
@@ -155,7 +147,6 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
       });
     };
 
-    // Cleanup preview URLs
     useEffect(() => {
       return () => {
         pendingImages.forEach(p => URL.revokeObjectURL(p.previewUrl));
@@ -189,7 +180,6 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
         setUploading(true);
         try {
           const uploadedUrls = await uploadImages();
-          // Clear pending images
           pendingImages.forEach(p => URL.revokeObjectURL(p.previewUrl));
           setPendingImages([]);
           onSend(uploadedUrls);
@@ -227,8 +217,17 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
     const canSend = (value.trim().length > 0 || pendingImages.length > 0) && !disabled && !uploading;
 
     return (
-      <div ref={containerRef} className={cn("flex flex-col sticky bottom-0", compact ? "px-4 py-3" : "px-4 sm:px-5 py-3")}
-        style={{ paddingBottom: compact ? undefined : 'calc(0.75rem + env(safe-area-inset-bottom, 0px))', paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))', paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))' }}
+      <div
+        ref={containerRef}
+        className={cn(
+          "flex flex-col sticky bottom-0 bg-background/80 backdrop-blur-xl border-t border-border/10",
+          compact ? "px-4 py-2" : "px-4 sm:px-5 py-2"
+        )}
+        style={{
+          paddingBottom: compact ? undefined : 'calc(0.5rem + env(safe-area-inset-bottom, 0px))',
+          paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))',
+          paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))',
+        }}
       >
         {/* Image preview strip */}
         <AnimatePresence>
@@ -237,24 +236,26 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="flex gap-2 mb-2 overflow-x-auto"
+              className="mb-2"
             >
-              {pendingImages.map((img, i) => (
-                <div key={i} className="relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border border-border/30 bg-muted/20">
-                  <img src={img.previewUrl} alt="" className="w-full h-full object-cover" />
-                  <button
-                    onClick={() => removePendingImage(i)}
-                    className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-sm"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                  {uploading && (
-                    <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
-                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                    </div>
-                  )}
-                </div>
-              ))}
+              <div className="flex gap-2 overflow-x-auto rounded-2xl bg-muted/10 border border-border/10 p-2">
+                {pendingImages.map((img, i) => (
+                  <div key={i} className="relative flex-shrink-0 w-[72px] h-[72px] rounded-xl overflow-hidden border border-border/20 bg-muted/20">
+                    <img src={img.previewUrl} alt="" className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => removePendingImage(i)}
+                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-sm ring-2 ring-background"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                    {uploading && (
+                      <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -266,8 +267,10 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
               <button
                 onClick={() => setShowAttachMenu(!showAttachMenu)}
                 className={cn(
-                  "w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 mb-0.5",
-                  showAttachMenu ? "bg-primary/15 text-primary rotate-45" : "hover:bg-muted/40 text-muted-foreground/50"
+                  "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 mb-0.5 active:scale-90",
+                  showAttachMenu
+                    ? "bg-primary/10 text-primary rotate-45"
+                    : "text-muted-foreground/40 hover:text-muted-foreground/60 hover:bg-muted/15"
                 )}
               >
                 <Plus className="w-5 h-5" />
@@ -280,18 +283,18 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 8, scale: 0.95 }}
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                    className="absolute bottom-full left-0 mb-2 bg-popover border border-border/25 rounded-xl shadow-xl z-50 overflow-hidden min-w-[160px]"
+                    className="absolute bottom-full left-0 mb-2 bg-popover/90 backdrop-blur-lg border border-border/20 rounded-xl shadow-xl z-50 overflow-hidden min-w-[170px]"
                   >
                     <button
                       onClick={() => { fileInputRef.current?.click(); }}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-sm hover:bg-muted/50 transition-colors text-foreground/80"
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm hover:bg-muted/40 transition-colors text-foreground/80"
                     >
                       <Image className="w-4 h-4 text-primary/70" />
                       <span className="font-medium">Photo Library</span>
                     </button>
                     <button
                       onClick={() => { cameraInputRef.current?.click(); }}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-sm hover:bg-muted/50 transition-colors text-foreground/80"
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm hover:bg-muted/40 transition-colors text-foreground/80"
                     >
                       <Camera className="w-4 h-4 text-primary/70" />
                       <span className="font-medium">Take Photo</span>
@@ -309,14 +312,14 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
           <div className="flex-1 relative">
             {/* Mention autocomplete dropdown */}
             {mentionQuery !== null && filteredMembers.length > 0 && (
-              <div ref={dropdownRef} className="absolute bottom-full left-0 right-0 mb-1 bg-popover border border-border/25 rounded-xl shadow-xl z-50 overflow-hidden max-h-[200px] overflow-y-auto">
+              <div ref={dropdownRef} className="absolute bottom-full left-0 right-0 mb-1 bg-popover/90 backdrop-blur-lg border border-border/20 rounded-xl shadow-xl z-50 overflow-hidden max-h-[200px] overflow-y-auto">
                 {filteredMembers.map((member, i) => (
                   <button
                     key={member.id}
                     onMouseDown={(e) => { e.preventDefault(); insertMention(member); }}
                     className={cn(
-                      "w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors",
-                      i === mentionIndex ? "bg-primary/10 text-primary" : "hover:bg-muted/50 text-foreground/80"
+                      "w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-sm transition-colors",
+                      i === mentionIndex ? "bg-primary/10 text-primary" : "hover:bg-muted/40 text-foreground/80"
                     )}
                   >
                     <UserAvatar userId={member.id} name={member.display_name} avatarUrl={member.avatar_url} size={24} />
@@ -335,32 +338,30 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
               placeholder={placeholder || 'Message'}
               rows={1}
               className={cn(
-                "w-full resize-none bg-muted/15 border border-border/20 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary/30 focus:bg-muted/25 transition-all duration-200 placeholder:text-muted-foreground/40",
-                compact ? "text-xs pl-3.5 pr-11 py-2" : "text-sm pl-4 pr-12 py-3"
+                "w-full resize-none bg-muted/10 border border-border/15 rounded-2xl focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/20 focus-visible:border-primary/25 focus:bg-muted/15 transition-all duration-200 placeholder:text-muted-foreground/35",
+                compact ? "text-xs pl-3.5 pr-3.5 py-2" : "text-sm pl-4 pr-4 py-3.5"
               )}
               autoComplete="off"
-              style={{ minHeight: compact ? 36 : 44, maxHeight: compact ? 96 : 104 }}
+              style={{ minHeight: compact ? 36 : 46, maxHeight: compact ? 96 : 104 }}
             />
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={canSend ? 'active' : 'inactive'}
-                initial={{ opacity: 0, scale: 0.6 }}
-                animate={{ opacity: canSend ? 1 : 0.3, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.6 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                className={cn("absolute right-2 bottom-2", compact ? "h-7 w-7" : "h-8 w-8")}
-              >
-                <Button
-                  size="sm"
-                  onClick={handleSend}
-                  disabled={!canSend}
-                  className={cn("p-0 rounded-xl shadow-sm w-full h-full active:scale-[0.85] transition-transform")}
-                >
-                  {uploading ? <Loader2 className={cn(compact ? "w-3 h-3" : "w-3.5 h-3.5", "animate-spin")} /> : <Send className={cn(compact ? "w-3 h-3" : "w-3.5 h-3.5")} />}
-                </Button>
-              </motion.div>
-            </AnimatePresence>
           </div>
+
+          {/* Send button — external, circular */}
+          <button
+            onClick={handleSend}
+            disabled={!canSend}
+            className={cn(
+              "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 mb-0.5 active:scale-90",
+              canSend
+                ? "bg-primary text-primary-foreground shadow-md hover:shadow-lg"
+                : "bg-muted/20 text-muted-foreground/40"
+            )}
+          >
+            {uploading
+              ? <Loader2 className={cn(compact ? "w-4 h-4" : "w-[18px] h-[18px]", "animate-spin")} />
+              : <Send className={cn(compact ? "w-4 h-4" : "w-[18px] h-[18px]")} />
+            }
+          </button>
         </div>
       </div>
     );
