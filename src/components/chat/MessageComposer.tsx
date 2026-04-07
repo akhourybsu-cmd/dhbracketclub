@@ -338,7 +338,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
               placeholder={placeholder || 'Message'}
               rows={1}
               className={cn(
-                "w-full resize-none bg-muted/10 border border-border/15 rounded-2xl focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/20 focus-visible:border-primary/25 focus:bg-muted/15 transition-all duration-200 placeholder:text-muted-foreground/35",
+                "w-full resize-none bg-muted/15 border border-border/25 rounded-2xl focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/20 focus-visible:border-primary/25 focus:bg-muted/15 transition-all duration-200 placeholder:text-muted-foreground/35",
                 compact ? "text-xs pl-3.5 pr-3.5 py-2" : "text-sm pl-4 pr-4 py-3.5"
               )}
               autoComplete="off"
@@ -354,7 +354,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
               "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 mb-0.5 active:scale-90",
               canSend
                 ? "bg-primary text-primary-foreground shadow-md hover:shadow-lg"
-                : "bg-muted/20 text-muted-foreground/40"
+                : "bg-muted/30 text-muted-foreground/50"
             )}
           >
             {uploading

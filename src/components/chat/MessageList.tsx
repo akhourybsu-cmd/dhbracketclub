@@ -256,7 +256,7 @@ export function MessageList({
               )}
 
               {/* Sender block spacer */}
-              {senderGap && <div className="h-3" />}
+              {senderGap && <div className="h-4" />}
 
               <MessageBubble
                 msg={msg}
