@@ -136,7 +136,7 @@ export default function AdminToolsPage() {
         const nextGame = games.find(g => g.round_number === nextRound && g.game_slot === nextSlot);
         if (nextGame) {
           const field = isTeam1 ? 'team1_id' : 'team2_id';
-          await supabase.from('games').update({ [field]: winnerId }).eq('id', nextGame.id);
+          await supabase.from('games').update({ [field]: winnerId } as any).eq('id', nextGame.id);
           setGames(prev => prev.map(g => g.id === nextGame.id ? { ...g, [field]: winnerId } : g));
         }
       }
@@ -275,7 +275,7 @@ export default function AdminToolsPage() {
           const field = isTeam1Slot ? 'team1_id' : 'team2_id';
           const nextGame = games.find(g => g.round_number === nextRound && g.game_slot === nextSlot);
           if (nextGame) {
-            await supabase.from('games').update({ [field]: updatePayload.winner_team_id }).eq('id', nextGame.id);
+            await supabase.from('games').update({ [field]: updatePayload.winner_team_id } as any).eq('id', nextGame.id);
           }
         }
       } else {
@@ -287,7 +287,7 @@ export default function AdminToolsPage() {
         updatePayload.live_period = null;
       }
 
-      await supabase.from('games').update(updatePayload).eq('id', simGameId);
+      await supabase.from('games').update(updatePayload as any).eq('id', simGameId);
 
       await supabase.from('game_state_history').insert({
         game_id: simGameId,
@@ -771,7 +771,7 @@ export default function AdminToolsPage() {
                       const field = g.game_slot % 2 === 1 ? 'team1_id' : 'team2_id';
                       const nextGame = games.find(ng => ng.round_number === nextRound && ng.game_slot === nextSlot);
                       if (nextGame) {
-                        await supabase.from('games').update({ [field]: winnerId }).eq('id', nextGame.id);
+                        await supabase.from('games').update({ [field]: winnerId } as any).eq('id', nextGame.id);
                       }
                     }
                   }
