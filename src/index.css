@@ -91,6 +91,11 @@
     --shadow-gold: 0 0 16px hsl(45 93% 52% / 0.15);
     --shadow-premium: 0 2px 8px rgba(0,0,0,0.25), 0 0 1px rgba(255,255,255,0.03);
 
+    /* ═══ Chat Bubble Tokens ═══ */
+    --chat-own: 215 65% 50%;
+    --chat-own-bg: 215 65% 50% / 0.18;
+    --chat-incoming: 160 8% 16%;
+
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   }
 
@@ -141,6 +146,9 @@
     --shadow-glow-sm: 0 0 12px hsl(152 72% 46% / 0.15);
     --shadow-inner: inset 0 1px 2px rgba(0,0,0,0.2);
     --shadow-gold: 0 0 16px hsl(45 93% 52% / 0.15);
+    --chat-own: 215 65% 50%;
+    --chat-own-bg: 215 65% 50% / 0.18;
+    --chat-incoming: 160 8% 16%;
   }
 
   /* Light mode */
@@ -204,6 +212,9 @@
     --gradient-card-shine-alt: linear-gradient(315deg, hsl(152 58% 32% / 0.015) 0%, transparent 50%);
     --gradient-arena-edge: linear-gradient(180deg, hsl(152 58% 32% / 0.03) 0%, transparent 40%);
     --gradient-arena-floor: linear-gradient(180deg, transparent 60%, hsl(150 8% 94% / 0.3) 100%);
+    --chat-own: 215 55% 48%;
+    --chat-own-bg: 215 55% 48% / 0.14;
+    --chat-incoming: 0 0% 100%;
   }
 
   * {

@@ -243,7 +243,7 @@ function MessageBubbleInner({
                 <span className="text-[12px] font-semibold truncate" style={{ color: senderColor }}>
                   {msg.profiles?.display_name || 'Unknown'}
                 </span>
-                <span className="text-[10px] text-muted-foreground/40 font-medium flex-shrink-0">
+                <span className="text-[10px] text-muted-foreground/45 font-medium flex-shrink-0">
                   {format(new Date(msg.created_at), 'h:mm a')}
                 </span>
               </div>
@@ -255,9 +255,14 @@ function MessageBubbleInner({
                 bubbleCorners,
                 "px-3 py-2 relative",
                 isOwn
-                  ? "bg-primary/15 text-foreground/95"
-                  : "bg-muted/20 text-foreground/90"
+                  ? "text-foreground/95"
+                  : "border border-border/10 text-foreground/90"
               )}
+              style={{
+                backgroundColor: isOwn
+                  ? 'hsl(var(--chat-own-bg))'
+                  : 'hsl(var(--chat-incoming))'
+              }}
             >
               {isBeingEdited ? (
                 <div className="flex items-start gap-2">
@@ -325,8 +330,8 @@ function MessageBubbleInner({
 
             {/* Timestamp for own messages — last in block */}
             {isOwn && isLastInBlock && !isBeingEdited && (
-              <div className="flex justify-end mt-0.5 pr-1">
-                <span className="text-[9px] text-muted-foreground/40 font-medium">
+              <div className="flex justify-end mt-1 pr-1">
+                <span className="text-[10px] text-muted-foreground/40 font-medium">
                   {format(new Date(msg.created_at), 'h:mm a')}
                 </span>
               </div>
