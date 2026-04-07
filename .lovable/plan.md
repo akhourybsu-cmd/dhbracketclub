@@ -1,59 +1,88 @@
 
 
-# Chat Composer Refinement
+# Chat Bubble Color System & Visual Hierarchy Refinement
 
 ## Overview
-Polish the MessageComposer component to feel like a premium messaging app input bar — better spacing, cleaner field styling, refined send button, and improved attachment controls — without changing any existing functionality.
+Replace the green-tinted own-message bubbles with a blue-based treatment, improve incoming bubble contrast in both modes, and refine spacing/timestamp/composer contrast — all without changing the chat structure.
 
-## Changes (single file: `src/components/chat/MessageComposer.tsx`)
+## Changes
 
-### 1. Outer container
-- Add a subtle top border (`border-t border-border/10`) and soft backdrop blur (`bg-background/80 backdrop-blur-xl`) to give the composer a floating, premium feel that separates it from the message feed
-- Tighten vertical padding: `py-2` instead of `py-3` for a more compact bar
+### 1. CSS Custom Properties (`src/index.css`)
 
-### 2. Input field
-- Replace `bg-muted/15 border border-border/20 rounded-xl` with `bg-muted/10 border border-border/15 rounded-2xl` for a softer, rounder pill shape
-- Increase vertical padding slightly (`py-3.5` for non-compact) for a more comfortable touch target
-- Improve placeholder opacity: `placeholder:text-muted-foreground/35`
-- Refine focus state: `focus-visible:ring-1 focus-visible:ring-primary/20 focus-visible:border-primary/25 focus:bg-muted/15` (thinner, subtler ring)
-- Set `minHeight` to 46px (non-compact) for a taller, more inviting field
+Add new chat-specific tokens to `:root`/`.dark` and `.light` blocks:
 
-### 3. Send button
-- Move outside the textarea container — place it as a sibling in the `flex items-end` row, to the right of the input, rather than absolutely positioned inside
-- Use a 40x40 circular button (`rounded-full w-10 h-10`) with `bg-primary` when active, `bg-muted/20` when inactive
-- Remove the motion AnimatePresence wrapper (simplify to a CSS transition: `transition-all duration-200`)
-- Add `active:scale-90` press feedback
-- Icon: white Send arrow when active, `text-muted-foreground/40` when inactive
+**Dark mode (`:root` and `.dark`):**
+```css
+--chat-own: 215 65% 50%;        /* Strong blue */
+--chat-own-bg: 215 65% 50% / 0.18;  /* Blue bubble bg */
+--chat-incoming: 160 8% 16%;    /* Darker neutral — lifted from bg */
+```
 
-### 4. Attach button (Plus)
-- Change from `w-9 h-9 rounded-xl` to `w-10 h-10 rounded-full` to match send button sizing
-- Improve inactive state: `text-muted-foreground/40 hover:text-muted-foreground/60 hover:bg-muted/15`
-- Active (menu open): `bg-primary/10 text-primary`
-- Align bottom with the input field baseline
+**Light mode (`.light`):**
+```css
+--chat-own: 215 55% 48%;
+--chat-own-bg: 215 55% 48% / 0.14;
+--chat-incoming: 0 0% 100%;     /* White bubbles */
+```
 
-### 5. Attach menu popup
-- Add `backdrop-blur-lg` for frosted glass effect
-- Slightly larger touch targets: `py-3 px-4` on menu items
+### 2. MessageBubble.tsx — Bubble Colors
 
-### 6. Image preview strip
-- Move inside a container with matching `rounded-2xl bg-muted/10 border border-border/10` to visually connect previews to the input
-- Slightly larger thumbnails: `w-18 h-18` (72px)
-- Improve remove button: `w-5 h-5` centered properly with ring styling
+Replace the current bubble color classes:
 
-### 7. Mention dropdown
-- Add `backdrop-blur-lg` to match attach menu
-- Slightly increase row height for better touch targets
+**Own messages** (line ~258):
+- Change `bg-primary/15` → `bg-[hsl(var(--chat-own-bg))]`
+- This gives a blue tint instead of green
 
-### 8. Bug fix
-- Remove duplicate `return false;` on line 138
+**Incoming messages** (line ~259):
+- Change `bg-muted/20` → `bg-[hsl(var(--chat-incoming))]`
+- Dark mode: distinct raised surface. Light mode: clean white
+
+Add a subtle border to incoming bubbles for light mode separation:
+- `border border-border/10` (invisible in dark, slight definition in light)
+
+### 3. MessageBubble.tsx — Reactions Stay Green
+
+Keep reactions using `border-primary/25 bg-primary/8 text-primary` — green remains the accent for interactive elements like reactions, which is correct per the plan.
+
+### 4. MessageBubble.tsx — Timestamp Refinements
+
+**Own messages (last in block):** Change from `text-[9px]` to `text-[10px]`, keep `text-muted-foreground/40`, add `mt-1` (was `mt-0.5`).
+
+**Other users (first in block):** Bump timestamp from `text-[10px] text-muted-foreground/40` to `text-[10px] text-muted-foreground/45` for slightly better visibility.
+
+### 5. MessageList.tsx — Spacing Refinements
+
+**Sender gap:** Change from `h-3` (12px) → `h-4` (16px) for better visual separation between sender blocks.
+
+**Within-group spacing:** Keep `py-[1px]` — already tight.
+
+### 6. MessageComposer.tsx — Light Mode Contrast
+
+**Input field:** Change `bg-muted/10 border border-border/15` to `bg-muted/15 border border-border/25` — more visible border in light mode while still subtle in dark.
+
+**Send button inactive:** Change `bg-muted/20 text-muted-foreground/40` to `bg-muted/30 text-muted-foreground/50` — more visible in light mode.
+
+**Send button active:** Keep `bg-primary` (green) — the send button accent stays green, matching brand.
+
+### 7. Unread Divider — Stays Green
+
+The unread divider already uses `bg-primary/10 text-primary/80` (emerald). This is correct — green as accent for system UI. No change needed.
+
+### 8. Mentions — Stay Green
+
+`@mention` highlights use `bg-primary/20 text-primary`. Correct — green accent. No change.
 
 ## Files Modified
-1. **src/components/chat/MessageComposer.tsx** — all changes above
+1. **`src/index.css`** — Add `--chat-own`, `--chat-own-bg`, `--chat-incoming` tokens to dark and light blocks
+2. **`src/components/chat/MessageBubble.tsx`** — Swap bubble bg classes, adjust timestamp sizing/spacing, add border to incoming bubbles
+3. **`src/components/chat/MessageList.tsx`** — Increase sender gap from `h-3` to `h-4`
+4. **`src/components/chat/MessageComposer.tsx`** — Increase input border/bg opacity for light mode visibility, boost inactive send button contrast
 
 ## Summary
-- **Layout**: Composer bar gets a frosted-glass top border, send button moves outside the input as a circular action button
-- **Input**: Softer pill shape, subtler focus ring, slightly taller for comfort
-- **Controls**: Plus and Send buttons both circular 40px, visually balanced on either side of the input
-- **Polish**: Backdrop blur on popups, smoother transitions, better inactive states
-- **Edge cases to test**: Multiline expansion with external send button alignment, image preview strip with new layout, keyboard open/close on iOS and Android, mention dropdown positioning
+- **Own bubbles**: Green → blue-tinted (`hsl(215 65% 50% / 0.18)` in dark, lighter in light)
+- **Incoming bubbles**: Neutral lifted surface in dark, white with subtle border in light
+- **Green preserved for**: Reactions, mentions, unread divider, send button, sender name accents
+- **Spacing**: Larger gaps between sender blocks, slightly more prominent timestamps
+- **Composer**: Better contrast in light mode for input field and inactive send button
+- **Edge cases to test**: Both dark and light mode, long messages, reactions on blue bubbles, mention highlights inside blue bubbles
 
