@@ -174,19 +174,20 @@ function MessageBubbleInner({
   const parsedLinks = useMemo(() => parseMessageLinks(msg.content), [msg.content]);
   const previewLinks = parsedLinks.filter(l => l.contentType !== 'image');
 
+  const senderColor = getUserColor(msg.user_id);
+
   return (
     <>
       <motion.div
         className={cn(
-          "group relative py-1.5 rounded-xl transition-colors",
-          "hover:bg-muted/12",
-          sameAuthor ? "mt-0" : "mt-3",
-          isOwn && "bg-primary/[0.04]",
+          "group relative rounded-lg transition-colors",
+          "hover:bg-muted/8",
+          sameAuthor ? "py-0.5" : "pt-2.5 pb-1",
+          isOwn && "bg-primary/[0.03]",
           msg._optimistic && "opacity-70"
         )}
         style={{
-          borderLeft: `3px solid ${getUserColor(msg.user_id)}`,
-          paddingLeft: '10px',
+          paddingLeft: '12px',
           paddingRight: '10px',
           x: dragX,
         }}
@@ -218,31 +219,33 @@ function MessageBubbleInner({
           <Reply className="w-3 h-3 text-primary" />
         </motion.div>
 
-        {/* Author line */}
+        {/* Author line — first message of sender block */}
         {!sameAuthor && (
-          <div className="flex items-center gap-2 mb-1">
-            <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} avatarUrl={msg.profiles?.avatar_url} size={30} />
-            <span className="text-[12px] font-bold" style={{ color: getUserColor(msg.user_id) }}>{msg.profiles?.display_name || 'Unknown'}</span>
-            <span className="text-[9px] text-muted-foreground/70 font-medium">{format(new Date(msg.created_at), 'h:mm a')}</span>
-            {msg.is_pinned && <Pin className="w-2.5 h-2.5" style={{ color: 'hsl(var(--premium-warm) / 0.7)' }} />}
+          <div className="flex items-center gap-2.5 mb-1.5">
+            <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} avatarUrl={msg.profiles?.avatar_url} size={32} />
+            <div className="flex items-baseline gap-2 min-w-0">
+              <span className="text-[13px] font-semibold truncate" style={{ color: senderColor }}>{msg.profiles?.display_name || 'Unknown'}</span>
+              <span className="text-[10px] text-muted-foreground/45 font-medium flex-shrink-0">{format(new Date(msg.created_at), 'h:mm a')}</span>
+            </div>
+            {msg.is_pinned && <Pin className="w-2.5 h-2.5 flex-shrink-0" style={{ color: 'hsl(var(--premium-warm) / 0.7)' }} />}
           </div>
         )}
 
         {/* Content area */}
-        <div className="relative pl-[38px]">
+        <div className={cn("relative", !sameAuthor ? "pl-[42px]" : "pl-[42px]")}>
+          {/* Follow-up: show mini timestamp on hover, optional grouped avatar */}
           {sameAuthor && (
             <div className="absolute left-0 top-0.5 flex items-center gap-1">
               {showGroupedAvatar ? (
                 <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} avatarUrl={msg.profiles?.avatar_url} size={18} />
               ) : (
-                <div className="w-[18px]" />
+                <span className={cn(
+                  "text-[9px] font-mono transition-colors w-[30px] text-right pr-1",
+                  showTimestamp ? "text-muted-foreground/60" : "text-muted-foreground/0 group-hover:text-muted-foreground/40"
+                )}>
+                  {format(new Date(msg.created_at), 'h:mm')}
+                </span>
               )}
-              <span className={cn(
-                "text-[8px] font-mono transition-colors",
-                showTimestamp ? "text-muted-foreground/70" : "text-muted-foreground/0 group-hover:text-muted-foreground/70"
-              )}>
-                {format(new Date(msg.created_at), 'h:mm')}
-              </span>
             </div>
           )}
 
@@ -270,12 +273,13 @@ function MessageBubbleInner({
             </div>
           ) : (
             <div>
-              <p className={cn("text-[13px] leading-[1.55] text-foreground/85 break-words whitespace-pre-wrap", imageUrls.length > 0 && !stripImageUrls(msg.content) && "hidden")}>
+              <p className={cn("text-[13px] leading-[1.6] text-foreground/90 break-words whitespace-pre-wrap", imageUrls.length > 0 && !stripImageUrls(msg.content) && "hidden")}>
                 {renderContent(stripImageUrls(msg.content), currentUserId, currentDisplayName)}
-                {msg.edited_at && <span className="text-[9px] text-muted-foreground/70 ml-1.5">(edited)</span>}
+                {msg.is_pinned && sameAuthor && <Pin className="w-2 h-2 inline-block ml-1 -mt-0.5" style={{ color: 'hsl(var(--premium-warm) / 0.5)' }} />}
+                {msg.edited_at && <span className="text-[9px] text-muted-foreground/50 ml-1.5">(edited)</span>}
               </p>
               {previewLinks.length > 0 && !msg._optimistic && (
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 mt-1.5">
                   {previewLinks.map((link, i) => (
                     <LinkPreviewCard key={`${link.url}-${i}`} link={link} messageId={msg.id} />
                   ))}
@@ -305,9 +309,9 @@ function MessageBubbleInner({
             </div>
           )}
 
-          {/* Reactions row — existing badges only, no add button */}
+          {/* Reactions row */}
           {msg.reactions && msg.reactions.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1.5">
+            <div className="flex flex-wrap gap-1 mt-2 mb-0.5">
               {msg.reactions.map(r => (
                 <button
                   key={r.emoji}
@@ -420,13 +424,13 @@ export const MessageBubble = memo(MessageBubbleInner, (prev, next) => {
     prev.msg.content === next.msg.content &&
     prev.msg.edited_at === next.msg.edited_at &&
     prev.msg.is_pinned === next.msg.is_pinned &&
+    prev.msg.reactions === next.msg.reactions &&
     prev.msg.reply_count === next.msg.reply_count &&
     prev.msg._optimistic === next.msg._optimistic &&
     prev.isOwn === next.isOwn &&
     prev.sameAuthor === next.sameAuthor &&
     prev.nextSameAuthor === next.nextSameAuthor &&
     prev.editingMessageId === next.editingMessageId &&
-    prev.editContent === next.editContent &&
-    JSON.stringify(prev.msg.reactions) === JSON.stringify(next.msg.reactions)
+    prev.editContent === next.editContent
   );
 });
