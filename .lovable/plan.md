@@ -1,81 +1,59 @@
 
 
-# Chat Bubble Layout — Left/Right Alignment Refactor
+# Chat Composer Refinement
 
 ## Overview
-Transform the chat from a feed-style layout to a conversational bubble layout: current user's messages right-aligned with blue bubbles, other users' messages left-aligned with dark neutral bubbles. Preserve DH Club premium dark styling, grouping logic, and all existing features.
+Polish the MessageComposer component to feel like a premium messaging app input bar — better spacing, cleaner field styling, refined send button, and improved attachment controls — without changing any existing functionality.
 
-## Changes
+## Changes (single file: `src/components/chat/MessageComposer.tsx`)
 
-### 1. MessageBubble.tsx — Bubble Layout
+### 1. Outer container
+- Add a subtle top border (`border-t border-border/10`) and soft backdrop blur (`bg-background/80 backdrop-blur-xl`) to give the composer a floating, premium feel that separates it from the message feed
+- Tighten vertical padding: `py-2` instead of `py-3` for a more compact bar
 
-**Right-aligned (own messages):**
-- Wrap content in a bubble with `bg-primary/20 rounded-2xl rounded-br-sm` (blue tint), `max-w-[80%]`, aligned right via `flex justify-end`
-- First message of own block: show timestamp below the last message in the cluster (right-aligned, subtle)
-- Follow-up messages: tighter rounded corners on the connecting side (`rounded-tr-sm`) for visual stacking
-- No avatar or name shown for own messages
-- Pin icon inline after text
+### 2. Input field
+- Replace `bg-muted/15 border border-border/20 rounded-xl` with `bg-muted/10 border border-border/15 rounded-2xl` for a softer, rounder pill shape
+- Increase vertical padding slightly (`py-3.5` for non-compact) for a more comfortable touch target
+- Improve placeholder opacity: `placeholder:text-muted-foreground/35`
+- Refine focus state: `focus-visible:ring-1 focus-visible:ring-primary/20 focus-visible:border-primary/25 focus:bg-muted/15` (thinner, subtler ring)
+- Set `minHeight` to 46px (non-compact) for a taller, more inviting field
 
-**Left-aligned (other users):**
-- Wrap content in a bubble with `bg-muted/25 rounded-2xl rounded-bl-sm`, `max-w-[80%]`, aligned left via `flex justify-start`
-- First message of a sender block: avatar (28px) to the left of the bubble, display name above in sender color, timestamp next to name
-- Follow-up messages: no avatar/name, indented to align with first bubble (`ml-[38px]`), tighter top-corner rounding
-- Last message of block: small avatar (18px) at bottom-left
+### 3. Send button
+- Move outside the textarea container — place it as a sibling in the `flex items-end` row, to the right of the input, rather than absolutely positioned inside
+- Use a 40x40 circular button (`rounded-full w-10 h-10`) with `bg-primary` when active, `bg-muted/20` when inactive
+- Remove the motion AnimatePresence wrapper (simplify to a CSS transition: `transition-all duration-200`)
+- Add `active:scale-90` press feedback
+- Icon: white Send arrow when active, `text-muted-foreground/40` when inactive
 
-**Bubble corner logic for grouping:**
-- Single message: fully rounded
-- First in group: rounded top, tight bottom-corner on sender side
-- Middle: tight corners on sender side
-- Last in group: tight top-corner on sender side, rounded bottom
+### 4. Attach button (Plus)
+- Change from `w-9 h-9 rounded-xl` to `w-10 h-10 rounded-full` to match send button sizing
+- Improve inactive state: `text-muted-foreground/40 hover:text-muted-foreground/60 hover:bg-muted/15`
+- Active (menu open): `bg-primary/10 text-primary`
+- Align bottom with the input field baseline
 
-**Reactions:** Rendered below the bubble, aligned to the bubble's side (left for others, right for own).
+### 5. Attach menu popup
+- Add `backdrop-blur-lg` for frosted glass effect
+- Slightly larger touch targets: `py-3 px-4` on menu items
 
-**Action overlay:** Position above the bubble, shifted to match alignment side.
+### 6. Image preview strip
+- Move inside a container with matching `rounded-2xl bg-muted/10 border border-border/10` to visually connect previews to the input
+- Slightly larger thumbnails: `w-18 h-18` (72px)
+- Improve remove button: `w-5 h-5` centered properly with ring styling
 
-**Thread indicator:** Below bubble, aligned to bubble side.
+### 7. Mention dropdown
+- Add `backdrop-blur-lg` to match attach menu
+- Slightly increase row height for better touch targets
 
-**Swipe-to-reply:** Keep existing, works for both alignments.
-
-### 2. MessageList.tsx — Minimal Changes
-
-- Remove the colored top-accent line from sender blocks (no longer needed with bubbles)
-- Keep existing sender grouping logic (`sameAuthor`, `nextSameAuthor`, `senderGap`)
-- Keep the unread divider as-is (emerald pill — already implemented)
-- Keep date separators as-is
-- Pass alignment info is already available via `isOwn` prop
-
-### 3. Visual Specs
-
-**Own bubble colors:**
-- Background: `bg-primary/15` (emerald-tinted, on brand)
-- Text: `text-foreground/95`
-- Border radius: `rounded-2xl` with grouped corner adjustments
-
-**Other bubble colors:**
-- Background: `bg-muted/20`
-- Text: `text-foreground/90`
-- Sender name: existing `getUserColor()` 
-
-**Spacing:**
-- Between different senders: `h-3` gap (existing)
-- Within same sender: `py-0.5` (existing)
-- Bubble internal padding: `px-3 py-2`
-
-### 4. Images & Link Previews
-- Render inside the bubble, constrained to bubble width
-- Image max-width reduced to fit bubble (`max-w-[240px]`)
-
-### 5. Edit Mode
-- Edit textarea renders inside the bubble container, maintaining alignment
+### 8. Bug fix
+- Remove duplicate `return false;` on line 138
 
 ## Files Modified
-1. **src/components/chat/MessageBubble.tsx** — Major refactor: add bubble containers, left/right alignment, grouped corner rounding, repositioned reactions/actions/threads
-2. **src/components/chat/MessageList.tsx** — Minor: remove top-accent line logic if any remains, ensure grouping props pass correctly
+1. **src/components/chat/MessageComposer.tsx** — all changes above
 
 ## Summary
-- **Own messages**: Right-aligned emerald-tinted bubbles, no avatar, timestamp at cluster end
-- **Other messages**: Left-aligned neutral bubbles, avatar + name on first message of block
-- **Grouping**: Tight stacking with connected corner rounding within blocks, larger gaps between blocks
-- **Reactions/replies**: Attached below bubbles, aligned to the correct side
-- **Edge cases to test**: Long messages, images, link previews, edit mode, reactions on both sides, rapid sender switching, mobile keyboard interaction
+- **Layout**: Composer bar gets a frosted-glass top border, send button moves outside the input as a circular action button
+- **Input**: Softer pill shape, subtler focus ring, slightly taller for comfort
+- **Controls**: Plus and Send buttons both circular 40px, visually balanced on either side of the input
+- **Polish**: Backdrop blur on popups, smoother transitions, better inactive states
+- **Edge cases to test**: Multiline expansion with external send button alignment, image preview strip with new layout, keyboard open/close on iOS and Android, mention dropdown positioning
 
