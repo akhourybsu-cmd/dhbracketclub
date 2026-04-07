@@ -60,18 +60,19 @@ export function ChannelList({
   return (
     <div className="px-4 pt-2 pb-6 lg:pb-4">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-        <div className="flex items-center justify-between mb-5">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border/10 pb-4 mb-6">
           <div>
-            <h1 className="text-xl font-extrabold tracking-tight">Chat</h1>
-            <p className="text-[10px] text-muted-foreground/60 font-medium mt-0.5">DH conversations</p>
+            <h1 className="text-2xl font-extrabold tracking-tight">Chat</h1>
+            <p className="text-[11px] text-muted-foreground/50 font-medium mt-0.5">DH conversations</p>
           </div>
           <div className="flex items-center gap-1">
             {onCreateCategory && (
-              <Button size="sm" variant="ghost" onClick={() => setShowNewCategory(true)} className="h-8 w-8 p-0 rounded-xl" title="New Category">
+              <Button size="sm" variant="ghost" onClick={() => setShowNewCategory(true)} className="h-8 w-8 p-0 rounded-full hover:bg-muted/30" title="New Category">
                 <FolderPlus className="w-4 h-4" />
               </Button>
             )}
-            <Button size="sm" variant="ghost" onClick={() => setShowNewChannel(true)} className="h-8 w-8 p-0 rounded-xl" title="New Channel">
+            <Button size="sm" variant="ghost" onClick={() => setShowNewChannel(true)} className="h-8 w-8 p-0 rounded-full hover:bg-muted/30" title="New Channel">
               <Plus className="w-4 h-4" />
             </Button>
           </div>
@@ -115,16 +116,18 @@ export function ChannelList({
           {groupedChannels.map(group => (
             group.channels.length > 0 && (
               <div key={group.id}>
-                <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70 mb-1.5 px-1">{group.name}</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/70 border-l-2 border-primary/20 pl-2 mb-2 px-1">{group.name}</p>
                 <Reorder.Group
                   axis="y"
                   values={group.channels}
                   onReorder={(newOrder) => onReorderChannels?.(group.id, newOrder)}
-                  className="space-y-0.5"
+                  className="space-y-1"
                 >
                   {group.channels.map((ch, i) => {
                     const meta = channelMeta.get(ch.id);
                     const emoji = getChannelEmoji(ch);
+                    const isActive = selectedChannel?.id === ch.id;
+                    const isUnread = !!meta?.unread;
 
                     return (
                       <Reorder.Item
@@ -138,10 +141,12 @@ export function ChannelList({
                         <div
                           onClick={() => onSelectChannel(ch)}
                           className={cn(
-                            "w-full flex items-center gap-2.5 px-3 py-3 rounded-xl text-left transition-all duration-150 cursor-pointer group",
-                            "hover:bg-muted/50 active:bg-muted/60 active:scale-[0.99]",
-                            selectedChannel?.id === ch.id && "bg-primary/8",
-                            meta?.unread && "bg-muted/25"
+                            "w-full flex items-center gap-2.5 px-3.5 py-3.5 rounded-2xl text-left transition-all duration-150 cursor-pointer group border border-transparent",
+                            isActive
+                              ? "bg-primary/10 border-primary/15 shadow-sm"
+                              : isUnread
+                                ? "bg-muted/40 hover:bg-muted/50 active:bg-muted/60 active:scale-[0.99]"
+                                : "hover:bg-muted/30 active:bg-muted/40 active:scale-[0.99]"
                           )}
                         >
                           {/* Drag handle — desktop only */}
@@ -150,8 +155,12 @@ export function ChannelList({
                           </div>
 
                           <div className={cn(
-                            "w-9 h-9 rounded-xl flex items-center justify-center text-base flex-shrink-0 transition-colors",
-                            meta?.unread ? "bg-primary/12" : "bg-muted/50"
+                            "w-10 h-10 rounded-2xl flex items-center justify-center text-base flex-shrink-0 transition-colors",
+                            isActive
+                              ? "bg-primary/12"
+                              : isUnread
+                                ? "bg-primary/15 shadow-sm"
+                                : "bg-muted/40"
                           )}>
                             {typeof emoji === 'string' && emoji !== '#' ? emoji : <Hash className="w-4 h-4 text-muted-foreground/60" />}
                           </div>
@@ -160,22 +169,22 @@ export function ChannelList({
                             <div className="flex items-center gap-1.5">
                               <span className={cn(
                                 "text-[13px] tracking-tight truncate",
-                                meta?.unread ? "font-bold text-foreground" : "font-semibold text-foreground/80"
+                                isUnread ? "font-bold text-foreground" : "font-semibold text-foreground/80"
                               )}>
                                 {ch.name}
                               </span>
-                              {meta?.unread && <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />}
+                              {isUnread && <span className="w-2.5 h-2.5 rounded-full bg-primary flex-shrink-0" />}
                             </div>
                             {meta?.lastMessage ? (
                               <p className={cn(
                                 "text-[11px] truncate mt-0.5",
-                                meta.unread ? "text-foreground/65 font-medium" : "text-muted-foreground/70"
+                                isUnread ? "text-foreground/70 font-medium" : "text-foreground/60"
                               )}>
-                                {meta.lastAuthor && <span className="font-semibold">{meta.lastAuthor}: </span>}
+                                {meta.lastAuthor && <span className="font-bold">{meta.lastAuthor}: </span>}
                                 {meta.lastMessage}
                               </p>
                             ) : (
-                              <p className="text-[10px] text-muted-foreground/70 mt-0.5 italic">{ch.description || 'No messages yet'}</p>
+                              <p className="text-[10px] text-muted-foreground/40 mt-0.5 italic">{ch.description || 'No messages yet'}</p>
                             )}
                           </div>
 
@@ -191,7 +200,10 @@ export function ChannelList({
                               </button>
                             )}
                             {meta?.lastMessageAt && (
-                              <span className="text-[9px] text-muted-foreground/70 font-medium">
+                              <span className={cn(
+                                "text-[10px] font-medium",
+                                isUnread ? "text-primary/60 font-semibold" : "text-muted-foreground/50"
+                              )}>
                                 {isToday(new Date(meta.lastMessageAt)) ? format(new Date(meta.lastMessageAt), 'h:mm a') : format(new Date(meta.lastMessageAt), 'MMM d')}
                               </span>
                             )}
@@ -207,18 +219,18 @@ export function ChannelList({
         </div>
 
         {loading && channels.length === 0 && (
-          <div className="space-y-0.5">
-            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70 mb-1.5 px-1">
+          <div className="space-y-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/70 border-l-2 border-primary/20 pl-2 mb-2 px-1">
               <span className="inline-block h-2 w-16 rounded skeleton-shimmer" />
             </p>
             {[1, 2, 3, 4, 5].map(i => (
-              <div key={i} className="flex items-center gap-3 px-3 py-3 rounded-xl">
-                <div className="w-9 h-9 rounded-xl skeleton-shimmer flex-shrink-0" />
+              <div key={i} className="flex items-center gap-3 px-3.5 py-3.5 rounded-2xl">
+                <div className="w-10 h-10 rounded-2xl skeleton-shimmer flex-shrink-0" />
                 <div className="flex-1 space-y-1.5">
                   <div className="h-3 rounded-md w-24 skeleton-shimmer" />
                   <div className="h-2.5 rounded-md w-40 skeleton-shimmer" />
                 </div>
-                <div className="h-2 w-10 rounded skeleton-shimmer" />
+                <div className="h-2.5 w-10 rounded skeleton-shimmer" />
               </div>
             ))}
           </div>
