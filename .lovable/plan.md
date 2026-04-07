@@ -1,88 +1,65 @@
 
 
-# Chat Bubble Color System & Visual Hierarchy Refinement
+# Chat Channel List — Premium Polish Refinement
 
 ## Overview
-Replace the green-tinted own-message bubbles with a blue-based treatment, improve incoming bubble contrast in both modes, and refine spacing/timestamp/composer contrast — all without changing the chat structure.
+Refine the ChannelList component to improve state differentiation, text hierarchy, surface contrast, and category polish in both dark and light modes — without changing the core layout or structure.
 
-## Changes
+## Changes (single file: `src/components/chat/ChannelList.tsx`)
 
-### 1. CSS Custom Properties (`src/index.css`)
+### 1. Channel Row States
+Replace the current flat state classes with stronger differentiation:
 
-Add new chat-specific tokens to `:root`/`.dark` and `.light` blocks:
+- **Active/selected**: `bg-primary/10 border border-primary/15` — subtle green-tinted highlight with a faint border for definition
+- **Unread**: `bg-muted/40` (dark) with a stronger unread dot (`w-2.5 h-2.5 bg-primary`) and slightly bolder treatment
+- **Read/quiet**: No background, just `hover:bg-muted/30 active:bg-muted/40` — clearly quieter than unread
+- Add `border border-transparent` to all rows so the active border doesn't cause layout shift
 
-**Dark mode (`:root` and `.dark`):**
-```css
---chat-own: 215 65% 50%;        /* Strong blue */
---chat-own-bg: 215 65% 50% / 0.18;  /* Blue bubble bg */
---chat-incoming: 160 8% 16%;    /* Darker neutral — lifted from bg */
-```
+### 2. Preview Text Hierarchy
+Differentiate between live message previews and static descriptions:
 
-**Light mode (`.light`):**
-```css
---chat-own: 215 55% 48%;
---chat-own-bg: 215 55% 48% / 0.14;
---chat-incoming: 0 0% 100%;     /* White bubbles */
-```
+- **Last message preview**: `text-[11px] text-foreground/60` (read) or `text-foreground/70 font-medium` (unread) — feels "live"
+- **Static description** (no messages): `text-[10px] text-muted-foreground/40 italic` — clearly secondary and quieter
+- **Author prefix** in preview: `font-bold` instead of `font-semibold` for stronger separation from content
 
-### 2. MessageBubble.tsx — Bubble Colors
+### 3. Emoji Icon Box
+- Unread: `bg-primary/15 shadow-sm` — slightly glowing, lifted
+- Active: `bg-primary/12`
+- Read: `bg-muted/40` (dark) / `bg-muted/60` (light — stronger surface in light mode)
+- Increase size from `w-9 h-9` to `w-10 h-10` and `rounded-xl` to `rounded-2xl` for a more premium feel
 
-Replace the current bubble color classes:
+### 4. Category Section Labels
+- Increase from `text-[9px]` to `text-[10px]`
+- Change tracking from `tracking-[0.2em]` to `tracking-[0.15em]`
+- Add a subtle left accent: `border-l-2 border-primary/20 pl-2` for premium intentionality
+- Increase bottom margin from `mb-1.5` to `mb-2`
 
-**Own messages** (line ~258):
-- Change `bg-primary/15` → `bg-[hsl(var(--chat-own-bg))]`
-- This gives a blue tint instead of green
+### 5. Header Polish
+- Increase title from `text-xl` to `text-2xl` for more presence
+- Improve subtitle: `text-[11px] text-muted-foreground/50` (slightly more readable)
+- Add bottom border to header area: `border-b border-border/10 pb-4 mb-6` to separate from channel list
+- Action buttons: add `hover:bg-muted/30` and `rounded-full` for a softer, more modern feel
 
-**Incoming messages** (line ~259):
-- Change `bg-muted/20` → `bg-[hsl(var(--chat-incoming))]`
-- Dark mode: distinct raised surface. Light mode: clean white
+### 6. Row Surface Separation
+- Add `rounded-2xl` (was `rounded-xl`) for softer, more premium corners
+- Increase row padding slightly: `px-3.5 py-3.5` (was `px-3 py-3`)
+- In the active state, add a very subtle shadow: `shadow-sm` to lift the selected channel
 
-Add a subtle border to incoming bubbles for light mode separation:
-- `border border-border/10` (invisible in dark, slight definition in light)
+### 7. Timestamp
+- Bump from `text-[9px]` to `text-[10px]`
+- Unread timestamp: `text-primary/60 font-semibold` — colored to match the unread indicator
+- Read timestamp: `text-muted-foreground/50`
 
-### 3. MessageBubble.tsx — Reactions Stay Green
-
-Keep reactions using `border-primary/25 bg-primary/8 text-primary` — green remains the accent for interactive elements like reactions, which is correct per the plan.
-
-### 4. MessageBubble.tsx — Timestamp Refinements
-
-**Own messages (last in block):** Change from `text-[9px]` to `text-[10px]`, keep `text-muted-foreground/40`, add `mt-1` (was `mt-0.5`).
-
-**Other users (first in block):** Bump timestamp from `text-[10px] text-muted-foreground/40` to `text-[10px] text-muted-foreground/45` for slightly better visibility.
-
-### 5. MessageList.tsx — Spacing Refinements
-
-**Sender gap:** Change from `h-3` (12px) → `h-4` (16px) for better visual separation between sender blocks.
-
-**Within-group spacing:** Keep `py-[1px]` — already tight.
-
-### 6. MessageComposer.tsx — Light Mode Contrast
-
-**Input field:** Change `bg-muted/10 border border-border/15` to `bg-muted/15 border border-border/25` — more visible border in light mode while still subtle in dark.
-
-**Send button inactive:** Change `bg-muted/20 text-muted-foreground/40` to `bg-muted/30 text-muted-foreground/50` — more visible in light mode.
-
-**Send button active:** Keep `bg-primary` (green) — the send button accent stays green, matching brand.
-
-### 7. Unread Divider — Stays Green
-
-The unread divider already uses `bg-primary/10 text-primary/80` (emerald). This is correct — green as accent for system UI. No change needed.
-
-### 8. Mentions — Stay Green
-
-`@mention` highlights use `bg-primary/20 text-primary`. Correct — green accent. No change.
+### 8. Spacing Between Rows
+- Change `space-y-0.5` to `space-y-1` for slightly more breathing room between channel rows
 
 ## Files Modified
-1. **`src/index.css`** — Add `--chat-own`, `--chat-own-bg`, `--chat-incoming` tokens to dark and light blocks
-2. **`src/components/chat/MessageBubble.tsx`** — Swap bubble bg classes, adjust timestamp sizing/spacing, add border to incoming bubbles
-3. **`src/components/chat/MessageList.tsx`** — Increase sender gap from `h-3` to `h-4`
-4. **`src/components/chat/MessageComposer.tsx`** — Increase input border/bg opacity for light mode visibility, boost inactive send button contrast
+1. **`src/components/chat/ChannelList.tsx`** — all changes above (styling only, no logic changes)
 
 ## Summary
-- **Own bubbles**: Green → blue-tinted (`hsl(215 65% 50% / 0.18)` in dark, lighter in light)
-- **Incoming bubbles**: Neutral lifted surface in dark, white with subtle border in light
-- **Green preserved for**: Reactions, mentions, unread divider, send button, sender name accents
-- **Spacing**: Larger gaps between sender blocks, slightly more prominent timestamps
-- **Composer**: Better contrast in light mode for input field and inactive send button
-- **Edge cases to test**: Both dark and light mode, long messages, reactions on blue bubbles, mention highlights inside blue bubbles
+- **Hierarchy**: Larger header, stronger category labels with left accent, bigger emoji boxes, clearer preview text levels
+- **State differentiation**: Active gets green border + shadow, unread gets stronger background + colored timestamp + larger dot, read stays quiet
+- **Light mode**: Stronger emoji box backgrounds, better contrast on preview text, border definition on active row
+- **Dark mode**: Subtle glow on unread emoji boxes, active row lift via shadow
+- **Edge cases to test**: Many categories with mixed read/unread, channel with no messages vs. with preview, light mode vs. dark mode, very long channel names or preview text truncation
 
