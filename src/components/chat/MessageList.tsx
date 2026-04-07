@@ -55,7 +55,7 @@ export function MessageList({
   const [newMsgCount, setNewMsgCount] = useState(0);
   const prevMsgCount = useRef(messages.length);
 
-  // Reset auto-scroll when channel changes — use MutationObserver to wait for messages
+  // Reset auto-scroll when channel changes
   useEffect(() => {
     setAutoScroll(true);
     setNewMsgCount(0);
@@ -63,12 +63,10 @@ export function MessageList({
     const el = scrollRef.current;
     if (!el) return;
 
-    // Immediate attempt
     requestAnimationFrame(() => {
       messagesEndRef.current?.scrollIntoView();
     });
 
-    // MutationObserver: if messages render after the rAF, scroll again
     const observer = new MutationObserver(() => {
       requestAnimationFrame(() => {
         messagesEndRef.current?.scrollIntoView();
@@ -76,7 +74,6 @@ export function MessageList({
     });
     observer.observe(el, { childList: true, subtree: true });
 
-    // Disconnect after a generous window
     const t = setTimeout(() => observer.disconnect(), 1500);
     return () => {
       clearTimeout(t);
@@ -87,14 +84,12 @@ export function MessageList({
   // Scroll preservation on load-more (prepend)
   const prevScrollHeight = useRef<number | null>(null);
 
-  // Capture scroll height before DOM update when loading more
   useEffect(() => {
     if (loadingMore && scrollRef.current) {
       prevScrollHeight.current = scrollRef.current.scrollHeight;
     }
   }, [loadingMore]);
 
-  // After messages prepend, restore scroll position
   useLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el || prevScrollHeight.current === null) return;
@@ -107,7 +102,7 @@ export function MessageList({
     }
   }, [messages, loadingMore]);
 
-  // Auto scroll to bottom on new messages (only if user is near bottom)
+  // Auto scroll to bottom on new messages
   useEffect(() => {
     if (autoScroll) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -118,7 +113,7 @@ export function MessageList({
     prevMsgCount.current = messages.length;
   }, [messages, autoScroll]);
 
-  // When the container resizes (keyboard open/close), always re-anchor to bottom
+  // Re-anchor on resize
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -134,7 +129,7 @@ export function MessageList({
     return () => observer.disconnect();
   }, [autoScroll]);
 
-  // Respond to external scroll-to-bottom trigger (keyboard open/close from parent)
+  // External scroll-to-bottom trigger
   useEffect(() => {
     if (scrollToBottomTrigger && autoScroll) {
       requestAnimationFrame(() => {
@@ -143,7 +138,7 @@ export function MessageList({
     }
   }, [scrollToBottomTrigger]);
 
-  // Passive, RAF-throttled scroll handler
+  // Passive scroll handler
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -192,10 +187,11 @@ export function MessageList({
     return -1;
   })();
   const hasUnreadDivider = unreadDividerAfterIdx >= 0 && unreadDividerAfterIdx < filtered.length - 1;
+  const unreadCount = hasUnreadDivider ? filtered.length - 1 - unreadDividerAfterIdx : 0;
 
   return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-5 relative" style={{ minHeight: 0 }}>
-      <div className="py-3 space-y-0.5">
+    <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-4 relative" style={{ minHeight: 0 }}>
+      <div className="py-3">
         {loadingMore && (
           <div className="text-center py-2">
             <span className="text-[10px] text-muted-foreground/50 font-medium">Loading older messages…</span>
@@ -228,7 +224,6 @@ export function MessageList({
           const prevMsg = idx > 0 ? filtered[idx - 1] : null;
           const nextMsg = idx < filtered.length - 1 ? filtered[idx + 1] : null;
           const showDate = !prevMsg || getDateLabel(msg.created_at) !== getDateLabel(prevMsg.created_at);
-          // sameAuthor now also checks date boundary
           const sameAuthor = !!prevMsg && prevMsg.user_id === msg.user_id &&
             new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() < 300000 &&
             getDateLabel(msg.created_at) === getDateLabel(prevMsg.created_at);
@@ -236,23 +231,33 @@ export function MessageList({
             new Date(nextMsg.created_at).getTime() - new Date(msg.created_at).getTime() < 300000 &&
             getDateLabel(msg.created_at) === getDateLabel(nextMsg.created_at);
 
+          // Dynamic spacing: larger gap between different senders
+          const senderGap = !sameAuthor && idx > 0 && !showDate;
+
           return (
             <div key={msg.id} style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 60px' }}>
               {showDate && (
-                <div className="flex items-center gap-3 py-4">
-                  <div className="flex-1 h-px bg-border/8" />
-                  <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground/70 px-2">{getDateLabel(msg.created_at)}</span>
-                  <div className="flex-1 h-px bg-border/8" />
+                <div className={cn("flex items-center gap-3", idx === 0 ? "py-3" : "pt-5 pb-3")}>
+                  <div className="flex-1 h-px bg-border/10" />
+                  <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/50 px-2">{getDateLabel(msg.created_at)}</span>
+                  <div className="flex-1 h-px bg-border/10" />
                 </div>
               )}
+
               {/* New messages divider */}
               {hasUnreadDivider && idx === unreadDividerAfterIdx + 1 && (
-                <div className="flex items-center gap-3 py-3">
-                  <div className="flex-1 h-px bg-destructive/30" />
-                  <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-destructive/70 px-2">New messages</span>
-                  <div className="flex-1 h-px bg-destructive/30" />
+                <div className="flex items-center gap-3 py-4">
+                  <div className="flex-1 h-px bg-primary/25" />
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-primary/80 bg-primary/10 px-3 py-1 rounded-full">
+                    {unreadCount === 1 ? '1 New Message' : `${unreadCount} New Messages`}
+                  </span>
+                  <div className="flex-1 h-px bg-primary/25" />
                 </div>
               )}
+
+              {/* Sender block spacer */}
+              {senderGap && <div className="h-3" />}
+
               <MessageBubble
                 msg={msg}
                 isOwn={msg.user_id === userId}
