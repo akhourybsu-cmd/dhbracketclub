@@ -24,7 +24,6 @@ function isImageUrl(url: string): boolean {
   return IMAGE_EXT_RE.test(url) || STORAGE_IMAGE_RE.test(url);
 }
 
-/** Remove image URLs from text so they only show as visual previews */
 function stripImageUrls(text: string): string {
   return text.replace(URL_RE, match => isImageUrl(match) ? '' : match).replace(/\n{2,}/g, '\n').trim();
 }
@@ -86,6 +85,21 @@ function extractImageUrls(text: string): string[] {
   return matches.filter(isImageUrl);
 }
 
+/* ═══ Bubble corner rounding logic ═══ */
+function getBubbleCorners(isOwn: boolean, isFirst: boolean, isLast: boolean, isSingle: boolean): string {
+  if (isSingle) return 'rounded-2xl';
+  const base = 'rounded-2xl';
+  if (isOwn) {
+    if (isFirst) return `${base} rounded-br-md`;
+    if (isLast) return `${base} rounded-tr-md`;
+    return `${base} rounded-tr-md rounded-br-md`;
+  } else {
+    if (isFirst) return `${base} rounded-bl-md`;
+    if (isLast) return `${base} rounded-tl-md`;
+    return `${base} rounded-tl-md rounded-bl-md`;
+  }
+}
+
 interface MessageBubbleProps {
   msg: Message;
   isOwn: boolean;
@@ -115,17 +129,14 @@ function MessageBubbleInner({
   editingMessageId, editContent, onEditContentChange, onCancelEdit,
 }: MessageBubbleProps) {
   const [showOverlay, setShowOverlay] = useState(false);
-  const [showTimestamp, setShowTimestamp] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const editRef = useRef<HTMLTextAreaElement>(null);
 
-  // Swipe-to-reply
   const dragX = useMotionValue(0);
   const replyIconOpacity = useTransform(dragX, [0, SWIPE_THRESHOLD], [0, 1]);
   const replyIconScale = useTransform(dragX, [0, SWIPE_THRESHOLD], [0.5, 1]);
   const [swiped, setSwiped] = useState(false);
 
-  // Auto-resize edit textarea
   useEffect(() => {
     const el = editRef.current;
     if (!el || editingMessageId !== msg.id) return;
@@ -133,7 +144,6 @@ function MessageBubbleInner({
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   }, [editContent, editingMessageId, msg.id]);
 
-  // Close overlay on Escape
   useEffect(() => {
     if (!showOverlay) return;
     const handleEsc = (e: KeyboardEvent) => {
@@ -144,6 +154,9 @@ function MessageBubbleInner({
   }, [showOverlay]);
 
   const isBeingEdited = editingMessageId === msg.id;
+  const isFirstInBlock = !sameAuthor;
+  const isLastInBlock = !nextSameAuthor;
+  const isSingle = isFirstInBlock && isLastInBlock;
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     if (isBeingEdited) return;
@@ -168,29 +181,21 @@ function MessageBubbleInner({
     setShowOverlay(false);
   };
 
-  const showGroupedAvatar = sameAuthor && !nextSameAuthor;
-
   const imageUrls = extractImageUrls(msg.content);
   const parsedLinks = useMemo(() => parseMessageLinks(msg.content), [msg.content]);
   const previewLinks = parsedLinks.filter(l => l.contentType !== 'image');
-
   const senderColor = getUserColor(msg.user_id);
+  const bubbleCorners = getBubbleCorners(isOwn, isFirstInBlock, isLastInBlock, isSingle);
 
   return (
     <>
       <motion.div
         className={cn(
-          "group relative rounded-lg transition-colors",
-          "hover:bg-muted/8",
-          sameAuthor ? "py-0.5" : "pt-2.5 pb-1",
-          isOwn && "bg-primary/[0.03]",
+          "group relative",
+          sameAuthor ? "py-[1px]" : "pt-1",
           msg._optimistic && "opacity-70"
         )}
-        style={{
-          paddingLeft: '12px',
-          paddingRight: '10px',
-          x: dragX,
-        }}
+        style={{ x: dragX }}
         drag={isBeingEdited ? false : "x"}
         dragDirectionLock
         dragConstraints={{ left: 0, right: SWIPE_THRESHOLD + 10 }}
@@ -203,9 +208,7 @@ function MessageBubbleInner({
           }
         }}
         onDragEnd={(_, info) => {
-          if (info.offset.x > SWIPE_THRESHOLD) {
-            onOpenThread(msg);
-          }
+          if (info.offset.x > SWIPE_THRESHOLD) onOpenThread(msg);
           setSwiped(false);
         }}
         onContextMenu={handleContextMenu}
@@ -219,185 +222,212 @@ function MessageBubbleInner({
           <Reply className="w-3 h-3 text-primary" />
         </motion.div>
 
-        {/* Author line — first message of sender block */}
-        {!sameAuthor && (
-          <div className="flex items-center gap-2.5 mb-1.5">
-            <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} avatarUrl={msg.profiles?.avatar_url} size={32} />
-            <div className="flex items-baseline gap-2 min-w-0">
-              <span className="text-[13px] font-semibold truncate" style={{ color: senderColor }}>{msg.profiles?.display_name || 'Unknown'}</span>
-              <span className="text-[10px] text-muted-foreground/45 font-medium flex-shrink-0">{format(new Date(msg.created_at), 'h:mm a')}</span>
-            </div>
-            {msg.is_pinned && <Pin className="w-2.5 h-2.5 flex-shrink-0" style={{ color: 'hsl(var(--premium-warm) / 0.7)' }} />}
-          </div>
-        )}
-
-        {/* Content area */}
-        <div className={cn("relative", !sameAuthor ? "pl-[42px]" : "pl-[42px]")}>
-          {/* Follow-up: show mini timestamp on hover, optional grouped avatar */}
-          {sameAuthor && (
-            <div className="absolute left-0 top-0.5 flex items-center gap-1">
-              {showGroupedAvatar ? (
-                <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} avatarUrl={msg.profiles?.avatar_url} size={18} />
+        {/* Row container: flex left or right */}
+        <div className={cn("flex items-end gap-2", isOwn ? "justify-end" : "justify-start")}>
+          {/* Avatar for other users — only on last message of block */}
+          {!isOwn && (
+            <div className="w-7 flex-shrink-0">
+              {isLastInBlock ? (
+                <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} avatarUrl={msg.profiles?.avatar_url} size={28} />
               ) : (
-                <span className={cn(
-                  "text-[9px] font-mono transition-colors w-[30px] text-right pr-1",
-                  showTimestamp ? "text-muted-foreground/60" : "text-muted-foreground/0 group-hover:text-muted-foreground/40"
-                )}>
-                  {format(new Date(msg.created_at), 'h:mm')}
-                </span>
+                <div className="w-7" />
               )}
             </div>
           )}
 
-          {editingMessageId === msg.id ? (
-            <div className="flex items-start gap-2">
-              <textarea
-                ref={editRef}
-                value={editContent}
-                onChange={e => onEditContentChange(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSaveEdit(msg.id, editContent); }
-                  if (e.key === 'Escape') onCancelEdit();
-                }}
-                className="flex-1 resize-none text-[13px] bg-muted/20 border border-border/25 rounded-lg px-3 py-2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/20"
-                rows={1}
-                autoFocus
-                style={{ minHeight: 32, maxHeight: 120 }}
-              />
-              <button onClick={() => onSaveEdit(msg.id, editContent)} className="p-1.5 rounded-lg bg-primary/15 text-primary hover:bg-primary/25 transition-colors mt-0.5">
-                <Check className="w-3.5 h-3.5" />
-              </button>
-              <button onClick={onCancelEdit} className="p-1.5 rounded-lg hover:bg-muted/50 transition-colors mt-0.5">
-                <X className="w-3.5 h-3.5 text-muted-foreground/70" />
-              </button>
-            </div>
-          ) : (
-            <div>
-              <p className={cn("text-[13px] leading-[1.6] text-foreground/90 break-words whitespace-pre-wrap", imageUrls.length > 0 && !stripImageUrls(msg.content) && "hidden")}>
-                {renderContent(stripImageUrls(msg.content), currentUserId, currentDisplayName)}
-                {msg.is_pinned && sameAuthor && <Pin className="w-2 h-2 inline-block ml-1 -mt-0.5" style={{ color: 'hsl(var(--premium-warm) / 0.5)' }} />}
-                {msg.edited_at && <span className="text-[9px] text-muted-foreground/50 ml-1.5">(edited)</span>}
-              </p>
-              {previewLinks.length > 0 && !msg._optimistic && (
-                <div className="space-y-1.5 mt-1.5">
-                  {previewLinks.map((link, i) => (
-                    <LinkPreviewCard key={`${link.url}-${i}`} link={link} messageId={msg.id} />
-                  ))}
-                </div>
-              )}
-              {imageUrls.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {imageUrls.map((url, i) => (
-                    <a key={i} href={url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
-                      <img
-                        src={url}
-                        alt="Shared image"
-                        className="rounded-xl max-w-[280px] max-h-[220px] object-cover border border-border/15"
-                        loading="lazy"
-                        decoding="async"
-                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                      />
-                    </a>
-                  ))}
-                </div>
-              )}
-              {msg._optimistic && (
-                <span className="inline-flex items-center gap-1 mt-0.5 text-[9px] text-muted-foreground/50 font-medium">
-                  <Loader2 className="w-2.5 h-2.5 animate-spin" /> Sending…
+          {/* Bubble column */}
+          <div className={cn("relative max-w-[80%] min-w-[60px]")}>
+            {/* Sender name — first message of other user's block */}
+            {!isOwn && isFirstInBlock && (
+              <div className="flex items-baseline gap-2 mb-0.5 pl-1">
+                <span className="text-[12px] font-semibold truncate" style={{ color: senderColor }}>
+                  {msg.profiles?.display_name || 'Unknown'}
                 </span>
-              )}
-            </div>
-          )}
+                <span className="text-[10px] text-muted-foreground/40 font-medium flex-shrink-0">
+                  {format(new Date(msg.created_at), 'h:mm a')}
+                </span>
+              </div>
+            )}
 
-          {/* Reactions row */}
-          {msg.reactions && msg.reactions.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2 mb-0.5">
-              {msg.reactions.map(r => (
-                <button
-                  key={r.emoji}
-                  onClick={(e) => { e.stopPropagation(); handleReaction(r.emoji); }}
-                  className={cn(
-                    "inline-flex items-center gap-1 h-6 px-1.5 rounded-md text-[11px] border transition-all duration-150 active:scale-90",
-                    r.user_reacted
-                      ? "border-primary/25 bg-primary/8 text-primary scale-[1.02]"
-                      : "border-border/15 bg-muted/20 text-muted-foreground/70 hover:border-border/30 hover:bg-muted/35"
+            {/* The bubble */}
+            <div
+              className={cn(
+                bubbleCorners,
+                "px-3 py-2 relative",
+                isOwn
+                  ? "bg-primary/15 text-foreground/95"
+                  : "bg-muted/20 text-foreground/90"
+              )}
+            >
+              {isBeingEdited ? (
+                <div className="flex items-start gap-2">
+                  <textarea
+                    ref={editRef}
+                    value={editContent}
+                    onChange={e => onEditContentChange(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSaveEdit(msg.id, editContent); }
+                      if (e.key === 'Escape') onCancelEdit();
+                    }}
+                    className="flex-1 resize-none text-[13px] bg-background/30 border border-border/25 rounded-lg px-2 py-1.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/20"
+                    rows={1}
+                    autoFocus
+                    style={{ minHeight: 28, maxHeight: 120 }}
+                  />
+                  <button onClick={() => onSaveEdit(msg.id, editContent)} className="p-1 rounded-lg bg-primary/15 text-primary hover:bg-primary/25 transition-colors">
+                    <Check className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={onCancelEdit} className="p-1 rounded-lg hover:bg-muted/50 transition-colors">
+                    <X className="w-3.5 h-3.5 text-muted-foreground/70" />
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <p className={cn(
+                    "text-[13px] leading-[1.55] break-words whitespace-pre-wrap",
+                    imageUrls.length > 0 && !stripImageUrls(msg.content) && "hidden"
+                  )}>
+                    {renderContent(stripImageUrls(msg.content), currentUserId, currentDisplayName)}
+                    {msg.is_pinned && <Pin className="w-2 h-2 inline-block ml-1 -mt-0.5" style={{ color: 'hsl(var(--premium-warm) / 0.5)' }} />}
+                    {msg.edited_at && <span className="text-[9px] text-muted-foreground/50 ml-1.5">(edited)</span>}
+                  </p>
+                  {previewLinks.length > 0 && !msg._optimistic && (
+                    <div className="space-y-1.5 mt-1.5">
+                      {previewLinks.map((link, i) => (
+                        <LinkPreviewCard key={`${link.url}-${i}`} link={link} messageId={msg.id} />
+                      ))}
+                    </div>
                   )}
-                >
-                  {r.emoji} <span className="font-bold text-[10px]">{r.count}</span>
-                </button>
-              ))}
+                  {imageUrls.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {imageUrls.map((url, i) => (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                          <img
+                            src={url}
+                            alt="Shared image"
+                            className="rounded-lg max-w-[240px] max-h-[200px] object-cover border border-border/10"
+                            loading="lazy"
+                            decoding="async"
+                            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                  {msg._optimistic && (
+                    <span className="inline-flex items-center gap-1 mt-0.5 text-[9px] text-muted-foreground/50 font-medium">
+                      <Loader2 className="w-2.5 h-2.5 animate-spin" /> Sending…
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
-          )}
 
-          {/* Inline reaction/action bar */}
-          <AnimatePresence>
-            {showOverlay && (
-              <motion.div
-                key="inline-bar"
-                initial={{ opacity: 0, scale: 0.9, y: 6 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 6 }}
-                transition={{ type: 'spring', damping: 26, stiffness: 380 }}
-                className="absolute -top-11 left-0 z-30 flex items-center gap-0.5 px-1.5 py-1 bg-background/95 backdrop-blur-lg border border-border/20 shadow-lg rounded-xl"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {QUICK_EMOJIS.map(emoji => (
+            {/* Timestamp for own messages — last in block */}
+            {isOwn && isLastInBlock && !isBeingEdited && (
+              <div className="flex justify-end mt-0.5 pr-1">
+                <span className="text-[9px] text-muted-foreground/40 font-medium">
+                  {format(new Date(msg.created_at), 'h:mm a')}
+                </span>
+              </div>
+            )}
+
+            {/* Reactions row */}
+            {msg.reactions && msg.reactions.length > 0 && (
+              <div className={cn("flex flex-wrap gap-1 mt-1.5 mb-0.5", isOwn ? "justify-end" : "justify-start")}>
+                {msg.reactions.map(r => (
                   <button
-                    key={emoji}
-                    onClick={(e) => handleReaction(emoji, e)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 text-base transition-colors active:scale-90 flex-shrink-0"
+                    key={r.emoji}
+                    onClick={(e) => { e.stopPropagation(); handleReaction(r.emoji); }}
+                    className={cn(
+                      "inline-flex items-center gap-1 h-6 px-1.5 rounded-md text-[11px] border transition-all duration-150 active:scale-90",
+                      r.user_reacted
+                        ? "border-primary/25 bg-primary/8 text-primary scale-[1.02]"
+                        : "border-border/15 bg-muted/20 text-muted-foreground/70 hover:border-border/30 hover:bg-muted/35"
+                    )}
                   >
-                    {emoji}
+                    {r.emoji} <span className="font-bold text-[10px]">{r.count}</span>
                   </button>
                 ))}
-                <div className="w-px h-5 bg-border/20 mx-0.5" />
-                <button
-                  onClick={(e) => { e.stopPropagation(); onOpenThread(msg); setShowOverlay(false); }}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 transition-colors active:scale-90"
-                  title="Reply"
-                >
-                  <Reply className="w-3.5 h-3.5 text-muted-foreground/70" />
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); onTogglePin(msg); setShowOverlay(false); }}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 transition-colors active:scale-90"
-                  title={msg.is_pinned ? 'Unpin' : 'Pin'}
-                >
-                  <Pin className="w-3.5 h-3.5 text-muted-foreground/70" />
-                </button>
-                {isOwn && (
-                  <>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onStartEditing(msg); setShowOverlay(false); }}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 transition-colors active:scale-90"
-                      title="Edit"
-                    >
-                      <Pencil className="w-3.5 h-3.5 text-muted-foreground/70" />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); setShowOverlay(false); }}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-destructive/10 transition-colors active:scale-90"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                    </button>
-                  </>
-                )}
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
 
-          {/* Thread indicator */}
-          {(msg.reply_count || 0) > 0 && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onOpenThread(msg); }}
-              className="flex items-center gap-1.5 mt-2 py-1.5 -my-1 text-[11px] font-semibold text-primary/80 hover:text-primary transition-colors"
-              style={{ touchAction: 'manipulation' }}
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              {msg.reply_count} {msg.reply_count === 1 ? 'reply' : 'replies'}
-            </button>
-          )}
+            {/* Action overlay */}
+            <AnimatePresence>
+              {showOverlay && (
+                <motion.div
+                  key="inline-bar"
+                  initial={{ opacity: 0, scale: 0.9, y: 6 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 6 }}
+                  transition={{ type: 'spring', damping: 26, stiffness: 380 }}
+                  className={cn(
+                    "absolute -top-11 z-30 flex items-center gap-0.5 px-1.5 py-1 bg-background/95 backdrop-blur-lg border border-border/20 shadow-lg rounded-xl",
+                    isOwn ? "right-0" : "left-0"
+                  )}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {QUICK_EMOJIS.map(emoji => (
+                    <button
+                      key={emoji}
+                      onClick={(e) => handleReaction(emoji, e)}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 text-base transition-colors active:scale-90 flex-shrink-0"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                  <div className="w-px h-5 bg-border/20 mx-0.5" />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onOpenThread(msg); setShowOverlay(false); }}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 transition-colors active:scale-90"
+                    title="Reply"
+                  >
+                    <Reply className="w-3.5 h-3.5 text-muted-foreground/70" />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onTogglePin(msg); setShowOverlay(false); }}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 transition-colors active:scale-90"
+                    title={msg.is_pinned ? 'Unpin' : 'Pin'}
+                  >
+                    <Pin className="w-3.5 h-3.5 text-muted-foreground/70" />
+                  </button>
+                  {isOwn && (
+                    <>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onStartEditing(msg); setShowOverlay(false); }}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 transition-colors active:scale-90"
+                        title="Edit"
+                      >
+                        <Pencil className="w-3.5 h-3.5 text-muted-foreground/70" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); setShowOverlay(false); }}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-destructive/10 transition-colors active:scale-90"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                      </button>
+                    </>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Thread indicator */}
+            {(msg.reply_count || 0) > 0 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onOpenThread(msg); }}
+                className={cn(
+                  "flex items-center gap-1.5 mt-1.5 py-1 text-[11px] font-semibold text-primary/80 hover:text-primary transition-colors",
+                  isOwn ? "ml-auto" : ""
+                )}
+                style={{ touchAction: 'manipulation' }}
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                {msg.reply_count} {msg.reply_count === 1 ? 'reply' : 'replies'}
+              </button>
+            )}
+          </div>
         </div>
       </motion.div>
 
