@@ -1,59 +1,64 @@
 
 
-# Commissioner Controls for Season-Eligible Drafts
+# Chat Message Layout Refinement
 
-## What We're Building
-A commissioner role for the Draft League that gives you (the logged-in user who created the season) authority to mark any draft as "season-eligible" — meaning it counts toward the 12 regular-season drafts. Drafts not marked season-eligible still track stats normally but don't count toward season standings.
+## Overview
+Refine the existing MessageBubble and MessageList components to improve sender grouping, visual separation, unread markers, and overall feed readability — without redesigning the chat system.
 
-Currently, drafts get manually assigned to a season via the `draft_season_entries` table, but there's no UI for a commissioner to manage this. There are 3 drafts in setup right now (Best Animated Films, Best Board Games, Best Mortal Kombat) with no season assignment.
+## Changes
 
-## Data Model
+### 1. MessageList.tsx — Spacing & Unread Divider
 
-**Add `commissioner_user_id` column to `draft_seasons`**
-- UUID referencing who controls the season
-- Set to your user ID for the current Spring 2026 season
-- The commissioner is the user who can assign/unassign drafts to the season
+**Sender block spacing**: Replace the uniform `space-y-0.5` with dynamic margins controlled by the `sameAuthor` flag already computed per message. Between different senders: `mt-5` (~20px). Within same sender: `mt-0.5` (~2px).
 
-**No other schema changes needed.** The existing `draft_season_entries` table already serves as the link between drafts and seasons — the commissioner UI simply controls which drafts get rows in that table.
+**Unread divider upgrade**: The current divider exists but is minimal. Enhance it:
+- Show unread count: "3 New Messages" (computed from `filtered.length - 1 - unreadDividerAfterIdx`)
+- Use a pill-style label centered on a horizontal rule
+- Color: `bg-primary/15 text-primary` (emerald tint, on-brand) instead of current destructive red
+- Add subtle top/bottom padding for breathing room
 
-## Commissioner Logic
+**Date separators**: Keep existing but reduce visual weight slightly — thinner text, more spacing from message blocks.
 
-- Commissioner = `draft_seasons.commissioner_user_id`
-- Only the commissioner can:
-  - Mark a draft as season-eligible (insert into `draft_season_entries`)
-  - Remove a draft from the season (delete from `draft_season_entries`)
-  - The draft number (`week_number`) is auto-assigned sequentially based on existing entries
-- All users can still create drafts freely — they just aren't season-eligible until the commissioner says so
+### 2. MessageBubble.tsx — Sender Grouping & Visual Treatment
 
-## UI Changes
+**Remove the 3px colored left border** on every message. Replace with:
+- **First message of a sender block**: Show a subtle colored top-accent line (2px, sender color, rounded, ~40px wide) above the author line, plus the avatar + name + timestamp
+- **Follow-up messages**: No accent, no avatar/name — just the content indented to align with the first message's text. Keep the hover-timestamp behavior.
+- **Last message of a block**: Show the mini-avatar (existing `showGroupedAvatar` logic) at 18px
 
-### 1. Commissioner Panel on CompetePage (League tab)
-Below the Season Hero banner, if the current user is the commissioner, show a "Commissioner" section with:
-- A list of **unassigned drafts** (drafts not in `draft_season_entries` for this season) — each with a button to "Add to Season"
-- A count of how many season slots remain (e.g., "7 of 12 slots filled")
-- Ability to remove a draft from the season from the Draft History section
+**Author line refinement**:
+- Name: `text-[13px] font-semibold` (slightly larger, more prominent)
+- Timestamp: `text-[10px] text-muted-foreground/50` (more subdued)
+- Remove pin icon from author line, move it inline after message text
 
-### 2. Season-Eligible Badge on DraftDetailPage
-- If a draft is part of the current season, show a gold "Season Draft #X" badge
-- If the user is the commissioner and the draft is NOT in the season, show an "Add to Season" button
-- If the user is the commissioner and the draft IS in the season, show a "Remove from Season" option in the more menu
+**Own-message treatment**: Keep the subtle `bg-primary/[0.04]` background but extend it to cover the entire sender block visually.
 
-### 3. DraftsListPage Indicator
-- Show a small gold dot or "S" badge on drafts that are season-eligible
+### 3. Reactions Spacing
+- Increase `mt-1.5` to `mt-2` on the reactions row
+- Add `mb-1` so reactions don't crowd into the next sender block
+- Keep existing reaction badge styling
 
-## Implementation Steps
+### 4. Thread Indicator
+- Keep as-is, the current treatment is clean
 
-1. **Migration**: Add `commissioner_user_id` to `draft_seasons`, set it to your user ID for Spring 2026
-2. **Hook**: Add `useIsCommissioner()` helper that checks if current user is the commissioner for the active season
-3. **CompetePage**: Add commissioner panel showing unassigned drafts with "Add to Season" / "Remove" controls
-4. **DraftDetailPage**: Add season badge + commissioner add/remove actions
-5. **DraftsListPage**: Add season-eligible indicator
-6. **Auto-numbering**: When commissioner adds a draft, auto-assign the next sequential `week_number`
+### 5. Content Indentation
+- All messages (first and follow-up) will have text at `pl-[38px]` (already the case)
+- This creates a consistent left-aligned text column that's easy to scan
 
-## Key Rules
-- Only completed official drafts count toward season standings (existing logic preserved)
-- Canceled/abandoned drafts can be removed by commissioner
-- Playoff drafts are separate (existing `is_playoff` flag)
-- All draft scoring/AI reports work identically regardless of season eligibility
-- Stats are always tracked — season eligibility only affects season standings
+## Files Modified
+1. **src/components/chat/MessageBubble.tsx** — Remove left border, add sender-block top accent on first message, refine author line typography, adjust reactions spacing
+2. **src/components/chat/MessageList.tsx** — Dynamic inter-block spacing, enhanced unread divider with count and on-brand styling, minor date separator refinement
+
+## Summary of Changes
+- **Sender grouping**: Consecutive messages grouped with tight spacing; avatar+name only on first message; larger gap between different senders
+- **Unread divider**: Emerald pill showing "X New Messages" on a subtle horizontal rule
+- **Spacing hierarchy**: 20px between sender blocks, 2px within; reactions get extra bottom margin
+- **Accent treatment**: Colored left border replaced with a short top-accent on the first message of each block — cleaner, less busy
+
+## Edge Cases to Test
+- Single-message sender blocks (should still show avatar + accent)
+- Very long message threads with many senders switching rapidly
+- Unread divider with 0 unread (should not show)
+- Messages with images, link previews, and reactions together
+- Dark mode and light mode appearance
 
