@@ -84,6 +84,9 @@ export default function DraftDetailPage() {
   const [editTopic, setEditTopic] = useState('');
   const [saving, setSaving] = useState(false);
   const [imagePickerPick, setImagePickerPick] = useState<Pick | null>(null);
+  const [editingPickId, setEditingPickId] = useState<string | null>(null);
+  const [editPickText, setEditPickText] = useState('');
+  const [savingPick, setSavingPick] = useState(false);
   const [expandedResultUser, setExpandedResultUser] = useState<string | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const confettiShown = useRef(false);
@@ -386,6 +389,43 @@ export default function DraftDetailPage() {
       toast.error(err.message || 'Failed to update');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleStartEditPick = (pick: Pick) => {
+    setEditingPickId(pick.id);
+    setEditPickText(pick.pick_text);
+  };
+
+  const handleCancelEditPick = () => {
+    setEditingPickId(null);
+    setEditPickText('');
+  };
+
+  const handleSavePickEdit = async () => {
+    if (!editingPickId || !editPickText.trim()) return;
+    setSavingPick(true);
+    try {
+      const { error } = await supabase.from('draft_picks').update({ pick_text: editPickText.trim() }).eq('id', editingPickId);
+      if (error) throw error;
+      // Reset enrichment so it re-matches with new text
+      await supabase.from('item_enrichments').update({
+        status: 'pending',
+        matched_name: null,
+        image_url: null,
+        thumbnail_url: null,
+        metadata: {},
+        confidence: 0,
+      }).eq('item_id', editingPickId).eq('item_type', 'draft_pick');
+      setEditingPickId(null);
+      setEditPickText('');
+      toast.success('Pick updated');
+      fetchData();
+      fetchEnrichments();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update pick');
+    } finally {
+      setSavingPick(false);
     }
   };
 
@@ -824,6 +864,22 @@ export default function DraftDetailPage() {
                       >
                         {isEnriching && !enrichment ? (
                           <EnrichedItemSkeleton compact />
+                        ) : editingPickId === pick.id ? (
+                          <div className="flex items-center gap-2 px-3 py-2.5 w-full">
+                            <Input
+                              value={editPickText}
+                              onChange={(e) => setEditPickText(e.target.value)}
+                              className="h-8 text-sm flex-1"
+                              autoFocus
+                              onKeyDown={(e) => { if (e.key === 'Enter') handleSavePickEdit(); if (e.key === 'Escape') handleCancelEditPick(); }}
+                            />
+                            <Button size="sm" onClick={handleSavePickEdit} disabled={savingPick || !editPickText.trim()} className="h-8 w-8 p-0">
+                              <Check className="w-3.5 h-3.5" />
+                            </Button>
+                            <button onClick={handleCancelEditPick} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         ) : (
                           <EnrichedItemCard
                             label={pick.pick_text}
@@ -841,13 +897,22 @@ export default function DraftDetailPage() {
                                   <span className="font-mono">Rd {pick.round}</span>
                                 </span>
                                 {(canManage || pick.user_id === user?.id) && (
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); setPickToRemove(pick); }}
-                                    className="p-1 rounded-md text-muted-foreground/30 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
-                                    title="Remove pick"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </button>
+                                  <div className="flex items-center gap-0.5">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleStartEditPick(pick); }}
+                                      className="p-1 rounded-md text-muted-foreground/30 hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+                                      title="Edit pick"
+                                    >
+                                      <Pencil className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setPickToRemove(pick); }}
+                                      className="p-1 rounded-md text-muted-foreground/30 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                                      title="Remove pick"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  </div>
                                 )}
                               </div>
                             }
@@ -1122,35 +1187,60 @@ export default function DraftDetailPage() {
                   <div className="divide-y divide-border/15 relative z-10">
                     {userPicks.sort((a, b) => a.round - b.round).map(pick => {
                       const enrichment = enrichments.get(pick.id);
-                      return (
-                        <EnrichedItemCard
-                          key={pick.id}
-                          label={pick.pick_text}
-                          rank={pick.round}
-                          enrichment={enrichment}
-                          showRank
-                          compact={!hasEnrichments}
-                          onImageClick={enrichment && (enrichment.metadata?.image_candidates as any[])?.length > 0
-                            ? () => setImagePickerPick(pick)
-                            : undefined}
-                          actions={
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              <span className="text-[10px] font-mono text-muted-foreground/70">
-                                Rd {pick.round}
-                              </span>
-                              {canManage && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setPickToRemove(pick); }}
-                                  className="p-1 rounded-md text-muted-foreground/30 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
-                                  title="Remove pick"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </button>
-                              )}
-                            </div>
-                          }
-                        />
-                      );
+                      return editingPickId === pick.id ? (
+                          <div className="flex items-center gap-2 px-3 py-2.5 w-full" key={pick.id}>
+                            <Input
+                              value={editPickText}
+                              onChange={(e) => setEditPickText(e.target.value)}
+                              className="h-8 text-sm flex-1"
+                              autoFocus
+                              onKeyDown={(e) => { if (e.key === 'Enter') handleSavePickEdit(); if (e.key === 'Escape') handleCancelEditPick(); }}
+                            />
+                            <Button size="sm" onClick={handleSavePickEdit} disabled={savingPick || !editPickText.trim()} className="h-8 w-8 p-0">
+                              <Check className="w-3.5 h-3.5" />
+                            </Button>
+                            <button onClick={handleCancelEditPick} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <EnrichedItemCard
+                            key={pick.id}
+                            label={pick.pick_text}
+                            rank={pick.round}
+                            enrichment={enrichment}
+                            showRank
+                            compact={!hasEnrichments}
+                            onImageClick={enrichment && (enrichment.metadata?.image_candidates as any[])?.length > 0
+                              ? () => setImagePickerPick(pick)
+                              : undefined}
+                            actions={
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <span className="text-[10px] font-mono text-muted-foreground/70">
+                                  Rd {pick.round}
+                                </span>
+                                {canManage && (
+                                  <div className="flex items-center gap-0.5">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleStartEditPick(pick); }}
+                                      className="p-1 rounded-md text-muted-foreground/30 hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+                                      title="Edit pick"
+                                    >
+                                      <Pencil className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setPickToRemove(pick); }}
+                                      className="p-1 rounded-md text-muted-foreground/30 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                                      title="Remove pick"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            }
+                          />
+                        );
                     })}
                   </div>
                 </motion.div>
