@@ -1187,8 +1187,7 @@ export default function DraftDetailPage() {
                   <div className="divide-y divide-border/15 relative z-10">
                     {userPicks.sort((a, b) => a.round - b.round).map(pick => {
                       const enrichment = enrichments.get(pick.id);
-                      return (
-                        {editingPickId === pick.id ? (
+                      return editingPickId === pick.id ? (
                           <div className="flex items-center gap-2 px-3 py-2.5 w-full" key={pick.id}>
                             <Input
                               value={editPickText}
@@ -1241,8 +1240,7 @@ export default function DraftDetailPage() {
                               </div>
                             }
                           />
-                        )}
-                      );
+                        );
                     })}
                   </div>
                 </motion.div>
