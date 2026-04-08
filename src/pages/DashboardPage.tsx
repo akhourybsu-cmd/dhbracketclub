@@ -610,8 +610,9 @@ export default function DashboardPage() {
       {(() => {
         const visiblePools = pools.filter((p: any) => {
           const bs = bracketStatuses.get(p.id);
-          const isActive = bs !== 'complete';
-          return isActive || !dismissedIds.has(`pool-${p.id}`);
+          const locked = isLocked(p.lock_time);
+          const isDone = bs === 'complete' || locked;
+          return !isDone || !dismissedIds.has(`pool-${p.id}`);
         });
         if (visiblePools.length === 0) return null;
         return (
@@ -651,7 +652,7 @@ export default function DashboardPage() {
                           </div>
                           <div className="flex items-center gap-1.5 flex-shrink-0">
                             <span className={cn("status-pill", bsCfg.className)}>{bsCfg.label}</span>
-                            {bs === 'complete' ? (
+                            {(bs === 'complete' || locked) ? (
                               <button onClick={(e) => dismissItem(`pool-${pool.id}`, e)} className="p-1 rounded-md text-muted-foreground/40 hover:text-foreground active:text-foreground transition-colors">
                                 <X className="w-3.5 h-3.5" />
                               </button>
