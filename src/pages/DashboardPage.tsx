@@ -520,104 +520,131 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
-      {pools.length > 0 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-          <div className="section-divider mb-3">
-            <h2 className="section-header mb-0">
-              <Trophy className="w-3.5 h-3.5 inline-block mr-1.5 text-primary" />
-              Brackets
-            </h2>
-            <Link to="/brackets" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors">View All</Link>
-          </div>
-          <div className="space-y-2 mb-7">
-            {pools.slice(0, 3).map((pool, i) => {
-              const bs = bracketStatuses.get(pool.id) || 'none';
-              const bsCfg = STATUS_CONFIG[bs];
-              const locked = isLocked(pool.lock_time);
-              const members = memberCounts.get(pool.id) || 0;
-              return (
-                <motion.div key={pool.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 + i * 0.04 }}>
-                  <Link to={`/pools/${pool.id}`} className="block group">
-                    <div className="glass-card p-3.5 transition-all duration-200 group-hover:border-primary/15">
-                        <div className="flex items-center gap-3 relative z-10">
+      {/* ═══ Hide Completed Toggle ═══ */}
+      {(drafts.length > 0 || pools.length > 0) && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.19 }} className="flex items-center justify-end mb-4">
+          <button
+            onClick={() => setHideCompleted(!hideCompleted)}
+            className={cn(
+              "flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 rounded-full transition-all duration-200",
+              hideCompleted
+                ? "bg-primary/15 text-primary"
+                : "bg-muted/50 text-muted-foreground hover:bg-muted/70"
+            )}
+          >
+            {hideCompleted ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+            {hideCompleted ? 'Show completed' : 'Hide completed'}
+          </button>
+        </motion.div>
+      )}
+
+      {/* ═══ Drafts (above Brackets) ═══ */}
+      {(() => {
+        const visibleDrafts = hideCompleted ? drafts.filter((d: any) => d.status !== 'completed') : drafts;
+        if (visibleDrafts.length === 0) return null;
+        return (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+            <div className="section-divider mb-3">
+              <h2 className="section-header mb-0">
+                <Bookmark className="w-3.5 h-3.5 inline-block mr-1.5" style={{ color: 'hsl(var(--gold))' }} />
+                Drafts
+              </h2>
+              <Link to="/drafts" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors">View All</Link>
+            </div>
+            <div className="space-y-2 mb-7">
+              {visibleDrafts.slice(0, 3).map((d: any, i: number) => (
+                <motion.div key={d.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 + i * 0.04 }}>
+                  <Link to={`/drafts/${d.id}`} className="block group">
+                    <div className="glass-card p-3.5 transition-all duration-200 group-hover:border-gold/15">
+                      <div className="flex items-center gap-3 relative z-10">
                         <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{
-                          background: (bs === 'complete' || locked) ? 'hsl(var(--muted) / 0.5)' : 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.04))',
+                          background: d.status === 'completed' ? 'hsl(var(--muted) / 0.5)' : 'linear-gradient(135deg, hsl(var(--gold) / 0.15), hsl(var(--gold) / 0.04))',
                         }}>
-                          <Trophy className={cn("w-4 h-4", (bs === 'complete' || locked) ? "text-muted-foreground/60" : "text-primary")} />
+                          <Bookmark className={cn("w-4 h-4", d.status === 'completed' ? "text-muted-foreground/60" : "")} style={d.status !== 'completed' ? { color: 'hsl(var(--gold))' } : {}} />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h3 className="font-bold text-[13px] truncate tracking-tight">{pool.name}</h3>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-[10px] text-muted-foreground/70 font-medium">{pool.tournaments?.name}</span>
-                            <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/15" />
-                            <span className="text-[10px] text-muted-foreground/70 flex items-center gap-0.5 font-medium">
-                              <Users className="w-2.5 h-2.5" /> {members}
-                            </span>
-                          </div>
+                          <h3 className="font-bold text-[13px] truncate tracking-tight">{d.topic}</h3>
+                          <p className="text-[10px] text-muted-foreground/70 font-medium">
+                            {d.num_rounds} rounds • {d.status === 'in_progress' ? 'In Progress' : d.status === 'setup' ? 'Setup' : 'Complete'}
+                          </p>
+                          {d.status === 'in_progress' && d.current_pick_user_id && (
+                            <p className="text-[10px] font-semibold mt-0.5" style={{ color: d.current_pick_user_id === user?.id ? 'hsl(var(--gold))' : 'hsl(var(--success))' }}>
+                              🎯 {d.current_pick_user_id === user?.id ? 'Your pick!' : `${d.current_pick_profiles?.display_name || 'Someone'}'s pick`}
+                            </p>
+                          )}
                         </div>
                         <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <span className={cn("status-pill", bsCfg.className)}>{bsCfg.label}</span>
+                          <span className={cn(
+                            "status-pill",
+                            d.status === 'in_progress' ? 'bg-success/10 text-success' : d.status === 'setup' ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
+                          )}>
+                            {d.status === 'in_progress' ? 'In Progress' : d.status === 'setup' ? 'Setup' : 'Complete'}
+                          </span>
                           <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60" />
                         </div>
                       </div>
                     </div>
                   </Link>
                 </motion.div>
-              );
-            })}
-          </div>
-        </motion.div>
-      )}
+              ))}
+            </div>
+          </motion.div>
+        );
+      })()}
 
-      {/* ═══ Active Drafts ═══ */}
-      {drafts.length > 0 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.28 }}>
-          <div className="section-divider mb-3">
-            <h2 className="section-header mb-0">
-              <Bookmark className="w-3.5 h-3.5 inline-block mr-1.5" style={{ color: 'hsl(var(--gold))' }} />
-              Drafts
-            </h2>
-            <Link to="/drafts" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors">View All</Link>
-          </div>
-          <div className="space-y-2 mb-7">
-            {drafts.slice(0, 3).map((d: any, i: number) => (
-              <motion.div key={d.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.04 }}>
-                <Link to={`/drafts/${d.id}`} className="block group">
-                  <div className="glass-card p-3.5 transition-all duration-200 group-hover:border-gold/15">
-                    <div className="flex items-center gap-3 relative z-10">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{
-                        background: 'linear-gradient(135deg, hsl(var(--gold) / 0.15), hsl(var(--gold) / 0.04))',
-                      }}>
-                        <Bookmark className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
+      {/* ═══ Brackets ═══ */}
+      {(() => {
+        const visiblePools = hideCompleted ? pools.filter((p: any) => bracketStatuses.get(p.id) !== 'complete') : pools;
+        if (visiblePools.length === 0) return null;
+        return (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.28 }}>
+            <div className="section-divider mb-3">
+              <h2 className="section-header mb-0">
+                <Trophy className="w-3.5 h-3.5 inline-block mr-1.5 text-primary" />
+                Brackets
+              </h2>
+              <Link to="/brackets" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors">View All</Link>
+            </div>
+            <div className="space-y-2 mb-7">
+              {visiblePools.slice(0, 3).map((pool: any, i: number) => {
+                const bs = bracketStatuses.get(pool.id) || 'none';
+                const bsCfg = STATUS_CONFIG[bs];
+                const locked = isLocked(pool.lock_time);
+                const members = memberCounts.get(pool.id) || 0;
+                return (
+                  <motion.div key={pool.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.04 }}>
+                    <Link to={`/pools/${pool.id}`} className="block group">
+                      <div className="glass-card p-3.5 transition-all duration-200 group-hover:border-primary/15">
+                        <div className="flex items-center gap-3 relative z-10">
+                          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{
+                            background: (bs === 'complete' || locked) ? 'hsl(var(--muted) / 0.5)' : 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.04))',
+                          }}>
+                            <Trophy className={cn("w-4 h-4", (bs === 'complete' || locked) ? "text-muted-foreground/60" : "text-primary")} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-bold text-[13px] truncate tracking-tight">{pool.name}</h3>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="text-[10px] text-muted-foreground/70 font-medium">{pool.tournaments?.name}</span>
+                              <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/15" />
+                              <span className="text-[10px] text-muted-foreground/70 flex items-center gap-0.5 font-medium">
+                                <Users className="w-2.5 h-2.5" /> {members}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <span className={cn("status-pill", bsCfg.className)}>{bsCfg.label}</span>
+                            <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60" />
+                          </div>
+                        </div>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-bold text-[13px] truncate tracking-tight">{d.topic}</h3>
-                        <p className="text-[10px] text-muted-foreground/70 font-medium">
-                          {d.num_rounds} rounds • {d.status === 'in_progress' ? 'In Progress' : d.status === 'setup' ? 'Setup' : 'Complete'}
-                        </p>
-                        {d.status === 'in_progress' && d.current_pick_user_id && (
-                          <p className="text-[10px] font-semibold mt-0.5" style={{ color: d.current_pick_user_id === user?.id ? 'hsl(var(--gold))' : 'hsl(var(--success))' }}>
-                            🎯 {d.current_pick_user_id === user?.id ? 'Your pick!' : `${d.current_pick_profiles?.display_name || 'Someone'}'s pick`}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <span className={cn(
-                          "status-pill",
-                          d.status === 'in_progress' ? 'bg-success/10 text-success' : d.status === 'setup' ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
-                        )}>
-                          {d.status === 'in_progress' ? 'In Progress' : d.status === 'setup' ? 'Setup' : 'Complete'}
-                        </span>
-                        <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60" />
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-      )}
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        );
+      })()}
 
       {/* Rankings & Polls archived — accessible via Compete > More */}
 
