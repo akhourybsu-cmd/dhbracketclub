@@ -543,23 +543,8 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
-      {/* ═══ Hide Completed Toggle ═══ */}
-      {(drafts.length > 0 || pools.length > 0) && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.19 }} className="flex items-center justify-end mb-4">
-          <button
-            onClick={() => setHideCompleted(!hideCompleted)}
-            className={cn(
-              "flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 rounded-full transition-all duration-200",
-              hideCompleted
-                ? "bg-primary/15 text-primary"
-                : "bg-muted/50 text-muted-foreground hover:bg-muted/70"
-            )}
-          >
-            {hideCompleted ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-            {hideCompleted ? 'Show completed' : 'Hide completed'}
-          </button>
-        </motion.div>
-      )}
+
+
 
       {/* ═══ Drafts (above Brackets) ═══ */}
       {(() => {
