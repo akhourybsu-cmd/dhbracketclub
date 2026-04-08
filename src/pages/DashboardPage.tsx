@@ -73,6 +73,30 @@ export default function DashboardPage() {
   const [dismissedInstall, setDismissedInstall] = useState(false);
   const [activity, setActivity] = useState<any[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
+  const [hideCompleted, setHideCompleted] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState<{id: string, name: string, avatar?: string}[]>([]);
+
+  // Online presence
+  useEffect(() => {
+    if (!user || !displayName) return;
+    const channel = supabase.channel('online-presence', { config: { presence: { key: user.id } } });
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        const users = Object.values(state).flat().map((p: any) => ({
+          id: p.user_id as string,
+          name: p.display_name as string,
+          avatar: p.avatar_url as string | undefined,
+        }));
+        setOnlineUsers(users);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({ user_id: user.id, display_name: displayName, avatar_url: dashAvatarUrl });
+        }
+      });
+    return () => { supabase.removeChannel(channel); };
+  }, [user, displayName, dashAvatarUrl]);
 
   const hydrateDrafts = useCallback(async (draftRows: any[]) => {
     if (!draftRows?.length) {
