@@ -548,7 +548,7 @@ export default function DashboardPage() {
 
       {/* ═══ Drafts (above Brackets) ═══ */}
       {(() => {
-        const visibleDrafts = hideCompleted ? drafts.filter((d: any) => d.status !== 'completed') : drafts;
+        const visibleDrafts = drafts.filter((d: any) => d.status === 'in_progress' || d.status === 'setup' || !dismissedIds.has(`draft-${d.id}`));
         if (visibleDrafts.length === 0) return null;
         return (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
