@@ -83,11 +83,18 @@ export default function DashboardPage() {
     channel
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
-        const users = Object.values(state).flat().map((p: any) => ({
+        const allPresences = Object.values(state).flat().map((p: any) => ({
           id: p.user_id as string,
           name: p.display_name as string,
           avatar: p.avatar_url as string | undefined,
         }));
+        // Deduplicate by user id (multiple devices)
+        const seen = new Set<string>();
+        const users = allPresences.filter(u => {
+          if (seen.has(u.id)) return false;
+          seen.add(u.id);
+          return true;
+        });
         setOnlineUsers(users);
       })
       .subscribe(async (status) => {
