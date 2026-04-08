@@ -84,6 +84,9 @@ export default function DraftDetailPage() {
   const [editTopic, setEditTopic] = useState('');
   const [saving, setSaving] = useState(false);
   const [imagePickerPick, setImagePickerPick] = useState<Pick | null>(null);
+  const [editingPickId, setEditingPickId] = useState<string | null>(null);
+  const [editPickText, setEditPickText] = useState('');
+  const [savingPick, setSavingPick] = useState(false);
   const [expandedResultUser, setExpandedResultUser] = useState<string | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const confettiShown = useRef(false);
