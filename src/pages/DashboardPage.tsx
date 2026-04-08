@@ -5,8 +5,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
   Plus, Users, ArrowRight, Trophy, BarChart3, Shield, Download, X, Swords,
-  MessageCircle, Bookmark, Zap, CalendarDays, Clock, MapPin, ChevronRight
+  MessageCircle, Bookmark, Zap, CalendarDays, Clock, MapPin, ChevronRight, Eye, EyeOff
 } from 'lucide-react';
+import { UserAvatar } from '@/components/chat/UserAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES } from '@/lib/bracketUtils';
 import { getDerivedDraftTurn } from '@/lib/draftTurn';
