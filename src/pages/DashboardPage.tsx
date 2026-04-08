@@ -588,8 +588,13 @@ export default function DashboardPage() {
                           )}>
                             {d.status === 'in_progress' ? 'In Progress' : d.status === 'setup' ? 'Setup' : 'Complete'}
                           </span>
-                          <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60" />
-                        </div>
+                          {d.status !== 'in_progress' && d.status !== 'setup' ? (
+                            <button onClick={(e) => dismissItem(`draft-${d.id}`, e)} className="p-1 rounded-md text-muted-foreground/40 hover:text-foreground active:text-foreground transition-colors">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          ) : (
+                            <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60" />
+                          )}
                       </div>
                     </div>
                   </Link>
