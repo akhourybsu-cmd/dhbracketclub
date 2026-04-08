@@ -385,6 +385,29 @@ export default function DashboardPage() {
               {totalActive > 0 ? `${totalActive} active competition${totalActive !== 1 ? 's' : ''}` : 'No active competitions yet'}
             </motion.p>
           )}
+          {/* Online presence indicator */}
+          {onlineUsers.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.25 }}
+              className="flex items-center gap-2 mt-2.5"
+            >
+              <div className="flex -space-x-1.5">
+                {onlineUsers.slice(0, 5).map(u => (
+                  <div key={u.id} className="ring-2 ring-background rounded-full">
+                    <UserAvatar userId={u.id} name={u.name} avatarUrl={u.avatar} size={22} />
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                <span className="text-[10px] text-muted-foreground font-medium">
+                  {onlineUsers.length} online
+                </span>
+              </div>
+            </motion.div>
+          )}
         </div>
       </motion.div>
 
