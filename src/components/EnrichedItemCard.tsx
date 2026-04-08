@@ -150,7 +150,7 @@ export default function EnrichedItemCard({
           "text-[13px] font-semibold block break-words",
           rank === 1 && showRank && "text-gold"
         )}>
-          {enrichment?.matched_name || label}
+          {label}
         </span>
         <MetadataSubtitle enrichment={enrichment} />
       </div>
