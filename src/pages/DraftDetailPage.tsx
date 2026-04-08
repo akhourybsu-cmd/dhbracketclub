@@ -865,19 +865,19 @@ export default function DraftDetailPage() {
                         {isEnriching && !enrichment ? (
                           <EnrichedItemSkeleton compact />
                         ) : editingPickId === pick.id ? (
-                          <div className="flex items-center gap-2 px-3 py-2.5 w-full">
+                          <div className="flex items-center gap-2 px-3 py-3 w-full">
                             <Input
                               value={editPickText}
                               onChange={(e) => setEditPickText(e.target.value)}
-                              className="h-8 text-sm flex-1"
+                              className="h-10 text-sm flex-1 min-w-0"
                               autoFocus
                               onKeyDown={(e) => { if (e.key === 'Enter') handleSavePickEdit(); if (e.key === 'Escape') handleCancelEditPick(); }}
                             />
-                            <Button size="sm" onClick={handleSavePickEdit} disabled={savingPick || !editPickText.trim()} className="h-8 w-8 p-0">
-                              <Check className="w-3.5 h-3.5" />
+                            <Button size="sm" onClick={handleSavePickEdit} disabled={savingPick || !editPickText.trim()} className="h-10 w-10 p-0 flex-shrink-0">
+                              <Check className="w-4 h-4" />
                             </Button>
-                            <button onClick={handleCancelEditPick} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors">
-                              <X className="w-3.5 h-3.5" />
+                            <button onClick={handleCancelEditPick} className="h-10 w-10 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground active:bg-muted/50 transition-colors flex-shrink-0">
+                              <X className="w-4 h-4" />
                             </button>
                           </div>
                         ) : (
@@ -891,7 +891,7 @@ export default function DraftDetailPage() {
                               ? () => setImagePickerPick(pick)
                               : undefined}
                             actions={
-                              <div className="flex items-center gap-1 flex-shrink-0">
+                              <div className="flex items-center gap-1.5 flex-shrink-0">
                                 <span className="text-[10px] text-muted-foreground/60 text-right">
                                   <span className="block font-medium">{pick.profiles?.display_name}</span>
                                   <span className="font-mono">Rd {pick.round}</span>
@@ -900,17 +900,17 @@ export default function DraftDetailPage() {
                                   <div className="flex items-center gap-0.5">
                                     <button
                                       onClick={(e) => { e.stopPropagation(); handleStartEditPick(pick); }}
-                                      className="p-1 rounded-md text-muted-foreground/30 hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+                                      className="p-2 rounded-md text-muted-foreground/50 hover:text-primary active:text-primary active:bg-primary/10 transition-colors"
                                       title="Edit pick"
                                     >
-                                      <Pencil className="w-3 h-3" />
+                                      <Pencil className="w-3.5 h-3.5" />
                                     </button>
                                     <button
                                       onClick={(e) => { e.stopPropagation(); setPickToRemove(pick); }}
-                                      className="p-1 rounded-md text-muted-foreground/30 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                                      className="p-2 rounded-md text-muted-foreground/50 hover:text-destructive active:text-destructive active:bg-destructive/10 transition-colors"
                                       title="Remove pick"
                                     >
-                                      <Trash2 className="w-3 h-3" />
+                                      <Trash2 className="w-3.5 h-3.5" />
                                     </button>
                                   </div>
                                 )}
@@ -1188,19 +1188,19 @@ export default function DraftDetailPage() {
                     {userPicks.sort((a, b) => a.round - b.round).map(pick => {
                       const enrichment = enrichments.get(pick.id);
                       return editingPickId === pick.id ? (
-                          <div className="flex items-center gap-2 px-3 py-2.5 w-full" key={pick.id}>
+                          <div className="flex items-center gap-2 px-3 py-3 w-full" key={pick.id}>
                             <Input
                               value={editPickText}
                               onChange={(e) => setEditPickText(e.target.value)}
-                              className="h-8 text-sm flex-1"
+                              className="h-10 text-sm flex-1 min-w-0"
                               autoFocus
                               onKeyDown={(e) => { if (e.key === 'Enter') handleSavePickEdit(); if (e.key === 'Escape') handleCancelEditPick(); }}
                             />
-                            <Button size="sm" onClick={handleSavePickEdit} disabled={savingPick || !editPickText.trim()} className="h-8 w-8 p-0">
-                              <Check className="w-3.5 h-3.5" />
+                            <Button size="sm" onClick={handleSavePickEdit} disabled={savingPick || !editPickText.trim()} className="h-10 w-10 p-0 flex-shrink-0">
+                              <Check className="w-4 h-4" />
                             </Button>
-                            <button onClick={handleCancelEditPick} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors">
-                              <X className="w-3.5 h-3.5" />
+                            <button onClick={handleCancelEditPick} className="h-10 w-10 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground active:bg-muted/50 transition-colors flex-shrink-0">
+                              <X className="w-4 h-4" />
                             </button>
                           </div>
                         ) : (
@@ -1215,7 +1215,7 @@ export default function DraftDetailPage() {
                               ? () => setImagePickerPick(pick)
                               : undefined}
                             actions={
-                              <div className="flex items-center gap-1 flex-shrink-0">
+                              <div className="flex items-center gap-1.5 flex-shrink-0">
                                 <span className="text-[10px] font-mono text-muted-foreground/70">
                                   Rd {pick.round}
                                 </span>
@@ -1223,17 +1223,17 @@ export default function DraftDetailPage() {
                                   <div className="flex items-center gap-0.5">
                                     <button
                                       onClick={(e) => { e.stopPropagation(); handleStartEditPick(pick); }}
-                                      className="p-1 rounded-md text-muted-foreground/30 hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+                                      className="p-2 rounded-md text-muted-foreground/50 hover:text-primary active:text-primary active:bg-primary/10 transition-colors"
                                       title="Edit pick"
                                     >
-                                      <Pencil className="w-3 h-3" />
+                                      <Pencil className="w-3.5 h-3.5" />
                                     </button>
                                     <button
                                       onClick={(e) => { e.stopPropagation(); setPickToRemove(pick); }}
-                                      className="p-1 rounded-md text-muted-foreground/30 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                                      className="p-2 rounded-md text-muted-foreground/50 hover:text-destructive active:text-destructive active:bg-destructive/10 transition-colors"
                                       title="Remove pick"
                                     >
-                                      <Trash2 className="w-3 h-3" />
+                                      <Trash2 className="w-3.5 h-3.5" />
                                     </button>
                                   </div>
                                 )}
