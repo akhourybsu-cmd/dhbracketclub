@@ -73,7 +73,23 @@ export default function DashboardPage() {
   const [dismissedInstall, setDismissedInstall] = useState(false);
   const [activity, setActivity] = useState<any[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
-  const [hideCompleted, setHideCompleted] = useState(false);
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('dh-dismissed-home');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch { return new Set(); }
+  });
+
+  const dismissItem = (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDismissedIds(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      localStorage.setItem('dh-dismissed-home', JSON.stringify([...next]));
+      return next;
+    });
+  };
   const [onlineUsers, setOnlineUsers] = useState<{id: string, name: string, avatar?: string}[]>([]);
 
   // Online presence
