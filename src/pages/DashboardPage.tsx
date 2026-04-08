@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
   Plus, Users, ArrowRight, Trophy, BarChart3, Shield, Download, X, Swords,
-  MessageCircle, Bookmark, Zap, CalendarDays, Clock, MapPin, ChevronRight, Eye, EyeOff
+  MessageCircle, Bookmark, Zap, CalendarDays, Clock, MapPin, ChevronRight
 } from 'lucide-react';
 import { UserAvatar } from '@/components/chat/UserAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -73,7 +73,23 @@ export default function DashboardPage() {
   const [dismissedInstall, setDismissedInstall] = useState(false);
   const [activity, setActivity] = useState<any[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
-  const [hideCompleted, setHideCompleted] = useState(false);
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('dh-dismissed-home');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch { return new Set(); }
+  });
+
+  const dismissItem = (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDismissedIds(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      localStorage.setItem('dh-dismissed-home', JSON.stringify([...next]));
+      return next;
+    });
+  };
   const [onlineUsers, setOnlineUsers] = useState<{id: string, name: string, avatar?: string}[]>([]);
 
   // Online presence
@@ -527,27 +543,12 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
-      {/* ═══ Hide Completed Toggle ═══ */}
-      {(drafts.length > 0 || pools.length > 0) && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.19 }} className="flex items-center justify-end mb-4">
-          <button
-            onClick={() => setHideCompleted(!hideCompleted)}
-            className={cn(
-              "flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 rounded-full transition-all duration-200",
-              hideCompleted
-                ? "bg-primary/15 text-primary"
-                : "bg-muted/50 text-muted-foreground hover:bg-muted/70"
-            )}
-          >
-            {hideCompleted ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-            {hideCompleted ? 'Show completed' : 'Hide completed'}
-          </button>
-        </motion.div>
-      )}
+
+
 
       {/* ═══ Drafts (above Brackets) ═══ */}
       {(() => {
-        const visibleDrafts = hideCompleted ? drafts.filter((d: any) => d.status !== 'completed') : drafts;
+        const visibleDrafts = drafts.filter((d: any) => d.status === 'in_progress' || d.status === 'setup' || !dismissedIds.has(`draft-${d.id}`));
         if (visibleDrafts.length === 0) return null;
         return (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
@@ -587,7 +588,13 @@ export default function DashboardPage() {
                           )}>
                             {d.status === 'in_progress' ? 'In Progress' : d.status === 'setup' ? 'Setup' : 'Complete'}
                           </span>
-                          <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60" />
+                          {d.status !== 'in_progress' && d.status !== 'setup' ? (
+                            <button onClick={(e) => dismissItem(`draft-${d.id}`, e)} className="p-1 rounded-md text-muted-foreground/40 hover:text-foreground active:text-foreground transition-colors">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          ) : (
+                            <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60" />
+                          )}
                         </div>
                       </div>
                     </div>
@@ -601,7 +608,11 @@ export default function DashboardPage() {
 
       {/* ═══ Brackets ═══ */}
       {(() => {
-        const visiblePools = hideCompleted ? pools.filter((p: any) => bracketStatuses.get(p.id) !== 'complete') : pools;
+        const visiblePools = pools.filter((p: any) => {
+          const bs = bracketStatuses.get(p.id);
+          const isActive = bs !== 'complete';
+          return isActive || !dismissedIds.has(`pool-${p.id}`);
+        });
         if (visiblePools.length === 0) return null;
         return (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.28 }}>
@@ -640,7 +651,13 @@ export default function DashboardPage() {
                           </div>
                           <div className="flex items-center gap-1.5 flex-shrink-0">
                             <span className={cn("status-pill", bsCfg.className)}>{bsCfg.label}</span>
-                            <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60" />
+                            {bs === 'complete' ? (
+                              <button onClick={(e) => dismissItem(`pool-${pool.id}`, e)} className="p-1 rounded-md text-muted-foreground/40 hover:text-foreground active:text-foreground transition-colors">
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            ) : (
+                              <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60" />
+                            )}
                           </div>
                         </div>
                       </div>
