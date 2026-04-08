@@ -1,76 +1,78 @@
 
 
-# Add Inline Pick Editing for Admins
+# Dashboard: Reorder, Hide Completed, Online Presence
 
 ## Overview
-Add an "Edit pick text" capability so admins (and draft creators) can tap a pick, edit the text inline, and save — across all drafts regardless of ownership. The RLS policies already permit admin updates on `draft_picks`.
+Three refinements to the Home tab: reorder sections so Drafts appear first, add a toggle to hide completed items, and show a subtle online-now indicator.
 
-## Changes (single file: `src/pages/DraftDetailPage.tsx`)
+## Changes (single file: `src/pages/DashboardPage.tsx`)
 
-### 1. New State
-- `editingPickId: string | null` — tracks which pick is being edited
-- `editPickText: string` — the current edited text
-- `savingPick: boolean` — loading state during save
+### 1. Reorder Sections
+Move the Drafts section (lines 524-572) above the Brackets section (lines 475-522). Adjust animation delays accordingly.
 
-### 2. Edit Handler Functions
-- `handleStartEditPick(pick)` — sets `editingPickId` and `editPickText`
-- `handleSavePickEdit()` — updates `draft_picks` row's `pick_text` via Supabase, resets enrichment for that pick to `pending` (so it re-enriches with new text), then calls `fetchData()`
-- `handleCancelEditPick()` — clears editing state
+### 2. Hide Completed Toggle
+- Add `const [hideCompleted, setHideCompleted] = useState(false)` state
+- Add a small toggle pill near the top of the competitions area (below Quick Create): "Hide completed" with a Switch or clickable pill
+- Filter drafts: when `hideCompleted`, exclude `d.status === 'completed'`
+- Filter brackets: when `hideCompleted`, exclude pools where `bracketStatuses.get(pool.id) === 'complete'`
+- If all items in a section are hidden, hide the entire section header
 
-### 3. UI Changes — Pick Action Buttons
-In both the in-progress pick list (~line 837) and the completed results pick list (~line 1136), add a **Pencil icon button** next to the existing Trash button, visible when `canManage || pick.user_id === user?.id`:
+### 3. Online Presence Indicator
+- Add a `presenceChannel` via `supabase.channel('online-presence')` using Supabase Realtime Presence
+- Track current user presence on mount, subscribe to sync events
+- Store `onlineUserIds` set in state
+- Display a subtle row below the greeting: small stacked avatar dots (colored circles with initials) for online members + "N online" label
+- Fetch all profiles once (the group is small/private) and cross-reference with presence state
+- Keep it minimal — a single row with tiny 24px avatar circles, max 5 shown + overflow count
 
+## Technical Details
+
+**Presence channel setup:**
+```typescript
+const [onlineUsers, setOnlineUsers] = useState<{id: string, name: string, avatar?: string}[]>([]);
+
+useEffect(() => {
+  if (!user) return;
+  const channel = supabase.channel('online-presence', { config: { presence: { key: user.id } } });
+  channel
+    .on('presence', { event: 'sync' }, () => {
+      const state = channel.presenceState();
+      const users = Object.values(state).flat().map((p: any) => ({
+        id: p.user_id, name: p.display_name, avatar: p.avatar_url
+      }));
+      setOnlineUsers(users);
+    })
+    .subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await channel.track({ user_id: user.id, display_name: displayName, avatar_url: dashAvatarUrl });
+      }
+    });
+  return () => { supabase.removeChannel(channel); };
+}, [user, displayName, dashAvatarUrl]);
 ```
-{(canManage || pick.user_id === user?.id) && (
-  <div className="flex items-center gap-0.5">
-    <button onClick={() => handleStartEditPick(pick)} title="Edit pick">
-      <Pencil className="w-3 h-3" />
-    </button>
-    <button onClick={() => setPickToRemove(pick)} title="Remove pick">
-      <Trash2 className="w-3 h-3" />
-    </button>
+
+**Online indicator UI** — placed right after the greeting subtitle:
+```
+<div className="flex items-center gap-1.5 mt-2">
+  <div className="flex -space-x-1.5">
+    {onlineUsers.slice(0,5).map(u => <UserAvatar size={20} ... />)}
   </div>
-)}
-```
-
-### 4. Inline Edit Mode
-When `editingPickId === pick.id`, replace the `EnrichedItemCard` label display with an inline input + save/cancel buttons:
-
-```
-<div className="flex items-center gap-2 w-full">
-  <Input value={editPickText} onChange={...} className="h-8 text-sm" autoFocus />
-  <Button size="sm" onClick={handleSavePickEdit} disabled={savingPick}>
-    <Check className="w-3 h-3" />
-  </Button>
-  <button onClick={handleCancelEditPick}>
-    <X className="w-3 h-3" />
-  </button>
+  <span className="text-[10px] text-muted-foreground font-medium">
+    {onlineUsers.length} online
+  </span>
 </div>
 ```
 
-### 5. Save Logic
-```typescript
-const handleSavePickEdit = async () => {
-  if (!editingPickId || !editPickText.trim()) return;
-  setSavingPick(true);
-  // Update pick text
-  await supabase.from('draft_picks').update({ pick_text: editPickText.trim() }).eq('id', editingPickId);
-  // Reset enrichment so it re-matches
-  await supabase.from('item_enrichments').update({ status: 'pending', matched_name: null, image_url: null, thumbnail_url: null, metadata: {}, confidence: 0 }).eq('item_id', editingPickId);
-  setEditingPickId(null);
-  fetchData();
-  fetchEnrichments();
-  setSavingPick(false);
-  toast.success('Pick updated');
-};
+**Hide completed pill** — placed between Quick Create and the first section:
+```
+<button onClick={() => setHideCompleted(!hideCompleted)}
+  className={cn("text-[10px] font-bold px-3 py-1.5 rounded-full transition-colors",
+    hideCompleted ? "bg-primary/15 text-primary" : "bg-muted/50 text-muted-foreground"
+  )}>
+  {hideCompleted ? 'Show completed' : 'Hide completed'}
+</button>
 ```
 
 ## Files Modified
-1. **`src/pages/DraftDetailPage.tsx`** — Add edit state, edit handlers, pencil button in pick actions, inline edit input mode
-
-## Summary
-- Admins get a pencil icon on every pick to edit the text inline
-- Saving updates the pick and resets enrichment for re-matching
-- Works on both in-progress and completed draft views
-- No database changes needed — RLS already permits admin updates
+1. **`src/pages/DashboardPage.tsx`** — All three features in one file
 
