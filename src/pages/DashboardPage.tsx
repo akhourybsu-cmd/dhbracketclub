@@ -83,8 +83,6 @@ export default function DashboardPage() {
     channel
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
-        const users = Object.values(state).flat().map((p: any) => ({
-          id: p.user_id as string,
         const allPresences = Object.values(state).flat().map((p: any) => ({
           id: p.user_id as string,
           name: p.display_name as string,
