@@ -608,7 +608,11 @@ export default function DashboardPage() {
 
       {/* ═══ Brackets ═══ */}
       {(() => {
-        const visiblePools = hideCompleted ? pools.filter((p: any) => bracketStatuses.get(p.id) !== 'complete') : pools;
+        const visiblePools = pools.filter((p: any) => {
+          const bs = bracketStatuses.get(p.id);
+          const isActive = bs !== 'complete';
+          return isActive || !dismissedIds.has(`pool-${p.id}`);
+        });
         if (visiblePools.length === 0) return null;
         return (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.28 }}>
