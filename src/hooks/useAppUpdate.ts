@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { toast } from 'sonner';
 
 /**
- * Forces the app to refresh when a new service worker is available.
- * On update detection, it activates the new SW and reloads the page automatically.
- * Checks for updates every 15 seconds for fast rollouts.
- * Also checks on visibility change (tab/app foregrounded).
+ * Detects when a new version of the app is available,
+ * shows a toast notification, then refreshes after a short delay.
+ * Checks for updates every 15 seconds and on tab focus.
  */
 export function useAppUpdate() {
   const {
@@ -33,8 +33,15 @@ export function useAppUpdate() {
 
   useEffect(() => {
     if (needRefresh) {
-      // Force update: activate the new service worker and reload
-      updateServiceWorker(true);
+      toast('🔄 New version available', {
+        description: 'Updating now — the app will refresh in a moment.',
+        duration: 4000,
+      });
+      // Give the toast a moment to display, then activate the new SW and reload
+      const timer = setTimeout(() => {
+        updateServiceWorker(true);
+      }, 2500);
+      return () => clearTimeout(timer);
     }
   }, [needRefresh, updateServiceWorker]);
 }
