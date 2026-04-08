@@ -610,8 +610,9 @@ export default function DashboardPage() {
       {(() => {
         const visiblePools = pools.filter((p: any) => {
           const bs = bracketStatuses.get(p.id);
-          const isActive = bs !== 'complete';
-          return isActive || !dismissedIds.has(`pool-${p.id}`);
+          const locked = isLocked(p.lock_time);
+          const isDone = bs === 'complete' || locked;
+          return !isDone || !dismissedIds.has(`pool-${p.id}`);
         });
         if (visiblePools.length === 0) return null;
         return (
