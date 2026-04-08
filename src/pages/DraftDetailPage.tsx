@@ -152,7 +152,16 @@ export default function DraftDetailPage() {
   const { status: realtimeStatus } = useDraftUpdates(draftId, fetchData);
 
   const isCreator = draft?.created_by === user?.id;
+  const [isAppAdmin, setIsAppAdmin] = useState(false);
   const isParticipant = participants.some(p => p.user_id === user?.id);
+  const canManage = isCreator || isAppAdmin;
+
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase.rpc('is_app_admin', { _user_id: user.id }).then(({ data }) => {
+      setIsAppAdmin(!!data);
+    });
+  }, [user?.id]);
 
   // Auto-generate report when draft is complete and no results exist (any participant can trigger)
   useEffect(() => {
@@ -190,7 +199,7 @@ export default function DraftDetailPage() {
   const hasEnrichments = enrichments.size > 0;
 
   const handleStartDraft = async () => {
-    if (!draftId || !isCreator) return;
+    if (!draftId || !canManage) return;
     if (participants.length < 2) {
       toast.error('Need at least 2 participants');
       return;
@@ -335,7 +344,7 @@ export default function DraftDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!draftId || !isCreator) return;
+    if (!draftId || !canManage) return;
     setDeleting(true);
     try {
       const pIds = picks.map(p => p.id);
@@ -383,7 +392,7 @@ export default function DraftDetailPage() {
   const handleRemovePick = async () => {
     if (!pickToRemove || !draftId || !user) return;
     const pick = pickToRemove;
-    const canRemove = user.id === pick.user_id || isCreator;
+    const canRemove = user.id === pick.user_id || canManage;
     if (!canRemove) return;
 
     setRemovingPick(true);
@@ -516,7 +525,7 @@ export default function DraftDetailPage() {
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
             <ShareButton contentType="draft" contentId={draftId!} title={draft.topic} />
-            {isCreator && picks.length > 0 && (
+            {canManage && picks.length > 0 && (
               <button
                 onClick={handleReEnrich}
                 disabled={enriching}
@@ -534,7 +543,7 @@ export default function DraftDetailPage() {
             )}>
               {isSetup ? 'Setup' : isInProgress && !isDraftComplete ? 'In Progress' : 'Complete'}
             </span>
-            {isCreator && (
+            {canManage && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="p-1.5 rounded-lg text-muted-foreground/60 hover:text-foreground transition-colors">
@@ -671,7 +680,7 @@ export default function DraftDetailPage() {
             </Button>
           )}
 
-          {isCreator && (
+          {canManage && (
             <Button onClick={handleStartDraft} disabled={starting || participants.length < 2} className="w-full h-12 rounded-xl font-bold btn-press gap-2 text-[13px]">
               <Play className="w-4 h-4" />
               {starting ? 'Starting…' : 'Start Draft'}
@@ -831,7 +840,7 @@ export default function DraftDetailPage() {
                                   <span className="block font-medium">{pick.profiles?.display_name}</span>
                                   <span className="font-mono">Rd {pick.round}</span>
                                 </span>
-                                {(isCreator || pick.user_id === user?.id) && (
+                                {(canManage || pick.user_id === user?.id) && (
                                   <button
                                     onClick={(e) => { e.stopPropagation(); setPickToRemove(pick); }}
                                     className="p-1 rounded-md text-muted-foreground/30 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
@@ -1055,7 +1064,7 @@ export default function DraftDetailPage() {
               </div>
 
               {/* Regenerate button */}
-              {isCreator && (
+              {canManage && (
                 <Button
                   onClick={generateResults}
                   variant="outline"
@@ -1129,7 +1138,7 @@ export default function DraftDetailPage() {
                               <span className="text-[10px] font-mono text-muted-foreground/70">
                                 Rd {pick.round}
                               </span>
-                              {isCreator && (
+                              {canManage && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); setPickToRemove(pick); }}
                                   className="p-1 rounded-md text-muted-foreground/30 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
