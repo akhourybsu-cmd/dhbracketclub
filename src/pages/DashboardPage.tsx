@@ -658,6 +658,7 @@ export default function DashboardPage() {
                             ) : (
                               <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60" />
                             )}
+                          </div>
                         </div>
                       </div>
                     </Link>
