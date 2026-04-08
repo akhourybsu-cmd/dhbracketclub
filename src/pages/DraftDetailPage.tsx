@@ -392,6 +392,43 @@ export default function DraftDetailPage() {
     }
   };
 
+  const handleStartEditPick = (pick: Pick) => {
+    setEditingPickId(pick.id);
+    setEditPickText(pick.pick_text);
+  };
+
+  const handleCancelEditPick = () => {
+    setEditingPickId(null);
+    setEditPickText('');
+  };
+
+  const handleSavePickEdit = async () => {
+    if (!editingPickId || !editPickText.trim()) return;
+    setSavingPick(true);
+    try {
+      const { error } = await supabase.from('draft_picks').update({ pick_text: editPickText.trim() }).eq('id', editingPickId);
+      if (error) throw error;
+      // Reset enrichment so it re-matches with new text
+      await supabase.from('item_enrichments').update({
+        status: 'pending',
+        matched_name: null,
+        image_url: null,
+        thumbnail_url: null,
+        metadata: {},
+        confidence: 0,
+      }).eq('item_id', editingPickId).eq('item_type', 'draft_pick');
+      setEditingPickId(null);
+      setEditPickText('');
+      toast.success('Pick updated');
+      fetchData();
+      fetchEnrichments();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update pick');
+    } finally {
+      setSavingPick(false);
+    }
+  };
+
   const handleRemovePick = async () => {
     if (!pickToRemove || !draftId || !user) return;
     const pick = pickToRemove;
