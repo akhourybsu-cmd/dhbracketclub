@@ -867,6 +867,18 @@ export default function CompetePage() {
     refetchStandings();
   }, [refetchEntries, refetchStandings]);
 
+  // Refetch standings and entries on page focus/visibility
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && season?.id) {
+        refetchStandings();
+        refetchEntries();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [season?.id, refetchStandings, refetchEntries]);
+
   return (
     <div className="pb-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>

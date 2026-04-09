@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { recalculateSeasonStandings } from '@/hooks/useDraftSeasons';
 
 interface PickRating {
   pick_id: string;
@@ -69,6 +70,20 @@ export function useDraftResults(draftId: string | undefined) {
 
       toast.success('Draft Report generated! 🏆');
       await fetchResults();
+
+      // Auto-recalculate season standings if draft belongs to a season (client-side fallback)
+      try {
+        const { data: entry } = await supabase
+          .from('draft_season_entries' as any)
+          .select('season_id')
+          .eq('draft_id', draftId)
+          .maybeSingle();
+        if ((entry as any)?.season_id) {
+          await recalculateSeasonStandings((entry as any).season_id);
+        }
+      } catch (seasonErr) {
+        console.error('Client-side season recalc failed (non-fatal):', seasonErr);
+      }
     } catch (err: any) {
       const msg = err?.message || 'Failed to generate report';
       toast.error(msg);
