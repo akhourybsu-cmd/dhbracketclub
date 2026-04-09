@@ -204,7 +204,7 @@ export default function DraftDetailPage() {
   const handleStartDraft = async () => {
     if (!draftId) return;
     if (!canManage) {
-      toast.error('You don't have permission to start this draft');
+      toast.error("You don't have permission to start this draft");
       return;
     }
     if (participants.length < 2) {
