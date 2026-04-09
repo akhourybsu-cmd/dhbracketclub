@@ -342,8 +342,14 @@ export async function recalculateSeasonStandings(seasonId: string) {
     });
   }
 
-  // Sort by season points and assign ranks
-  standingsUpdates.sort((a, b) => b.season_points - a.season_points);
+  // Sort by season points with multi-factor tiebreaker, then assign ranks
+  standingsUpdates.sort((a, b) => {
+    if (b.season_points !== a.season_points) return b.season_points - a.season_points;
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    if (b.podiums !== a.podiums) return b.podiums - a.podiums;
+    if (a.avg_finish !== b.avg_finish) return a.avg_finish - b.avg_finish; // lower is better
+    return b.avg_score - a.avg_score;
+  });
   let rank = 1;
   for (let i = 0; i < standingsUpdates.length; i++) {
     if (i > 0 && standingsUpdates[i].season_points < standingsUpdates[i - 1].season_points) {

@@ -363,7 +363,14 @@ Use the rate_draft_results tool to return your structured analysis.`;
               });
             }
 
-            standingsUpdates.sort((a, b) => b.season_points - a.season_points);
+            // Multi-factor tiebreaker sort
+            standingsUpdates.sort((a: any, b: any) => {
+              if (b.season_points !== a.season_points) return b.season_points - a.season_points;
+              if (b.wins !== a.wins) return b.wins - a.wins;
+              if (b.podiums !== a.podiums) return b.podiums - a.podiums;
+              if (a.avg_finish !== b.avg_finish) return a.avg_finish - b.avg_finish;
+              return b.avg_score - a.avg_score;
+            });
             let sRank = 1;
             for (let i = 0; i < standingsUpdates.length; i++) {
               if (i > 0 && standingsUpdates[i].season_points < standingsUpdates[i - 1].season_points) sRank = i + 1;

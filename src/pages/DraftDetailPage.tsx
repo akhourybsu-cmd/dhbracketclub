@@ -382,12 +382,29 @@ export default function DraftDetailPage() {
       await supabase.from('draft_results' as any).delete().eq('draft_id', draftId);
       await supabase.from('draft_picks').delete().eq('draft_id', draftId);
       await supabase.from('draft_participants').delete().eq('draft_id', draftId);
+
+      // Check season membership before deleting entry so we can recalc after
+      const { data: seasonEntryData } = await supabase
+        .from('draft_season_entries' as any)
+        .select('season_id')
+        .eq('draft_id', draftId)
+        .maybeSingle();
+      const deletedSeasonId = (seasonEntryData as any)?.season_id;
+
       await supabase.from('draft_season_entries' as any).delete().eq('draft_id', draftId);
       const { error } = await supabase.from('drafts').delete().eq('id', draftId);
       if (error) throw error;
       if (draft?.competition_id) {
         await supabase.from('competitions').delete().eq('id', draft.competition_id);
       }
+
+      // Recalculate season standings if draft was in a season
+      if (deletedSeasonId) {
+        recalculateSeasonStandings(deletedSeasonId).catch(err =>
+          console.error('Season recalc after deletion failed:', err)
+        );
+      }
+
       toast.success('Draft deleted');
       navigate('/drafts');
     } catch (err: any) {

@@ -55,6 +55,13 @@ export function useDraftResults(draftId: string | undefined) {
 
   const generateResults = useCallback(async () => {
     if (!draftId) return;
+
+    // Guard against concurrent/duplicate report generation
+    if (hasResults) {
+      console.log('Results already exist, skipping generation');
+      return;
+    }
+
     setGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('rate-draft', {
