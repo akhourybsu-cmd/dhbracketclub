@@ -109,9 +109,14 @@ export default function DraftDetailPage() {
   const seasonEntry = seasonEntries.find(e => e.draft_id === draftId);
 
 
-  const { results: draftResults, loading: resultsLoading, generating: resultsGenerating, hasResults, generateResults } = useDraftResults(draftId);
+  const { results: draftResults, loading: resultsLoading, generating: resultsGenerating, hasResults, generateResults, regenerateResults } = useDraftResults(draftId);
 
   const [autoTriggered, setAutoTriggered] = useState(false);
+  const [disputes, setDisputes] = useState<any[]>([]);
+  const [disputeDialogPick, setDisputeDialogPick] = useState<{ pick_id: string; pick_text: string; score: number; explanation: string } | null>(null);
+  const [disputeReason, setDisputeReason] = useState('');
+  const [submittingDispute, setSubmittingDispute] = useState(false);
+  const [resolvingDisputeId, setResolvingDisputeId] = useState<string | null>(null);
   const pickIds = picks.map(p => p.id);
   const { enrichments, loading: enrichmentsLoading, fetchEnrichments } = useItemEnrichments(pickIds, 'draft_pick');
   const { enriching, enrichDraftPicks } = useEnrichDraftPicks();
