@@ -1,71 +1,61 @@
 
 
-# Fix Draft Order Randomization Bug
+# Auto-Update Season Standings When Drafts Complete
 
 ## Problem
-The creator of every draft always ends up with pick_order 1 (first pick), despite the Fisher-Yates shuffle code existing. Queried all 11 completed/in-progress drafts — the creator is at position 1 in every single one. The probability of this happening by chance is effectively zero.
+When a season-eligible draft finishes and gets rated, **season standings are never automatically recalculated**. The `recalculateSeasonStandings` function is only called when the commissioner manually adds/removes a draft from the season on the Compete page. This means standings, points, wins, podiums, and averages go stale until someone triggers a manual refresh.
 
 ## Root Cause
-The shuffle updates via `Promise.all` on individual `.update()` calls likely fail silently — Supabase's `.update()` without `.throwOnError()` doesn't throw on zero-rows-affected results. Even if RLS permits it, individual updates in parallel may race or fail without surfacing errors.
+- The `rate-draft` edge function inserts `draft_results` rows but has no knowledge of seasons
+- The `useDraftResults.generateResults()` callback in DraftDetailPage calls the edge function and fetches results, but never checks if the draft belongs to a season
+- The DraftsListPage fetches stats from `draft_results` directly but doesn't refresh season standings
+- The CompetePage standings hooks (`useSeasonStandings`, `useSeasonEntries`) only fetch once on mount with no realtime or event-driven refresh
 
-## Fix (single file: `src/pages/DraftDetailPage.tsx`)
+## Fix
 
-### 1. Add `.throwOnError()` to each shuffle update
-Add `.throwOnError()` to the `.update()` calls inside the `Promise.all` so failures are caught and surfaced.
+### 1. Auto-recalculate standings after results are generated (DraftDetailPage)
+In `useDraftResults.ts`, after `generateResults()` successfully fetches new results, check if the draft belongs to a season entry. If so, call `recalculateSeasonStandings` automatically.
 
-### 2. Verify shuffle results before proceeding
-After the `Promise.all` completes, re-fetch participants to confirm the new pick_orders took effect. Use the re-fetched data (not the local `shuffled` array) to set `current_pick_user_id`.
+### 2. Auto-recalculate standings in the edge function itself (rate-draft)
+Add season-awareness to the `rate-draft` edge function: after inserting `draft_results`, check if the draft has a `draft_season_entries` row. If so, run the standings recalculation server-side using the service role client. This ensures standings update even if the client-side call is interrupted.
 
-### 3. Add a small sequential fallback
-If `Promise.all` still fails, fall back to updating participants sequentially with error logging — this ensures at least one approach works.
+### 3. Refresh standings on CompetePage mount and after navigation
+Make `useSeasonStandings` and `useSeasonEntries` re-fetch when the user navigates to the Compete page (they currently only fetch once due to empty dependency arrays effectively). Add a refetch on visibility/focus.
 
-### Updated `handleStartDraft` logic:
+## Technical Details
+
+**`supabase/functions/rate-draft/index.ts`** — After inserting draft_results (line ~284), add:
 ```typescript
-const handleStartDraft = async () => {
-  if (!draftId || !canManage) return;
-  if (participants.length < 2) {
-    toast.error('Need at least 2 participants');
-    return;
-  }
-  setStarting(true);
-  try {
-    // Fisher-Yates shuffle
-    const shuffled = [...participants];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
+// Check if this draft is part of a season
+const { data: seasonEntry } = await admin
+  .from('draft_season_entries')
+  .select('season_id')
+  .eq('draft_id', draft_id)
+  .maybeSingle();
 
-    // Update pick_order sequentially with error handling
-    for (let idx = 0; idx < shuffled.length; idx++) {
-      const { error } = await supabase
-        .from('draft_participants')
-        .update({ pick_order: idx + 1 })
-        .eq('id', shuffled[idx].id);
-      if (error) throw error;
-    }
-
-    // Start the draft with the first shuffled participant
-    const { error } = await supabase.from('drafts').update({
-      status: 'in_progress',
-      current_round: 1,
-      current_pick_number: 1,
-      current_pick_user_id: shuffled[0].user_id,
-    }).eq('id', draftId);
-    if (error) throw error;
-
-    toast.success('Draft started! Order randomized 🎲');
-    fetchData();
-  } catch (err: any) {
-    toast.error(err.message || 'Failed to start');
-  } finally {
-    setStarting(false);
-  }
-};
+if (seasonEntry?.season_id) {
+  // Recalculate season standings server-side
+  // (inline the recalculation logic using the admin client)
+}
 ```
 
-Key change: sequential updates instead of `Promise.all` to avoid race conditions, plus explicit error checking on each update.
+**`src/hooks/useDraftResults.ts`** — After `fetchResults()` succeeds in `generateResults`, check season membership and trigger client-side recalc as a fallback:
+```typescript
+// After fetchResults()
+const { data: entry } = await supabase
+  .from('draft_season_entries')
+  .select('season_id')
+  .eq('draft_id', draftId)
+  .maybeSingle();
+if (entry?.season_id) {
+  await recalculateSeasonStandings(entry.season_id);
+}
+```
+
+**`src/pages/CompetePage.tsx`** — Call `refetchStandings()` and `refetchEntries()` on page focus/visibility change so returning to the page always shows fresh data.
 
 ## Files Modified
-1. **`src/pages/DraftDetailPage.tsx`** — Fix `handleStartDraft` shuffle persistence
+1. **`supabase/functions/rate-draft/index.ts`** — Add server-side season standings recalculation after results insertion
+2. **`src/hooks/useDraftResults.ts`** — Add client-side season recalc after generating results
+3. **`src/pages/CompetePage.tsx`** — Add visibility-based refetch for standings and entries
 
