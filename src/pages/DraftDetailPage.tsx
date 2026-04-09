@@ -199,7 +199,84 @@ export default function DraftDetailPage() {
     }
   }, [hasResults]);
 
-  // Derive turn state from pick count + participant order (single source of truth)
+  // Fetch disputes for this draft
+  const fetchDisputes = useCallback(async () => {
+    if (!draftId) return;
+    const { data } = await supabase
+      .from('draft_pick_disputes' as any)
+      .select('*')
+      .eq('draft_id', draftId)
+      .order('created_at', { ascending: false });
+    if (data) setDisputes(data as any[]);
+  }, [draftId]);
+
+  useEffect(() => {
+    if (hasResults) fetchDisputes();
+  }, [hasResults, fetchDisputes]);
+
+  const handleSubmitDispute = async () => {
+    if (!disputeDialogPick || !disputeReason.trim() || !user || !draftId) return;
+    setSubmittingDispute(true);
+    try {
+      const { error } = await supabase.from('draft_pick_disputes' as any).insert({
+        draft_id: draftId,
+        pick_id: disputeDialogPick.pick_id,
+        user_id: user.id,
+        reason: disputeReason.trim(),
+      } as any);
+      if (error) throw error;
+      toast.success('Dispute submitted for review');
+      setDisputeDialogPick(null);
+      setDisputeReason('');
+      fetchDisputes();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to submit dispute');
+    } finally {
+      setSubmittingDispute(false);
+    }
+  };
+
+  const handleResolveDispute = async (disputeId: string) => {
+    setResolvingDisputeId(disputeId);
+    try {
+      const { data, error } = await supabase.functions.invoke('resolve-pick-dispute', {
+        body: { dispute_id: disputeId },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+      const scoreChange = data.old_score !== data.new_score
+        ? `Score: ${data.old_score} → ${data.new_score}`
+        : 'Score unchanged';
+      toast.success(`Pick re-evaluated! ${scoreChange}`);
+      fetchDisputes();
+      // Refresh results to show updated scores
+      const { results: refreshed } = useDraftResults(draftId);
+      // Actually just re-fetch via the hook's fetchResults
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to resolve dispute');
+    } finally {
+      setResolvingDisputeId(null);
+    }
+  };
+
+  const handleDismissDispute = async (disputeId: string) => {
+    try {
+      const { error } = await supabase
+        .from('draft_pick_disputes' as any)
+        .update({ status: 'dismissed', resolved_at: new Date().toISOString() } as any)
+        .eq('id', disputeId);
+      if (error) throw error;
+      toast.success('Dispute dismissed');
+      fetchDisputes();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to dismiss dispute');
+    }
+  };
+
+
   const derivedTurn = getDerivedDraftTurn(
     draft || { num_rounds: 1 },
     participants,
