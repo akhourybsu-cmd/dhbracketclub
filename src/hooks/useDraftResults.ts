@@ -100,5 +100,39 @@ export function useDraftResults(draftId: string | undefined) {
     }
   }, [draftId, fetchResults, hasResults]);
 
-  return { results, loading, generating, hasResults, generateResults, fetchResults };
+  const regenerateResults = useCallback(async () => {
+    if (!draftId) return;
+    setGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('rate-draft', {
+        body: { draft_id: draftId },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+      toast.success('Draft Report regenerated! 🏆');
+      await fetchResults();
+      try {
+        const { data: entry } = await supabase
+          .from('draft_season_entries' as any)
+          .select('season_id')
+          .eq('draft_id', draftId)
+          .maybeSingle();
+        if ((entry as any)?.season_id) {
+          await recalculateSeasonStandings((entry as any).season_id);
+        }
+      } catch (seasonErr) {
+        console.error('Client-side season recalc failed (non-fatal):', seasonErr);
+      }
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to regenerate report';
+      toast.error(msg);
+    } finally {
+      setGenerating(false);
+    }
+  }, [draftId, fetchResults]);
+
+  return { results, loading, generating, hasResults, generateResults, regenerateResults, fetchResults };
 }
