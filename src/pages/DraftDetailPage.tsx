@@ -216,12 +216,14 @@ export default function DraftDetailPage() {
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
       }
 
-      // Update pick_order for each participant
-      await Promise.all(
-        shuffled.map((p, idx) =>
-          supabase.from('draft_participants').update({ pick_order: idx + 1 }).eq('id', p.id)
-        )
-      );
+      // Update pick_order sequentially to avoid silent failures
+      for (let idx = 0; idx < shuffled.length; idx++) {
+        const { error: orderErr } = await supabase
+          .from('draft_participants')
+          .update({ pick_order: idx + 1 })
+          .eq('id', shuffled[idx].id);
+        if (orderErr) throw orderErr;
+      }
 
       const { error } = await supabase.from('drafts').update({
         status: 'in_progress',
