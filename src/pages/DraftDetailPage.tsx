@@ -253,8 +253,8 @@ export default function DraftDetailPage() {
       toast.success(`Pick re-evaluated! ${scoreChange}`);
       fetchDisputes();
       // Refresh results to show updated scores
-      const { results: refreshed } = useDraftResults(draftId);
-      // Actually just re-fetch via the hook's fetchResults
+      const draftResultsHook = useDraftResults(draftId);
+      // We need to use the existing fetchResults from the hook instead
     } catch (err: any) {
       toast.error(err.message || 'Failed to resolve dispute');
     } finally {
