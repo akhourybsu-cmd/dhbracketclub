@@ -220,13 +220,24 @@ export default function DraftDetailPage() {
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
       }
 
-      // Update pick_order sequentially to avoid silent failures
+      // Clear all pick_orders to negative temps to avoid unique constraint violations
       for (let idx = 0; idx < shuffled.length; idx++) {
-        const { error: orderErr, count } = await supabase
+        const { error: clearErr } = await supabase
+          .from('draft_participants')
+          .update({ pick_order: -(idx + 1) })
+          .eq('id', shuffled[idx].id);
+        if (clearErr) {
+          console.error('Failed to clear pick_order for participant', shuffled[idx].id, clearErr);
+          throw clearErr;
+        }
+      }
+
+      // Now set the real shuffled pick_orders
+      for (let idx = 0; idx < shuffled.length; idx++) {
+        const { error: orderErr } = await supabase
           .from('draft_participants')
           .update({ pick_order: idx + 1 })
-          .eq('id', shuffled[idx].id)
-          .select();
+          .eq('id', shuffled[idx].id);
         if (orderErr) {
           console.error('Failed to update pick_order for participant', shuffled[idx].id, orderErr);
           throw orderErr;
