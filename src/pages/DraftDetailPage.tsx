@@ -1499,6 +1499,42 @@ export default function DraftDetailPage() {
           }}
         />
       )}
+
+      {/* Dispute Dialog */}
+      <Dialog open={!!disputeDialogPick} onOpenChange={(open) => { if (!open) { setDisputeDialogPick(null); setDisputeReason(''); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Dispute Pick Rating</DialogTitle>
+            <DialogDescription>
+              Explain why you think this rating is incorrect. An admin will review and may trigger an AI re-evaluation.
+            </DialogDescription>
+          </DialogHeader>
+          {disputeDialogPick && (
+            <div className="space-y-4">
+              <div className="p-3 rounded-lg bg-muted/30 border border-border/30">
+                <p className="text-[13px] font-semibold">{disputeDialogPick.pick_text}</p>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Current score: {disputeDialogPick.score.toFixed(1)} — {disputeDialogPick.explanation}
+                </p>
+              </div>
+              <Textarea
+                placeholder="Why do you think this rating is wrong? (e.g., the AI made a factual error, overlooked an important quality, etc.)"
+                value={disputeReason}
+                onChange={(e) => setDisputeReason(e.target.value)}
+                className="min-h-[100px]"
+                maxLength={500}
+              />
+              <p className="text-[10px] text-muted-foreground text-right">{disputeReason.length}/500</p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDisputeDialogPick(null); setDisputeReason(''); }}>Cancel</Button>
+            <Button onClick={handleSubmitDispute} disabled={submittingDispute || !disputeReason.trim()}>
+              {submittingDispute ? 'Submitting…' : 'Submit Dispute'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
