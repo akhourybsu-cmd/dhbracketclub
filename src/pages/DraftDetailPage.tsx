@@ -202,7 +202,11 @@ export default function DraftDetailPage() {
   const hasEnrichments = enrichments.size > 0;
 
   const handleStartDraft = async () => {
-    if (!draftId || !canManage) return;
+    if (!draftId) return;
+    if (!canManage) {
+      toast.error('You don't have permission to start this draft');
+      return;
+    }
     if (participants.length < 2) {
       toast.error('Need at least 2 participants');
       return;
@@ -218,11 +222,15 @@ export default function DraftDetailPage() {
 
       // Update pick_order sequentially to avoid silent failures
       for (let idx = 0; idx < shuffled.length; idx++) {
-        const { error: orderErr } = await supabase
+        const { error: orderErr, count } = await supabase
           .from('draft_participants')
           .update({ pick_order: idx + 1 })
-          .eq('id', shuffled[idx].id);
-        if (orderErr) throw orderErr;
+          .eq('id', shuffled[idx].id)
+          .select();
+        if (orderErr) {
+          console.error('Failed to update pick_order for participant', shuffled[idx].id, orderErr);
+          throw orderErr;
+        }
       }
 
       const { error } = await supabase.from('drafts').update({
@@ -231,11 +239,15 @@ export default function DraftDetailPage() {
         current_pick_number: 1,
         current_pick_user_id: shuffled[0].user_id,
       }).eq('id', draftId);
-      if (error) throw error;
+      if (error) {
+        console.error('Failed to update draft status', error);
+        throw error;
+      }
       toast.success('Draft started! Order randomized 🎲');
       fetchData();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to start');
+      console.error('handleStartDraft error:', err);
+      toast.error(err.message || 'Failed to start draft');
     } finally {
       setStarting(false);
     }
