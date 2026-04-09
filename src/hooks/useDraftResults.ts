@@ -98,7 +98,7 @@ export function useDraftResults(draftId: string | undefined) {
     } finally {
       setGenerating(false);
     }
-  }, [draftId, fetchResults]);
+  }, [draftId, fetchResults, hasResults]);
 
   return { results, loading, generating, hasResults, generateResults, fetchResults };
 }
