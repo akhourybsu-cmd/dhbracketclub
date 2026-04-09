@@ -372,6 +372,42 @@ export type Database = {
           },
         ]
       }
+      draft_pick_disputes: {
+        Row: {
+          created_at: string
+          draft_id: string
+          id: string
+          pick_id: string
+          reason: string
+          resolution: string | null
+          resolved_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          draft_id: string
+          id?: string
+          pick_id: string
+          reason: string
+          resolution?: string | null
+          resolved_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          draft_id?: string
+          id?: string
+          pick_id?: string
+          reason?: string
+          resolution?: string | null
+          resolved_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       draft_picks: {
         Row: {
           draft_id: string
