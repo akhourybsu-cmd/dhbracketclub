@@ -109,7 +109,7 @@ export default function DraftDetailPage() {
   const seasonEntry = seasonEntries.find(e => e.draft_id === draftId);
 
 
-  const { results: draftResults, loading: resultsLoading, generating: resultsGenerating, hasResults, generateResults, regenerateResults } = useDraftResults(draftId);
+  const { results: draftResults, loading: resultsLoading, generating: resultsGenerating, hasResults, generateResults, regenerateResults, fetchResults } = useDraftResults(draftId);
 
   const [autoTriggered, setAutoTriggered] = useState(false);
   const [disputes, setDisputes] = useState<any[]>([]);
