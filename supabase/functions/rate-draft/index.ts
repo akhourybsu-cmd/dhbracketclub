@@ -287,6 +287,102 @@ Use the rate_draft_results tool to return your structured analysis.`;
       return new Response(JSON.stringify({ error: "Failed to save results" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ── Auto-recalculate season standings if draft belongs to a season ──
+    try {
+      const { data: seasonEntry } = await admin
+        .from("draft_season_entries")
+        .select("season_id")
+        .eq("draft_id", draft_id)
+        .maybeSingle();
+
+      if (seasonEntry?.season_id) {
+        const seasonId = seasonEntry.season_id;
+        console.log("Recalculating season standings for season:", seasonId);
+
+        // Get all season entries
+        const { data: allEntries } = await admin
+          .from("draft_season_entries")
+          .select("draft_id, week_number, is_playoff")
+          .eq("season_id", seasonId)
+          .eq("is_playoff", false);
+
+        if (allEntries && allEntries.length > 0) {
+          const allDraftIds = allEntries.map((e: any) => e.draft_id);
+          const { data: allResults } = await admin
+            .from("draft_results")
+            .select("draft_id, user_id, rank, total_score, points_awarded")
+            .in("draft_id", allDraftIds);
+
+          if (allResults && allResults.length > 0) {
+            // Get season config
+            const { data: seasonData } = await admin
+              .from("draft_seasons")
+              .select("best_of")
+              .eq("id", seasonId)
+              .single();
+
+            const bestOf = seasonData?.best_of || 10;
+
+            // Season points by placement
+            const SEASON_POINTS: Record<number, number> = { 1: 10, 2: 7, 3: 5, 4: 3, 5: 2 };
+            const getSeasonPts = (rank: number) => SEASON_POINTS[rank] || 1;
+
+            // Group results by user
+            const userResults = new Map<string, Array<{ rank: number; total_score: number }>>();
+            for (const r of allResults) {
+              const arr = userResults.get(r.user_id) || [];
+              arr.push({ rank: r.rank, total_score: Number(r.total_score) });
+              userResults.set(r.user_id, arr);
+            }
+
+            // Calculate standings
+            const standingsUpdates: any[] = [];
+            for (const [uid, draftsArr] of userResults) {
+              const withPts = draftsArr.map(d => ({ ...d, seasonPts: getSeasonPts(d.rank) }));
+              withPts.sort((a, b) => b.seasonPts - a.seasonPts);
+              const counted = withPts.slice(0, bestOf);
+              const seasonPoints = counted.reduce((s, d) => s + d.seasonPts, 0);
+              const wins = draftsArr.filter(d => d.rank === 1).length;
+              const podiums = draftsArr.filter(d => d.rank <= 3).length;
+              const avgFinish = draftsArr.reduce((s, d) => s + d.rank, 0) / draftsArr.length;
+              const scores = draftsArr.map(d => d.total_score);
+              const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
+              const bestScore = Math.max(...scores);
+              const worstScore = Math.min(...scores);
+              const variance = scores.reduce((s, v) => s + (v - avgScore) ** 2, 0) / scores.length;
+
+              standingsUpdates.push({
+                season_id: seasonId, user_id: uid,
+                season_points: seasonPoints, drafts_played: draftsArr.length,
+                wins, podiums,
+                avg_finish: Math.round(avgFinish * 100) / 100,
+                avg_score: Math.round(avgScore * 100) / 100,
+                best_score: Math.round(bestScore * 100) / 100,
+                worst_score: Math.round(worstScore * 100) / 100,
+                consistency: Math.round(Math.sqrt(variance) * 100) / 100,
+              });
+            }
+
+            standingsUpdates.sort((a, b) => b.season_points - a.season_points);
+            let sRank = 1;
+            for (let i = 0; i < standingsUpdates.length; i++) {
+              if (i > 0 && standingsUpdates[i].season_points < standingsUpdates[i - 1].season_points) sRank = i + 1;
+              standingsUpdates[i].rank = sRank;
+              standingsUpdates[i].playoff_seed = i + 1;
+            }
+
+            await admin.from("draft_season_standings").delete().eq("season_id", seasonId);
+            for (const s of standingsUpdates) {
+              await admin.from("draft_season_standings").insert(s);
+            }
+            console.log("Season standings recalculated:", standingsUpdates.length, "entries");
+          }
+        }
+      }
+    } catch (seasonErr) {
+      console.error("Season recalc error (non-fatal):", seasonErr);
+    }
+
     return new Response(JSON.stringify({ results: inserts }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
