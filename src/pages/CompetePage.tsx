@@ -879,6 +879,19 @@ export default function CompetePage() {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [season?.id, refetchStandings, refetchEntries]);
 
+  // Auto-recalc guard: if stored standings appear stale vs completed entries, trigger recalc
+  useEffect(() => {
+    if (!season?.id || standingsLoading || entriesLoading) return;
+    const completedEntries = entries.filter(e => !e.is_playoff && e.drafts?.status === 'complete');
+    const maxDraftsPlayed = standings.length > 0 ? Math.max(...standings.map(s => s.drafts_played)) : 0;
+    if (completedEntries.length > 0 && maxDraftsPlayed < completedEntries.length) {
+      console.log('Standings stale — triggering recalc', { maxDraftsPlayed, completedEntries: completedEntries.length });
+      recalculateSeasonStandings(season.id).then(() => {
+        refetchStandings();
+      }).catch(err => console.error('Auto-recalc failed:', err));
+    }
+  }, [season?.id, standings, entries, standingsLoading, entriesLoading, refetchStandings]);
+
   return (
     <div className="pb-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
