@@ -1,78 +1,71 @@
 
 
-# Dashboard: Reorder, Hide Completed, Online Presence
+# Fix Draft Order Randomization Bug
 
-## Overview
-Three refinements to the Home tab: reorder sections so Drafts appear first, add a toggle to hide completed items, and show a subtle online-now indicator.
+## Problem
+The creator of every draft always ends up with pick_order 1 (first pick), despite the Fisher-Yates shuffle code existing. Queried all 11 completed/in-progress drafts — the creator is at position 1 in every single one. The probability of this happening by chance is effectively zero.
 
-## Changes (single file: `src/pages/DashboardPage.tsx`)
+## Root Cause
+The shuffle updates via `Promise.all` on individual `.update()` calls likely fail silently — Supabase's `.update()` without `.throwOnError()` doesn't throw on zero-rows-affected results. Even if RLS permits it, individual updates in parallel may race or fail without surfacing errors.
 
-### 1. Reorder Sections
-Move the Drafts section (lines 524-572) above the Brackets section (lines 475-522). Adjust animation delays accordingly.
+## Fix (single file: `src/pages/DraftDetailPage.tsx`)
 
-### 2. Hide Completed Toggle
-- Add `const [hideCompleted, setHideCompleted] = useState(false)` state
-- Add a small toggle pill near the top of the competitions area (below Quick Create): "Hide completed" with a Switch or clickable pill
-- Filter drafts: when `hideCompleted`, exclude `d.status === 'completed'`
-- Filter brackets: when `hideCompleted`, exclude pools where `bracketStatuses.get(pool.id) === 'complete'`
-- If all items in a section are hidden, hide the entire section header
+### 1. Add `.throwOnError()` to each shuffle update
+Add `.throwOnError()` to the `.update()` calls inside the `Promise.all` so failures are caught and surfaced.
 
-### 3. Online Presence Indicator
-- Add a `presenceChannel` via `supabase.channel('online-presence')` using Supabase Realtime Presence
-- Track current user presence on mount, subscribe to sync events
-- Store `onlineUserIds` set in state
-- Display a subtle row below the greeting: small stacked avatar dots (colored circles with initials) for online members + "N online" label
-- Fetch all profiles once (the group is small/private) and cross-reference with presence state
-- Keep it minimal — a single row with tiny 24px avatar circles, max 5 shown + overflow count
+### 2. Verify shuffle results before proceeding
+After the `Promise.all` completes, re-fetch participants to confirm the new pick_orders took effect. Use the re-fetched data (not the local `shuffled` array) to set `current_pick_user_id`.
 
-## Technical Details
+### 3. Add a small sequential fallback
+If `Promise.all` still fails, fall back to updating participants sequentially with error logging — this ensures at least one approach works.
 
-**Presence channel setup:**
+### Updated `handleStartDraft` logic:
 ```typescript
-const [onlineUsers, setOnlineUsers] = useState<{id: string, name: string, avatar?: string}[]>([]);
+const handleStartDraft = async () => {
+  if (!draftId || !canManage) return;
+  if (participants.length < 2) {
+    toast.error('Need at least 2 participants');
+    return;
+  }
+  setStarting(true);
+  try {
+    // Fisher-Yates shuffle
+    const shuffled = [...participants];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
 
-useEffect(() => {
-  if (!user) return;
-  const channel = supabase.channel('online-presence', { config: { presence: { key: user.id } } });
-  channel
-    .on('presence', { event: 'sync' }, () => {
-      const state = channel.presenceState();
-      const users = Object.values(state).flat().map((p: any) => ({
-        id: p.user_id, name: p.display_name, avatar: p.avatar_url
-      }));
-      setOnlineUsers(users);
-    })
-    .subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
-        await channel.track({ user_id: user.id, display_name: displayName, avatar_url: dashAvatarUrl });
-      }
-    });
-  return () => { supabase.removeChannel(channel); };
-}, [user, displayName, dashAvatarUrl]);
+    // Update pick_order sequentially with error handling
+    for (let idx = 0; idx < shuffled.length; idx++) {
+      const { error } = await supabase
+        .from('draft_participants')
+        .update({ pick_order: idx + 1 })
+        .eq('id', shuffled[idx].id);
+      if (error) throw error;
+    }
+
+    // Start the draft with the first shuffled participant
+    const { error } = await supabase.from('drafts').update({
+      status: 'in_progress',
+      current_round: 1,
+      current_pick_number: 1,
+      current_pick_user_id: shuffled[0].user_id,
+    }).eq('id', draftId);
+    if (error) throw error;
+
+    toast.success('Draft started! Order randomized 🎲');
+    fetchData();
+  } catch (err: any) {
+    toast.error(err.message || 'Failed to start');
+  } finally {
+    setStarting(false);
+  }
+};
 ```
 
-**Online indicator UI** — placed right after the greeting subtitle:
-```
-<div className="flex items-center gap-1.5 mt-2">
-  <div className="flex -space-x-1.5">
-    {onlineUsers.slice(0,5).map(u => <UserAvatar size={20} ... />)}
-  </div>
-  <span className="text-[10px] text-muted-foreground font-medium">
-    {onlineUsers.length} online
-  </span>
-</div>
-```
-
-**Hide completed pill** — placed between Quick Create and the first section:
-```
-<button onClick={() => setHideCompleted(!hideCompleted)}
-  className={cn("text-[10px] font-bold px-3 py-1.5 rounded-full transition-colors",
-    hideCompleted ? "bg-primary/15 text-primary" : "bg-muted/50 text-muted-foreground"
-  )}>
-  {hideCompleted ? 'Show completed' : 'Hide completed'}
-</button>
-```
+Key change: sequential updates instead of `Promise.all` to avoid race conditions, plus explicit error checking on each update.
 
 ## Files Modified
-1. **`src/pages/DashboardPage.tsx`** — All three features in one file
+1. **`src/pages/DraftDetailPage.tsx`** — Fix `handleStartDraft` shuffle persistence
 
