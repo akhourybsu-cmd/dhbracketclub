@@ -131,7 +131,7 @@ For each pick's explanation, address:
 Be strategic, specific, consistent, readable, and confident but not overly harsh. Avoid vague generic praise, random unexplained criticism, over-rewarding popularity alone, over-penalizing niche picks that are strategically sound, and contradicting yourself across similar picks.
 
 === SCORING ===
-Rate each pick on a scale of 1-10. Then rank all participants from best to worst based on their total scores.
+Rate each pick on a scale of 1.0 to 10.0 using tenth-of-a-point precision (e.g. 7.3, 8.7, 6.1). Do NOT round to whole numbers or half-points — every score must reflect a specific tenth. Differentiate meaningfully between similar picks. Then rank all participants from best to worst based on their total scores.
 
 === SUMMARY (per person) ===
 Write a 2-3 sentence summary of each participant's draft performance. Mention their best pick, worst pick, overall board identity, and strategic approach.
@@ -180,7 +180,7 @@ Use the rate_draft_results tool to return your structured analysis.`;
                             properties: {
                               pick_id: { type: "string" },
                               pick_text: { type: "string" },
-                              score: { type: "number", description: "Score from 1.0 to 10.0" },
+                              score: { type: "number", description: "Score from 1.0 to 10.0, must use tenth precision (e.g. 7.3, not 7.0 or 7.5)" },
                               explanation: { type: "string", description: "Brief explanation for the score" },
                             },
                             required: ["pick_id", "pick_text", "score", "explanation"],

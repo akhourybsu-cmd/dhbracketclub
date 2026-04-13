@@ -118,6 +118,8 @@ Please re-evaluate this pick considering their argument. Apply the same 8-factor
 
 If the dispute raises a valid point (e.g., factual error, overlooked quality, incorrect assumption), adjust the score accordingly. If the original rating was fair, you may keep it the same or make minor adjustments. Be honest and fair.
 
+IMPORTANT: Score using tenth-of-a-point precision (e.g. 7.3, 8.7, 6.1). Do NOT round to whole numbers or half-points.
+
 Use the re_evaluate_pick tool to return your updated assessment.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -141,7 +143,7 @@ Use the re_evaluate_pick tool to return your updated assessment.`;
               parameters: {
                 type: "object",
                 properties: {
-                  new_score: { type: "number", description: "Updated score from 1.0 to 10.0" },
+                  new_score: { type: "number", description: "Updated score from 1.0 to 10.0, must use tenth precision (e.g. 7.3, not 7.0 or 7.5)" },
                   new_explanation: { type: "string", description: "Updated explanation for the score" },
                   resolution_note: { type: "string", description: "Brief note about what changed and why (or why the score stayed the same)" },
                 },
