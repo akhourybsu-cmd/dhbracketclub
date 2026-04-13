@@ -1189,10 +1189,10 @@ export default function DraftDetailPage() {
                           {result.rank}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <span className="text-[13px] font-bold truncate flex items-center gap-1.5">
-                            {participant?.profiles?.display_name || 'Unknown'}
+                          <span className="text-[13px] font-bold flex items-center gap-1.5 min-w-0">
+                            <span className="truncate">{participant?.profiles?.display_name || 'Unknown'}</span>
                             {userStreak && (
-                              <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md" style={{ background: 'hsl(var(--gold) / 0.12)', color: 'hsl(var(--gold))' }}>
+                              <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0" style={{ background: 'hsl(var(--gold) / 0.12)', color: 'hsl(var(--gold))' }}>
                                 <Flame className="w-2.5 h-2.5" /> {userStreak}🔥
                               </span>
                             )}
@@ -1260,8 +1260,8 @@ export default function DraftDetailPage() {
                                     {isParticipant && (
                                       <button
                                         onClick={(e) => { e.stopPropagation(); setDisputeDialogPick(pr); }}
-                                        className="p-1.5 rounded-md text-muted-foreground/40 hover:text-warning active:text-warning transition-colors"
-                                        title="Dispute this rating"
+                                        className="p-2.5 -m-1 rounded-md text-muted-foreground/40 hover:text-warning active:text-warning transition-colors"
+                                        aria-label="Dispute this rating"
                                       >
                                         <Flag className="w-3.5 h-3.5" />
                                       </button>
