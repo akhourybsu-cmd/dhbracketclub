@@ -329,9 +329,10 @@ function StandingsCard({ standings, userId }: { standings: SeasonStanding[]; use
 
             return (
               <div key={s.id}>
-                <div
+                <button
+                  type="button"
                   className={cn(
-                    'flex items-center gap-3 px-4 py-3.5 transition-colors cursor-pointer',
+                    'flex items-center gap-3 px-4 py-3.5 transition-colors cursor-pointer w-full text-left',
                     rank === 1 && 'relative',
                     isMe && !isPodium && 'border-l-2 border-l-gold/40',
                   )}
@@ -339,6 +340,8 @@ function StandingsCard({ standings, userId }: { standings: SeasonStanding[]; use
                     background: 'linear-gradient(90deg, hsl(var(--gold) / 0.08), transparent)',
                   } : undefined}
                   onClick={() => setExpanded(isExpanded ? null : s.id)}
+                  aria-expanded={isExpanded}
+                  aria-label={`${(s.profiles as any)?.display_name || 'Unknown'} standings details`}
                 >
                   <div className="w-7 flex-shrink-0 flex items-center justify-center">
                     {isPodium ? (
@@ -377,7 +380,7 @@ function StandingsCard({ standings, userId }: { standings: SeasonStanding[]; use
                       <p className="text-[8px] font-bold uppercase" style={{ color: 'hsl(var(--gold) / 0.6)' }}>Leader</p>
                     )}
                   </div>
-                </div>
+                </button>
                 {isExpanded && (
                   <div className="px-4 pb-3 pt-0">
                     <div className="grid grid-cols-4 gap-px rounded-lg overflow-hidden bg-border/10">

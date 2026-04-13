@@ -241,10 +241,18 @@ export default function FeedPage() {
             })}
           </div>
 
-          {activity.length === 0 && !loading && (
-            <div className="text-center py-12">
-              <Zap className="w-8 h-8 mx-auto text-muted-foreground/60 mb-2" />
-              <p className="text-xs text-muted-foreground/60">No activity yet</p>
+          {activity.length === 0 && posts.length === 0 && !loading && (
+            <div className="text-center py-16">
+              <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--primary) / 0.04))' }}>
+                <Newspaper className="w-7 h-7 text-primary/60" />
+              </div>
+              <p className="text-sm font-semibold text-foreground/70 mb-1">No activity yet</p>
+              <p className="text-xs text-muted-foreground/60 mb-4">Start a discussion or create something to get the feed going</p>
+              <Link to="/posts/create">
+                <Button size="sm" variant="outline" className="gap-1.5 text-xs rounded-xl">
+                  <Plus className="w-3.5 h-3.5" /> Start a Discussion
+                </Button>
+              </Link>
             </div>
           )}
         </div>

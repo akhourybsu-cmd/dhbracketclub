@@ -201,7 +201,7 @@ export default function EventsPage() {
               <div className="glass-card p-4 space-y-3">
                 <div className="flex items-center justify-between mb-1">
                   <h3 className="text-sm font-bold">New Event</h3>
-                  <button onClick={() => setShowCreate(false)} className="p-1 rounded hover:bg-muted/50"><X className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => setShowCreate(false)} className="p-2.5 -m-1 rounded-lg hover:bg-muted/50" aria-label="Close create form"><X className="w-3.5 h-3.5" /></button>
                 </div>
                 <Input
                   placeholder="What's the plan?"
@@ -440,10 +440,12 @@ export default function EventsPage() {
 
         {events.length === 0 && !loading && (
           <div className="text-center py-16">
-            <CalendarDays className="w-10 h-10 mx-auto text-muted-foreground/60 mb-3" />
-            <p className="text-sm text-muted-foreground/70 font-medium">No events yet</p>
-            <p className="text-xs text-muted-foreground/70 mt-1">Plan something with the crew</p>
-            <Button size="sm" variant="outline" onClick={() => setShowCreate(true)} className="mt-4 gap-1.5 text-xs rounded-xl">
+            <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, hsl(var(--success) / 0.12), hsl(var(--success) / 0.04))' }}>
+              <CalendarDays className="w-7 h-7 text-success/60" />
+            </div>
+            <p className="text-sm font-semibold text-foreground/70 mb-1">No events yet</p>
+            <p className="text-xs text-muted-foreground/60 mb-4">Plan something with the crew</p>
+            <Button size="sm" variant="outline" onClick={() => setShowCreate(true)} className="gap-1.5 text-xs rounded-xl">
               <Plus className="w-3.5 h-3.5" /> Create Event
             </Button>
           </div>

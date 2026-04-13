@@ -42,7 +42,7 @@ export default function ChatPage() {
         const viewportHeight = vv.height + vv.offsetTop;
         const keyboardInset = Math.max(0, window.innerHeight - viewportHeight);
         const keyboardOpen = keyboardInset > 100;
-        const mobileBottomOffset = keyboardOpen ? 0 : 72;
+        const mobileBottomOffset = keyboardOpen ? 0 : 76; // 4.5rem (nav) + ~4px buffer
         const nextHeight = isDesktop()
           ? viewportHeight
           : Math.max(220, viewportHeight - mobileBottomOffset);
