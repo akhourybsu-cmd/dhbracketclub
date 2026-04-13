@@ -1,73 +1,28 @@
 
 
-# Restrict Report Regeneration + Add Pick Dispute System
+# Clarification Needed
 
-## Overview
-Two changes: (1) Lock down the "Regenerate Report" button to admin-only, and (2) add a "Dispute Pick" feature where any participant can flag a specific pick rating with reasoning, which the admin can then use to trigger an AI re-evaluation of just that pick.
+The project already uses **Lovable AI**, which provides access to both Google Gemini and OpenAI models through a pre-configured gateway. No external API key is needed.
 
-## Changes
+The earlier issue with outdated AI knowledge (Zootopia 2, K-pop Demon Hunters) is solved by:
+1. Upgrading the model from `google/gemini-3-flash-preview` to `google/gemini-2.5-pro` (more recent training data)
+2. Adding today's date to the system prompt so the AI knows what year it is
 
-### 1. Restrict Regenerate Report to Admin Only
-**`src/pages/DraftDetailPage.tsx`**
-- Change the regenerate button guard from `canManage` (creator OR admin) to `isAppAdmin` only
-- Keep the initial "Generate Report" button available to all participants (first-time generation)
+**This was already planned and approved** in a previous conversation but may not have been deployed yet.
 
-### 2. Create `draft_pick_disputes` Table
-New migration:
-```sql
-CREATE TABLE public.draft_pick_disputes (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  draft_id uuid NOT NULL,
-  pick_id uuid NOT NULL,
-  user_id uuid NOT NULL,
-  reason text NOT NULL,
-  status text NOT NULL DEFAULT 'pending',
-  resolution text,
-  resolved_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-ALTER TABLE public.draft_pick_disputes ENABLE ROW LEVEL SECURITY;
--- Everyone can view disputes for transparency
-CREATE POLICY "Disputes viewable by authenticated" ON public.draft_pick_disputes FOR SELECT TO authenticated USING (true);
--- Users can submit disputes
-CREATE POLICY "Users can create disputes" ON public.draft_pick_disputes FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
--- Admin can update disputes
-CREATE POLICY "Admin can update disputes" ON public.draft_pick_disputes FOR UPDATE TO authenticated USING (is_app_admin(auth.uid()));
--- Admin can delete disputes
-CREATE POLICY "Admin can delete disputes" ON public.draft_pick_disputes FOR DELETE TO authenticated USING (is_app_admin(auth.uid()));
-```
+## If you still want to use your own OpenAI API key
 
-### 3. Add Dispute UI on Pick Ratings
-**`src/pages/DraftDetailPage.tsx`**
-- Add a small flag icon button next to each pick rating score (visible to all participants)
-- Clicking opens a dialog with the pick text, current score, current explanation, and a textarea for "Why do you think this rating is wrong?"
-- Submit inserts into `draft_pick_disputes`
-- Show a small badge/indicator on picks that have pending disputes
+This is possible but **not recommended** — it would mean:
+- Managing your own billing separately from Lovable
+- No real advantage since the same OpenAI models (GPT-5, GPT-5-mini) are already available through Lovable AI
+- Extra configuration work
 
-### 4. Admin Dispute Resolution Panel
-**`src/pages/DraftDetailPage.tsx`**
-- Below the results section (admin-only), show pending disputes with the pick, current score, and user's reasoning
-- Each dispute gets a "Re-evaluate" button that calls a new edge function
-- Also a "Dismiss" button to reject the dispute
+## Recommended next step
 
-### 5. New Edge Function: `resolve-pick-dispute`
-**`supabase/functions/resolve-pick-dispute/index.ts`**
-- Accepts: `dispute_id`
-- Admin-only (verify via `is_app_admin` RPC)
-- Fetches the dispute, the original pick, the draft topic, and the user's reasoning
-- Sends the single pick back to AI with the dispute context: "A user has disputed this rating because: [reason]. Re-evaluate this pick considering their argument."
-- AI returns a new score and explanation for just that one pick
-- Updates the `pick_ratings` JSONB in `draft_results` for that specific pick
-- Recalculates `total_score` by summing all pick scores
-- Re-ranks all participants using the same tiebreaker cascade
-- Updates the dispute status to `resolved`
-- Triggers season standings recalc if applicable
+Apply the previously approved fix: upgrade the AI model and add date-awareness to the `rate-draft` and `resolve-pick-dispute` edge functions. This will resolve the knowledge recency problem without any external API key.
 
-### 6. Notification
-- Toast feedback to the disputing user ("Dispute submitted") and to admin on resolution
-
-## Files Modified
-1. **`src/pages/DraftDetailPage.tsx`** — Restrict regenerate to admin, add dispute flag button + dialog, add admin dispute panel
-2. **`supabase/functions/resolve-pick-dispute/index.ts`** — New edge function for AI re-evaluation of a single pick
-3. **Migration** — New `draft_pick_disputes` table
+### Changes
+1. **`supabase/functions/rate-draft/index.ts`** — Change model to `google/gemini-2.5-pro`, add `Today's date is YYYY-MM-DD` to system prompt
+2. **`supabase/functions/resolve-pick-dispute/index.ts`** — Same model + date changes
+3. **`supabase/functions/suggest-items/index.ts`** — Same updates for consistency
 
