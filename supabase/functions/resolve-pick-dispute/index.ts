@@ -127,9 +127,9 @@ Use the re_evaluate_pick tool to return your updated assessment.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-pro",
         messages: [
-          { role: "system", content: "You are a fair draft competition judge. Re-evaluate picks when presented with valid arguments." },
+          { role: "system", content: `Today's date is ${new Date().toISOString().split('T')[0]}. You are a fair draft competition judge. Evaluate all picks based on their current real-world status as of today — do not treat released content as unreleased. Re-evaluate picks when presented with valid arguments.` },
           { role: "user", content: prompt },
         ],
         tools: [

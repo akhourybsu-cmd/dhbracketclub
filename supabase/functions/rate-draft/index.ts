@@ -150,9 +150,9 @@ Use the rate_draft_results tool to return your structured analysis.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-pro",
         messages: [
-          { role: "system", content: "You are a fair and insightful draft competition judge. Provide honest, entertaining, and constructive ratings." },
+          { role: "system", content: `Today's date is ${new Date().toISOString().split('T')[0]}. You are a fair and insightful draft competition judge. Evaluate all picks based on their current real-world status as of today — do not treat released content as unreleased. Provide honest, entertaining, and constructive ratings.` },
           { role: "user", content: prompt },
         ],
         tools: [
