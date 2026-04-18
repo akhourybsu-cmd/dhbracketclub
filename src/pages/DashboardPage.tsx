@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
   Plus, Users, ArrowRight, Trophy, BarChart3, Shield, Download, X, Swords,
-  MessageCircle, Bookmark, Zap, CalendarDays, Clock, MapPin, ChevronRight
+  MessageCircle, Bookmark, Zap, CalendarDays, Clock, MapPin, ChevronRight, ScrollText, Newspaper
 } from 'lucide-react';
 import { UserAvatar } from '@/components/chat/UserAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -442,9 +442,9 @@ export default function DashboardPage() {
         className="grid grid-cols-4 gap-1.5 sm:gap-2 mb-7"
       >
         {[
+          { to: '/lore', icon: ScrollText, label: 'Lore', color: 'lore' },
           { to: '/drafts/create', icon: Bookmark, label: 'Draft', color: 'gold' },
           { to: '/pools/create', icon: Trophy, label: 'Bracket', color: 'primary' },
-          { to: '/compete', icon: Swords, label: 'League', color: 'gold' },
           { to: '/lockbox', icon: Shield, label: 'Lockbox', color: 'destructive' },
         ].map((item, i) => (
           <motion.div key={item.to} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 + i * 0.04 }}>
@@ -711,6 +711,9 @@ export default function DashboardPage() {
               <Zap className="w-3.5 h-3.5 inline-block mr-1.5 text-primary" />
               Recent Activity
             </h2>
+            <Link to="/feed" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors inline-flex items-center gap-1">
+              <Newspaper className="w-3 h-3" /> Open Feed
+            </Link>
           </div>
           <div className="glass-card divide-y divide-border/20 overflow-hidden">
             {activity.slice(0, 6).map((a: any) => {
