@@ -1,118 +1,95 @@
 
-# DH Lore Module — Plan
 
-## Overview
-Add **DH Lore** as a new primary navigation tab replacing Feed. Feed moves to a secondary entry point on the Dashboard. DH Lore becomes a private archive of inside jokes, quotes, moments, and nicknames with a fast Quick Add flow.
+# DH Club Home — Command Center Refinement
 
-## Navigation Changes
-- **Bottom nav (`AppLayout.tsx`)**: Replace `Feed` tab with `Lore` tab (icon: `ScrollText` or `BookHeart`, gold accent matching Drafts/module-identity guidelines).
-- **Dashboard (`DashboardPage.tsx`)**: Add a compact "Recent Activity" card with a clear "Open Feed" CTA in the secondary section (below primary modules).
-- **Routes (`App.tsx`)**:
-  - `/lore` → LorePage (home/library hybrid)
-  - `/lore/create` → opens via dialog/sheet (not full route, faster UX)
-  - `/lore/:loreId` → LoreDetailPage
-  - `/feed` → kept intact
+## Audit Findings (current Home: `src/pages/DashboardPage.tsx`)
 
-## Data Model (new migration)
+**Works well**
+- Clean hero with monogram + greeting, online presence dots
+- Lore tile in quick-create row, smooth animations
+- Section dividers + glass cards have a premium feel
+- Drafts/Brackets sections handle dismissed/completed states
 
-**`lore_entries`** table:
-- `id` uuid pk
-- `created_by` uuid (auth user)
-- `type` text — enum-like: `quote | inside_joke | story | nickname | bit | hall_of_fame | hall_of_shame`
-- `title` text (required) — the phrase/quote/nickname
-- `context` text (required) — short story
-- `people_involved` uuid[] (optional, references profile ids)
-- `tags` text[] (optional)
-- `image_url` text (optional)
-- `era` text (optional, freeform like "Summer 2023")
-- `status` text — `classic | active | legendary | cursed | retired` (default `classic`)
-- `source_message_id` uuid (nullable, future chat-to-lore)
-- `created_at`, `updated_at`
+**Too passive / low-signal**
+- Hero only shows "Good morning, Name 👋" + "X active competitions" — no season, no rank, no urgency
+- "Your turn" only appears as a small line *inside* a draft card — easy to miss
+- 4 quick-create tiles are visually equal (Lore, Draft, Bracket, Lockbox) — doesn't reflect that Drafts/League are the backbone
+- No League/Season presence on Home at all, despite being central to the product
+- Recent Activity is a flat 6-row list, no priority weighting
+- "X active competitions" is a generic counter, not actionable
 
-**`lore_reactions`** table (lightweight):
-- `id`, `lore_id`, `user_id`, `reaction` text (`legendary | elite | cursed | fraud | all_timer | certified`), `created_at`
-- Unique on (lore_id, user_id, reaction)
+## Changes (smallest set, no app redesign)
 
-RLS: viewable by all authenticated; insert/update/delete by creator or admin (matching app pattern).
+### 1. Hero → Command Strip
+Keep the greeting line compact (1 row: monogram + "Hey, Name"). **Add a Season Command Strip directly under the greeting** — a single horizontal row of 3 stat chips:
+- **Season** — e.g. `Season 1` (from `useCurrentSeason`)
+- **Your rank** — e.g. `2nd` with seed dot color (from `useSeasonStandings` filtered to current user)
+- **Progress** — e.g. `Draft 7 of 12` (entries count vs `regular_season_drafts`)
 
-## Screens
+Tappable → routes to `/compete`. Falls back gracefully if no season exists (hides chip strip, keeps greeting).
 
-### 1. LorePage (`/lore`) — Home + Library combined
-- **Header**: "DH Lore" title, subtitle "The archive", `+ Add Lore` button (top-right, gold accent)
-- **Featured strip**: 1-2 random "legendary" entries as hero cards
-- **Quick filters**: chip row — All / Quotes / Jokes / Moments / Nicknames / Bits / Legendary / Cursed
-- **Search bar**: keyword search (title + context + tags)
-- **Random Lore button**: dice icon, fetches random entry → opens detail
-- **Grid/list of entries**: card layout with type badge, title (large), context preview (2 lines), tags, reaction counts, era
+### 2. New "Needs Your Attention" Block (above quick-create)
+Render only when there's ≥1 urgent item. Compact list of 1–3 action chips:
+- **Your pick is up** in *<draft topic>* → `/drafts/:id` (gold accent, pulse dot)
+- **Playoffs live** if season status = `playoffs`
+- **Season ends in N drafts** when ≤2 regular drafts remain
+- **Lockbox closes today** (if applicable from existing lockbox hook)
 
-### 2. LoreDetailPage (`/lore/:id`)
-- Type badge + status badge (e.g. "LEGENDARY")
-- Large title/quote (display typography)
-- Era + created by + date
-- Full context/story
-- People involved (avatar row)
-- Tags
-- Image if present
-- Reaction bar (6 reactions, tap to toggle, count display)
-- Edit/delete for owner/admin
+Distinct visual: thin gold left-border stripe, no padding bloat. Hidden entirely when nothing urgent (preserves clean feel for empty states).
 
-### 3. Quick Add Lore (Sheet/Dialog from `+ Add Lore`)
-- **Step 1 (visible by default)** — only 3 fields:
-  1. **Type** — segmented chip selector (Quote / Joke / Moment / Nickname / Bit) — default Quote
-  2. **Title or phrase** — single line input, autofocus, large text
-  3. **What's the story?** — compact textarea (3 rows)
-- **"Add more details" collapsible** — hidden until expanded:
-  - People involved (multi-select profiles)
-  - Tags (chip input)
-  - Era (text)
-  - Status (segmented: Classic/Active/Legendary/Cursed/Retired)
-  - Image upload (uses existing `chat-attachments` bucket or new `lore-images`)
-- **Save to Lore** button — sticky bottom, gold, full-width on mobile
-- Toast confirmation + redirect to detail or list
+### 3. Rebalance Quick Create Tiles
+Reorder to reflect real priority and make Drafts visually dominant:
+- **Drafts** tile gets a subtle gold gradient halo (slightly brighter)
+- Order: `Draft → Lore → Bracket → Lockbox`
+- Same 4-col grid, no layout change — just hierarchy via accent intensity
 
-## Dashboard Feed Relocation
-- New secondary card under main modules: **"Recent Activity"** card
-  - Shows last 2-3 activity items inline
-  - "Open Feed" button → `/feed`
-- Compact, doesn't compete visually with Lore/Drafts/Brackets
+### 4. Drafts Section — sharper status hierarchy
+- Sort: **your-turn first**, then in-progress, then setup
+- "Your pick!" line promoted to a **left edge gold stripe** on the card (not just text)
+- Status pill colors made more distinct: in_progress = success green pulse, setup = muted, on-the-clock-you = gold solid
+- Add a tiny "on the clock: Name" chip under topic when in_progress and not your turn (already partly there — just elevate visual)
+- Truncate gracefully: ensure `min-w-0` on the flex child (already present — verify)
 
-## Design Language
-- Lore module color: **soft purple/violet accent** (new module identity, distinct from gold/blue/teal/amber) OR reuse existing gold for archive feel. Recommend: **violet** `hsl(265 70% 65%)` for "lore/memory" feel.
-- Cards: same Surface/Elevated pattern, Arena Edge top gradient
-- Type badges: subtle pill, monospace label
-- Status badges: more prominent for Legendary/Cursed (gold/red glow)
-- Mobile-first: 44px touch targets, safe-area aware
+### 5. League Snapshot card (new, inserted before Drafts section, only if season exists)
+Single compact glass card:
+- Header: `Season 1 · Draft 7 of 12` + "View League →" link to `/compete`
+- Mini top-3 podium: gold/silver/bronze rank dots + display names + season points (one row each, super compact)
+- Progress bar: regular-season completion %
+- If status = `playoffs`: replace progress bar with "Playoffs Live" badge
 
-## Files to Add
-- `supabase/migrations/<new>_dh_lore.sql` — tables, RLS, indexes
-- `src/pages/LorePage.tsx`
-- `src/pages/LoreDetailPage.tsx`
-- `src/components/lore/QuickAddLoreSheet.tsx`
-- `src/components/lore/LoreCard.tsx`
-- `src/components/lore/LoreReactionBar.tsx`
-- `src/components/lore/LoreTypeBadge.tsx`
-- `src/hooks/useLoreEntries.ts`
+Reuses existing hooks (`useCurrentSeason`, `useSeasonStandings`, `useSeasonEntries`) — no new queries to write from scratch.
+
+### 6. Recent Activity — pulse, not noise
+- Cap at 5 items (was 6)
+- **Promote high-signal events** (`draft_completed`, `bracket_submitted`, `event_created`) with a subtle accent dot
+- De-emphasize routine events (`poll_voted`, `event_rsvp`) with reduced opacity
+- Keep "Open Feed" link intact (Feed stays accessible)
+
+### 7. Light/Dark polish
+- Command-strip chips: use `bg-surface-elevated` with `border-border/40` for clean separation in light mode
+- Gold accents already use HSL tokens — verify contrast on light bg, slightly darken `--gold` usage in light mode if needed via existing `.light` overrides
+- "Needs Attention" block: gold tint at 8% opacity in dark, 12% in light for parity
+
+### 8. Mobile-first
+All new elements sit above the fold on 411×734. Command strip is a single row of 3 chips (~28px tall). Needs-attention block is ≤2 rows. League snapshot ≈140px. No horizontal scroll, all touch targets ≥44px.
 
 ## Files to Modify
-- `src/App.tsx` — add 3 routes, keep `/feed`
-- `src/components/AppLayout.tsx` — swap Feed → Lore in bottom nav
-- `src/pages/DashboardPage.tsx` — add "Recent Activity / Open Feed" secondary card
-- `tailwind.config.ts` / `src/index.css` — add `--lore` violet token if going that route
+- `src/pages/DashboardPage.tsx` — hero command strip, needs-attention block, league snapshot, drafts sort/accent, activity tier
+- `src/index.css` — minor: needs-attention left-stripe utility, dark/light polish tokens (if needed)
 
-## Future-Friendly Hooks
-- `source_message_id` column ready for "Save to Lore" from chat
-- `people_involved` array ready for profile linking
-- `era` + `created_at` ready for "On this day" resurfacing
-- Reaction system extensible (just add to enum)
-- Image upload path generic enough for future video/audio
+## Files NOT Changed
+- Navigation (`AppLayout.tsx`)
+- Routes (`App.tsx`)
+- Data model / migrations
+- Other pages
 
-## Manual Testing Checklist
-- Navigation tab swap on mobile (411px viewport)
-- Quick Add: 3-field flow saves under 20s
-- Optional details expand/collapse smoothly
-- Search + filter chips work together
-- Random Lore returns different entries
-- Reactions toggle correctly per user
-- Feed still accessible from Dashboard
-- Detail page edit/delete permissions
-- Dark mode polish on new violet accent
+## Final Output (will summarize after build)
+1. Hierarchy: greeting → command strip → needs-attention → quick-create → league snapshot → drafts → brackets → activity
+2. Hero: now shows season, rank, draft progress at a glance
+3. Urgency: dedicated block surfaces "your turn" + season milestones
+4. League/Drafts centrality: snapshot card + gold-accented draft tile + sorted draft list
+5. Draft cards: your-turn-first sort, gold left stripe when on the clock, clearer status pills
+6. Activity: trimmed to 5, signal events accented, routine events dimmed
+7. Light/Dark: chip backgrounds tuned, gold contrast verified
+8. Future: easy to add "On this day" lore resurfacing, lockbox urgency hook, playoff bracket teaser — all slot into the new attention block or league snapshot
+
