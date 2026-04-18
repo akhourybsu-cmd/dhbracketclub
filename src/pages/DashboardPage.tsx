@@ -764,6 +764,24 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
+      {/* ═══ Feed entry point (always visible secondary CTA) ═══ */}
+      {activity.length === 0 && (
+        <Link to="/feed" className="block group">
+          <div className="glass-card p-4 flex items-center gap-3 transition-all duration-200 group-hover:border-primary/15">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{
+              background: 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.04))',
+            }}>
+              <Newspaper className="w-4 h-4 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-bold tracking-tight">The Feed</p>
+              <p className="text-[10px] text-muted-foreground/70 font-medium">Activity, posts & discussions</p>
+            </div>
+            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
+          </div>
+        </Link>
+      )}
+
     </div>
   );
 }
