@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState, useCallback } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { LayoutDashboard, MessageSquareText, CalendarDays, Swords, Newspaper, User, Trophy, BarChart3, MessageCircle, Bookmark, Link2 } from 'lucide-react';
+import { LayoutDashboard, MessageSquareText, CalendarDays, Swords, Newspaper, User, Trophy, BarChart3, MessageCircle, Bookmark, Link2, ScrollText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -14,13 +14,14 @@ const navItems = [
   { path: '/chat', label: 'Chat', icon: MessageSquareText },
   { path: '/compete', label: 'Compete', icon: Swords },
   { path: '/events', label: 'Events', icon: CalendarDays },
-  { path: '/feed', label: 'Feed', icon: Newspaper },
+  { path: '/lore', label: 'Lore', icon: ScrollText },
 ];
 
 const sidebarModules = [
   { path: '/dashboard', label: 'Home', icon: LayoutDashboard },
   { path: '/chat', label: 'Chat', icon: MessageSquareText },
   { path: '/shared', label: 'Shared', icon: Link2 },
+  { path: '/lore', label: 'Lore', icon: ScrollText },
   { path: '/feed', label: 'Feed', icon: Newspaper },
   { path: '/events', label: 'Events', icon: CalendarDays },
   { type: 'divider', label: 'Compete' },
@@ -123,6 +124,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
     }
     if (path === '/feed') {
       return location.pathname === '/feed' || location.pathname.startsWith('/posts');
+    }
+    if (path === '/lore') {
+      return location.pathname.startsWith('/lore');
     }
     if (path === '/dashboard') return location.pathname === '/dashboard';
     return location.pathname.startsWith(path);
