@@ -1457,6 +1457,101 @@ export type Database = {
         }
         Relationships: []
       }
+      lore_entries: {
+        Row: {
+          context: string
+          created_at: string
+          created_by: string
+          era: string | null
+          id: string
+          image_url: string | null
+          people_involved: string[] | null
+          source_message_id: string | null
+          status: string
+          tags: string[] | null
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          context: string
+          created_at?: string
+          created_by: string
+          era?: string | null
+          id?: string
+          image_url?: string | null
+          people_involved?: string[] | null
+          source_message_id?: string | null
+          status?: string
+          tags?: string[] | null
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          context?: string
+          created_at?: string
+          created_by?: string
+          era?: string | null
+          id?: string
+          image_url?: string | null
+          people_involved?: string[] | null
+          source_message_id?: string | null
+          status?: string
+          tags?: string[] | null
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lore_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lore_reactions: {
+        Row: {
+          created_at: string
+          id: string
+          lore_id: string
+          reaction: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lore_id: string
+          reaction: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lore_id?: string
+          reaction?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lore_reactions_lore_id_fkey"
+            columns: ["lore_id"]
+            isOneToOne: false
+            referencedRelation: "lore_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lore_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_link_previews: {
         Row: {
           content_type: string

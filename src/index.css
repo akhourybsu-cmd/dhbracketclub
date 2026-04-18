@@ -65,6 +65,8 @@
     --silver: 220 10% 68%;
     --bronze: 30 55% 48%;
     --live: 0 75% 58%;
+    /* DH Lore — soft violet for memory/archive */
+    --lore: 265 70% 65%;
 
     /* ═══ Premium Gradients ═══ */
     --gradient-primary: linear-gradient(135deg, hsl(152 72% 42%), hsl(152 80% 56%));
@@ -140,6 +142,7 @@
     --silver: 220 10% 68%;
     --bronze: 30 55% 48%;
     --live: 0 75% 58%;
+    --lore: 265 70% 65%;
     --shadow-card: 0 1px 2px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.18);
     --shadow-elevated: 0 8px 32px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.3);
     --shadow-glow: 0 0 20px hsl(152 72% 46% / 0.2), 0 0 40px hsl(152 72% 46% / 0.05);
@@ -193,6 +196,7 @@
     --silver: 220 8% 48%;
     --bronze: 30 45% 38%;
     --live: 0 68% 48%;
+    --lore: 265 55% 45%;
     --premium-warm: 28 70% 44%;
     --shadow-card: 0 1px 3px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.04);
     --shadow-elevated: 0 8px 32px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04);

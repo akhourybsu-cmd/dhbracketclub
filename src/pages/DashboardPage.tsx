@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
   Plus, Users, ArrowRight, Trophy, BarChart3, Shield, Download, X, Swords,
-  MessageCircle, Bookmark, Zap, CalendarDays, Clock, MapPin, ChevronRight
+  MessageCircle, Bookmark, Zap, CalendarDays, Clock, MapPin, ChevronRight, ScrollText, Newspaper
 } from 'lucide-react';
 import { UserAvatar } from '@/components/chat/UserAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -442,9 +442,9 @@ export default function DashboardPage() {
         className="grid grid-cols-4 gap-1.5 sm:gap-2 mb-7"
       >
         {[
+          { to: '/lore', icon: ScrollText, label: 'Lore', color: 'lore' },
           { to: '/drafts/create', icon: Bookmark, label: 'Draft', color: 'gold' },
           { to: '/pools/create', icon: Trophy, label: 'Bracket', color: 'primary' },
-          { to: '/compete', icon: Swords, label: 'League', color: 'gold' },
           { to: '/lockbox', icon: Shield, label: 'Lockbox', color: 'destructive' },
         ].map((item, i) => (
           <motion.div key={item.to} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 + i * 0.04 }}>
@@ -711,6 +711,9 @@ export default function DashboardPage() {
               <Zap className="w-3.5 h-3.5 inline-block mr-1.5 text-primary" />
               Recent Activity
             </h2>
+            <Link to="/feed" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors inline-flex items-center gap-1">
+              <Newspaper className="w-3 h-3" /> Open Feed
+            </Link>
           </div>
           <div className="glass-card divide-y divide-border/20 overflow-hidden">
             {activity.slice(0, 6).map((a: any) => {
@@ -759,6 +762,24 @@ export default function DashboardPage() {
             })}
           </div>
         </motion.div>
+      )}
+
+      {/* ═══ Feed entry point (always visible secondary CTA) ═══ */}
+      {activity.length === 0 && (
+        <Link to="/feed" className="block group">
+          <div className="glass-card p-4 flex items-center gap-3 transition-all duration-200 group-hover:border-primary/15">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{
+              background: 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.04))',
+            }}>
+              <Newspaper className="w-4 h-4 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-bold tracking-tight">The Feed</p>
+              <p className="text-[10px] text-muted-foreground/70 font-medium">Activity, posts & discussions</p>
+            </div>
+            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
+          </div>
+        </Link>
       )}
 
     </div>

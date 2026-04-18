@@ -44,6 +44,8 @@ const CompetePage = lazy(() => import("./pages/CompetePage"));
 const LockboxPage = lazy(() => import("./pages/LockboxPage"));
 const LockboxCrackPage = lazy(() => import("./pages/LockboxCrackPage"));
 const FeedPage = lazy(() => import("./pages/FeedPage"));
+const LorePage = lazy(() => import("./pages/LorePage"));
+const LoreDetailPage = lazy(() => import("./pages/LoreDetailPage"));
 const PostsPage = lazy(() => import("./pages/PostsPage"));
 const PostDetailPage = lazy(() => import("./pages/PostDetailPage"));
 const SharedMediaPage = lazy(() => import("./pages/SharedMediaPage"));
@@ -108,6 +110,10 @@ function AnimatedRoutes() {
         {/* Lockbox module */}
         <Route path="/lockbox" element={<ProtectedPage><LockboxPage /></ProtectedPage>} />
         <Route path="/lockbox/:lockId" element={<ProtectedPage><LockboxCrackPage /></ProtectedPage>} />
+
+        {/* DH Lore */}
+        <Route path="/lore" element={<ProtectedPage><LorePage /></ProtectedPage>} />
+        <Route path="/lore/:loreId" element={<ProtectedPage><LoreDetailPage /></ProtectedPage>} />
 
         {/* Feed + Posts */}
         <Route path="/feed" element={<ProtectedPage><FeedPage /></ProtectedPage>} />
