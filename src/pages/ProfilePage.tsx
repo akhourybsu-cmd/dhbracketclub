@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { LogOut, User, Volume2, VolumeX, BarChart3, MessageCircle, CalendarDays, MessageSquareText, Trophy, Bookmark, Zap, Sun, Moon, Bell, BellOff, Camera, Loader2 } from 'lucide-react';
+import { LogOut, User, Volume2, VolumeX, BarChart3, MessageCircle, CalendarDays, MessageSquareText, Trophy, Bookmark, Zap, Sun, Moon, Bell, BellOff, Camera, Loader2, RefreshCw } from 'lucide-react';
+import { nukeAndReload } from '@/lib/forceUpdate';
 import { useTheme } from 'next-themes';
 import { motion } from 'framer-motion';
 import dhMonogram from '@/assets/dh-monogram.png';
@@ -354,6 +355,29 @@ export default function ProfilePage() {
             />
           </div>
         )}
+
+        {/* Force update */}
+        <div className="flex items-center justify-between pt-2 border-t border-border/40">
+          <div className="flex items-center gap-3">
+            <RefreshCw className="w-4 h-4 text-primary" />
+            <div>
+              <p className="text-[13px] font-semibold">Force Update</p>
+              <p className="text-[10px] text-muted-foreground">Clear cache and pull the latest build</p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              toast.loading('Clearing cache and reloading...');
+              play('tap');
+              await nukeAndReload();
+            }}
+            className="h-8 text-[11px] font-bold rounded-lg btn-press"
+          >
+            Update
+          </Button>
+        </div>
       </div>
 
       <NotificationPreferencesSection />
