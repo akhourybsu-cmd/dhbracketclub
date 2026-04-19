@@ -18,6 +18,7 @@ export default function PickemAdminPage() {
 
   const [activeWeekId, setActiveWeekId] = useState<string | null>(null);
   const { games, refetch: refetchGames } = useWeekGames(activeWeekId || undefined);
+  const [newGame, setNewGame] = useState({ away: '', home: '', kickoff: '' });
 
   useEffect(() => {
     if (!user) return;
@@ -77,8 +78,6 @@ export default function PickemAdminPage() {
     refetchWeeks();
   }
 
-  // Game CRUD
-  const [newGame, setNewGame] = useState({ away: '', home: '', kickoff: '' });
   async function addGame() {
     if (!activeWeekId || !season) return;
     if (!newGame.away || !newGame.home || !newGame.kickoff) return toast.error('Pick teams + kickoff');
