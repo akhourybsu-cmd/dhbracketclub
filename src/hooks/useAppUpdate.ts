@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { toast } from 'sonner';
 
@@ -6,15 +7,20 @@ import { toast } from 'sonner';
  * Detects when a new version of the app is available,
  * shows a toast notification, then refreshes after a short delay.
  * Aggressively checks: immediately on mount, every 10s, on focus,
- * on visibility change, and when the network comes back online.
+ * on visibility change, when the network comes back online,
+ * and on every route change.
  */
 export function useAppUpdate() {
+  const location = useLocation();
+  const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
+
   const {
     needRefresh: [needRefresh],
     updateServiceWorker,
   } = useRegisterSW({
-    onRegisteredSW(swUrl, registration) {
+    onRegisteredSW(_swUrl, registration) {
       if (!registration) return;
+      registrationRef.current = registration;
 
       const checkForUpdate = () => {
         registration.update().catch(() => {
@@ -47,16 +53,26 @@ export function useAppUpdate() {
     },
   });
 
+  // Cheap update check on every route change — catches stuck installs
+  // that aren't getting woken up by visibility/focus events.
+  useEffect(() => {
+    registrationRef.current?.update().catch(() => {});
+  }, [location.pathname]);
+
   useEffect(() => {
     if (needRefresh) {
       toast('🔄 New version available', {
-        description: 'Updating now — the app will refresh in a moment.',
-        duration: 2000,
+        description: 'Tap to update now, or we\'ll refresh in a moment.',
+        duration: 4000,
+        action: {
+          label: 'Update',
+          onClick: () => updateServiceWorker(true),
+        },
       });
       // Short delay so the toast registers, then activate the new SW and reload
       const timer = setTimeout(() => {
         updateServiceWorker(true);
-      }, 1200);
+      }, 1500);
       return () => clearTimeout(timer);
     }
   }, [needRefresh, updateServiceWorker]);

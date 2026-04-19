@@ -1,5 +1,10 @@
 // Push notification handler for the service worker
 // This file is imported by the PWA service worker
+//
+// SW_VERSION: bump this string to force the browser to detect a SW change
+// and trigger an update on installed PWAs (Android/iOS).
+const SW_VERSION = '2025-04-19-2';
+self.__SW_VERSION = SW_VERSION;
 
 // Take control immediately on install so updates apply without waiting
 self.addEventListener('install', () => {
