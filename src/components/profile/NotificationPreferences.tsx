@@ -30,6 +30,8 @@ export default function NotificationPreferencesSection() {
   const { play } = useSoundEffect();
   const { user } = useAuth();
   const [testingSend, setTestingSend] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const buildId = typeof __BUILD_ID__ !== 'undefined' ? __BUILD_ID__ : 'dev';
 
   if (loading) return null;
 
