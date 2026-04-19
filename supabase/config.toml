@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.suggest-items]
 verify_jwt = false
+
+[functions.suggest-playoff-topics]
+verify_jwt = false
+
+[functions.advance-playoffs]
+verify_jwt = false
