@@ -3,7 +3,7 @@
 //
 // SW_VERSION: bump this string to force the browser to detect a SW change
 // and trigger an update on installed PWAs (Android/iOS).
-const SW_VERSION = '2025-04-19-2';
+const SW_VERSION = '2025-04-19-3-dashboard';
 self.__SW_VERSION = SW_VERSION;
 
 // Take control immediately on install so updates apply without waiting
