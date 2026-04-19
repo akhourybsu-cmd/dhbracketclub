@@ -218,6 +218,7 @@ function MessageBubbleInner({
         dragConstraints={{ left: 0, right: SWIPE_THRESHOLD + 10 }}
         dragElastic={0.15}
         dragSnapToOrigin
+        dragMomentum={false}
         onDrag={(_, info) => {
           if (info.offset.x > SWIPE_THRESHOLD && !swiped) {
             setSwiped(true);
@@ -229,7 +230,12 @@ function MessageBubbleInner({
           setSwiped(false);
         }}
         onContextMenu={handleContextMenu}
-        onClick={handleTap}
+        onTap={(e) => {
+          // Ignore taps that originated on interactive children (links, buttons, images)
+          const target = e.target as HTMLElement;
+          if (target.closest('a, button, textarea, input')) return;
+          handleTap();
+        }}
       >
         {/* Swipe reply icon */}
         <motion.div
