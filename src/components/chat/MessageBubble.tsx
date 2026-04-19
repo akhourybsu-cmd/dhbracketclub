@@ -160,29 +160,37 @@ function MessageBubbleInner({
     };
     document.addEventListener('keydown', handleEsc);
     return () => document.removeEventListener('keydown', handleEsc);
-  }, [showOverlay]);
+  }, [showOverlay, setShowOverlay]);
 
   const isBeingEdited = editingMessageId === msg.id;
   const isFirstInBlock = !sameAuthor;
   const isLastInBlock = !nextSameAuthor;
   const isSingle = isFirstInBlock && isLastInBlock;
 
+  const openOverlay = useCallback(() => {
+    if (isBeingEdited) return;
+    const rect = bubbleWrapperRef.current?.getBoundingClientRect();
+    setOverlayBelow(!!rect && rect.top < HEADER_OFFSET + 44);
+    setShowOverlay(true);
+  }, [isBeingEdited, setShowOverlay]);
+
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     if (isBeingEdited) return;
     e.preventDefault();
-    setShowOverlay(true);
-  }, [isBeingEdited]);
+    openOverlay();
+  }, [isBeingEdited, openOverlay]);
 
   const handleTap = useCallback(() => {
     if (isBeingEdited) return;
-    setShowOverlay(prev => !prev);
-  }, [isBeingEdited]);
+    if (showOverlay) setShowOverlay(false);
+    else openOverlay();
+  }, [isBeingEdited, showOverlay, openOverlay, setShowOverlay]);
 
   const handleReaction = useCallback((emoji: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     onToggleReaction(msg.id, emoji);
     setShowOverlay(false);
-  }, [msg.id, onToggleReaction]);
+  }, [msg.id, onToggleReaction, setShowOverlay]);
 
   const confirmDelete = () => {
     onDeleteMessage(msg.id);
