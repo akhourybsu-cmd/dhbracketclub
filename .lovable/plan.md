@@ -1,44 +1,51 @@
 
-The user already has the PWA installed on Android and isn't getting the latest version, even after our recent update improvements. The issue: Android Chrome PWAs cache the precached `index.html` very aggressively, and the existing installed SW (from before our recent changes) may not be checking often enough — or the precache manifest itself isn't being invalidated.
+The user is stuck — even with `?fresh=1` and our SW updates, the installed Android PWA isn't picking up new versions. Time for a nuclear, universal solution that doesn't rely on the user remembering URLs or the old SW behaving correctly.
 
-Looking at current state:
-- `vite.config.ts` precaches `**/*.{js,css,html,...}` — this includes `index.html`. Even with our NetworkFirst nav rule, Workbox's precache controller can still serve the precached HTML before the runtime route matches.
-- Android installed PWAs often keep the OLD service worker active for a long time because the browser only checks for SW updates ~every 24h on its own when foregrounded briefly.
-- The user's *currently installed* SW is the old one — it doesn't have our new 10s polling or focus listeners yet. They need ONE good update to land, then future updates will be fast.
+## Root problem
+The OLD service worker (installed before our fixes) is still in control. It's serving cached HTML, never lets the new SW activate, and the user can't reach `?fresh=1` because even that route loads through the stale shell. We need a solution that works **without** depending on the old SW cooperating.
 
-### Root causes
-1. `index.html` is in the precache → served instantly from cache, never hits network on navigation
-2. Old installed SW doesn't aggressively self-update on Android
-3. No "tap to update now" escape hatch when user knows there's a new version
+## The Universal Solution: Build-time version stamping + in-app force-update
 
-### Plan
+### 1. Build-time version stamp (`vite.config.ts` + new `src/lib/version.ts`)
+- Inject `__BUILD_ID__` (timestamp) at build time via Vite `define`
+- Every deploy gets a unique ID baked into the JS bundle
 
-**1. Stop precaching `index.html`** (`vite.config.ts`)
-- Remove `html` from `globPatterns` so the HTML shell is never precached
-- The existing NetworkFirst nav route will fetch fresh HTML every time (with 3s timeout fallback to cache)
-- This is the single biggest fix — guarantees the next visit pulls fresh HTML which loads fresh JS hashes
+### 2. Version probe endpoint (`public/version.json`)
+- Static file written at build time containing `{ "buildId": "<timestamp>" }`
+- Served fresh from network (cache-busted with `?t=${Date.now()}`)
+- This bypasses the SW entirely because we fetch with `cache: 'no-store'`
 
-**2. Add a manual "Update available" action** (`src/hooks/useAppUpdate.ts`)
-- When `needRefresh` is true, in addition to the auto-reload toast, also expose a tap-to-update button via the toast action
-- Shorter, clearer messaging
-- Also: call `registration.update()` once on every route change (cheap, no-op when nothing new)
+### 3. Active version checker (`src/hooks/useAppUpdate.ts` — rewrite)
+- On mount + every 30s + on focus/online: fetch `/version.json?t=<now>` with `cache: 'no-store'`
+- Compare server `buildId` to baked-in `__BUILD_ID__`
+- If mismatch → show prominent toast with "Update Now" button
+- "Update Now" handler: unregister ALL service workers, clear ALL caches, then `window.location.reload(true)` — does NOT depend on the old SW behaving
 
-**3. Force one-time SW reset for stuck installs** (`public/sw-push.js` + `src/main.tsx`)
-- Bump a `SW_VERSION` constant in `sw-push.js` so the SW file content changes → forces browser to detect SW update
-- In `main.tsx`, on app boot, if a query param `?fresh=1` is present, unregister all SWs and clear all caches then reload — gives the user a recovery URL to share
+### 4. Auto-nuke after grace period
+- If mismatch detected and user doesn't tap within 10s, auto-execute the nuke + reload
+- This guarantees update lands within 30-40s of opening the app, regardless of SW state
 
-**4. User recovery instructions**
-- Tell user: open `https://dhbracketclub.lovable.app/?fresh=1` once on the installed PWA — this nukes the old SW and caches, then on next launch the new fast-update SW takes over.
-- After that one-time reset, all future updates land within ~10s of opening the app.
+### 5. In-app "Force Update" button (Profile page)
+- Always-available manual escape hatch in Settings/Profile
+- Same nuke + reload logic
+- User can hit it anytime they suspect they're on an old version
 
-### Files to modify
-- `vite.config.ts` — drop `html` from precache globs
-- `src/hooks/useAppUpdate.ts` — route-change update check, clearer toast with action
-- `public/sw-push.js` — version bump comment to invalidate
-- `src/main.tsx` — `?fresh=1` recovery handler
+### 6. Removed dependency on SW update cycle
+- Stop relying on `useRegisterSW`'s `needRefresh` (which requires the old SW to cooperate)
+- Our version check works at the app layer — even a totally broken SW can't prevent it
 
-### Result
-- Next deploy: installed Android PWA pulls fresh `index.html` on next launch (no longer precached)
-- New SW takes over with 10s polling + focus/online listeners
-- User has `?fresh=1` recovery URL if stuck
-- Future updates: visible within seconds of foregrounding
+## Files to modify
+- `vite.config.ts` — add `define: { __BUILD_ID__: ... }` and emit `version.json` via a small plugin
+- `src/vite-env.d.ts` — declare `__BUILD_ID__` global
+- `src/hooks/useAppUpdate.ts` — rewrite with version-probe strategy + nuke helper
+- `src/lib/forceUpdate.ts` (new) — exported `nukeAndReload()` helper
+- `src/pages/ProfilePage.tsx` — add "Force Update" button in settings area
+- `public/version.json` — placeholder (overwritten at build)
+
+## Why this works universally
+- Doesn't trust the SW to self-update
+- Doesn't trust the browser to check for SW changes
+- Doesn't require the user to remember a URL
+- Probes a no-store endpoint that bypasses all caches
+- When mismatch found, nukes everything from the JS layer and forces a hard reload
+- Works on Android Chrome, iOS Safari, desktop, anywhere
