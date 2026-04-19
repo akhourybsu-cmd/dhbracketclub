@@ -1,6 +1,5 @@
 
 
-User wants reactions on chat messages to visually overlap the bottom-right corner of the message bubble (like iMessage/Messenger style), instead of sitting below as a separate row.
+User wants reaction pills to overlap the bubble corner but not collide with the timestamp shown below the bubble.
 
-### Current state
-Need to check `MessageBubble.tsx` to see how reactions render today.
+Need to check current MessageBubble layout to see where timestamp sits relative to bubble + reactions.
