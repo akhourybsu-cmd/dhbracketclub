@@ -1,63 +1,80 @@
 
 
-## Mobile Platform Deep Review
+## Playoff System — 3-Round Head-to-Head with AI-Generated Topics
 
-Goal: systematic audit of the mobile experience (411×734 viewport) — verify every module is wired up, navigates correctly, renders without overflow, and updates in real-time. Identify loose ends and produce a prioritized fix list before changing any code.
+### Current state
+- `draft_playoff_matches` table exists with the right shape (round, match_number, seed_a/b, user_a/b, draft_id, winner)
+- Visual `PlayoffPicture` bracket already renders matches if they exist
+- **Missing**: nothing actually creates matches, generates the H2H draft, or advances winners
 
-### Approach — read-only audit in 4 sweeps
+### New playoff format (per your direction)
+Every playoff round is a **head-to-head 1v1 mini-draft** with an **AI-generated topic** unique to that matchup. **3 rounds** total, all 5 seeds qualify:
 
-**Sweep 1 — Navigation & shell integrity**
-- `AppLayout.tsx` mobile bottom-nav (5 tabs: Home/Compete/Chat/More/Profile)
-- Verify every route in `App.tsx` is reachable and `ProtectedRoute` works
-- Confirm safe-area insets, 4.5rem nav height, no content obscured
-- Check the recent desktop-sidebar reorg didn't regress mobile
+```
+Round 1 — QUARTERFINAL (Play-In)
+  M1:  #4 seed  vs  #5 seed         (#1, #2, #3 get byes)
 
-**Sweep 2 — Module-by-module functionality** (read each main page + its hook)
-| Module | Page(s) | Hook(s) / data path |
-|---|---|---|
-| Dashboard | DashboardPage | Drafts/Brackets/Events priority sort, presence |
-| Drafts | DraftsList, DraftDetail, CreateDraft | useDraftSeasons, useDraftResults, draftTurn |
-| Pick'em | PickemHome, PickemWeek, PickemWeekResults, Standings, History, Rules | usePickem, usePickSuggestion |
-| Lockbox | LockboxPage, LockboxCrackPage | useLockbox |
-| Chat | ChatPage | useChatMessages, useChatActions, useChatRealtime, presence |
-| Lore | LorePage, LoreDetail | useLoreEntries |
-| Events | EventsPage, EventDetail | (RSVP + thread) |
-| Compete | CompetePage | hub routing |
-| Polls/Rankings/Posts | (archived in More) | basic reachability |
-| Profile | ProfilePage + AdminHub | avatar, notifications, admin gating |
+Round 2 — SEMIFINALS
+  M1:  #1 seed  vs  M1 winner       (lowest remaining seed)
+  M2:  #2 seed  vs  #3 seed
 
-**Sweep 3 — Cross-cutting concerns**
-- Realtime subscriptions: chat messages, presence, draft picks, lockbox cracks
-- Push notifications: VAPID fetch, subscription persistence, throttle behavior
-- PWA update flow: confirm probe + ChunkLoadError recovery still wired after recent changes
-- Auth: login/signup/reset flow, session persistence, ProtectedRoute redirects
-- AI flows: suggestions, draft enrichment, draft reports, dispute resolution
-- Edge function health: spot-check logs for `enrich-draft-picks`, `score-nfl-week`, `finalize-lockbox-day`, `send-push-notification`
-- Mobile interaction standards: 44px touch targets, no-truncation policy, image lazy/async decoding
+Round 3 — CHAMPIONSHIP
+  M1:  Semi M1 winner  vs  Semi M2 winner
+```
 
-**Sweep 4 — Live preview QA at 411×734**
-- Browser-test each main route for: overflow, broken layouts, tap-target size, empty-state correctness, loading skeletons, console errors
+Each match = a real draft (`drafts` row) with exactly 2 participants, AI-generated topic, snake-style, normal scoring. Winner = higher `total_score` from `draft_results`.
 
-### Deliverable
+### Implementation
 
-A categorized findings report with:
-- ✅ Verified working
-- ⚠️ Minor polish opportunities
-- 🔴 Real bugs / loose ends needing fixes
+**1. New edge function: `generate-playoff-draft`** (Lovable AI / Gemini 2.5 Pro)
+- Input: `{ seasonId, round, matchNumber, userA, userB, seedA, seedB }`
+- AI generates a fresh, fun, never-before-used topic (passes prior season topics for variety) — e.g. "Top 5 movie villains of all time", "Best pizza toppings"
+- Creates a `competitions` row + `drafts` row (`num_rounds: 5`, `status: 'setup'`, topic from AI, category inferred)
+- Inserts both users as `draft_participants` with random pick_order (Fisher-Yates, per memory)
+- Updates `draft_playoff_matches.draft_id` to link
+- Returns the new draft id
 
-Then propose a follow-up implementation plan only for the 🔴 items, scoped tightly so we don't redesign anything.
+**2. New edge function: `advance-playoffs`**
+- Input: `{ seasonId }`
+- Logic:
+  - **Trigger transition**: if `season.status === 'regular_season'` AND all regular drafts complete AND all top-5 standings finalized → set `status = 'playoffs'`, write `playoff_seed` (1–5), generate **Round 1** (QF: #4 vs #5)
+  - **Advance**: for each completed playoff match (linked draft is `complete`), set `winner_user_id` from highest `total_score`. Then check if the round is complete:
+    - QF done → generate Semis (#1 vs QF winner; #2 vs #3)
+    - Semis done → generate Final (SF1 winner vs SF2 winner)
+    - Final done → set `season.status = 'complete'`
+- Idempotent (safe to re-run)
+
+**3. Auto-trigger hooks**
+- Call `advance-playoffs` from `CompetePage` mount + visibility-change (alongside existing `recalculateSeasonStandings`) when `season.status` is `regular_season` or `playoffs`
+- Also expose a manual "Advance Playoffs" button in `CommissionerPanel` for safety
+
+**4. UI updates to `PlayoffPicture` (existing component)**
+Update the existing 3-column bracket render to:
+- Column 1: QF (1 match — #4 vs #5)
+- Column 2: SF (2 matches)
+- Column 3: Final (1 match)
+- Each match card shows: AI topic, both players with seeds, status pill (Pending / In Progress / Complete + winner), "Open Draft" link if `draft_id` exists
+- Champion banner above bracket once Final is decided
+
+**5. Lifetime stats**
+`useLifetimeStats` already counts `round = 'final'` wins as championships — keep that, and the new round names will be `'qf' | 'sf' | 'final'`.
+
+### Files touched
+- **NEW**: `supabase/functions/generate-playoff-draft/index.ts`
+- **NEW**: `supabase/functions/advance-playoffs/index.ts`
+- **NEW**: `supabase/migrations/<timestamp>_playoff_round_constraint.sql` — drop any old round CHECK if it exists; allow `'qf' | 'sf' | 'final'`. (Schema shows no constraint, so likely a no-op confirmation.)
+- `src/hooks/useDraftSeasons.ts` — add `advancePlayoffs(seasonId)` helper that invokes the edge function
+- `src/pages/CompetePage.tsx` — auto-invoke advance on mount/visibility; rewrite `PlayoffPicture` bracket layout for QF/SF/Final; add Commissioner "Advance Playoffs" button
 
 ### Out of scope
-- No redesign, no new features
-- No mobile native (Capacitor) work — PWA only
-- No edge function rewrites unless a real bug surfaces
+- No changes to regular-season scoring or standings logic
+- No changes to the underlying draft engine — playoff drafts use the existing snake draft
+- No notifications wiring in this pass (can add later: "Your playoff matchup is ready" push)
 
-### Files to inspect (read-only)
-- `src/App.tsx`, `src/components/AppLayout.tsx`, `src/components/ProtectedRoute.tsx`
-- All pages listed above + their primary hooks
-- Recent edits: `src/main.tsx`, `src/lib/forceUpdate.ts`, `src/hooks/useAppUpdate.ts`, `src/components/profile/AdminHub.tsx`
-- Edge function logs (spot-check) via supabase tools
-
-### After audit
-Present findings inline in chat with a prioritized fix plan you can approve before any code changes.
+### QA
+- With a season at `regular_season` and all 12 drafts complete → seeing the bracket auto-generate QF #4 vs #5
+- Complete the QF draft → Semis auto-generate with correct pairings
+- Complete both Semis → Final auto-generates
+- Complete Final → season flips to `complete`, championship counted in Lifetime Stats
+- Each generated draft has a distinct AI topic, both users present, snake order randomized
 
