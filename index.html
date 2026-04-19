@@ -27,8 +27,87 @@
     <meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/76bc1a9b-404b-4b98-8bdc-398d9b967fe6/id-preview-29d45b82--db618edb-d8da-47d5-a69b-30b667ef4202.lovable.app-1773630762223.png">
     <meta property="og:title" content="DH — Compete With Your Crew">
   <meta name="twitter:title" content="DH — Compete With Your Crew">
-  <meta property="og:description" content="Brackets, rankings, polls, and drafts with your crew. Private competitions for bragging rights — for fun, not funds.">
+    <meta property="og:description" content="Brackets, rankings, polls, and drafts with your crew. Private competitions for bragging rights — for fun, not funds.">
   <meta name="twitter:description" content="Brackets, rankings, polls, and drafts with your crew. Private competitions for bragging rights — for fun, not funds.">
+
+  <!--
+    BOOTSTRAP UPDATE PROBE — runs BEFORE any bundled JS.
+    This breaks installed PWAs out of stale-SW limbo even when the cached
+    JS bundle is broken or the old SW is intercepting everything.
+    It uses a sessionStorage flag to avoid reload loops.
+  -->
+  <script>
+    (function () {
+      try {
+        var url = new URL(window.location.href);
+        var forceKill = url.searchParams.has('fresh') || url.searchParams.has('kill');
+        var alreadyNuked = sessionStorage.getItem('__dh_nuked__') === '1';
+
+        function nukeAll(reason) {
+          if (alreadyNuked) return Promise.resolve();
+          sessionStorage.setItem('__dh_nuked__', '1');
+          console.warn('[DH bootstrap] Nuking SW + caches:', reason);
+          var swPromise = ('serviceWorker' in navigator)
+            ? navigator.serviceWorker.getRegistrations().then(function (regs) {
+                return Promise.all(regs.map(function (r) { return r.unregister().catch(function () {}); }));
+              }).catch(function () {})
+            : Promise.resolve();
+          var cachePromise = ('caches' in window)
+            ? caches.keys().then(function (keys) {
+                return Promise.all(keys.map(function (k) { return caches.delete(k).catch(function () {}); }));
+              }).catch(function () {})
+            : Promise.resolve();
+          return Promise.all([swPromise, cachePromise]);
+        }
+
+        function reloadClean() {
+          var u = new URL(window.location.href);
+          u.searchParams.delete('fresh');
+          u.searchParams.delete('kill');
+          u.searchParams.set('_v', Date.now().toString());
+          window.location.replace(u.toString());
+        }
+
+        if (forceKill) {
+          nukeAll('manual ?fresh/?kill').then(reloadClean);
+          return;
+        }
+
+        // Probe version.json directly (no-store, cache-busted) to detect stale installs.
+        // If the response is intercepted by an old SW returning HTML, JSON parse will fail
+        // → treat as stale and nuke.
+        fetch('/version.json?t=' + Date.now(), {
+          cache: 'no-store',
+          headers: { 'cache-control': 'no-cache', 'pragma': 'no-cache' }
+        })
+          .then(function (r) { return r.ok ? r.text() : null; })
+          .then(function (txt) {
+            if (!txt) return;
+            try {
+              var data = JSON.parse(txt);
+              var remoteId = data && data.buildId;
+              var lastSeen = localStorage.getItem('__dh_build_id__');
+              if (remoteId && remoteId !== 'dev') {
+                if (lastSeen && lastSeen !== remoteId && !alreadyNuked) {
+                  // We previously saw a different build → SW is likely serving stale shell.
+                  nukeAll('build mismatch ' + lastSeen + ' -> ' + remoteId).then(reloadClean);
+                  return;
+                }
+                localStorage.setItem('__dh_build_id__', remoteId);
+              }
+            } catch (e) {
+              // version.json was intercepted and returned non-JSON (probably HTML from old SW)
+              if (!alreadyNuked) {
+                nukeAll('version.json intercepted as non-JSON').then(reloadClean);
+              }
+            }
+          })
+          .catch(function () { /* offline — leave alone */ });
+      } catch (e) {
+        console.error('[DH bootstrap] probe failed:', e);
+      }
+    })();
+  </script>
 </head>
 
   <body>
