@@ -236,7 +236,10 @@ function MessageBubbleInner({
           )}
 
           {/* Bubble column */}
-          <div className={cn("relative max-w-[80%] min-w-[60px]")}>
+          <div className={cn(
+            "relative max-w-[80%] min-w-[60px]",
+            msg.reactions && msg.reactions.length > 0 && "mb-3"
+          )}>
             {/* Sender name — first message of other user's block */}
             {!isOwn && isFirstInBlock && (
               <div className="flex items-baseline gap-2 mb-0.5 pl-1">
