@@ -965,6 +965,7 @@ export default function CompetePage() {
           </TabsContent>
 
           <TabsContent value="more" className="space-y-3">
+            <PickemCompeteCard />
             <ArchivedModesCard />
           </TabsContent>
         </Tabs>
