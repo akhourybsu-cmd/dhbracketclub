@@ -157,6 +157,15 @@ function AnimatedRoutes() {
         <Route path="/drafts/create" element={<ProtectedPage><CreateDraftPage /></ProtectedPage>} />
         <Route path="/drafts/:draftId" element={<ProtectedPage><DraftDetailPage /></ProtectedPage>} />
 
+        {/* NFL Pick'em module */}
+        <Route path="/pickem" element={<ProtectedPage><PickemHomePage /></ProtectedPage>} />
+        <Route path="/pickem/week/:weekNumber" element={<ProtectedPage><PickemWeekPage /></ProtectedPage>} />
+        <Route path="/pickem/week/:weekNumber/results" element={<ProtectedPage><PickemWeekResultsPage /></ProtectedPage>} />
+        <Route path="/pickem/standings" element={<ProtectedPage><PickemStandingsPage /></ProtectedPage>} />
+        <Route path="/pickem/history" element={<ProtectedPage><PickemHistoryPage /></ProtectedPage>} />
+        <Route path="/pickem/rules" element={<ProtectedPage><PickemRulesPage /></ProtectedPage>} />
+        <Route path="/pickem/admin" element={<ProtectedPage><PickemAdminPage /></ProtectedPage>} />
+
         <Route path="/profile" element={<ProtectedPage><ProfilePage /></ProtectedPage>} />
         <Route path="*" element={<Suspense fallback={<PageFallback />}><NotFound /></Suspense>} />
       </Routes>
