@@ -1699,6 +1699,439 @@ export type Database = {
           },
         ]
       }
+      nfl_games: {
+        Row: {
+          away_score: number | null
+          away_team_id: string
+          created_at: string
+          external_id: string | null
+          external_provider: string | null
+          home_score: number | null
+          home_team_id: string
+          id: string
+          kickoff_at: string
+          season_id: string
+          status: string
+          updated_at: string
+          week_id: string
+          winner_team_id: string | null
+        }
+        Insert: {
+          away_score?: number | null
+          away_team_id: string
+          created_at?: string
+          external_id?: string | null
+          external_provider?: string | null
+          home_score?: number | null
+          home_team_id: string
+          id?: string
+          kickoff_at: string
+          season_id: string
+          status?: string
+          updated_at?: string
+          week_id: string
+          winner_team_id?: string | null
+        }
+        Update: {
+          away_score?: number | null
+          away_team_id?: string
+          created_at?: string
+          external_id?: string | null
+          external_provider?: string | null
+          home_score?: number | null
+          home_team_id?: string
+          id?: string
+          kickoff_at?: string
+          season_id?: string
+          status?: string
+          updated_at?: string
+          week_id?: string
+          winner_team_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nfl_games_away_team_id_fkey"
+            columns: ["away_team_id"]
+            isOneToOne: false
+            referencedRelation: "nfl_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nfl_games_home_team_id_fkey"
+            columns: ["home_team_id"]
+            isOneToOne: false
+            referencedRelation: "nfl_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nfl_games_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "nfl_seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nfl_games_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "nfl_weeks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nfl_games_winner_team_id_fkey"
+            columns: ["winner_team_id"]
+            isOneToOne: false
+            referencedRelation: "nfl_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nfl_picks: {
+        Row: {
+          created_at: string
+          game_id: string
+          id: string
+          is_correct: boolean | null
+          picked_team_id: string
+          points_awarded: number
+          season_id: string
+          updated_at: string
+          user_id: string
+          week_id: string
+        }
+        Insert: {
+          created_at?: string
+          game_id: string
+          id?: string
+          is_correct?: boolean | null
+          picked_team_id: string
+          points_awarded?: number
+          season_id: string
+          updated_at?: string
+          user_id: string
+          week_id: string
+        }
+        Update: {
+          created_at?: string
+          game_id?: string
+          id?: string
+          is_correct?: boolean | null
+          picked_team_id?: string
+          points_awarded?: number
+          season_id?: string
+          updated_at?: string
+          user_id?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nfl_picks_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "nfl_games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nfl_picks_picked_team_id_fkey"
+            columns: ["picked_team_id"]
+            isOneToOne: false
+            referencedRelation: "nfl_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nfl_picks_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "nfl_seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nfl_picks_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "nfl_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nfl_season_standings: {
+        Row: {
+          accuracy: number
+          avg_weekly_rank: number | null
+          id: string
+          rank: number | null
+          season_id: string
+          total_correct: number
+          total_picked: number
+          updated_at: string
+          user_id: string
+          weekly_wins: number
+        }
+        Insert: {
+          accuracy?: number
+          avg_weekly_rank?: number | null
+          id?: string
+          rank?: number | null
+          season_id: string
+          total_correct?: number
+          total_picked?: number
+          updated_at?: string
+          user_id: string
+          weekly_wins?: number
+        }
+        Update: {
+          accuracy?: number
+          avg_weekly_rank?: number | null
+          id?: string
+          rank?: number | null
+          season_id?: string
+          total_correct?: number
+          total_picked?: number
+          updated_at?: string
+          user_id?: string
+          weekly_wins?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nfl_season_standings_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "nfl_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nfl_seasons: {
+        Row: {
+          created_at: string
+          current_week: number
+          ends_at: string
+          id: string
+          name: string
+          starts_at: string
+          status: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          current_week?: number
+          ends_at: string
+          id?: string
+          name: string
+          starts_at: string
+          status?: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          current_week?: number
+          ends_at?: string
+          id?: string
+          name?: string
+          starts_at?: string
+          status?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      nfl_teams: {
+        Row: {
+          abbr: string
+          city: string
+          conference: string
+          created_at: string
+          division: string
+          id: string
+          logo_url: string | null
+          name: string
+          primary_color: string | null
+        }
+        Insert: {
+          abbr: string
+          city: string
+          conference: string
+          created_at?: string
+          division: string
+          id?: string
+          logo_url?: string | null
+          name: string
+          primary_color?: string | null
+        }
+        Update: {
+          abbr?: string
+          city?: string
+          conference?: string
+          created_at?: string
+          division?: string
+          id?: string
+          logo_url?: string | null
+          name?: string
+          primary_color?: string | null
+        }
+        Relationships: []
+      }
+      nfl_tiebreakers: {
+        Row: {
+          actual_total: number | null
+          created_at: string
+          delta: number | null
+          id: string
+          predicted_total: number
+          season_id: string
+          updated_at: string
+          user_id: string
+          week_id: string
+        }
+        Insert: {
+          actual_total?: number | null
+          created_at?: string
+          delta?: number | null
+          id?: string
+          predicted_total: number
+          season_id: string
+          updated_at?: string
+          user_id: string
+          week_id: string
+        }
+        Update: {
+          actual_total?: number | null
+          created_at?: string
+          delta?: number | null
+          id?: string
+          predicted_total?: number
+          season_id?: string
+          updated_at?: string
+          user_id?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nfl_tiebreakers_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "nfl_seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nfl_tiebreakers_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "nfl_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nfl_weekly_standings: {
+        Row: {
+          accuracy: number
+          correct_picks: number
+          id: string
+          rank: number | null
+          season_id: string
+          tiebreak_delta: number | null
+          total_picks: number
+          updated_at: string
+          user_id: string
+          week_id: string
+        }
+        Insert: {
+          accuracy?: number
+          correct_picks?: number
+          id?: string
+          rank?: number | null
+          season_id: string
+          tiebreak_delta?: number | null
+          total_picks?: number
+          updated_at?: string
+          user_id: string
+          week_id: string
+        }
+        Update: {
+          accuracy?: number
+          correct_picks?: number
+          id?: string
+          rank?: number | null
+          season_id?: string
+          tiebreak_delta?: number | null
+          total_picks?: number
+          updated_at?: string
+          user_id?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nfl_weekly_standings_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "nfl_seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nfl_weekly_standings_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "nfl_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nfl_weeks: {
+        Row: {
+          created_at: string
+          ends_at: string
+          featured_game_id: string | null
+          id: string
+          label: string
+          season_id: string
+          starts_at: string
+          status: string
+          updated_at: string
+          week_number: number
+        }
+        Insert: {
+          created_at?: string
+          ends_at: string
+          featured_game_id?: string | null
+          id?: string
+          label: string
+          season_id: string
+          starts_at: string
+          status?: string
+          updated_at?: string
+          week_number: number
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string
+          featured_game_id?: string | null
+          id?: string
+          label?: string
+          season_id?: string
+          starts_at?: string
+          status?: string
+          updated_at?: string
+          week_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nfl_weeks_featured_game_fk"
+            columns: ["featured_game_id"]
+            isOneToOne: false
+            referencedRelation: "nfl_games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nfl_weeks_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "nfl_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_preferences: {
         Row: {
           chat_messages: boolean
@@ -2673,6 +3106,7 @@ export type Database = {
     Functions: {
       get_bracket_pool_id: { Args: { _bracket_id: string }; Returns: string }
       is_app_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_pick_unlocked: { Args: { _game_id: string }; Returns: boolean }
       is_pool_admin: {
         Args: { _pool_id: string; _user_id: string }
         Returns: boolean

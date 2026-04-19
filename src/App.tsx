@@ -49,6 +49,13 @@ const LoreDetailPage = lazy(() => import("./pages/LoreDetailPage"));
 const PostsPage = lazy(() => import("./pages/PostsPage"));
 const PostDetailPage = lazy(() => import("./pages/PostDetailPage"));
 const SharedMediaPage = lazy(() => import("./pages/SharedMediaPage"));
+const PickemHomePage = lazy(() => import("./pages/PickemHomePage"));
+const PickemWeekPage = lazy(() => import("./pages/PickemWeekPage"));
+const PickemWeekResultsPage = lazy(() => import("./pages/PickemWeekResultsPage"));
+const PickemStandingsPage = lazy(() => import("./pages/PickemStandingsPage"));
+const PickemHistoryPage = lazy(() => import("./pages/PickemHistoryPage"));
+const PickemRulesPage = lazy(() => import("./pages/PickemRulesPage"));
+const PickemAdminPage = lazy(() => import("./pages/PickemAdminPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
