@@ -62,6 +62,9 @@ const ACTIVITY_ICONS: Record<string, { icon: any; color: string }> = {
 export default function DashboardPage() {
   const { user } = useAuth();
   const { canInstall, install } = usePwaInstall();
+  const { season } = useCurrentSeason();
+  const { standings } = useSeasonStandings(season?.id);
+  const { entries: seasonEntries } = useSeasonEntries(season?.id);
   const [pools, setPools] = useState<any[]>([]);
   const [rankings, setRankings] = useState<any[]>([]);
   const [polls, setPolls] = useState<any[]>([]);
