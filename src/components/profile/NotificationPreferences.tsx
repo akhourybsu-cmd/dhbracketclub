@@ -104,6 +104,26 @@ export default function NotificationPreferencesSection() {
           </Button>
         </div>
       )}
+
+      <div className="pt-2 border-t border-border/40 space-y-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full gap-2 text-xs"
+          onClick={async () => {
+            setUpdating(true);
+            toast.loading('Clearing cache and reloading…');
+            await nukeAndReload();
+          }}
+          disabled={updating}
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${updating ? 'animate-spin' : ''}`} />
+          {updating ? 'Updating…' : 'Check for updates'}
+        </Button>
+        <p className="text-[9px] text-muted-foreground/60 text-center font-mono">
+          build {String(buildId).slice(0, 12)}
+        </p>
+      </div>
     </div>
   );
 }
