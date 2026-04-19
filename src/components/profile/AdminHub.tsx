@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
-import { nukeAndReload } from '@/lib/forceUpdate';
+import { nukeAndReload, subscribeProbeState, fetchRemoteBuildId, type ProbeState } from '@/lib/forceUpdate';
 import { toast } from 'sonner';
 
 type Tool = {
@@ -56,6 +56,135 @@ function ToolRow({ tool }: { tool: Tool }) {
     >
       {inner}
     </button>
+  );
+}
+
+function formatRelative(ts: number | null): string {
+  if (!ts) return 'never';
+  const diff = Date.now() - ts;
+  if (diff < 1000) return 'just now';
+  if (diff < 60_000) return `${Math.floor(diff / 1000)}s ago`;
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+  return `${Math.floor(diff / 3_600_000)}h ago`;
+}
+
+function outcomeColor(o: ProbeState['lastOutcome']): string {
+  switch (o) {
+    case 'ok': return 'hsl(var(--primary))';
+    case 'mismatch': return 'hsl(var(--gold))';
+    case 'network-failed':
+    case 'invalid-json': return 'hsl(var(--destructive))';
+    default: return 'hsl(var(--muted-foreground))';
+  }
+}
+
+function UpdateDiagnostics({ buildId }: { buildId: string }) {
+  const [probe, setProbe] = useState<ProbeState | null>(null);
+  const [swInfo, setSwInfo] = useState<{ scriptURL: string | null; regs: number; cacheKeys: string[] }>({
+    scriptURL: null, regs: 0, cacheKeys: [],
+  });
+  const [, force] = useState(0);
+  const [checking, setChecking] = useState(false);
+
+  useEffect(() => {
+    const unsub = subscribeProbeState(setProbe);
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refreshSW = async () => {
+      try {
+        const regs = 'serviceWorker' in navigator
+          ? await navigator.serviceWorker.getRegistrations()
+          : [];
+        const active = regs[0]?.active?.scriptURL ?? regs[0]?.installing?.scriptURL ?? regs[0]?.waiting?.scriptURL ?? null;
+        const cacheKeys = 'caches' in window ? await caches.keys() : [];
+        if (!cancelled) setSwInfo({ scriptURL: active, regs: regs.length, cacheKeys });
+      } catch {
+        // noop
+      }
+    };
+    void refreshSW();
+    const t = setInterval(() => force((n) => n + 1), 5000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, []);
+
+  const handleCheck = async () => {
+    setChecking(true);
+    await fetchRemoteBuildId();
+    setChecking(false);
+  };
+
+  const localShort = String(buildId).slice(0, 12);
+  const remoteShort = probe?.lastRemoteBuildId ? String(probe.lastRemoteBuildId).slice(0, 12) : '—';
+  const isStale = probe?.lastOutcome === 'mismatch';
+
+  return (
+    <div
+      className="mt-2 rounded-xl p-3 space-y-2"
+      style={{
+        background: 'hsl(var(--muted) / 0.25)',
+        border: `1px solid ${isStale ? 'hsl(var(--gold) / 0.4)' : 'hsl(var(--border) / 0.6)'}`,
+      }}
+    >
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/80">
+          Update Diagnostics
+        </p>
+        <button
+          type="button"
+          onClick={handleCheck}
+          disabled={checking}
+          className="text-[10px] font-semibold px-2 py-1 rounded-md disabled:opacity-50 btn-press"
+          style={{
+            color: 'hsl(var(--primary))',
+            background: 'hsl(var(--primary) / 0.1)',
+            border: '1px solid hsl(var(--primary) / 0.3)',
+          }}
+        >
+          {checking ? 'Checking…' : 'Check now'}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] font-mono">
+        <span className="text-muted-foreground/70">local build</span>
+        <span className="text-right truncate">{localShort}</span>
+
+        <span className="text-muted-foreground/70">remote build</span>
+        <span className="text-right truncate" style={{ color: isStale ? 'hsl(var(--gold))' : undefined }}>
+          {remoteShort}
+        </span>
+
+        <span className="text-muted-foreground/70">last probe</span>
+        <span className="text-right" style={{ color: outcomeColor(probe?.lastOutcome ?? 'never') }}>
+          {probe?.lastOutcome ?? 'never'} · {formatRelative(probe?.lastAttemptAt ?? null)}
+        </span>
+
+        <span className="text-muted-foreground/70">last success</span>
+        <span className="text-right">{formatRelative(probe?.lastSuccessAt ?? null)}</span>
+
+        <span className="text-muted-foreground/70">probes ok / fail</span>
+        <span className="text-right">{probe?.successes ?? 0} / {probe?.failures ?? 0}</span>
+
+        <span className="text-muted-foreground/70">SW registrations</span>
+        <span className="text-right">{swInfo.regs}</span>
+
+        <span className="text-muted-foreground/70">SW script</span>
+        <span className="text-right truncate" title={swInfo.scriptURL ?? ''}>
+          {swInfo.scriptURL ? swInfo.scriptURL.split('/').pop() : 'none'}
+        </span>
+
+        <span className="text-muted-foreground/70">cache keys</span>
+        <span className="text-right">{swInfo.cacheKeys.length}</span>
+      </div>
+
+      {isStale && (
+        <p className="text-[10px] leading-snug pt-1" style={{ color: 'hsl(var(--gold))' }}>
+          New build detected. The auto-update toast should appear shortly, or tap "Force Refresh App" above.
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -175,6 +304,7 @@ export default function AdminHub() {
         <div className="space-y-0.5">
           {appManagement.map((t) => <ToolRow key={t.label} tool={t} />)}
         </div>
+        <UpdateDiagnostics buildId={buildId} />
       </div>
 
       {/* Competitions */}

@@ -1,7 +1,9 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
-import { fetchRemoteBuildId } from "./lib/forceUpdate";
+import { fetchRemoteBuildId, nukeAndReload } from "./lib/forceUpdate";
+
+const BUILD_ID = typeof __BUILD_ID__ !== "undefined" ? __BUILD_ID__ : "dev";
 
 // Recovery escape hatch: visit `/?fresh=1` to nuke service workers + caches.
 async function maybeHardReset() {
@@ -25,6 +27,40 @@ async function maybeHardReset() {
   url.searchParams.delete("fresh");
   window.location.replace(url.pathname + url.search + url.hash);
   return true;
+}
+
+// Auto-recover from stale-bundle ChunkLoadErrors. After a deploy, an Android
+// PWA that managed to update index.html but kept an old chunk reference will
+// throw "Loading chunk … failed" or similar — without intervention this leaves
+// the app in a white-screen / silent-failure state. Detect and self-heal.
+function installChunkErrorRecovery() {
+  let recovering = false;
+  const isChunkError = (msg: unknown): boolean => {
+    if (!msg) return false;
+    const s = typeof msg === "string" ? msg : String((msg as any)?.message ?? "");
+    return (
+      /ChunkLoadError/i.test(s) ||
+      /Loading chunk [\w-]+ failed/i.test(s) ||
+      /Failed to fetch dynamically imported module/i.test(s) ||
+      /Importing a module script failed/i.test(s)
+    );
+  };
+  const recover = (reason: string) => {
+    if (recovering) return;
+    recovering = true;
+    console.warn("[chunk-recovery] triggering nukeAndReload:", reason);
+    void nukeAndReload();
+  };
+  window.addEventListener("error", (e) => {
+    if (isChunkError(e?.message) || isChunkError(e?.error)) {
+      recover(`error: ${e?.message}`);
+    }
+  });
+  window.addEventListener("unhandledrejection", (e) => {
+    if (isChunkError(e?.reason)) {
+      recover(`unhandledrejection: ${e?.reason?.message ?? e?.reason}`);
+    }
+  });
 }
 
 // Register our minimal push-only service worker. Skips iframes/preview hosts
@@ -51,8 +87,18 @@ function registerPushSW() {
   // any legacy Workbox SWs first.
   window.addEventListener("load", () => {
     setTimeout(() => {
+      // Cache-bust the SW URL with the current build id. New builds register
+      // a "different" SW URL, forcing Chrome (especially Android WebAPK
+      // contexts) to re-evaluate and re-fetch the script.
       navigator.serviceWorker
-        .register("/sw-push.js", { scope: "/" })
+        .register(`/sw-push.js?v=${encodeURIComponent(BUILD_ID)}`, { scope: "/" })
+        .then((reg) => {
+          // On focus, ask the browser to re-check the SW script. On installed
+          // Android PWAs this also nudges Chrome to revalidate the launch shell.
+          window.addEventListener("focus", () => {
+            reg.update().catch(() => false);
+          });
+        })
         .catch((err) => console.warn("[sw-push] register failed:", err));
     }, 1500);
   });
@@ -60,6 +106,7 @@ function registerPushSW() {
 
 maybeHardReset().then((reset) => {
   if (reset) return;
+  installChunkErrorRecovery();
   // Fire one immediate version probe at boot so cold launches detect
   // a new build instantly (instead of waiting for the 30s interval).
   void fetchRemoteBuildId();

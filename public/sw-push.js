@@ -14,7 +14,7 @@
 // (old SW) vs registered directly. We detect "old SW" by checking for the
 // presence of workbox globals.
 
-const SW_VERSION = '2026-04-19-self-destruct-v2';
+const SW_VERSION = '2026-04-19-android-update-fix-v3';
 self.__SW_VERSION = SW_VERSION;
 
 const isLegacyWorkboxSW =
