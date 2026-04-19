@@ -1,166 +1,66 @@
 
 
-# NFL Pick'em — Mobile-First Plan
+## Pick'em Schedule Hookup — Gap Scan & Free-Source Plan
 
-A new season-long competition mode added to **Compete → More tab**, fitting alongside Polls/Rankings/Lockbox under the existing Arena identity.
+### What's already in place
+- ✅ Tables: `nfl_seasons`, `nfl_weeks`, `nfl_games`, `nfl_teams` (32 seeded), picks, tiebreakers, standings
+- ✅ Admin page: manual one-game-at-a-time entry, set finals, score week
+- ✅ Scoring edge function (`score-nfl-week`) — works idempotently
+- ✅ `external_provider` + `external_id` columns already on `nfl_games` (provider-agnostic, ready)
 
-## How it works (product summary)
+### What's missing for a real season import
+1. **No bulk schedule import** — admin would have to add ~272 regular-season games one by one
+2. **No live score sync** — admin must hand-enter every final score
+3. **No automated week locking / current-week advance** — relies on manual status changes
+4. **No `external_id` on `nfl_teams`** — can't reliably match a provider's team to ours
+5. **No scheduled job** to fetch scores during Sunday windows
+6. **No "Sync now" button** in admin to pull this week's results on demand
 
-- One active **NFL season** (e.g., "2025 NFL Season") with weekly slates (Weeks 1–18 regular season, expandable to playoffs later).
-- Each user picks one **winner per game** in the current week.
-- Picks lock **per game at kickoff** (game-level locking — this is the clean MVP, and what the spec prefers).
-- 1 point per correct pick. No spreads, no confidence, no survivor.
-- One **featured tiebreaker game** per week: predict total combined points. Used for weekly tiebreaks.
-- Season ranking by total correct picks → tiebreakers: best avg weekly finish → cumulative tiebreaker accuracy.
+### Free, no-key data sources (ranked)
 
-## Where it lives in the app
+| Source | Cost | What it gives | Good for | Gotchas |
+|---|---|---|---|---|
+| **ESPN hidden JSON API** (`site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=N&seasontype=2`) | Free, no key, no signup | Full schedule, kickoffs, live + final scores, team abbrs, week structure | **Best fit for MVP** — schedule import + live scoring | Unofficial; could change. Rate-limit politely. |
+| **NFLverse `nflverse-data` GitHub releases** (`schedules.csv`) | Free, no key | Full historical + upcoming schedule CSV | Bulk preseason import | No live scores; updated daily |
+| **TheSportsDB v1** (used elsewhere in app for player images) | Free key | Schedule + scores | Backup | Slower updates, less reliable for live |
+| **MySportsFeeds / SportsDataIO** | Paid free tier (limited) | Everything | Future upgrade | Requires signup + key |
 
-- New entry on `CompetePage.tsx` "More" tab: **NFL Pick'em** card (amber/gold accent to differentiate from emerald Drafts).
-- Routes added under `/pickem`:
-  - `/pickem` → Home
-  - `/pickem/week/:weekNumber` → Make Picks / Slate
-  - `/pickem/week/:weekNumber/results` → Weekly Results
-  - `/pickem/standings` → Season Standings
-  - `/pickem/history` → My Pick History
-  - `/pickem/rules` → Rules
-  - `/pickem/admin` → Admin (gated to `is_app_admin`)
-- Dashboard "Needs Your Attention" gets a new card: *"Week N picks due — X games unpicked"* when current week is open and user has incomplete picks.
+**Recommendation:** ESPN scoreboard endpoint as primary (schedule + live scores in one call), NFLverse CSV as a one-shot preseason backup. Both are free, no API key, no user signup.
 
-## Mobile-first UX
+### Build plan
 
-```text
-Home (/pickem)
-┌────────────────────────────┐
-│ 2025 NFL Pick'em           │
-│ Week 7 · Thu 8:20 PM lock  │
-│ ┌────────────────────────┐ │
-│ │ Make Your Picks   →    │ │  ← big amber CTA
-│ │ 3 of 14 picked         │ │
-│ └────────────────────────┘ │
-│ Your season: 42–28 · #3    │
-│ ── Recent Results ──       │
-│ Week 6: 11/14 · #2         │
-└────────────────────────────┘
+**1. Migration**
+- Add `external_id text` and `external_provider text` to `nfl_teams`
+- Backfill ESPN team IDs for all 32 teams (one SQL UPDATE)
 
-Week Slate (/pickem/week/7)
-┌────────────────────────────┐
-│ ← Week 7      [3/14 ✓]     │
-│                            │
-│ Sun 1:00 PM     [UNLOCKED] │
-│ ┌──────────┬──────────┐    │
-│ │ ● BUF 🦬 │   KC 🏈  │    │  ← tap team to pick
-│ │ selected │          │    │
-│ └──────────┴──────────┘    │
-│                            │
-│ Sun 4:25 PM     [LOCKED]   │
-│ ┌──────────┬──────────┐    │
-│ │   PHI    │ ● DAL ✓  │    │  ← post-game: green ✓ or red ✗
-│ └──────────┴──────────┘    │
-│                            │
-│ ⭐ Tiebreaker (SNF):       │
-│ Total points: [  45  ]     │
-└────────────────────────────┘
-```
+**2. New edge function: `sync-nfl-week`** (admin-only, also cron-callable)
+- Input: `{ season_year, week_number }`
+- Calls ESPN: `/scoreboard?dates={year}&seasontype=2&week={n}`
+- For each event:
+  - Find/create `nfl_week` row
+  - Upsert `nfl_games` keyed on `(week_id, external_id)` — idempotent
+  - When `status=final`, set `winner_team_id`, `away_score`, `home_score`
+- After sync: invoke `score-nfl-week` for that week automatically
 
-Game cards: full-width, two big tap targets (away | home), ≥56px tall. Selected state = amber fill + ring. Locked = muted + lock icon, no taps. Final = green check on correct, red X on wrong, neutral on unpicked locked games.
+**3. Admin UI additions** (`PickemAdminPage.tsx`)
+- **"Import full season schedule"** button → loops weeks 1-18, calls `sync-nfl-week`
+- **"Sync this week now"** button on the active week
+- Shows last-synced timestamp per week
 
-## Data model (new tables)
+**4. Optional cron (pg_cron + pg_net)**
+- Sundays every 15 min during game windows: call `sync-nfl-week` for `season.current_week`
+- Tuesday 6 AM: advance `season.current_week` if all prior week's games are final
 
-```text
-nfl_seasons
-  id, year, name, status (upcoming|active|complete),
-  current_week, starts_at, ends_at, created_at
+**5. Auto-derived week status**
+- Trigger on `nfl_games` UPDATE: recompute parent `nfl_weeks.status` (open → partially_locked → closed → scored) so admin doesn't manage it manually
 
-nfl_teams
-  id, abbr (BUF), name (Bills), city, conference (AFC/NFC),
-  division, primary_color, logo_url
+### What user needs to decide
+- Do you want the **cron auto-sync** during Sundays, or just a manual "Sync Now" button for the MVP? Cron requires `pg_cron`/`pg_net` (already used in the app for Lockbox, so available).
+- Should we import the **full 2025 schedule now** (preseason + regular season weeks 1-18) or wait until you're closer to Week 1?
 
-nfl_weeks
-  id, season_id, week_number, label ("Week 7"),
-  starts_at, ends_at, status (upcoming|open|partially_locked|closed|scored),
-  featured_game_id (tiebreaker)
-
-nfl_games
-  id, season_id, week_id, away_team_id, home_team_id,
-  kickoff_at, status (scheduled|live|final),
-  away_score, home_score, winner_team_id,
-  external_provider, external_id
-
-nfl_picks
-  id, user_id, game_id, week_id, season_id,
-  picked_team_id, is_correct (nullable), points_awarded,
-  created_at, updated_at
-  UNIQUE(user_id, game_id)
-
-nfl_tiebreakers
-  id, user_id, week_id, predicted_total,
-  actual_total (nullable), delta (nullable)
-  UNIQUE(user_id, week_id)
-
-nfl_weekly_standings
-  id, user_id, week_id, season_id,
-  correct_picks, total_picks, accuracy, tiebreak_delta,
-  rank, updated_at
-
-nfl_season_standings
-  id, user_id, season_id,
-  total_correct, total_picked, accuracy,
-  weekly_wins, avg_weekly_rank, rank, updated_at
-```
-
-**RLS pattern:** all tables `SELECT` open to authenticated. `picks`/`tiebreakers` INSERT/UPDATE gated by `auth.uid() = user_id` AND a security-definer function `is_pick_unlocked(game_id)` that checks `kickoff_at > now()`. Admin-only writes on seasons/weeks/games/teams via `is_app_admin(auth.uid())`.
-
-**Provider abstraction:** `nfl_games.external_provider` + `external_id` mirror the bracket sync pattern. MVP: admin manually enters/edits via Admin page, with seed CSV for the season schedule. Future: ESPN/SportsDataIO edge function. Scoring runs in a `score-nfl-week` edge function — idempotent upsert, recomputes both standings tables.
-
-## Lock logic
-
-- Per-game lock: pick can only be inserted/updated where `nfl_games.kickoff_at > now()`.
-- Enforced in **3 layers**: RLS policy (definer function), edge function validation, and UI disable.
-- Week status auto-derived: `open` (no games kicked) → `partially_locked` (some live/final) → `closed` (all kicked) → `scored` (admin/cron finalized).
-
-## Scoring flow
-
-1. Admin enters final score in Admin page (or future cron syncs).
-2. Trigger on `nfl_games` UPDATE when `status → final`: sets `winner_team_id`, then calls scoring edge function for that week.
-3. Edge function: marks `nfl_picks.is_correct`, recomputes `nfl_weekly_standings` and `nfl_season_standings`, ranks with tiebreakers.
-4. Realtime: subscribe `nfl_weekly_standings` + `nfl_games` so leaderboards/results update live during Sunday games.
-
-## Screens summary
-
-| Screen | File | Purpose |
-|---|---|---|
-| Home | `pages/PickemHomePage.tsx` | Week status, CTA, season snapshot, recent results |
-| Week Slate | `pages/PickemWeekPage.tsx` | Game cards + tiebreaker input |
-| Weekly Results | `pages/PickemWeekResultsPage.tsx` | Per-game ✓/✗, weekly leaderboard |
-| Season Standings | `pages/PickemStandingsPage.tsx` | Full season leaderboard |
-| Pick History | `pages/PickemHistoryPage.tsx` | Weekly accordion of past picks |
-| Rules | `pages/PickemRulesPage.tsx` | Static, mobile-readable |
-| Admin | `pages/PickemAdminPage.tsx` | Season/week/game CRUD, set finals, set tiebreaker game |
-
-Plus components: `GamePickCard`, `WeekNavigator`, `PickemStandingsRow`, `TiebreakerInput`, `WeekStatusPill`.
-
-## What we're seeding
-
-- 32 NFL teams (abbr, name, city, colors, logos via static asset URLs).
-- One placeholder season: "2025 NFL Season" in `upcoming` status. Admin populates schedule via the Admin page (paste/import flow — JSON paste for MVP, with a parse helper).
-
-## Future expansion preserved
-
-- `nfl_seasons` allows multiple seasons (archive past years).
-- Pick/standings tables are season-scoped → ready for multiple leagues by adding `league_id`.
-- Provider fields ready for live sync edge function.
-- Scoring function is single-source — adding confidence points = one column + formula change.
-- Survivor mode = new picks table variant, won't conflict.
-- Playoff weeks = same model with `week.label = "Wild Card"` etc.
-
-## Manual testing checklist (post-build)
-
-1. Mobile: tap targets ≥44px, week navigator swipe-friendly.
-2. Lock enforcement: try picking after kickoff (UI + RLS).
-3. Update pick before lock — works.
-4. Admin enters final → standings recompute, realtime updates.
-5. Tiebreaker tie scenario.
-6. Empty states (no week, no picks, season not started).
-7. Safe-area insets on iPhone PWA, fixed bottom nav doesn't cover CTA.
-8. Dashboard "Attention" card appears when picks incomplete.
+### Files to touch
+- New: `supabase/functions/sync-nfl-week/index.ts`
+- New migration: add `external_id` to `nfl_teams` + backfill ESPN IDs + week-status trigger
+- Edit: `src/pages/PickemAdminPage.tsx` — add sync buttons
+- Optional new migration: pg_cron schedule rows
 
