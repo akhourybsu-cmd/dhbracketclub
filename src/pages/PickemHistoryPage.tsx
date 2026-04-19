@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { ChevronLeft, History, ChevronRight } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useActiveSeason, useSeasonWeeks } from '@/hooks/usePickem';
 import { supabase } from '@/integrations/supabase/client';
@@ -50,53 +51,103 @@ export default function PickemHistoryPage() {
     })();
   }, [user, season, weeks]);
 
+  const totals = useMemo(() => {
+    const scored = stats.filter((s) => s.status === 'scored');
+    const correct = scored.reduce((a, s) => a + s.correct, 0);
+    const total = scored.reduce((a, s) => a + s.total, 0);
+    return {
+      weeks: scored.length,
+      correct,
+      total,
+      accuracy: total > 0 ? Math.round((correct / total) * 100) : 0,
+    };
+  }, [stats]);
+
   return (
-    <div className="space-y-3 pb-6">
+    <div className="space-y-4 pb-6">
       <Link to="/pickem" className="text-[12px] text-muted-foreground flex items-center gap-1 btn-press">
         <ChevronLeft className="w-4 h-4" /> Pick'em
       </Link>
-      <div className="page-header">
-        <div className="page-header-icon" style={{ background: 'linear-gradient(135deg, hsl(var(--primary) / 0.2), hsl(var(--primary) / 0.05))' }}>
-          <History className="w-5 h-5 text-primary" />
+
+      {/* Hero header with overall record */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+        className="relative rounded-2xl overflow-hidden p-5"
+        style={{
+          background: 'radial-gradient(ellipse 80% 60% at 50% 0%, hsl(var(--primary) / 0.10), transparent 60%), hsl(var(--card))',
+          border: '1px solid hsl(var(--border) / 0.4)',
+        }}
+      >
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, hsl(var(--primary) / 0.22), hsl(var(--primary) / 0.05))', boxShadow: 'var(--shadow-glow-sm)' }}>
+            <History className="w-5 h-5 text-primary" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-primary/90">My Record</p>
+            <h1 className="text-[22px] font-extrabold tracking-tight leading-tight">Pick History</h1>
+          </div>
         </div>
-        <div>
-          <h1 className="page-header-title">My Pick History</h1>
-          <p className="page-header-subtitle">All your weeks, results & rank</p>
-        </div>
-      </div>
+        {totals.weeks > 0 ? (
+          <div className="grid grid-cols-3 gap-2 mt-2">
+            <Stat label="Correct" value={`${totals.correct}/${totals.total}`} />
+            <Stat label="Accuracy" value={`${totals.accuracy}%`} accent />
+            <Stat label="Weeks" value={`${totals.weeks}`} />
+          </div>
+        ) : (
+          <p className="text-[12px] text-muted-foreground">No scored weeks yet.</p>
+        )}
+      </motion.div>
 
       <div className="space-y-1.5">
         {loading ? (
-          <div className="glass-card p-6 text-center text-xs text-muted-foreground">Loading…</div>
+          [0, 1, 2, 3].map((i) => <div key={i} className="h-14 rounded-2xl skeleton-shimmer" />)
         ) : stats.length === 0 ? (
           <div className="glass-card p-8 text-center">
             <History className="w-6 h-6 mx-auto mb-2 text-muted-foreground/40" />
             <p className="text-sm font-bold">No history yet</p>
+            <p className="text-xs text-muted-foreground mt-1">Your weekly results will appear here.</p>
           </div>
-        ) : stats.map((s) => {
+        ) : stats.map((s, i) => {
           const scored = s.status === 'scored';
           const accuracy = s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0;
           return (
-            <Link key={s.week_id} to={`/pickem/week/${s.week_number}${scored ? '/results' : ''}`}>
-              <div className="glass-card p-3.5 flex items-center gap-3 hover:bg-muted/30 transition-colors">
-                <div className="w-12 text-center">
-                  <p className="text-[10px] text-muted-foreground/70 font-bold uppercase">Wk</p>
-                  <p className="text-base font-extrabold leading-none">{s.week_number}</p>
+            <motion.div key={s.week_id}
+              initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: Math.min(i * 0.025, 0.25) }}>
+              <Link to={`/pickem/week/${s.week_number}${scored ? '/results' : ''}`}>
+                <div className="glass-card p-3.5 flex items-center gap-3 hover:bg-muted/30 transition-colors">
+                  <div className={cn(
+                    'w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0',
+                    scored ? 'bg-gold/10 border border-gold/20' : 'bg-muted/30 border border-border/30'
+                  )}>
+                    <p className="text-[8px] text-muted-foreground/70 font-extrabold uppercase tracking-wider">Wk</p>
+                    <p className={cn('text-base font-extrabold leading-none tabular-nums', scored && 'text-gold')}>{s.week_number}</p>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-extrabold truncate">{s.label}</p>
+                    <p className={cn('text-[10px] tabular-nums mt-0.5', scored ? 'text-muted-foreground' : 'text-muted-foreground/60 italic')}>
+                      {scored
+                        ? <>{s.correct}/{s.total} · {accuracy}% · #{s.rank ?? '–'}</>
+                        : <>Not scored yet</>}
+                    </p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-bold truncate">{s.label}</p>
-                  <p className={cn('text-[10px]', scored ? 'text-muted-foreground' : 'text-muted-foreground/60 italic')}>
-                    {scored
-                      ? <>{s.correct}/{s.total} · {accuracy}% · #{s.rank ?? '–'}</>
-                      : <>Not scored yet</>}
-                  </p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
-              </div>
-            </Link>
+              </Link>
+            </motion.div>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div className="rounded-xl bg-background/40 border border-border/30 p-2.5 text-center">
+      <p className={cn('text-[15px] font-extrabold tabular-nums leading-none', accent && 'text-primary')}>{value}</p>
+      <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-muted-foreground/70 mt-1">{label}</p>
     </div>
   );
 }

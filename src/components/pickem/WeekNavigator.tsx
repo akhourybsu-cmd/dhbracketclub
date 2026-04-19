@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { NflWeek } from '@/hooks/usePickem';
@@ -15,33 +16,44 @@ export function WeekNavigator({ weeks, currentWeek, basePath }: Props) {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between min-h-[20px]">
         {prev ? (
-          <Link to={`${basePath}/${prev.week_number}`} className="flex items-center gap-1 text-[12px] font-bold text-muted-foreground hover:text-foreground btn-press">
-            <ChevronLeft className="w-4 h-4" /> {prev.label}
+          <Link to={`${basePath}/${prev.week_number}`} className="flex items-center gap-1 text-[11px] font-extrabold text-muted-foreground hover:text-foreground btn-press">
+            <ChevronLeft className="w-3.5 h-3.5" /> {prev.label}
           </Link>
         ) : <span />}
         {next ? (
-          <Link to={`${basePath}/${next.week_number}`} className="flex items-center gap-1 text-[12px] font-bold text-muted-foreground hover:text-foreground btn-press">
-            {next.label} <ChevronRight className="w-4 h-4" />
+          <Link to={`${basePath}/${next.week_number}`} className="flex items-center gap-1 text-[11px] font-extrabold text-muted-foreground hover:text-foreground btn-press">
+            {next.label} <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         ) : <span />}
       </div>
-      <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-1 scrollbar-none">
-        {weeks.map((w) => (
-          <Link
-            key={w.id}
-            to={`${basePath}/${w.week_number}`}
-            className={cn(
-              'flex-shrink-0 min-w-[44px] h-9 px-3 rounded-lg flex items-center justify-center text-[11px] font-bold transition-colors',
-              w.week_number === currentWeek
-                ? 'bg-gold/20 text-gold border border-gold/30'
-                : 'bg-muted/40 text-muted-foreground hover:bg-muted/60'
-            )}
-          >
-            {w.week_number}
-          </Link>
-        ))}
+      <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-1.5 scrollbar-none snap-x">
+        {weeks.map((w) => {
+          const active = w.week_number === currentWeek;
+          return (
+            <Link
+              key={w.id}
+              to={`${basePath}/${w.week_number}`}
+              className={cn(
+                'relative flex-shrink-0 min-w-[44px] h-9 px-3 rounded-lg flex items-center justify-center text-[11px] font-extrabold transition-colors snap-start',
+                active
+                  ? 'text-gold'
+                  : 'bg-muted/40 text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+              )}
+            >
+              {active && (
+                <motion.span
+                  layoutId="week-nav-active"
+                  className="absolute inset-0 rounded-lg bg-gold/15 border border-gold/35"
+                  style={{ boxShadow: '0 0 12px hsl(var(--gold) / 0.18)' }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                />
+              )}
+              <span className="relative tabular-nums">{w.week_number}</span>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
