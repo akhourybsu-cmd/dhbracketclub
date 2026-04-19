@@ -236,10 +236,7 @@ function MessageBubbleInner({
           )}
 
           {/* Bubble column */}
-          <div className={cn(
-            "relative max-w-[80%] min-w-[60px]",
-            msg.reactions && msg.reactions.length > 0 && "mb-3"
-          )}>
+          <div className="relative max-w-[80%] min-w-[60px]">
             {/* Sender name — first message of other user's block */}
             {!isOwn && isFirstInBlock && (
               <div className="flex items-baseline gap-2 mb-0.5 pl-1">
@@ -252,81 +249,110 @@ function MessageBubbleInner({
               </div>
             )}
 
-            {/* The bubble */}
-            <div
-              className={cn(
-                bubbleCorners,
-                "px-3 py-2 relative",
-                isOwn
-                  ? "text-foreground/95"
-                  : "border border-border/10 text-foreground/90"
-              )}
-              style={{
-                backgroundColor: isOwn
-                  ? 'hsl(var(--chat-own-bg))'
-                  : 'hsl(var(--chat-incoming))'
-              }}
-            >
-              {isBeingEdited ? (
-                <div className="flex items-start gap-2">
-                  <textarea
-                    ref={editRef}
-                    value={editContent}
-                    onChange={e => onEditContentChange(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSaveEdit(msg.id, editContent); }
-                      if (e.key === 'Escape') onCancelEdit();
-                    }}
-                    className="flex-1 resize-none text-[13px] bg-background/30 border border-border/25 rounded-lg px-2 py-1.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/20"
-                    rows={1}
-                    autoFocus
-                    style={{ minHeight: 28, maxHeight: 120 }}
-                  />
-                  <button onClick={() => onSaveEdit(msg.id, editContent)} className="p-1 rounded-lg bg-primary/15 text-primary hover:bg-primary/25 transition-colors">
-                    <Check className="w-3.5 h-3.5" />
-                  </button>
-                  <button onClick={onCancelEdit} className="p-1 rounded-lg hover:bg-muted/50 transition-colors">
-                    <X className="w-3.5 h-3.5 text-muted-foreground/70" />
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <p className={cn(
-                    "text-[13px] leading-[1.55] break-words whitespace-pre-wrap",
-                    imageUrls.length > 0 && !stripImageUrls(msg.content) && "hidden"
-                  )}>
-                    {renderContent(stripImageUrls(msg.content), currentUserId, currentDisplayName)}
-                    {msg.is_pinned && <Pin className="w-2 h-2 inline-block ml-1 -mt-0.5" style={{ color: 'hsl(var(--premium-warm) / 0.5)' }} />}
-                    {msg.edited_at && <span className="text-[9px] text-muted-foreground/50 ml-1.5">(edited)</span>}
-                  </p>
-                  {previewLinks.length > 0 && !msg._optimistic && (
-                    <div className="space-y-1.5 mt-1.5">
-                      {previewLinks.map((link, i) => (
-                        <LinkPreviewCard key={`${link.url}-${i}`} link={link} messageId={msg.id} />
-                      ))}
-                    </div>
-                  )}
-                  {imageUrls.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      {imageUrls.map((url, i) => (
-                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
-                          <img
-                            src={url}
-                            alt="Shared image"
-                            className="rounded-lg max-w-[240px] max-h-[200px] object-cover border border-border/10"
-                            loading="lazy"
-                            decoding="async"
-                            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                          />
-                        </a>
-                      ))}
-                    </div>
-                  )}
-                  {msg._optimistic && (
-                    <span className="inline-flex items-center gap-1 mt-0.5 text-[9px] text-muted-foreground/50 font-medium">
-                      <Loader2 className="w-2.5 h-2.5 animate-spin" /> Sending…
-                    </span>
-                  )}
+            {/* Bubble + overlapping reactions wrapper */}
+            <div className={cn(
+              "relative",
+              msg.reactions && msg.reactions.length > 0 && "mb-3.5"
+            )}>
+              {/* The bubble */}
+              <div
+                className={cn(
+                  bubbleCorners,
+                  "px-3 py-2 relative",
+                  isOwn
+                    ? "text-foreground/95"
+                    : "border border-border/10 text-foreground/90"
+                )}
+                style={{
+                  backgroundColor: isOwn
+                    ? 'hsl(var(--chat-own-bg))'
+                    : 'hsl(var(--chat-incoming))'
+                }}
+              >
+                {isBeingEdited ? (
+                  <div className="flex items-start gap-2">
+                    <textarea
+                      ref={editRef}
+                      value={editContent}
+                      onChange={e => onEditContentChange(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSaveEdit(msg.id, editContent); }
+                        if (e.key === 'Escape') onCancelEdit();
+                      }}
+                      className="flex-1 resize-none text-[13px] bg-background/30 border border-border/25 rounded-lg px-2 py-1.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/20"
+                      rows={1}
+                      autoFocus
+                      style={{ minHeight: 28, maxHeight: 120 }}
+                    />
+                    <button onClick={() => onSaveEdit(msg.id, editContent)} className="p-1 rounded-lg bg-primary/15 text-primary hover:bg-primary/25 transition-colors">
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={onCancelEdit} className="p-1 rounded-lg hover:bg-muted/50 transition-colors">
+                      <X className="w-3.5 h-3.5 text-muted-foreground/70" />
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <p className={cn(
+                      "text-[13px] leading-[1.55] break-words whitespace-pre-wrap",
+                      imageUrls.length > 0 && !stripImageUrls(msg.content) && "hidden"
+                    )}>
+                      {renderContent(stripImageUrls(msg.content), currentUserId, currentDisplayName)}
+                      {msg.is_pinned && <Pin className="w-2 h-2 inline-block ml-1 -mt-0.5" style={{ color: 'hsl(var(--premium-warm) / 0.5)' }} />}
+                      {msg.edited_at && <span className="text-[9px] text-muted-foreground/50 ml-1.5">(edited)</span>}
+                    </p>
+                    {previewLinks.length > 0 && !msg._optimistic && (
+                      <div className="space-y-1.5 mt-1.5">
+                        {previewLinks.map((link, i) => (
+                          <LinkPreviewCard key={`${link.url}-${i}`} link={link} messageId={msg.id} />
+                        ))}
+                      </div>
+                    )}
+                    {imageUrls.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        {imageUrls.map((url, i) => (
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                            <img
+                              src={url}
+                              alt="Shared image"
+                              className="rounded-lg max-w-[240px] max-h-[200px] object-cover border border-border/10"
+                              loading="lazy"
+                              decoding="async"
+                              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                            />
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                    {msg._optimistic && (
+                      <span className="inline-flex items-center gap-1 mt-0.5 text-[9px] text-muted-foreground/50 font-medium">
+                        <Loader2 className="w-2.5 h-2.5 animate-spin" /> Sending…
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Reactions — overlapping bottom corner of bubble (iMessage style) */}
+              {msg.reactions && msg.reactions.length > 0 && (
+                <div className={cn(
+                  "absolute -bottom-2.5 z-10 flex flex-wrap gap-1",
+                  isOwn ? "right-1" : "left-1"
+                )}>
+                  {msg.reactions.map(r => (
+                    <button
+                      key={r.emoji}
+                      onClick={(e) => { e.stopPropagation(); handleReaction(r.emoji); }}
+                      className={cn(
+                        "inline-flex items-center gap-1 h-6 px-1.5 rounded-full text-[11px] border shadow-sm backdrop-blur-sm transition-all duration-150 active:scale-90",
+                        r.user_reacted
+                          ? "border-primary/30 bg-primary/15 text-primary"
+                          : "border-border/30 bg-background/95 text-foreground/80 hover:bg-background"
+                      )}
+                    >
+                      {r.emoji} <span className="font-bold text-[10px]">{r.count}</span>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
@@ -337,29 +363,6 @@ function MessageBubbleInner({
                 <span className="text-[10px] text-muted-foreground/40 font-medium">
                   {format(new Date(msg.created_at), 'h:mm a')}
                 </span>
-              </div>
-            )}
-
-            {/* Reactions — overlapping bottom corner of bubble (iMessage style) */}
-            {msg.reactions && msg.reactions.length > 0 && (
-              <div className={cn(
-                "absolute -bottom-3 z-10 flex flex-wrap gap-1",
-                isOwn ? "right-1" : "left-1"
-              )}>
-                {msg.reactions.map(r => (
-                  <button
-                    key={r.emoji}
-                    onClick={(e) => { e.stopPropagation(); handleReaction(r.emoji); }}
-                    className={cn(
-                      "inline-flex items-center gap-1 h-6 px-1.5 rounded-full text-[11px] border shadow-sm backdrop-blur-sm transition-all duration-150 active:scale-90",
-                      r.user_reacted
-                        ? "border-primary/30 bg-primary/15 text-primary"
-                        : "border-border/30 bg-background/95 text-foreground/80 hover:bg-background"
-                    )}
-                  >
-                    {r.emoji} <span className="font-bold text-[10px]">{r.count}</span>
-                  </button>
-                ))}
               </div>
             )}
 
