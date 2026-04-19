@@ -126,10 +126,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
       return location.pathname.startsWith('/brackets') || location.pathname.startsWith('/pools');
     }
     if (path === '/compete') {
-      return location.pathname === '/compete' || location.pathname.startsWith('/brackets') || location.pathname.startsWith('/pools') || location.pathname.startsWith('/rankings') || location.pathname.startsWith('/polls') || location.pathname.startsWith('/drafts');
+      return location.pathname === '/compete';
     }
     if (path === '/feed') {
-      return location.pathname === '/feed' || location.pathname.startsWith('/posts');
+      return location.pathname === '/feed';
+    }
+    if (path === '/posts') {
+      return location.pathname.startsWith('/posts');
     }
     if (path === '/lore') {
       return location.pathname.startsWith('/lore');
