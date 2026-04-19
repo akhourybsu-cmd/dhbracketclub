@@ -8,6 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="icon" href="/favicon.png" type="image/png" />
     <link rel="apple-touch-icon" href="/pwa-icon-512.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <!-- Preload fonts for faster rendering -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -103,6 +104,26 @@
             }
           })
           .catch(function () { /* offline — leave alone */ });
+
+        // Proactively evict ANY service worker that isn't our minimal push SW.
+        // This kills leftover Workbox SWs (sw.js, registerSW.js, etc.) on first
+        // load of the new index.html, even before our self-destruct sw-push.js
+        // gets a chance to run.
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function (regs) {
+            regs.forEach(function (reg) {
+              try {
+                var scriptUrl = (reg.active && reg.active.scriptURL) ||
+                                (reg.waiting && reg.waiting.scriptURL) ||
+                                (reg.installing && reg.installing.scriptURL) || '';
+                if (scriptUrl && scriptUrl.indexOf('/sw-push.js') === -1) {
+                  console.warn('[DH bootstrap] evicting non-push SW:', scriptUrl);
+                  reg.unregister().catch(function () {});
+                }
+              } catch (e) {}
+            });
+          }).catch(function () {});
+        }
       } catch (e) {
         console.error('[DH bootstrap] probe failed:', e);
       }
