@@ -15,6 +15,7 @@ import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { formatDistanceToNow } from 'date-fns';
 import NotificationPreferencesSection from '@/components/profile/NotificationPreferences';
 import SecurityInfoPanel from '@/components/profile/SecurityInfoPanel';
+import AdminHub from '@/components/profile/AdminHub';
 
 export default function ProfilePage() {
   const { theme, setTheme } = useTheme();
@@ -379,6 +380,9 @@ export default function ProfilePage() {
           </Button>
         </div>
       </div>
+
+      {/* Admin Hub (admin-only, self-gates) */}
+      <AdminHub />
 
       <NotificationPreferencesSection />
 
