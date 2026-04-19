@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Shield, Plus, Save, Loader2, Calculator } from 'lucide-react';
+import { ChevronLeft, Shield, Plus, Save, Loader2, Calculator, RefreshCw, Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,6 +19,9 @@ export default function PickemAdminPage() {
   const [activeWeekId, setActiveWeekId] = useState<string | null>(null);
   const { games, refetch: refetchGames } = useWeekGames(activeWeekId || undefined);
   const [newGame, setNewGame] = useState({ away: '', home: '', kickoff: '' });
+  const [syncingWeek, setSyncingWeek] = useState(false);
+  const [importingSeason, setImportingSeason] = useState(false);
+  const [importProgress, setImportProgress] = useState<{ done: number; total: number } | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -121,6 +124,51 @@ export default function PickemAdminPage() {
     toast.success(`Scored: ${data?.scored_users ?? 0} users`);
     refetchWeeks();
     refetchGames();
+  }
+
+  async function syncWeekFromEspn(weekNumber: number) {
+    if (!season) return;
+    setSyncingWeek(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-nfl-week', {
+        body: { season_year: season.year, week_number: weekNumber },
+      });
+      if (error) throw error;
+      toast.success(`Week ${weekNumber}: ${data?.upserts ?? 0} games synced${data?.finals ? `, ${data.finals} final` : ''}`);
+      refetchWeeks();
+      refetchGames();
+    } catch (e: any) {
+      toast.error(e.message ?? 'Sync failed');
+    } finally {
+      setSyncingWeek(false);
+    }
+  }
+
+  async function importFullSeason() {
+    if (!season) return;
+    if (!confirm(`Import all 18 regular-season weeks for ${season.year} from ESPN? This is idempotent and safe to re-run.`)) return;
+    setImportingSeason(true);
+    setImportProgress({ done: 0, total: 18 });
+    let totalGames = 0;
+    try {
+      for (let w = 1; w <= 18; w++) {
+        const { data, error } = await supabase.functions.invoke('sync-nfl-week', {
+          body: { season_year: season.year, week_number: w },
+        });
+        if (error) {
+          toast.error(`Week ${w} failed: ${error.message}`);
+        } else {
+          totalGames += data?.upserts ?? 0;
+        }
+        setImportProgress({ done: w, total: 18 });
+      }
+      toast.success(`Season import complete: ${totalGames} games`);
+      refetchWeeks();
+      refetchGames();
+    } finally {
+      setImportingSeason(false);
+      setImportProgress(null);
+    }
   }
 
   return (
