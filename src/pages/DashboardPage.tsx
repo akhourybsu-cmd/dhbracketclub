@@ -299,6 +299,45 @@ export default function DashboardPage() {
 
   const totalActive = pools.length + drafts.length;
 
+  // Season-derived values for hero command strip + league snapshot
+  const myStanding = standings.find(s => s.user_id === user?.id);
+  const regularEntriesCount = seasonEntries.filter(e => !e.is_playoff).length;
+  const seasonTarget = season ? getSeasonDraftTarget(season) : 0;
+  const seasonProgress = seasonTarget > 0 ? Math.min(100, Math.round((regularEntriesCount / seasonTarget) * 100)) : 0;
+  const draftsRemaining = Math.max(0, seasonTarget - regularEntriesCount);
+  const formatRank = (r: number) => {
+    const s = ['th', 'st', 'nd', 'rd'];
+    const v = r % 100;
+    return r + (s[(v - 20) % 10] || s[v] || s[0]);
+  };
+
+  // Sort drafts: your-turn first, then in_progress, then setup, then complete
+  const sortedDrafts = [...drafts].sort((a, b) => {
+    const score = (d: any) => {
+      if (d.status === 'in_progress' && d.current_pick_user_id === user?.id) return 0;
+      if (d.status === 'in_progress') return 1;
+      if (d.status === 'setup') return 2;
+      return 3;
+    };
+    return score(a) - score(b);
+  });
+
+  // Build "Needs your attention" items
+  const yourTurnDrafts = drafts.filter((d: any) => d.status === 'in_progress' && d.current_pick_user_id === user?.id);
+  const attentionItems: Array<{ id: string; label: string; sub?: string; to: string; icon: any }> = [];
+  yourTurnDrafts.slice(0, 2).forEach((d: any) => {
+    attentionItems.push({ id: `turn-${d.id}`, label: 'Your pick is up', sub: d.topic, to: `/drafts/${d.id}`, icon: Bookmark });
+  });
+  if (season?.status === 'playoffs') {
+    attentionItems.push({ id: 'playoffs-live', label: 'Playoffs are live', sub: season.name, to: '/compete', icon: Trophy });
+  } else if (season && draftsRemaining > 0 && draftsRemaining <= 2) {
+    attentionItems.push({ id: 'season-ending', label: `Season ends in ${draftsRemaining} draft${draftsRemaining !== 1 ? 's' : ''}`, sub: season.name, to: '/compete', icon: Swords });
+  }
+
+  // Activity priority weighting
+  const HIGH_SIGNAL_EVENTS = new Set(['draft_completed', 'bracket_submitted', 'event_created', 'draft_created']);
+
+
   if (loading) {
     return (
       <div className="pb-6">
