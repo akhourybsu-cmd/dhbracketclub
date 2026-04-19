@@ -340,18 +340,21 @@ function MessageBubbleInner({
               </div>
             )}
 
-            {/* Reactions row */}
+            {/* Reactions — overlapping bottom corner of bubble (iMessage style) */}
             {msg.reactions && msg.reactions.length > 0 && (
-              <div className={cn("flex flex-wrap gap-1 mt-1.5 mb-0.5", isOwn ? "justify-end" : "justify-start")}>
+              <div className={cn(
+                "absolute -bottom-3 z-10 flex flex-wrap gap-1",
+                isOwn ? "right-1" : "left-1"
+              )}>
                 {msg.reactions.map(r => (
                   <button
                     key={r.emoji}
                     onClick={(e) => { e.stopPropagation(); handleReaction(r.emoji); }}
                     className={cn(
-                      "inline-flex items-center gap-1 h-6 px-1.5 rounded-md text-[11px] border transition-all duration-150 active:scale-90",
+                      "inline-flex items-center gap-1 h-6 px-1.5 rounded-full text-[11px] border shadow-sm backdrop-blur-sm transition-all duration-150 active:scale-90",
                       r.user_reacted
-                        ? "border-primary/25 bg-primary/8 text-primary scale-[1.02]"
-                        : "border-border/15 bg-muted/20 text-muted-foreground/70 hover:border-border/30 hover:bg-muted/35"
+                        ? "border-primary/30 bg-primary/15 text-primary"
+                        : "border-border/30 bg-background/95 text-foreground/80 hover:bg-background"
                     )}
                   >
                     {r.emoji} <span className="font-bold text-[10px]">{r.count}</span>
