@@ -117,9 +117,12 @@ interface MessageBubbleProps {
   editContent: string;
   onEditContentChange: (content: string) => void;
   onCancelEdit: () => void;
+  isOverlayOpen?: boolean;
+  onToggleOverlay?: (msgId: string | null) => void;
 }
 
 const SWIPE_THRESHOLD = 60;
+const HEADER_OFFSET = 80;
 
 function MessageBubbleInner({
   msg, isOwn, sameAuthor, nextSameAuthor,
@@ -127,9 +130,15 @@ function MessageBubbleInner({
   onToggleReaction, onOpenThread, onTogglePin,
   onStartEditing, onDeleteMessage, onSaveEdit,
   editingMessageId, editContent, onEditContentChange, onCancelEdit,
+  isOverlayOpen, onToggleOverlay,
 }: MessageBubbleProps) {
-  const [showOverlay, setShowOverlay] = useState(false);
+  const showOverlay = !!isOverlayOpen;
+  const setShowOverlay = useCallback((open: boolean) => {
+    onToggleOverlay?.(open ? msg.id : null);
+  }, [msg.id, onToggleOverlay]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [overlayBelow, setOverlayBelow] = useState(false);
+  const bubbleWrapperRef = useRef<HTMLDivElement>(null);
   const editRef = useRef<HTMLTextAreaElement>(null);
 
   const dragX = useMotionValue(0);
@@ -151,29 +160,37 @@ function MessageBubbleInner({
     };
     document.addEventListener('keydown', handleEsc);
     return () => document.removeEventListener('keydown', handleEsc);
-  }, [showOverlay]);
+  }, [showOverlay, setShowOverlay]);
 
   const isBeingEdited = editingMessageId === msg.id;
   const isFirstInBlock = !sameAuthor;
   const isLastInBlock = !nextSameAuthor;
   const isSingle = isFirstInBlock && isLastInBlock;
 
+  const openOverlay = useCallback(() => {
+    if (isBeingEdited) return;
+    const rect = bubbleWrapperRef.current?.getBoundingClientRect();
+    setOverlayBelow(!!rect && rect.top < HEADER_OFFSET + 44);
+    setShowOverlay(true);
+  }, [isBeingEdited, setShowOverlay]);
+
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     if (isBeingEdited) return;
     e.preventDefault();
-    setShowOverlay(true);
-  }, [isBeingEdited]);
+    openOverlay();
+  }, [isBeingEdited, openOverlay]);
 
   const handleTap = useCallback(() => {
     if (isBeingEdited) return;
-    setShowOverlay(prev => !prev);
-  }, [isBeingEdited]);
+    if (showOverlay) setShowOverlay(false);
+    else openOverlay();
+  }, [isBeingEdited, showOverlay, openOverlay, setShowOverlay]);
 
   const handleReaction = useCallback((emoji: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     onToggleReaction(msg.id, emoji);
     setShowOverlay(false);
-  }, [msg.id, onToggleReaction]);
+  }, [msg.id, onToggleReaction, setShowOverlay]);
 
   const confirmDelete = () => {
     onDeleteMessage(msg.id);
@@ -201,6 +218,7 @@ function MessageBubbleInner({
         dragConstraints={{ left: 0, right: SWIPE_THRESHOLD + 10 }}
         dragElastic={0.15}
         dragSnapToOrigin
+        dragMomentum={false}
         onDrag={(_, info) => {
           if (info.offset.x > SWIPE_THRESHOLD && !swiped) {
             setSwiped(true);
@@ -212,7 +230,12 @@ function MessageBubbleInner({
           setSwiped(false);
         }}
         onContextMenu={handleContextMenu}
-        onClick={handleTap}
+        onTap={(e) => {
+          // Ignore taps that originated on interactive children (links, buttons, images)
+          const target = e.target as HTMLElement;
+          if (target.closest('a, button, textarea, input')) return;
+          handleTap();
+        }}
       >
         {/* Swipe reply icon */}
         <motion.div
@@ -236,7 +259,7 @@ function MessageBubbleInner({
           )}
 
           {/* Bubble column */}
-          <div className="relative max-w-[80%] min-w-[60px]">
+          <div ref={bubbleWrapperRef} className="relative max-w-[80%] min-w-[60px]">
             {/* Sender name — first message of other user's block */}
             {!isOwn && isFirstInBlock && (
               <div className="flex items-baseline gap-2 mb-0.5 pl-1">
@@ -376,10 +399,12 @@ function MessageBubbleInner({
                   exit={{ opacity: 0, scale: 0.9, y: 6 }}
                   transition={{ type: 'spring', damping: 26, stiffness: 380 }}
                   className={cn(
-                    "absolute -top-11 z-30 flex items-center gap-0.5 px-1.5 py-1 bg-background/95 backdrop-blur-lg border border-border/20 shadow-lg rounded-xl",
+                    "absolute z-50 pointer-events-auto flex items-center gap-0.5 px-1.5 py-1 bg-background/95 backdrop-blur-lg border border-border/20 shadow-lg rounded-xl",
+                    overlayBelow ? "-bottom-11" : "-top-11",
                     isOwn ? "right-0" : "left-0"
                   )}
                   onClick={(e) => e.stopPropagation()}
+                  onTap={(e) => e.stopPropagation?.()}
                 >
                   {QUICK_EMOJIS.map(emoji => (
                     <button
@@ -475,6 +500,7 @@ export const MessageBubble = memo(MessageBubbleInner, (prev, next) => {
     prev.sameAuthor === next.sameAuthor &&
     prev.nextSameAuthor === next.nextSameAuthor &&
     prev.editingMessageId === next.editingMessageId &&
-    prev.editContent === next.editContent
+    prev.editContent === next.editContent &&
+    prev.isOverlayOpen === next.isOverlayOpen
   );
 });

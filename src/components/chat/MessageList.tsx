@@ -53,7 +53,12 @@ export function MessageList({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const [newMsgCount, setNewMsgCount] = useState(0);
+  const [openOverlayMessageId, setOpenOverlayMessageId] = useState<string | null>(null);
   const prevMsgCount = useRef(messages.length);
+
+  const handleToggleOverlay = useCallback((msgId: string | null) => {
+    setOpenOverlayMessageId(msgId);
+  }, []);
 
   // Reset auto-scroll when channel changes
   useEffect(() => {
@@ -275,6 +280,8 @@ export function MessageList({
                 editContent={editContent}
                 onEditContentChange={onEditContentChange}
                 onCancelEdit={onCancelEdit}
+                isOverlayOpen={openOverlayMessageId === msg.id}
+                onToggleOverlay={handleToggleOverlay}
               />
             </div>
           );
