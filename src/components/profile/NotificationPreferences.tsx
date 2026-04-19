@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, BarChart3, CalendarDays, Bookmark, Bell, AtSign, Lock } from 'lucide-react';
+import { MessageCircle, BarChart3, CalendarDays, Bookmark, Bell, AtSign, Lock, RefreshCw } from 'lucide-react';
 import { useNotificationPreferences, NotificationPreferences } from '@/hooks/useNotificationPreferences';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { nukeAndReload } from '@/lib/forceUpdate';
 import { toast } from 'sonner';
 
 const PREF_ITEMS: {
