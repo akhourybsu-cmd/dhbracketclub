@@ -16,7 +16,7 @@ import {
   useCurrentSeason,
   useSeasonStandings,
   useSeasonEntries,
-  usePlayoffMatches,
+  usePlayoffMatchesLive,
   useLifetimeStats,
   useIsCommissioner,
   useUnassignedDrafts,
@@ -24,13 +24,18 @@ import {
   removeDraftFromSeason,
   recalculateSeasonStandings,
   advancePlayoffs,
+  suggestPlayoffTopics,
+  startPlayoffMatch,
   getSeasonDraftTarget,
   type SeasonStanding,
+  type PlayoffMatch,
 } from '@/hooks/useDraftSeasons';
 import { getSeasonDisplayName, getOrdinalSuffix, getDraftLabel, getSeasonEmoji, getSeasonProgressText } from '@/lib/seasonUtils';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Loader2, Sparkles, RefreshCw } from 'lucide-react';
 
 /* ── Lockbox card (unchanged) ── */
 function LockboxCompeteCard() {
@@ -1034,7 +1039,7 @@ export default function CompetePage() {
   const { season, loading: seasonLoading } = useCurrentSeason();
   const { standings, loading: standingsLoading, refetch: refetchStandings } = useSeasonStandings(season?.id);
   const { entries, loading: entriesLoading, refetch: refetchEntries } = useSeasonEntries(season?.id);
-  const { matches } = usePlayoffMatches(season?.id);
+  const { matches } = usePlayoffMatchesLive(season?.id);
   const isCommissioner = useIsCommissioner(season);
 
   const totalDrafts = season ? getSeasonDraftTarget(season) : 12;
