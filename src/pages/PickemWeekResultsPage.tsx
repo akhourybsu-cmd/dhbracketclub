@@ -38,7 +38,7 @@ export default function PickemWeekResultsPage() {
 
   return (
     <div className="space-y-4 pb-6">
-      {podiumed && firedRef.current && <Confetti />}
+      <Confetti active={podiumed} duration={2200} />
 
       <div className="flex items-center justify-between">
         <Link to="/pickem" className="text-[12px] text-muted-foreground flex items-center gap-1 btn-press">
