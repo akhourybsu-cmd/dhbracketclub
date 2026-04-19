@@ -441,7 +441,7 @@ export default function DashboardPage() {
               👋
             </motion.span>
           </motion.h1>
-          {!loading && (
+          {!loading && !season && (
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -450,6 +450,39 @@ export default function DashboardPage() {
             >
               {totalActive > 0 ? `${totalActive} active competition${totalActive !== 1 ? 's' : ''}` : 'No active competitions yet'}
             </motion.p>
+          )}
+          {/* Season Command Strip */}
+          {!loading && season && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.18 }}
+              className="flex items-center gap-1.5 mt-3 flex-wrap"
+            >
+              <Link to="/compete" className="command-chip">
+                <Swords className="w-3 h-3" style={{ color: 'hsl(var(--primary))' }} />
+                <span>{season.name}</span>
+              </Link>
+              {myStanding?.rank && (
+                <Link to="/compete" className="command-chip">
+                  <Trophy className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />
+                  <span>{formatRank(myStanding.rank)}</span>
+                  <span className="command-chip-label hidden sm:inline">rank</span>
+                </Link>
+              )}
+              {seasonTarget > 0 && (
+                <Link to="/compete" className="command-chip">
+                  <Bookmark className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />
+                  <span>{regularEntriesCount} of {seasonTarget}</span>
+                </Link>
+              )}
+              {season.status === 'playoffs' && (
+                <span className="command-chip" style={{ background: 'hsl(var(--gold) / 0.15)', borderColor: 'hsl(var(--gold) / 0.4)', color: 'hsl(var(--gold))' }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                  Playoffs
+                </span>
+              )}
+            </motion.div>
           )}
           {/* Online presence indicator */}
           {onlineUsers.length > 0 && (
