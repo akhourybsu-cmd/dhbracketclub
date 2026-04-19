@@ -1,0 +1,86 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+
+export type LoreContribution = {
+  id: string;
+  lore_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  profiles?: { id: string; display_name: string; avatar_url: string | null };
+};
+
+export function useLoreContributions(loreId: string | undefined) {
+  return useQuery({
+    queryKey: ['lore-contributions', loreId],
+    enabled: !!loreId,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('lore_contributions')
+        .select('*, profiles:user_id(id, display_name, avatar_url)')
+        .eq('lore_id', loreId)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return (data || []) as LoreContribution[];
+    },
+  });
+}
+
+export function useAddLoreContribution() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ loreId, content }: { loreId: string; content: string }) => {
+      if (!user) throw new Error('Not authenticated');
+      const { data, error } = await (supabase as any)
+        .from('lore_contributions')
+        .insert({ lore_id: loreId, user_id: user.id, content })
+        .select('*, profiles:user_id(id, display_name, avatar_url)')
+        .single();
+      if (error) throw error;
+      return data as LoreContribution;
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['lore-contributions', vars.loreId] });
+      queryClient.invalidateQueries({ queryKey: ['lore-entries'] });
+    },
+  });
+}
+
+export function useUpdateLoreContribution() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, content }: { id: string; loreId: string; content: string }) => {
+      const { error } = await (supabase as any)
+        .from('lore_contributions')
+        .update({ content })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['lore-contributions', vars.loreId] });
+    },
+  });
+}
+
+export function useDeleteLoreContribution() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id }: { id: string; loreId: string }) => {
+      const { error } = await (supabase as any)
+        .from('lore_contributions')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['lore-contributions', vars.loreId] });
+      queryClient.invalidateQueries({ queryKey: ['lore-entries'] });
+    },
+  });
+}

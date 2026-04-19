@@ -1460,6 +1460,41 @@ export type Database = {
         }
         Relationships: []
       }
+      lore_contributions: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          lore_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          lore_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          lore_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lore_contributions_lore_id_fkey"
+            columns: ["lore_id"]
+            isOneToOne: false
+            referencedRelation: "lore_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lore_entries: {
         Row: {
           context: string
