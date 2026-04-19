@@ -6,6 +6,7 @@ import { useLoreEntry, useDeleteLoreEntry } from '@/hooks/useLoreEntries';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoreTypeBadge, LoreStatusBadge } from '@/components/lore/LoreTypeBadge';
 import { LoreReactionBar } from '@/components/lore/LoreReactionBar';
+import { LoreContributions } from '@/components/lore/LoreContributions';
 import { toast } from 'sonner';
 
 export default function LoreDetailPage() {
@@ -124,6 +125,8 @@ export default function LoreDetailPage() {
             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground mb-3">Reactions</p>
             <LoreReactionBar loreId={entry.id} reactions={entry.reactions || []} />
           </div>
+
+          <LoreContributions loreId={entry.id} />
         </div>
       </div>
     </motion.div>

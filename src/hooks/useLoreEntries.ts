@@ -18,6 +18,7 @@ export type LoreEntry = {
   updated_at: string;
   profiles?: { id: string; display_name: string; avatar_url: string | null };
   reactions?: { reaction: string; user_id: string }[];
+  contributions?: { count: number }[];
 };
 
 export type LoreReaction = 'legendary' | 'elite' | 'cursed' | 'fraud' | 'all_timer' | 'certified';
@@ -37,7 +38,7 @@ export function useLoreEntries(filters?: { type?: string; status?: string; searc
     queryFn: async () => {
       let q = (supabase as any)
         .from('lore_entries')
-        .select('*, profiles:created_by(id, display_name, avatar_url), reactions:lore_reactions(reaction, user_id)')
+        .select('*, profiles:created_by(id, display_name, avatar_url), reactions:lore_reactions(reaction, user_id), contributions:lore_contributions(count)')
         .order('created_at', { ascending: false });
 
       if (filters?.type && filters.type !== 'all') q = q.eq('type', filters.type);
@@ -60,7 +61,7 @@ export function useLoreEntry(id: string | undefined) {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('lore_entries')
-        .select('*, profiles:created_by(id, display_name, avatar_url), reactions:lore_reactions(reaction, user_id)')
+        .select('*, profiles:created_by(id, display_name, avatar_url), reactions:lore_reactions(reaction, user_id), contributions:lore_contributions(count)')
         .eq('id', id)
         .single();
       if (error) throw error;

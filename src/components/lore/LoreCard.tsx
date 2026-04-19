@@ -7,6 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 export function LoreCard({ entry, index = 0 }: { entry: LoreEntry; index?: number }) {
   const reactionCount = entry.reactions?.length || 0;
+  const contributionCount = entry.contributions?.[0]?.count || 0;
 
   return (
     <motion.div
@@ -63,6 +64,11 @@ export function LoreCard({ entry, index = 0 }: { entry: LoreEntry; index?: numbe
                 {entry.era && <> · <span className="font-mono">{entry.era}</span></>}
               </span>
               <div className="flex items-center gap-2 flex-shrink-0">
+                {contributionCount > 0 && (
+                  <span className="font-bold tabular-nums text-muted-foreground/80">
+                    +{contributionCount}
+                  </span>
+                )}
                 {reactionCount > 0 && (
                   <span className="font-bold tabular-nums" style={{ color: 'hsl(var(--lore))' }}>
                     {reactionCount} {reactionCount === 1 ? 'react' : 'reacts'}
