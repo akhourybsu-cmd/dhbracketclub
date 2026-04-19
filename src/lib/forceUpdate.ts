@@ -27,6 +27,49 @@ export async function nukeAndReload(): Promise<void> {
   window.location.replace(url.toString());
 }
 
+// ---------- Live probe state (read by Admin Hub diagnostics) ----------
+
+export type ProbeOutcome = 'ok' | 'mismatch' | 'network-failed' | 'invalid-json' | 'never';
+
+export interface ProbeState {
+  lastAttemptAt: number | null;
+  lastSuccessAt: number | null;
+  lastOutcome: ProbeOutcome;
+  lastRemoteBuildId: string | null;
+  attempts: number;
+  successes: number;
+  failures: number;
+}
+
+const probeState: ProbeState = {
+  lastAttemptAt: null,
+  lastSuccessAt: null,
+  lastOutcome: 'never',
+  lastRemoteBuildId: null,
+  attempts: 0,
+  successes: 0,
+  failures: 0,
+};
+
+const listeners = new Set<(s: ProbeState) => void>();
+
+export function getProbeState(): ProbeState {
+  return { ...probeState };
+}
+
+export function subscribeProbeState(cb: (s: ProbeState) => void): () => void {
+  listeners.add(cb);
+  cb({ ...probeState });
+  return () => listeners.delete(cb);
+}
+
+function emit() {
+  const snapshot = { ...probeState };
+  listeners.forEach((cb) => {
+    try { cb(snapshot); } catch { /* noop */ }
+  });
+}
+
 /**
  * Fetch the deployed build id from /version.json, bypassing every cache layer.
  * Uses `cache: 'reload'` (more reliably honored on Android Chrome than
@@ -34,6 +77,9 @@ export async function nukeAndReload(): Promise<void> {
  * Returns null on failure (offline, 404, etc.) so callers can no-op.
  */
 export async function fetchRemoteBuildId(): Promise<string | null> {
+  probeState.lastAttemptAt = Date.now();
+  probeState.attempts += 1;
+
   try {
     const req = new Request(`/version.json?t=${Date.now()}`, {
       cache: 'reload',
@@ -43,10 +89,34 @@ export async function fetchRemoteBuildId(): Promise<string | null> {
       },
     });
     const res = await fetch(req);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      probeState.lastOutcome = 'network-failed';
+      probeState.failures += 1;
+      console.warn('[update-probe] non-OK response:', res.status);
+      emit();
+      return null;
+    }
     const data = await res.json();
-    return typeof data?.buildId === 'string' ? data.buildId : null;
-  } catch {
+    const buildId = typeof data?.buildId === 'string' ? data.buildId : null;
+    if (!buildId) {
+      probeState.lastOutcome = 'invalid-json';
+      probeState.failures += 1;
+      emit();
+      return null;
+    }
+    probeState.lastRemoteBuildId = buildId;
+    probeState.lastSuccessAt = Date.now();
+    probeState.successes += 1;
+    const local = typeof __BUILD_ID__ !== 'undefined' ? __BUILD_ID__ : 'dev';
+    probeState.lastOutcome = buildId === local ? 'ok' : 'mismatch';
+    console.info('[update-probe]', probeState.lastOutcome, 'remote=', buildId, 'local=', local);
+    emit();
+    return buildId;
+  } catch (err) {
+    probeState.lastOutcome = 'network-failed';
+    probeState.failures += 1;
+    console.warn('[update-probe] fetch failed:', err);
+    emit();
     return null;
   }
 }
