@@ -399,10 +399,12 @@ function MessageBubbleInner({
                   exit={{ opacity: 0, scale: 0.9, y: 6 }}
                   transition={{ type: 'spring', damping: 26, stiffness: 380 }}
                   className={cn(
-                    "absolute -top-11 z-30 flex items-center gap-0.5 px-1.5 py-1 bg-background/95 backdrop-blur-lg border border-border/20 shadow-lg rounded-xl",
+                    "absolute z-50 pointer-events-auto flex items-center gap-0.5 px-1.5 py-1 bg-background/95 backdrop-blur-lg border border-border/20 shadow-lg rounded-xl",
+                    overlayBelow ? "-bottom-11" : "-top-11",
                     isOwn ? "right-0" : "left-0"
                   )}
                   onClick={(e) => e.stopPropagation()}
+                  onTap={(e) => e.stopPropagation?.()}
                 >
                   {QUICK_EMOJIS.map(emoji => (
                     <button
