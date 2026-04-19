@@ -280,6 +280,8 @@ export function MessageList({
                 editContent={editContent}
                 onEditContentChange={onEditContentChange}
                 onCancelEdit={onCancelEdit}
+                isOverlayOpen={openOverlayMessageId === msg.id}
+                onToggleOverlay={handleToggleOverlay}
               />
             </div>
           );
