@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState, useCallback } from 'react';
+import { ReactNode, useEffect, useState, useCallback, useRef } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { LayoutDashboard, MessageSquareText, CalendarDays, Swords, Newspaper, User, Trophy, BarChart3, MessageCircle, Bookmark, Link2, ScrollText, Lock, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -43,10 +43,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  const lastFetchAtRef = useRef<number>(0);
 
-  // Fetch unread chat count
-  const fetchUnreadCount = useCallback(async () => {
+  // Fetch unread chat count (throttled)
+  const fetchUnreadCount = useCallback(async (force = false) => {
     if (!user) return;
+    const now = Date.now();
+    if (!force && now - lastFetchAtRef.current < 10_000) return;
+    lastFetchAtRef.current = now;
     try {
       const [{ data: channels }, { data: readStates }] = await Promise.all([
         supabase.from('channels').select('id'),
@@ -80,11 +84,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
     } catch {}
   }, [user]);
 
-  useEffect(() => { fetchUnreadCount(); }, [fetchUnreadCount]);
+  useEffect(() => { fetchUnreadCount(true); }, [fetchUnreadCount]);
 
-  // Refresh unread count periodically and on route change
+  // Refresh unread count periodically and on route change (throttled to 10s)
   useEffect(() => {
-    const interval = setInterval(fetchUnreadCount, 30000);
+    const interval = setInterval(() => fetchUnreadCount(true), 30000);
     return () => clearInterval(interval);
   }, [fetchUnreadCount]);
 

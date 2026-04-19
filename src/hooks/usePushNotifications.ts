@@ -26,19 +26,35 @@ function normalizeBase64Url(value: string): string {
   return value.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
+let cachedVapidKey: string | null = null;
+let cachedVapidKeyPromise: Promise<string> | null = null;
+
 async function fetchVapidPublicKey(): Promise<string> {
-  const { data, error } = await supabase.functions.invoke('send-push-notification', {
-    body: { action: 'get_vapid_public_key' },
-  });
+  if (cachedVapidKey) return cachedVapidKey;
+  if (cachedVapidKeyPromise) return cachedVapidKeyPromise;
 
-  if (error) throw error;
+  cachedVapidKeyPromise = (async () => {
+    const { data, error } = await supabase.functions.invoke('send-push-notification', {
+      body: { action: 'get_vapid_public_key' },
+    });
 
-  const key = data?.vapidPublicKey;
-  if (!key || typeof key !== 'string') {
-    throw new Error('Missing VAPID public key');
+    if (error) throw error;
+
+    const key = data?.vapidPublicKey;
+    if (!key || typeof key !== 'string') {
+      throw new Error('Missing VAPID public key');
+    }
+
+    cachedVapidKey = key;
+    return key;
+  })();
+
+  try {
+    return await cachedVapidKeyPromise;
+  } catch (err) {
+    cachedVapidKeyPromise = null;
+    throw err;
   }
-
-  return key;
 }
 
 export function usePushNotifications() {
