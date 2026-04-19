@@ -117,9 +117,12 @@ interface MessageBubbleProps {
   editContent: string;
   onEditContentChange: (content: string) => void;
   onCancelEdit: () => void;
+  isOverlayOpen?: boolean;
+  onToggleOverlay?: (msgId: string | null) => void;
 }
 
 const SWIPE_THRESHOLD = 60;
+const HEADER_OFFSET = 80;
 
 function MessageBubbleInner({
   msg, isOwn, sameAuthor, nextSameAuthor,
@@ -127,9 +130,15 @@ function MessageBubbleInner({
   onToggleReaction, onOpenThread, onTogglePin,
   onStartEditing, onDeleteMessage, onSaveEdit,
   editingMessageId, editContent, onEditContentChange, onCancelEdit,
+  isOverlayOpen, onToggleOverlay,
 }: MessageBubbleProps) {
-  const [showOverlay, setShowOverlay] = useState(false);
+  const showOverlay = !!isOverlayOpen;
+  const setShowOverlay = useCallback((open: boolean) => {
+    onToggleOverlay?.(open ? msg.id : null);
+  }, [msg.id, onToggleOverlay]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [overlayBelow, setOverlayBelow] = useState(false);
+  const bubbleWrapperRef = useRef<HTMLDivElement>(null);
   const editRef = useRef<HTMLTextAreaElement>(null);
 
   const dragX = useMotionValue(0);
