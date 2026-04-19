@@ -170,15 +170,21 @@ export default function ChatPage() {
       chIds.forEach((id: string) => { if (!meta.has(id)) meta.set(id, { unread: false }); });
       setChannelMeta(meta);
 
-      // Only auto-select on initial load (no channel selected yet)
+      // Only auto-select on initial load (no channel selected yet).
+      // On mobile we keep the user on the channel-list view so nothing feels artificially "active";
+      // on desktop we auto-open the saved/default channel because the sidebar always shows the list.
       if (!selectedChannelRef.current) {
+        const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches;
         let target: Channel | undefined;
         try {
           const savedId = localStorage.getItem('last_chat_channel_id');
           if (savedId) target = (chs as Channel[]).find(c => c.id === savedId);
         } catch {}
         if (!target) target = (chs as Channel[]).find(c => c.is_default) || (chs[0] as Channel);
-        if (target) { setSelectedChannel(target); setShowChannelList(false); }
+        if (target) {
+          setSelectedChannel(target);
+          if (isDesktop) setShowChannelList(false);
+        }
       } else {
         // If the currently selected channel still exists, refresh its data from the fetch
         const refreshed = (chs as Channel[]).find(c => c.id === selectedChannelRef.current!.id);
@@ -190,7 +196,40 @@ export default function ChatPage() {
 
   useEffect(() => { fetchChannels(); }, [fetchChannels]);
 
-  /* ═══ FETCH MEMBERS FOR @MENTIONS ═══ */
+  /* ═══ GLOBAL REALTIME — keep channel previews live across ALL channels ═══ */
+  const selectedIdRef = useRef<string | null>(null);
+  selectedIdRef.current = selectedChannel?.id || null;
+  useEffect(() => {
+    if (!user) return;
+    const ch = supabase
+      .channel('chat-channel-previews')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async (payload) => {
+        const m = payload.new as any;
+        if (m.parent_message_id) return; // threads don't update channel previews
+        // Look up author name from cached members; fall back to a quick fetch
+        let authorName = '';
+        // We can't use members here directly (closure), so do a tiny fetch for unknowns
+        const { data: prof } = await supabase.from('profiles').select('display_name').eq('id', m.user_id).maybeSingle();
+        authorName = prof?.display_name || '';
+        setChannelMeta(prev => {
+          const next = new Map(prev);
+          const existing = next.get(m.channel_id) || { unread: false };
+          // Only mark unread when the new message isn't from the current user AND user isn't actively viewing this channel
+          const isViewing = selectedIdRef.current === m.channel_id;
+          const fromMe = m.user_id === user.id;
+          next.set(m.channel_id, {
+            ...existing,
+            lastMessage: m.content,
+            lastMessageAt: m.created_at,
+            lastAuthor: authorName,
+            unread: existing.unread || (!fromMe && !isViewing),
+          });
+          return next;
+        });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user]);
   useEffect(() => {
     if (!user) return;
     supabase.from('profiles').select('id, display_name, avatar_url').then(({ data }) => {
