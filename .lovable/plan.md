@@ -1,59 +1,59 @@
 
 
-## Diagnose: Android PWA not getting updates
+## Admin Hub on Profile Page
 
-### Current state (from code I've read)
-- `useAppUpdate.ts` polls `/version.json` every 30s and on focus/visibility/route change. On mismatch → toast + auto nuke + reload via `nukeAndReload()`.
-- `nukeAndReload()` unregisters SWs, deletes caches, hard-reloads with `?_v=timestamp`.
-- `sw-push.js` is push-only (no fetch handler, no caching).
-- `vite.config.ts` emits `/version.json` with `BUILD_ID = Date.now()` at build time.
-- `main.tsx` registers `/sw-push.js` only on non-preview hosts.
+Goal: one organized "Admin Tools" section on Alex's Profile page surfacing every admin capability in the app, plus the force-refresh button.
 
-### Why Android specifically gets stuck
+### Discovery — what admin tools exist today
 
-Three high-probability culprits:
+From the file tree:
+- `/admin` → `AdminToolsPage.tsx` (sync runs, general admin)
+- `/pickem/admin` → `PickemAdminPage.tsx` (NFL season/week/game management)
+- Draft commissioner controls (season-eligibility, league management) — accessed inline on draft pages today
+- Force update / build ID display — currently buried in `NotificationPreferences.tsx`
+- Chat changelog posting — done via DB today, no UI
 
-1. **The `manifest.webmanifest` `start_url` has no cache-buster.** Android Chrome aggressively caches the launch HTML for installed PWAs. When you tap the home-screen icon, Android may serve a cached `index.html` from HTTP cache *before* JS ever runs — so `useAppUpdate` never gets a chance to fire on a stale shell. The bundle hash inside that stale HTML points at old JS chunks.
+### Plan
 
-2. **No HTTP cache headers on `index.html`.** Lovable hosting may serve `index.html` with default caching. Without `Cache-Control: no-cache` on the shell, Android holds onto it for hours/days.
+**1. New `AdminHub` section on `ProfilePage.tsx`** (only renders when `has_role(user, 'admin')`)
+- Premium gold-bordered card with "Admin Tools" eyebrow + Shield icon header
+- Grouped into 3 logical sections with eyebrow labels:
 
-3. **`/version.json` may itself be cached by Android's HTTP cache** even with `cache: 'no-store'` in the fetch — Android Chrome has been known to ignore that hint for installed PWAs in certain conditions. The query param `?t=${Date.now()}` is there but only helps if the request actually goes out.
+  **a. App Management**
+  - "Sync Runs & Logs" → `/admin` (existing AdminToolsPage)
+  - "Force refresh app" → calls `nukeAndReload()` directly (moved from NotificationPreferences)
+  - Build ID displayed as small mono text
 
-4. **No visible recovery affordance** in the installed PWA. The `?fresh=1` escape hatch exists but users can't type URLs into a launched PWA easily.
+  **b. Competitions**
+  - "NFL Pick'em Admin" → `/pickem/admin`
+  - "Draft Commissioner" → `/drafts` with note "Manage seasons from any draft page" (or link to a future commissioner view if one exists — confirm during build)
 
-### Fix plan
+  **c. Diagnostics**
+  - "Test push notification" → reuses existing test-push action from NotificationPreferences
+  - Current role + user ID display for debugging
 
-**A. Force `index.html` + `version.json` to never be cached**
-- Add `<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />`, `Pragma: no-cache`, `Expires: 0` to `index.html` `<head>`. Belt + suspenders for Android's HTTP cache.
+**2. Clean up `NotificationPreferences.tsx`**
+- Remove the build-id + "Check for updates" row (now lives in AdminHub)
+- Keep the push-notification test there for non-admin users since it's also user-relevant
 
-**B. Cache-bust the PWA `start_url`**
-- Change `manifest.webmanifest` `start_url` from `/` to `/?source=pwa` so Android treats launches as a unique URL. Add a `?v=` token isn't possible without a build step — `?source=pwa` is enough to defeat the most aggressive caching path on Android.
-
-**C. Make the version probe bulletproof on Android**
-- In `fetchRemoteBuildId()`: switch from `fetch(..., {cache:'no-store'})` to a `Request` with `cache: 'reload'` (forces network revalidation, more reliably honored on Android than `no-store`).
-- Add a fallback: if 3 consecutive probes fail to detect change but the page has been open >5 min since last successful check, do a soft `location.reload()` anyway on next focus. Catches the case where the cached JS bundle never sees a fresh `version.json`.
-
-**D. User-facing manual update button (the real fix for frustration)**
-- Add a tiny "Check for updates" row to `NotificationPreferences.tsx` (already on Profile page). Tapping it calls `nukeAndReload()` directly. Gives the user a permanent panic button inside the installed PWA — no URL typing needed.
-- Show current `__BUILD_ID__` next to it as tiny grey text so the user/you can confirm what version they're on.
-
-**E. Trigger update check on PWA launch**
-- In `main.tsx`, after `createRoot`, immediately call `fetchRemoteBuildId()` once before the `useAppUpdate` hook even mounts. Reduces time-to-detect on cold launch from ~30s to ~immediate.
+**3. Visual treatment**
+- Match the seasonal-league-aesthetic: gold radial glow header, Shield icon in gold gradient container
+- Each tool = full-width row button with icon + title + chevron right (44px touch targets)
+- Section eyebrows: `text-[10px] tracking-[0.14em] uppercase text-muted-foreground`
 
 ### Files to touch
-- `index.html` — no-cache meta tags
-- `public/manifest.webmanifest` — `start_url: "/?source=pwa"`
-- `src/lib/forceUpdate.ts` — switch to `cache: 'reload'`, add stale-detection fallback
-- `src/hooks/useAppUpdate.ts` — track consecutive probe count for fallback reload
-- `src/components/profile/NotificationPreferences.tsx` — add "Check for updates" row + build id display
-- `src/main.tsx` — fire one immediate `fetchRemoteBuildId` on boot
+- `src/pages/ProfilePage.tsx` — add AdminHub section (admin-gated)
+- `src/components/profile/NotificationPreferences.tsx` — remove build/refresh row (relocated, not duplicated)
+- (read first to confirm structure: `ProfilePage.tsx`, `AdminToolsPage.tsx`)
 
 ### Out of scope
-- No service worker rewrite (current push-only SW is fine and not the cause).
-- No build-pipeline changes.
+- No new admin capabilities — purely consolidation
+- No changes to existing admin pages themselves
+- Non-admins see no change to Profile
 
-### How to verify after deploy
-1. Install PWA on Android, note build id shown on Profile.
-2. Make any code change, publish.
-3. Within ~30s of opening the PWA the toast should appear. If not, tap "Check for updates" — should nuke + reload immediately to new build.
+### QA after build
+- Sign in as Alex → Profile shows Admin Tools section with all 3 groups
+- Sign in as non-admin → no Admin section visible
+- Tap "Force refresh" → confirms + nukes + reloads
+- All deep links navigate correctly on mobile (411×734)
 
