@@ -21,23 +21,34 @@ export function TiebreakerInput({ game, predicted, actual, onChange }: Props) {
   const locked = isGameLocked(game);
 
   return (
-    <div className="rounded-2xl border border-gold/30 bg-gold/5 p-4">
-      <div className="flex items-center gap-1.5 mb-2">
+    <div
+      className="relative rounded-2xl overflow-hidden p-4 mt-1"
+      style={{
+        background: 'radial-gradient(ellipse 100% 80% at 50% 0%, hsl(var(--gold) / 0.12), transparent 70%), hsl(var(--card))',
+        border: '1px solid hsl(var(--gold) / 0.32)',
+        boxShadow: '0 0 18px hsl(var(--gold) / 0.10)',
+      }}
+    >
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/50 to-transparent" />
+
+      <div className="flex items-center gap-1.5 mb-3">
         <Star className="w-3.5 h-3.5 text-gold fill-gold" />
-        <p className="text-[11px] font-extrabold uppercase tracking-wider text-gold">Tiebreaker</p>
-        {locked && <Lock className="w-3 h-3 text-muted-foreground" />}
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-gold">Tiebreaker</p>
+        {locked && <Lock className="w-3 h-3 text-muted-foreground ml-auto" />}
       </div>
-      <div className="flex items-center gap-2 mb-3">
-        <TeamLogo team={game.away_team} size={24} />
-        <span className="text-[12px] font-bold">{game.away_team?.abbr}</span>
-        <span className="text-[10px] text-muted-foreground">@</span>
-        <TeamLogo team={game.home_team} size={24} />
-        <span className="text-[12px] font-bold">{game.home_team?.abbr}</span>
+
+      <div className="flex items-center gap-2 mb-3 p-2 rounded-xl bg-background/40">
+        <TeamLogo team={game.away_team} size={26} />
+        <span className="text-[12px] font-extrabold">{game.away_team?.abbr}</span>
+        <span className="text-[9px] font-extrabold tracking-wider text-muted-foreground/60">VS</span>
+        <TeamLogo team={game.home_team} size={26} />
+        <span className="text-[12px] font-extrabold">{game.home_team?.abbr}</span>
         <span className="text-[10px] text-muted-foreground/70 ml-auto">
           {format(new Date(game.kickoff_at), 'EEE h:mm a')}
         </span>
       </div>
-      <label className="text-[11px] text-muted-foreground/80 block mb-1.5">
+
+      <label className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-muted-foreground/80 block mb-1.5">
         Predict total combined points
       </label>
       <Input
@@ -54,12 +65,12 @@ export function TiebreakerInput({ game, predicted, actual, onChange }: Props) {
           const n = parseInt(v, 10);
           if (!isNaN(n) && n >= 0 && n <= 200) onChange(n);
         }}
-        className="text-base font-bold h-11"
+        className="text-base font-extrabold h-11 tabular-nums"
       />
       {actual != null && (
         <p className="text-[11px] mt-2 text-muted-foreground">
-          Actual total: <span className="font-bold text-foreground">{actual}</span>
-          {predicted != null && <> · Off by <span className="font-bold">{Math.abs(actual - predicted)}</span></>}
+          Actual total: <span className="font-extrabold text-foreground tabular-nums">{actual}</span>
+          {predicted != null && <> · Off by <span className="font-extrabold tabular-nums">{Math.abs(actual - predicted)}</span></>}
         </p>
       )}
     </div>

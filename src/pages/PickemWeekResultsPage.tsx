@@ -1,11 +1,13 @@
 import { Link, useParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { ChevronLeft, Trophy, Check, X } from 'lucide-react';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   useActiveSeason, useSeasonWeeks, useWeekGames, useMyWeekPicks, useWeeklyStandings,
 } from '@/hooks/usePickem';
 import { TeamLogo } from '@/components/pickem/TeamLogo';
+import { Confetti } from '@/components/Confetti';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -22,59 +24,95 @@ export default function PickemWeekResultsPage() {
 
   const correctCount = picks.filter((p) => p.is_correct === true).length;
   const totalScored = picks.filter((p) => p.is_correct !== null).length;
+  const accuracy = totalScored > 0 ? Math.round((correctCount / totalScored) * 100) : 0;
+
+  const meStanding = standings.find((s) => s.user_id === user?.id);
+  const myRank = meStanding?.rank ?? null;
+  const podiumed = myRank !== null && myRank >= 1 && myRank <= 3;
+
+  // Trigger confetti once per session per week if user is in top 3
+  const firedRef = useRef(false);
+  useEffect(() => {
+    if (podiumed && !firedRef.current) firedRef.current = true;
+  }, [podiumed]);
 
   return (
-    <div className="space-y-3 pb-6">
+    <div className="space-y-4 pb-6">
+      <Confetti active={podiumed} duration={2200} />
+
       <div className="flex items-center justify-between">
         <Link to="/pickem" className="text-[12px] text-muted-foreground flex items-center gap-1 btn-press">
           <ChevronLeft className="w-4 h-4" /> Pick'em
         </Link>
-        <Link to={`/pickem/week/${num}`} className="text-[12px] text-gold font-bold btn-press">
+        <Link to={`/pickem/week/${num}`} className="text-[12px] text-gold font-extrabold btn-press">
           Slate
         </Link>
       </div>
 
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">{week?.label ?? `Week ${num}`} Results</h1>
-        <p className="text-[12px] text-muted-foreground">
-          You got <span className="font-bold text-foreground">{correctCount}</span> of {totalScored || picks.length} correct
-        </p>
-      </div>
+      {/* Recap hero */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+        className="relative rounded-2xl overflow-hidden p-5"
+        style={{
+          background: 'radial-gradient(ellipse 80% 60% at 50% 0%, hsl(var(--gold) / 0.12), transparent 60%), hsl(var(--card))',
+          border: '1px solid hsl(var(--border) / 0.4)',
+        }}
+      >
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-gold/90">Final Results</p>
+        <h1 className="text-[26px] font-extrabold tracking-tight leading-tight mt-0.5">
+          {week?.label ?? `Week ${num}`}
+        </h1>
+        <div className="mt-3 flex items-baseline gap-2">
+          <span className="text-[34px] font-extrabold tabular-nums leading-none text-gold">{correctCount}</span>
+          <span className="text-[14px] font-extrabold text-muted-foreground tabular-nums">/ {totalScored || picks.length}</span>
+          <span className="text-[12px] text-muted-foreground ml-2">({accuracy}%)</span>
+          {myRank && (
+            <span className="ml-auto text-[12px] font-extrabold text-foreground/80">
+              Rank <span className="text-gold tabular-nums">#{myRank}</span>
+            </span>
+          )}
+        </div>
+      </motion.div>
 
       {/* Per-game results */}
       <div className="space-y-2">
-        {games.map((game) => {
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-muted-foreground px-1">Game Results</p>
+        {games.map((game, i) => {
           const myPick = picks.find((p) => p.game_id === game.id);
           const winner = game.winner_team_id;
           const isFinal = game.status === 'final';
           const wasCorrect = myPick?.is_correct === true;
           const wasWrong = myPick?.is_correct === false;
           return (
-            <div key={game.id} className={cn(
-              'rounded-2xl border p-3',
-              wasCorrect && 'bg-success/5 border-success/30',
-              wasWrong && 'bg-destructive/5 border-destructive/30',
-              !myPick && isFinal && 'bg-muted/20 border-border/30',
-              !isFinal && 'bg-card/40 border-border/30',
-            )}>
+            <motion.div
+              key={game.id}
+              initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: Math.min(i * 0.025, 0.25) }}
+              className={cn(
+                'rounded-2xl border p-3',
+                wasCorrect && 'bg-success/5 border-success/35',
+                wasWrong && 'bg-destructive/5 border-destructive/30',
+                !myPick && isFinal && 'bg-muted/20 border-border/30',
+                !isFinal && 'bg-card/40 border-border/30',
+              )}>
               <div className="flex items-center justify-between mb-2">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                <p className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-[0.14em]">
                   {format(new Date(game.kickoff_at), 'EEE h:mm a')}
                 </p>
                 {isFinal ? (
-                  wasCorrect ? <Check className="w-4 h-4 text-success" />
-                  : wasWrong ? <X className="w-4 h-4 text-destructive" />
-                  : <span className="text-[10px] font-bold text-muted-foreground">No pick</span>
+                  wasCorrect ? <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-success uppercase tracking-wider"><Check className="w-3 h-3" /> Correct</span>
+                  : wasWrong ? <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-destructive uppercase tracking-wider"><X className="w-3 h-3" /> Wrong</span>
+                  : <span className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider">No pick</span>
                 ) : (
-                  <span className="text-[10px] font-bold text-muted-foreground">{game.status === 'live' ? 'LIVE' : 'Pending'}</span>
+                  <span className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider">{game.status === 'live' ? 'LIVE' : 'Pending'}</span>
                 )}
               </div>
               <div className="flex items-center gap-2">
                 <TeamRow team={game.away_team} score={game.away_score} isWinner={winner === game.away_team_id} myPickHere={myPick?.picked_team_id === game.away_team_id} />
-                <span className="text-[10px] text-muted-foreground">@</span>
+                <span className="text-[9px] font-extrabold tracking-[0.14em] text-muted-foreground/40">VS</span>
                 <TeamRow team={game.home_team} score={game.home_score} isWinner={winner === game.home_team_id} myPickHere={myPick?.picked_team_id === game.home_team_id} />
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>
@@ -83,7 +121,7 @@ export default function PickemWeekResultsPage() {
       <div className="glass-card overflow-hidden">
         <div className="p-3.5 border-b border-border/20 flex items-center gap-1.5">
           <Trophy className="w-3.5 h-3.5 text-gold" />
-          <h3 className="font-bold text-[13px]">Weekly Leaderboard</h3>
+          <h3 className="font-extrabold text-[13px] tracking-tight">Weekly Leaderboard</h3>
         </div>
         {standings.length === 0 ? (
           <div className="p-6 text-center text-xs text-muted-foreground">No scored picks yet for this week.</div>
@@ -93,22 +131,26 @@ export default function PickemWeekResultsPage() {
               const isMe = s.user_id === user?.id;
               const rank = s.rank ?? i + 1;
               return (
-                <div key={s.id} className={cn(
-                  'flex items-center gap-3 px-4 py-3',
-                  isMe && 'bg-gold/5 border-l-2 border-l-gold',
-                )}>
-                  <div className="w-6 text-center text-[12px] font-extrabold tabular-nums">
-                    {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`}
+                <motion.div
+                  key={s.id}
+                  initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: Math.min(i * 0.04, 0.3) }}
+                  className={cn(
+                    'flex items-center gap-3 px-4 py-3',
+                    isMe && 'bg-gold/5 border-l-2 border-l-gold',
+                  )}>
+                  <div className="w-7 text-center text-[12px] font-extrabold tabular-nums">
+                    {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : <span className="text-muted-foreground">#{rank}</span>}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-bold truncate">{(s.profiles as any)?.display_name ?? 'Unknown'}</p>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-[13px] font-extrabold truncate">{(s.profiles as any)?.display_name ?? 'Unknown'}</p>
+                    <p className="text-[10px] text-muted-foreground tabular-nums">
                       {s.correct_picks}/{s.total_picks} · {Math.round((s.accuracy || 0) * 100)}%
                       {s.tiebreak_delta != null && <> · TB ±{s.tiebreak_delta}</>}
                     </p>
                   </div>
                   <div className="text-base font-extrabold tabular-nums">{s.correct_picks}</div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
@@ -121,15 +163,15 @@ export default function PickemWeekResultsPage() {
 function TeamRow({ team, score, isWinner, myPickHere }: { team?: any; score: number | null; isWinner: boolean; myPickHere: boolean }) {
   return (
     <div className={cn(
-      'flex-1 flex items-center gap-2 p-2 rounded-lg',
-      isWinner && 'bg-success/10',
-      myPickHere && !isWinner && 'ring-1 ring-border',
+      'flex-1 flex items-center gap-2 p-2 rounded-lg transition-colors',
+      isWinner && 'bg-success/12',
+      myPickHere && !isWinner && 'ring-1 ring-border/50',
     )}>
-      <TeamLogo team={team} size={28} />
+      <TeamLogo team={team} size={28} className={cn(isWinner ? '' : 'opacity-80')} />
       <div className="flex-1 min-w-0">
-        <p className="text-[12px] font-extrabold leading-tight truncate">{team?.abbr}</p>
+        <p className={cn('text-[12px] font-extrabold leading-tight truncate', isWinner && 'text-success')}>{team?.abbr}</p>
       </div>
-      {score !== null && <span className={cn('text-[14px] font-extrabold tabular-nums', isWinner && 'text-success')}>{score}</span>}
+      {score !== null && <span className={cn('text-[15px] font-extrabold tabular-nums', isWinner && 'text-success')}>{score}</span>}
     </div>
   );
 }
