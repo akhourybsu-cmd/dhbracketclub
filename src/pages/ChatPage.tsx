@@ -196,7 +196,40 @@ export default function ChatPage() {
 
   useEffect(() => { fetchChannels(); }, [fetchChannels]);
 
-  /* ═══ FETCH MEMBERS FOR @MENTIONS ═══ */
+  /* ═══ GLOBAL REALTIME — keep channel previews live across ALL channels ═══ */
+  const selectedIdRef = useRef<string | null>(null);
+  selectedIdRef.current = selectedChannel?.id || null;
+  useEffect(() => {
+    if (!user) return;
+    const ch = supabase
+      .channel('chat-channel-previews')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async (payload) => {
+        const m = payload.new as any;
+        if (m.parent_message_id) return; // threads don't update channel previews
+        // Look up author name from cached members; fall back to a quick fetch
+        let authorName = '';
+        // We can't use members here directly (closure), so do a tiny fetch for unknowns
+        const { data: prof } = await supabase.from('profiles').select('display_name').eq('id', m.user_id).maybeSingle();
+        authorName = prof?.display_name || '';
+        setChannelMeta(prev => {
+          const next = new Map(prev);
+          const existing = next.get(m.channel_id) || { unread: false };
+          // Only mark unread when the new message isn't from the current user AND user isn't actively viewing this channel
+          const isViewing = selectedIdRef.current === m.channel_id;
+          const fromMe = m.user_id === user.id;
+          next.set(m.channel_id, {
+            ...existing,
+            lastMessage: m.content,
+            lastMessageAt: m.created_at,
+            lastAuthor: authorName,
+            unread: existing.unread || (!fromMe && !isViewing),
+          });
+          return next;
+        });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user]);
   useEffect(() => {
     if (!user) return;
     supabase.from('profiles').select('id, display_name, avatar_url').then(({ data }) => {
