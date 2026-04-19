@@ -29,11 +29,22 @@ export default defineConfig(({ mode }) => ({
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
+            // Always try the network first for the HTML shell so users
+            // get fresh builds the moment they reopen the app.
+            urlPattern: ({ request }) => request.mode === "navigate",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "html-shell",
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 },
+              networkTimeoutSeconds: 3,
+            },
+          },
+          {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
             handler: "NetworkFirst",
             options: {
               cacheName: "supabase-api",
-              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 5 },
+              expiration: { maxEntries: 50, maxAgeSeconds: 60 },
               networkTimeoutSeconds: 5,
             },
           },

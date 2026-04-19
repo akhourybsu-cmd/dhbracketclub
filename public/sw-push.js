@@ -1,6 +1,11 @@
 // Push notification handler for the service worker
 // This file is imported by the PWA service worker
 
+// Take control immediately on install so updates apply without waiting
+self.addEventListener('install', () => {
+  self.skipWaiting();
+});
+
 // On activation, clear ALL old caches to prevent stale data
 self.addEventListener('activate', (event) => {
   event.waitUntil(
