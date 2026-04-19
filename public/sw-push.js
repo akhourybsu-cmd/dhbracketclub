@@ -1,91 +1,131 @@
-// Push notification handler for the service worker
-// This file is imported by the PWA service worker
+// DH service worker — single file that handles two phases:
 //
-// SW_VERSION: bump this string to force the browser to detect a SW change
-// and trigger an update on installed PWAs (Android/iOS).
-const SW_VERSION = '2026-04-19-bootstrap-probe';
+// 1) SELF-DESTRUCT phase: when an old install's SW (which `importScripts`'d
+//    this file) refetches it, this script unregisters the SW, wipes ALL
+//    caches, and reloads every open client. This breaks installs that are
+//    stuck on a stale Workbox-precached index.html.
+//
+// 2) PUSH-ONLY phase: when the page registers `/sw-push.js` directly as the
+//    SW (no Workbox wrapper), it serves only push + notificationclick
+//    handlers. No fetch listener, no caching. The app shell is always
+//    fetched fresh from the network.
+//
+// The phase is determined by whether this script was loaded via importScripts
+// (old SW) vs registered directly. We detect "old SW" by checking for the
+// presence of workbox globals.
+
+const SW_VERSION = '2026-04-19-self-destruct-v2';
 self.__SW_VERSION = SW_VERSION;
 
-// Take control immediately on install so updates apply without waiting
-self.addEventListener('install', () => {
-  self.skipWaiting();
-});
+const isLegacyWorkboxSW =
+  typeof self.workbox !== 'undefined' ||
+  typeof self.__WB_MANIFEST !== 'undefined' ||
+  typeof self.__WB_DISABLE_DEV_LOGS !== 'undefined';
 
-// On activation: nuke ALL caches (including old workbox precaches) and claim clients.
-// This ensures the bootstrap probe in index.html sees a fresh /version.json.
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    (async () => {
-      const cacheNames = await caches.keys();
-      await Promise.all(cacheNames.map((name) => caches.delete(name).catch(() => false)));
-      await self.clients.claim();
-    })()
-  );
-});
+if (isLegacyWorkboxSW) {
+  // === SELF-DESTRUCT PHASE ===
+  // Old Workbox SW imported us. Nuke everything.
+  self.addEventListener('install', (event) => {
+    self.skipWaiting();
+  });
 
-// NEVER intercept /version.json — it must always hit the network so the
-// bootstrap probe in index.html can detect new deploys.
-self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-  if (url.pathname === '/version.json') {
-    event.respondWith(fetch(event.request, { cache: 'no-store' }).catch(() => new Response('{}', { headers: { 'content-type': 'application/json' } })));
-  }
-});
-
-self.addEventListener('push', (event) => {
-  if (!event.data) return;
-
-  try {
-    const data = event.data.json();
-    const tag = data.tag || 'dh-chat-' + (data.data?.url || 'default');
-
-    // Check for existing notification with same tag to build a count
-    const showPromise = self.registration.getNotifications({ tag }).then((existing) => {
-      let body = data.body || '';
-      let count = 1;
-
-      if (existing.length > 0) {
-        const prev = existing[0];
-        const prevCount = prev.data?.messageCount || 1;
-        count = prevCount + 1;
-        body = `${count} new messages`;
-      }
-
-      const options = {
-        body,
-        icon: data.icon || '/pwa-icon-512.png',
-        badge: '/pwa-icon-512.png',
-        data: { ...(data.data || {}), messageCount: count },
-        vibrate: [100, 50, 100],
-        tag,
-        renotify: true,
-      };
-
-      return self.registration.showNotification(data.title || 'DH', options);
-    });
-
-    event.waitUntil(showPromise);
-  } catch (e) {
-    console.error('Push event error:', e);
-  }
-});
-
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-
-  const url = event.notification.data?.url || '/chat';
-
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Focus existing window if available
-      for (const client of clientList) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          client.navigate(url);
-          return client.focus();
+  self.addEventListener('activate', (event) => {
+    event.waitUntil(
+      (async () => {
+        try {
+          const cacheNames = await caches.keys();
+          await Promise.all(cacheNames.map((n) => caches.delete(n).catch(() => false)));
+        } catch (e) {
+          console.error('[sw-push self-destruct] cache wipe failed:', e);
         }
-      }
-      // Open new window
-      return clients.openWindow(url);
-    })
-  );
-});
+        try {
+          await self.registration.unregister();
+        } catch (e) {
+          console.error('[sw-push self-destruct] unregister failed:', e);
+        }
+        try {
+          const clientsList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+          for (const client of clientsList) {
+            try {
+              const u = new URL(client.url);
+              u.searchParams.set('_sw_killed', Date.now().toString());
+              client.navigate(u.toString());
+            } catch (e) {
+              // Fallback: postMessage to client
+              try { client.postMessage({ type: 'SW_KILLED' }); } catch {}
+            }
+          }
+        } catch (e) {
+          console.error('[sw-push self-destruct] client reload failed:', e);
+        }
+      })()
+    );
+  });
+
+  // Don't intercept anything during the brief self-destruct window.
+} else {
+  // === PUSH-ONLY PHASE ===
+  // We are the standalone SW. Only handle push + notificationclick.
+  self.addEventListener('install', () => {
+    self.skipWaiting();
+  });
+
+  self.addEventListener('activate', (event) => {
+    event.waitUntil(self.clients.claim());
+  });
+
+  self.addEventListener('push', (event) => {
+    if (!event.data) return;
+
+    try {
+      const data = event.data.json();
+      const tag = data.tag || 'dh-chat-' + (data.data?.url || 'default');
+
+      const showPromise = self.registration.getNotifications({ tag }).then((existing) => {
+        let body = data.body || '';
+        let count = 1;
+
+        if (existing.length > 0) {
+          const prev = existing[0];
+          const prevCount = prev.data?.messageCount || 1;
+          count = prevCount + 1;
+          body = `${count} new messages`;
+        }
+
+        const options = {
+          body,
+          icon: data.icon || '/pwa-icon-512.png',
+          badge: '/pwa-icon-512.png',
+          data: { ...(data.data || {}), messageCount: count },
+          vibrate: [100, 50, 100],
+          tag,
+          renotify: true,
+        };
+
+        return self.registration.showNotification(data.title || 'DH', options);
+      });
+
+      event.waitUntil(showPromise);
+    } catch (e) {
+      console.error('Push event error:', e);
+    }
+  });
+
+  self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+
+    const url = event.notification.data?.url || '/chat';
+
+    event.waitUntil(
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+        for (const client of clientList) {
+          if (client.url.includes(self.location.origin) && 'focus' in client) {
+            client.navigate(url);
+            return client.focus();
+          }
+        }
+        return clients.openWindow(url);
+      })
+    );
+  });
+}

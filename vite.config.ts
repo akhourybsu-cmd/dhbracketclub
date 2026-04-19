@@ -3,7 +3,6 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import fs from "fs";
 import { componentTagger } from "lovable-tagger";
-import { VitePWA } from "vite-plugin-pwa";
 
 const BUILD_ID = Date.now().toString();
 
@@ -43,67 +42,6 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     emitVersionJson(),
-    VitePWA({
-      registerType: "autoUpdate",
-      includeAssets: ["favicon.png", "pwa-icon-512.png"],
-      workbox: {
-        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
-        navigateFallbackDenylist: [/^\/~oauth/, /^\/version\.json/],
-        // Note: 'html' intentionally excluded so index.html is always
-        // fetched fresh via the NetworkFirst navigation route below.
-        // This prevents installed PWAs from serving a stale app shell.
-        globPatterns: ["**/*.{js,css,ico,png,svg,woff2}"],
-        importScripts: ["/sw-push.js"],
-        skipWaiting: true,
-        clientsClaim: true,
-        cleanupOutdatedCaches: true,
-        runtimeCaching: [
-          {
-            // version.json must NEVER be cached — it's our update probe.
-            urlPattern: ({ url }) => url.pathname === "/version.json",
-            handler: "NetworkOnly",
-          },
-          {
-            // Always try the network first for the HTML shell so users
-            // get fresh builds the moment they reopen the app.
-            urlPattern: ({ request }) => request.mode === "navigate",
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "html-shell",
-              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 },
-              networkTimeoutSeconds: 3,
-            },
-          },
-          {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "supabase-api",
-              expiration: { maxEntries: 50, maxAgeSeconds: 60 },
-              networkTimeoutSeconds: 5,
-            },
-          },
-        ],
-      },
-      manifest: {
-        name: "DH",
-        short_name: "DH",
-        description: "Brackets, rankings, polls, and drafts with your crew — for fun, not funds.",
-        theme_color: "#0D1210",
-        background_color: "#0D1210",
-        display: "standalone",
-        orientation: "portrait",
-        start_url: "/",
-        icons: [
-          {
-            src: "/pwa-icon-512.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "any maskable",
-          },
-        ],
-      },
-    }),
   ].filter(Boolean),
   resolve: {
     alias: {
