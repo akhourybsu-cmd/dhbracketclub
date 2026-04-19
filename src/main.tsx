@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { fetchRemoteBuildId } from "./lib/forceUpdate";
 
 // Recovery escape hatch: visit `/?fresh=1` to nuke service workers + caches.
 async function maybeHardReset() {
