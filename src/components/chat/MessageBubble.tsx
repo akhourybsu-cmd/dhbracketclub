@@ -500,6 +500,7 @@ export const MessageBubble = memo(MessageBubbleInner, (prev, next) => {
     prev.sameAuthor === next.sameAuthor &&
     prev.nextSameAuthor === next.nextSameAuthor &&
     prev.editingMessageId === next.editingMessageId &&
-    prev.editContent === next.editContent
+    prev.editContent === next.editContent &&
+    prev.isOverlayOpen === next.isOverlayOpen
   );
 });
