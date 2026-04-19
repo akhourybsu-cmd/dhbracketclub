@@ -16,6 +16,7 @@ import { usePwaInstall } from '@/hooks/usePwaInstall';
 import dhMonogram from '@/assets/dh-monogram.png';
 import { formatDistanceToNow, format, isPast, isToday, isTomorrow, isThisWeek } from 'date-fns';
 import { useActivityFeedUpdates, useDraftListUpdates } from '@/hooks/useRealtimeSubscription';
+import { useCurrentSeason, useSeasonStandings, useSeasonEntries, getSeasonDraftTarget } from '@/hooks/useDraftSeasons';
 
 const MODULE_ICONS: Record<string, any> = {
   bracket_pool: Trophy,
@@ -61,6 +62,9 @@ const ACTIVITY_ICONS: Record<string, { icon: any; color: string }> = {
 export default function DashboardPage() {
   const { user } = useAuth();
   const { canInstall, install } = usePwaInstall();
+  const { season } = useCurrentSeason();
+  const { standings } = useSeasonStandings(season?.id);
+  const { entries: seasonEntries } = useSeasonEntries(season?.id);
   const [pools, setPools] = useState<any[]>([]);
   const [rankings, setRankings] = useState<any[]>([]);
   const [polls, setPolls] = useState<any[]>([]);
@@ -295,6 +299,45 @@ export default function DashboardPage() {
 
   const totalActive = pools.length + drafts.length;
 
+  // Season-derived values for hero command strip + league snapshot
+  const myStanding = standings.find(s => s.user_id === user?.id);
+  const regularEntriesCount = seasonEntries.filter(e => !e.is_playoff).length;
+  const seasonTarget = season ? getSeasonDraftTarget(season) : 0;
+  const seasonProgress = seasonTarget > 0 ? Math.min(100, Math.round((regularEntriesCount / seasonTarget) * 100)) : 0;
+  const draftsRemaining = Math.max(0, seasonTarget - regularEntriesCount);
+  const formatRank = (r: number) => {
+    const s = ['th', 'st', 'nd', 'rd'];
+    const v = r % 100;
+    return r + (s[(v - 20) % 10] || s[v] || s[0]);
+  };
+
+  // Sort drafts: your-turn first, then in_progress, then setup, then complete
+  const sortedDrafts = [...drafts].sort((a, b) => {
+    const score = (d: any) => {
+      if (d.status === 'in_progress' && d.current_pick_user_id === user?.id) return 0;
+      if (d.status === 'in_progress') return 1;
+      if (d.status === 'setup') return 2;
+      return 3;
+    };
+    return score(a) - score(b);
+  });
+
+  // Build "Needs your attention" items
+  const yourTurnDrafts = drafts.filter((d: any) => d.status === 'in_progress' && d.current_pick_user_id === user?.id);
+  const attentionItems: Array<{ id: string; label: string; sub?: string; to: string; icon: any }> = [];
+  yourTurnDrafts.slice(0, 2).forEach((d: any) => {
+    attentionItems.push({ id: `turn-${d.id}`, label: 'Your pick is up', sub: d.topic, to: `/drafts/${d.id}`, icon: Bookmark });
+  });
+  if (season?.status === 'playoffs') {
+    attentionItems.push({ id: 'playoffs-live', label: 'Playoffs are live', sub: season.name, to: '/compete', icon: Trophy });
+  } else if (season && draftsRemaining > 0 && draftsRemaining <= 2) {
+    attentionItems.push({ id: 'season-ending', label: `Season ends in ${draftsRemaining} draft${draftsRemaining !== 1 ? 's' : ''}`, sub: season.name, to: '/compete', icon: Swords });
+  }
+
+  // Activity priority weighting
+  const HIGH_SIGNAL_EVENTS = new Set(['draft_completed', 'bracket_submitted', 'event_created', 'draft_created']);
+
+
   if (loading) {
     return (
       <div className="pb-6">
@@ -398,7 +441,7 @@ export default function DashboardPage() {
               👋
             </motion.span>
           </motion.h1>
-          {!loading && (
+          {!loading && !season && (
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -407,6 +450,39 @@ export default function DashboardPage() {
             >
               {totalActive > 0 ? `${totalActive} active competition${totalActive !== 1 ? 's' : ''}` : 'No active competitions yet'}
             </motion.p>
+          )}
+          {/* Season Command Strip */}
+          {!loading && season && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.18 }}
+              className="flex items-center gap-1.5 mt-3 flex-wrap"
+            >
+              <Link to="/compete" className="command-chip">
+                <Swords className="w-3 h-3" style={{ color: 'hsl(var(--primary))' }} />
+                <span>{season.name}</span>
+              </Link>
+              {myStanding?.rank && (
+                <Link to="/compete" className="command-chip">
+                  <Trophy className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />
+                  <span>{formatRank(myStanding.rank)}</span>
+                  <span className="command-chip-label hidden sm:inline">rank</span>
+                </Link>
+              )}
+              {seasonTarget > 0 && (
+                <Link to="/compete" className="command-chip">
+                  <Bookmark className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />
+                  <span>{regularEntriesCount} of {seasonTarget}</span>
+                </Link>
+              )}
+              {season.status === 'playoffs' && (
+                <span className="command-chip" style={{ background: 'hsl(var(--gold) / 0.15)', borderColor: 'hsl(var(--gold) / 0.4)', color: 'hsl(var(--gold))' }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                  Playoffs
+                </span>
+              )}
+            </motion.div>
           )}
           {/* Online presence indicator */}
           {onlineUsers.length > 0 && (
@@ -434,6 +510,33 @@ export default function DashboardPage() {
         </div>
       </motion.div>
 
+      {/* ═══ Needs Your Attention ═══ */}
+      {attentionItems.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="space-y-1.5 mb-5"
+        >
+          {attentionItems.map((item) => (
+            <Link key={item.id} to={item.to} className="block group">
+              <div className="attention-card flex items-center gap-3 transition-transform group-active:scale-[0.99]">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{
+                  background: 'linear-gradient(135deg, hsl(var(--gold) / 0.2), hsl(var(--gold) / 0.06))',
+                }}>
+                  <item.icon className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12px] font-extrabold tracking-tight leading-tight" style={{ color: 'hsl(var(--gold))' }}>{item.label}</p>
+                  {item.sub && <p className="text-[10px] text-muted-foreground/80 font-medium truncate mt-0.5">{item.sub}</p>}
+                </div>
+                <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
+              </div>
+            </Link>
+          ))}
+        </motion.div>
+      )}
+
       {/* ═══ Quick Create ═══ */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
@@ -442,14 +545,21 @@ export default function DashboardPage() {
         className="grid grid-cols-4 gap-1.5 sm:gap-2 mb-7"
       >
         {[
+          { to: '/drafts/create', icon: Bookmark, label: 'Draft', color: 'gold', primary: true },
           { to: '/lore', icon: ScrollText, label: 'Lore', color: 'lore' },
-          { to: '/drafts/create', icon: Bookmark, label: 'Draft', color: 'gold' },
           { to: '/pools/create', icon: Trophy, label: 'Bracket', color: 'primary' },
           { to: '/lockbox', icon: Shield, label: 'Lockbox', color: 'destructive' },
         ].map((item, i) => (
           <motion.div key={item.to} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 + i * 0.04 }}>
             <Link to={item.to}>
-              <div className="action-tile py-3">
+              <div
+                className="action-tile py-3"
+                style={item.primary ? {
+                  background: 'linear-gradient(135deg, hsl(var(--gold) / 0.12), hsl(var(--gold) / 0.03))',
+                  borderColor: 'hsl(var(--gold) / 0.3)',
+                  boxShadow: '0 0 18px hsl(var(--gold) / 0.12)',
+                } : undefined}
+              >
                 <Plus className="w-3 h-3 absolute top-2 right-2 text-muted-foreground/70" />
                 <item.icon className="w-5 h-5 mx-auto mb-1.5 relative z-10" style={{ color: `hsl(var(--${item.color}))` }} />
                 <p className="text-[10px] font-bold relative z-10">{item.label}</p>
@@ -546,9 +656,75 @@ export default function DashboardPage() {
 
 
 
+      {/* ═══ League Snapshot ═══ */}
+      {season && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.18 }} className="mb-7">
+          <div className="section-divider mb-3">
+            <h2 className="section-header mb-0">
+              <Swords className="w-3.5 h-3.5 inline-block mr-1.5 text-primary" />
+              League
+            </h2>
+            <Link to="/compete" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors inline-flex items-center gap-1">
+              View League <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <Link to="/compete" className="block group">
+            <div className="glass-card arena-edge p-4 transition-all duration-200 group-hover:border-primary/20">
+              <div className="flex items-center justify-between mb-3 relative z-10">
+                <div className="min-w-0">
+                  <p className="text-[13px] font-extrabold tracking-tight truncate">{season.name}</p>
+                  <p className="text-[10px] text-muted-foreground/70 font-medium">
+                    {season.status === 'playoffs' ? 'Playoffs in progress' : `Draft ${regularEntriesCount} of ${seasonTarget}`}
+                  </p>
+                </div>
+                {season.status === 'playoffs' ? (
+                  <span className="status-pill" style={{ background: 'hsl(var(--gold) / 0.15)', color: 'hsl(var(--gold))' }}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse mr-1" />
+                    Live
+                  </span>
+                ) : (
+                  <span className="status-pill bg-primary/10 text-primary">{seasonProgress}%</span>
+                )}
+              </div>
+
+              {/* Top 3 podium */}
+              {standings.length > 0 && (
+                <div className="space-y-1 mb-3 relative z-10">
+                  {standings.slice(0, 3).map((s, idx) => {
+                    const colors = ['hsl(var(--gold))', 'hsl(var(--muted-foreground))', 'hsl(35 60% 55%)'];
+                    return (
+                      <div key={s.id} className="flex items-center gap-2">
+                        <span className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-extrabold flex-shrink-0" style={{
+                          background: `${colors[idx]}22`, color: colors[idx],
+                        }}>{idx + 1}</span>
+                        <span className={cn("text-[11px] font-semibold truncate flex-1", s.user_id === user?.id && "text-primary")}>
+                          {s.profiles?.display_name || 'Unknown'}{s.user_id === user?.id ? ' (you)' : ''}
+                        </span>
+                        <span className="text-[11px] font-mono font-bold tabular-nums">{s.season_points}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Progress bar (regular season) */}
+              {season.status !== 'playoffs' && seasonTarget > 0 && (
+                <div className="h-1 rounded-full overflow-hidden relative z-10" style={{ background: 'hsl(var(--muted) / 0.4)' }}>
+                  <div className="h-full transition-all duration-500" style={{
+                    width: `${seasonProgress}%`,
+                    background: 'linear-gradient(90deg, hsl(var(--gold) / 0.7), hsl(var(--gold)))',
+                    boxShadow: '0 0 8px hsl(var(--gold) / 0.4)',
+                  }} />
+                </div>
+              )}
+            </div>
+          </Link>
+        </motion.div>
+      )}
+
       {/* ═══ Drafts (above Brackets) ═══ */}
       {(() => {
-        const visibleDrafts = drafts.filter((d: any) => d.status === 'in_progress' || d.status === 'setup' || !dismissedIds.has(`draft-${d.id}`));
+        const visibleDrafts = sortedDrafts.filter((d: any) => d.status === 'in_progress' || d.status === 'setup' || !dismissedIds.has(`draft-${d.id}`));
         if (visibleDrafts.length === 0) return null;
         return (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
@@ -560,47 +736,54 @@ export default function DashboardPage() {
               <Link to="/drafts" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors">View All</Link>
             </div>
             <div className="space-y-2 mb-7">
-              {visibleDrafts.slice(0, 3).map((d: any, i: number) => (
-                <motion.div key={d.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 + i * 0.04 }}>
-                  <Link to={`/drafts/${d.id}`} className="block group">
-                    <div className="glass-card p-3.5 transition-all duration-200 group-hover:border-gold/15">
-                      <div className="flex items-center gap-3 relative z-10">
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{
-                          background: d.status === 'completed' ? 'hsl(var(--muted) / 0.5)' : 'linear-gradient(135deg, hsl(var(--gold) / 0.15), hsl(var(--gold) / 0.04))',
-                        }}>
-                          <Bookmark className={cn("w-4 h-4", d.status === 'completed' ? "text-muted-foreground/60" : "")} style={d.status !== 'completed' ? { color: 'hsl(var(--gold))' } : {}} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-bold text-[13px] truncate tracking-tight">{d.topic}</h3>
-                          <p className="text-[10px] text-muted-foreground/70 font-medium">
-                            {d.num_rounds} rounds • {d.status === 'in_progress' ? 'In Progress' : d.status === 'setup' ? 'Setup' : 'Complete'}
-                          </p>
-                          {d.status === 'in_progress' && d.current_pick_user_id && (
-                            <p className="text-[10px] font-semibold mt-0.5" style={{ color: d.current_pick_user_id === user?.id ? 'hsl(var(--gold))' : 'hsl(var(--success))' }}>
-                              🎯 {d.current_pick_user_id === user?.id ? 'Your pick!' : `${d.current_pick_profiles?.display_name || 'Someone'}'s pick`}
+              {visibleDrafts.slice(0, 3).map((d: any, i: number) => {
+                const isYourTurn = d.status === 'in_progress' && d.current_pick_user_id === user?.id;
+                const someoneElseTurn = d.status === 'in_progress' && d.current_pick_user_id && d.current_pick_user_id !== user?.id;
+                return (
+                  <motion.div key={d.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 + i * 0.04 }}>
+                    <Link to={`/drafts/${d.id}`} className="block group">
+                      <div className={cn("glass-card p-3.5 transition-all duration-200 group-hover:border-gold/15", isYourTurn && "draft-your-turn")}>
+                        <div className="flex items-center gap-3 relative z-10">
+                          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{
+                            background: d.status === 'completed' ? 'hsl(var(--muted) / 0.5)' : 'linear-gradient(135deg, hsl(var(--gold) / 0.15), hsl(var(--gold) / 0.04))',
+                          }}>
+                            <Bookmark className={cn("w-4 h-4", d.status === 'completed' ? "text-muted-foreground/60" : "")} style={d.status !== 'completed' ? { color: 'hsl(var(--gold))' } : {}} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-bold text-[13px] truncate tracking-tight">{d.topic}</h3>
+                            <p className="text-[10px] text-muted-foreground/70 font-medium">
+                              {d.num_rounds} rounds • {d.status === 'in_progress' ? 'In Progress' : d.status === 'setup' ? 'Setup' : 'Complete'}
                             </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <span className={cn(
-                            "status-pill",
-                            d.status === 'in_progress' ? 'bg-success/10 text-success' : d.status === 'setup' ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
-                          )}>
-                            {d.status === 'in_progress' ? 'In Progress' : d.status === 'setup' ? 'Setup' : 'Complete'}
-                          </span>
-                          {d.status !== 'in_progress' && d.status !== 'setup' ? (
-                            <button onClick={(e) => dismissItem(`draft-${d.id}`, e)} className="p-2.5 -m-1 rounded-md text-muted-foreground/40 hover:text-foreground active:text-foreground transition-colors" aria-label="Dismiss draft">
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          ) : (
-                            <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60" />
-                          )}
+                            {someoneElseTurn && (
+                              <p className="text-[10px] font-semibold mt-0.5 flex items-center gap-1" style={{ color: 'hsl(var(--success))' }}>
+                                <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                                On the clock: {d.current_pick_profiles?.display_name || 'Someone'}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <span className={cn(
+                              "status-pill",
+                              isYourTurn ? '' :
+                              d.status === 'in_progress' ? 'bg-success/10 text-success' :
+                              d.status === 'setup' ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
+                            )} style={isYourTurn ? { background: 'hsl(var(--gold))', color: 'hsl(var(--background))' } : undefined}>
+                              {isYourTurn ? 'Your turn' : d.status === 'in_progress' ? 'Live' : d.status === 'setup' ? 'Setup' : 'Complete'}
+                            </span>
+                            {d.status !== 'in_progress' && d.status !== 'setup' ? (
+                              <button onClick={(e) => dismissItem(`draft-${d.id}`, e)} className="p-2.5 -m-1 rounded-md text-muted-foreground/40 hover:text-foreground active:text-foreground transition-colors" aria-label="Dismiss draft">
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            ) : (
+                              <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60" />
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
+                    </Link>
+                  </motion.div>
+                );
+              })}
             </div>
           </motion.div>
         );
@@ -716,11 +899,12 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="glass-card divide-y divide-border/20 overflow-hidden">
-            {activity.slice(0, 6).map((a: any) => {
+            {activity.slice(0, 5).map((a: any) => {
               const actConfig = ACTIVITY_ICONS[a.event_type];
               const ActIcon = actConfig?.icon || Zap;
               const actColor = actConfig?.color || 'primary';
               const label = ACTIVITY_LABELS[a.event_type] || a.event_type.replace(/_/g, ' ');
+              const isHighSignal = HIGH_SIGNAL_EVENTS.has(a.event_type);
 
               // Build link target based on activity type
               const targetLink = a.target_id && a.target_type
@@ -734,11 +918,17 @@ export default function DashboardPage() {
                 : null;
 
               const content = (
-                <div className="px-4 py-3 flex items-center gap-3 relative z-10">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{
+                <div className={cn("px-4 py-3 flex items-center gap-3 relative z-10", !isHighSignal && "opacity-65")}>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 relative" style={{
                     background: `linear-gradient(135deg, hsl(var(--${actColor}) / 0.12), hsl(var(--${actColor}) / 0.04))`,
                   }}>
                     <ActIcon className="w-3 h-3" style={{ color: `hsl(var(--${actColor}))` }} />
+                    {isHighSignal && (
+                      <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full" style={{
+                        background: `hsl(var(--${actColor}))`,
+                        boxShadow: `0 0 6px hsl(var(--${actColor}) / 0.6)`,
+                      }} />
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-[12px] font-medium truncate">
