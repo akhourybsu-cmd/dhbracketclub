@@ -1944,6 +1944,8 @@ export type Database = {
           conference: string
           created_at: string
           division: string
+          external_id: string | null
+          external_provider: string | null
           id: string
           logo_url: string | null
           name: string
@@ -1955,6 +1957,8 @@ export type Database = {
           conference: string
           created_at?: string
           division: string
+          external_id?: string | null
+          external_provider?: string | null
           id?: string
           logo_url?: string | null
           name: string
@@ -1966,6 +1970,8 @@ export type Database = {
           conference?: string
           created_at?: string
           division?: string
+          external_id?: string | null
+          external_provider?: string | null
           id?: string
           logo_url?: string | null
           name?: string
@@ -3114,6 +3120,10 @@ export type Database = {
       is_pool_member: {
         Args: { _pool_id: string; _user_id: string }
         Returns: boolean
+      }
+      recompute_nfl_week_status: {
+        Args: { _week_id: string }
+        Returns: undefined
       }
       toggle_message_pin: { Args: { p_message_id: string }; Returns: undefined }
     }
