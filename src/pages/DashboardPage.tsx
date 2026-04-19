@@ -899,11 +899,12 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="glass-card divide-y divide-border/20 overflow-hidden">
-            {activity.slice(0, 6).map((a: any) => {
+            {activity.slice(0, 5).map((a: any) => {
               const actConfig = ACTIVITY_ICONS[a.event_type];
               const ActIcon = actConfig?.icon || Zap;
               const actColor = actConfig?.color || 'primary';
               const label = ACTIVITY_LABELS[a.event_type] || a.event_type.replace(/_/g, ' ');
+              const isHighSignal = HIGH_SIGNAL_EVENTS.has(a.event_type);
 
               // Build link target based on activity type
               const targetLink = a.target_id && a.target_type
@@ -917,11 +918,17 @@ export default function DashboardPage() {
                 : null;
 
               const content = (
-                <div className="px-4 py-3 flex items-center gap-3 relative z-10">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{
+                <div className={cn("px-4 py-3 flex items-center gap-3 relative z-10", !isHighSignal && "opacity-65")}>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 relative" style={{
                     background: `linear-gradient(135deg, hsl(var(--${actColor}) / 0.12), hsl(var(--${actColor}) / 0.04))`,
                   }}>
                     <ActIcon className="w-3 h-3" style={{ color: `hsl(var(--${actColor}))` }} />
+                    {isHighSignal && (
+                      <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full" style={{
+                        background: `hsl(var(--${actColor}))`,
+                        boxShadow: `0 0 6px hsl(var(--${actColor}) / 0.6)`,
+                      }} />
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-[12px] font-medium truncate">
