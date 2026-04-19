@@ -16,7 +16,7 @@ import {
   useCurrentSeason,
   useSeasonStandings,
   useSeasonEntries,
-  usePlayoffMatches,
+  usePlayoffMatchesLive,
   useLifetimeStats,
   useIsCommissioner,
   useUnassignedDrafts,
@@ -24,13 +24,18 @@ import {
   removeDraftFromSeason,
   recalculateSeasonStandings,
   advancePlayoffs,
+  suggestPlayoffTopics,
+  startPlayoffMatch,
   getSeasonDraftTarget,
   type SeasonStanding,
+  type PlayoffMatch,
 } from '@/hooks/useDraftSeasons';
 import { getSeasonDisplayName, getOrdinalSuffix, getDraftLabel, getSeasonEmoji, getSeasonProgressText } from '@/lib/seasonUtils';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Loader2, Sparkles, RefreshCw } from 'lucide-react';
 
 /* ── Lockbox card (unchanged) ── */
 function LockboxCompeteCard() {
@@ -409,9 +414,110 @@ function StandingsCard({ standings, userId }: { standings: SeasonStanding[]; use
 }
 
 /* ══════════════════════════════════════════════════════════
+   TOPIC PICKER DIALOG — higher seed picks from 3 AI suggestions
+   ══════════════════════════════════════════════════════════ */
+function TopicPickerDialog({
+  open, onOpenChange, seasonId, match, onStarted,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  seasonId: string;
+  match: PlayoffMatch;
+  onStarted: () => void;
+}) {
+  const [topics, setTopics] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState<string | null>(null);
+
+  const fetchTopics = useCallback(async () => {
+    setLoading(true);
+    setTopics([]);
+    try {
+      const list = await suggestPlayoffTopics(seasonId, match.id);
+      setTopics(list);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to get suggestions');
+    } finally {
+      setLoading(false);
+    }
+  }, [seasonId, match.id]);
+
+  useEffect(() => {
+    if (open) fetchTopics();
+  }, [open, fetchTopics]);
+
+  const handlePick = async (topic: string) => {
+    setSubmitting(topic);
+    try {
+      await startPlayoffMatch(match.id, topic);
+      toast.success('Matchup created!');
+      onOpenChange(false);
+      onStarted();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to start matchup');
+    } finally {
+      setSubmitting(null);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Sparkles className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
+            Choose your matchup topic
+          </DialogTitle>
+          <DialogDescription className="text-[12px]">
+            As the higher seed, you get to pick the topic for this draft.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2 py-2">
+          {loading ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-14 rounded-lg skeleton-shimmer" />
+              ))}
+            </div>
+          ) : (
+            <>
+              {topics.map(t => (
+                <button
+                  key={t}
+                  onClick={() => handlePick(t)}
+                  disabled={!!submitting}
+                  className="w-full text-left p-3 rounded-lg border border-border/30 hover:border-gold/40 hover:bg-gold/5 transition-all disabled:opacity-40"
+                >
+                  <p className="font-bold text-[13px]">{t}</p>
+                  {submitting === t && (
+                    <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Creating draft…
+                    </p>
+                  )}
+                </button>
+              ))}
+              <button
+                onClick={fetchTopics}
+                disabled={loading || !!submitting}
+                className="w-full mt-2 h-9 rounded-lg bg-muted/50 text-[11px] font-bold text-foreground/80 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40"
+              >
+                <RefreshCw className="w-3 h-3" /> Regenerate options
+              </button>
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
    PLAYOFF BRACKET — visual bracket with connector lines
    ══════════════════════════════════════════════════════════ */
-function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; matches: any[] }) {
+function PlayoffPicture({ standings, matches, seasonId }: { standings: SeasonStanding[]; matches: PlayoffMatch[]; seasonId: string | undefined }) {
+  const { user } = useAuth();
+  const [pickerMatch, setPickerMatch] = useState<PlayoffMatch | null>(null);
+
   const seeds = standings.filter(s => s.playoff_seed).sort((a, b) => (a.playoff_seed || 99) - (b.playoff_seed || 99));
   const getName = (seed: number) => {
     const s = seeds.find(s => s.playoff_seed === seed);
@@ -439,10 +545,22 @@ function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; m
 
   const qfMatches = matches.filter(m => m.round === 'qf').sort((a, b) => a.match_number - b.match_number);
   const sfMatches = matches.filter(m => m.round === 'sf').sort((a, b) => a.match_number - b.match_number);
-  const finalMatches = matches.filter(m => m.round === 'final');
-  const champion = finalMatches[0]?.status === 'complete' ? finalMatches[0].winner_user_id : null;
+  const finalMatches = matches.filter(m => m.round === 'final').sort((a, b) => a.match_number - b.match_number);
 
-  const MatchCard = ({ m, placeholder }: { m?: any; placeholder?: { roundLabel: string } }) => {
+  // Series state for finals best-of-3
+  const finalWinCount: Record<string, number> = {};
+  for (const m of finalMatches) {
+    if (m.status === 'complete' && m.winner_user_id) {
+      finalWinCount[m.winner_user_id] = (finalWinCount[m.winner_user_id] || 0) + 1;
+    }
+  }
+  const finalsPlayers = finalMatches[0] ? [finalMatches[0].user_a, finalMatches[0].user_b] : [];
+  const champion = finalsPlayers.find(p => p && (finalWinCount[p] || 0) >= 2) || null;
+  const seriesScore = finalsPlayers.length === 2
+    ? `${finalWinCount[finalsPlayers[0]!] || 0}–${finalWinCount[finalsPlayers[1]!] || 0}`
+    : null;
+
+  const MatchCard = ({ m, placeholder, gameLabel }: { m?: PlayoffMatch; placeholder?: { roundLabel: string }; gameLabel?: string }) => {
     if (!m) {
       return (
         <div className="rounded-lg bg-muted/20 p-2.5 border border-dashed border-border/20 text-center">
@@ -451,12 +569,22 @@ function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; m
         </div>
       );
     }
-    const statusLabel = m.status === 'complete' ? 'Final' : m.status === 'in_progress' ? 'Live' : 'Pending';
-    const statusClass = m.status === 'complete' ? 'bg-primary/15 text-primary' : m.status === 'in_progress' ? 'bg-success/15 text-success' : 'bg-muted text-muted-foreground';
+    const isAwaitingTopic = m.status === 'awaiting_topic';
+    const isCallerPicker = isAwaitingTopic && user?.id === m.topic_picker_user_id;
+    const pickerName = getNameByUser(m.topic_picker_user_id);
+
+    let statusLabel = 'Pending';
+    let statusClass = 'bg-muted text-muted-foreground';
+    if (m.status === 'complete') { statusLabel = 'Final'; statusClass = 'bg-primary/15 text-primary'; }
+    else if (m.status === 'in_progress') { statusLabel = 'Live'; statusClass = 'bg-success/15 text-success'; }
+    else if (isAwaitingTopic) { statusLabel = 'Topic'; statusClass = 'bg-gold/15 text-gold'; }
+
     return (
       <div className="rounded-lg bg-muted/30 p-2.5 border border-border/15 space-y-1.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/70">M{m.match_number}</span>
+          <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/70">
+            {gameLabel || `M${m.match_number}`}
+          </span>
           <span className={cn('text-[8px] font-bold px-1.5 py-0.5 rounded', statusClass)}>{statusLabel}</span>
         </div>
         <div className="space-y-0.5">
@@ -471,6 +599,20 @@ function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; m
             {m.winner_user_id === m.user_b && <Trophy className="w-2.5 h-2.5 ml-auto" style={{ color: 'hsl(var(--gold))' }} />}
           </p>
         </div>
+        {isAwaitingTopic && isCallerPicker && (
+          <button
+            onClick={() => setPickerMatch(m)}
+            className="block w-full text-[9px] font-bold text-center py-1 rounded bg-gold/15 hover:bg-gold/25 transition-colors flex items-center justify-center gap-1"
+            style={{ color: 'hsl(var(--gold))' }}
+          >
+            <Sparkles className="w-2.5 h-2.5" /> Choose topic
+          </button>
+        )}
+        {isAwaitingTopic && !isCallerPicker && (
+          <p className="text-[9px] text-center py-1 text-muted-foreground/70 italic truncate">
+            Waiting for {pickerName}…
+          </p>
+        )}
         {m.draft_id && (
           <Link to={`/drafts/${m.draft_id}`} className="block">
             <div className="text-[9px] font-bold text-center py-1 rounded bg-gold/10 hover:bg-gold/15 transition-colors flex items-center justify-center gap-1" style={{ color: 'hsl(var(--gold))' }}>
@@ -498,6 +640,7 @@ function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; m
             <Trophy className="w-6 h-6 mx-auto mb-1" style={{ color: 'hsl(var(--gold))' }} />
             <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Champion</p>
             <p className="text-[14px] font-black mt-0.5" style={{ color: 'hsl(var(--gold))' }}>{getNameByUser(champion)}</p>
+            {seriesScore && <p className="text-[10px] text-muted-foreground mt-1">Series {seriesScore}</p>}
           </div>
         )}
 
@@ -513,8 +656,19 @@ function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; m
               <MatchCard m={sfMatches[1]} placeholder={{ roundLabel: 'SF 2' }} />
             </div>
             <div className="space-y-2">
-              <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/50 text-center">Final</p>
-              <MatchCard m={finalMatches[0]} placeholder={{ roundLabel: 'Final' }} />
+              <div className="flex items-center justify-center gap-1">
+                <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/50 text-center">Final · Bo3</p>
+              </div>
+              {seriesScore && finalMatches.length > 0 && !champion && (
+                <p className="text-[8px] font-bold text-center text-gold">Series {seriesScore}</p>
+              )}
+              {finalMatches.length === 0 ? (
+                <MatchCard placeholder={{ roundLabel: 'Final' }} />
+              ) : (
+                finalMatches.map(fm => (
+                  <MatchCard key={fm.id} m={fm} gameLabel={`Game ${fm.match_number}`} />
+                ))
+              )}
             </div>
           </div>
         ) : (
@@ -544,7 +698,7 @@ function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; m
                 <div className="text-center">
                   <Trophy className="w-4 h-4 mx-auto mb-1" style={{ color: 'hsl(var(--gold) / 0.5)' }} />
                   <p className="text-[9px] font-bold" style={{ color: 'hsl(var(--gold))' }}>Championship</p>
-                  <p className="text-[8px] text-muted-foreground mt-0.5">Semi winners</p>
+                  <p className="text-[8px] text-muted-foreground mt-0.5">Best of 3</p>
                 </div>
               </div>
             </div>
@@ -560,11 +714,21 @@ function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; m
             </div>
 
             <p className="text-[9px] text-muted-foreground/50 text-center pt-1">
-              All 5 players qualify · #1, #2, #3 get first-round byes
+              All 5 players qualify · #1, #2, #3 get first-round byes · Higher seed picks topics
             </p>
           </div>
         )}
       </div>
+
+      {pickerMatch && seasonId && (
+        <TopicPickerDialog
+          open={!!pickerMatch}
+          onOpenChange={(v) => { if (!v) setPickerMatch(null); }}
+          seasonId={seasonId}
+          match={pickerMatch}
+          onStarted={() => { /* live subscription will refetch */ }}
+        />
+      )}
     </motion.div>
   );
 }
@@ -1034,7 +1198,7 @@ export default function CompetePage() {
   const { season, loading: seasonLoading } = useCurrentSeason();
   const { standings, loading: standingsLoading, refetch: refetchStandings } = useSeasonStandings(season?.id);
   const { entries, loading: entriesLoading, refetch: refetchEntries } = useSeasonEntries(season?.id);
-  const { matches } = usePlayoffMatches(season?.id);
+  const { matches } = usePlayoffMatchesLive(season?.id);
   const isCommissioner = useIsCommissioner(season);
 
   const totalDrafts = season ? getSeasonDraftTarget(season) : 12;
@@ -1126,7 +1290,7 @@ export default function CompetePage() {
                 {isCommissioner && <CommissionerPanel season={season} entries={entries} onUpdate={handleSeasonUpdate} />}
                 <NextDraftCard entries={entries} totalDrafts={totalDrafts} />
                 <StandingsCard standings={standings} userId={user?.id} />
-                <PlayoffPicture standings={standings} matches={matches} />
+                <PlayoffPicture standings={standings} matches={matches} seasonId={season?.id} />
                 <SeasonDraftHistory entries={entries} totalDrafts={totalDrafts} />
                 <LifetimeStatsCard userId={user?.id} />
 

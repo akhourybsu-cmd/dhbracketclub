@@ -59,6 +59,7 @@ export interface PlayoffMatch {
   draft_id: string | null;
   winner_user_id: string | null;
   status: string;
+  topic_picker_user_id: string | null;
 }
 
 // Season points by placement
@@ -522,6 +523,56 @@ export async function advancePlayoffs(seasonId: string) {
   });
   if (error) throw error;
   return data;
+}
+
+/** Fetch 3 AI-generated topic options for a playoff matchup. */
+export async function suggestPlayoffTopics(seasonId: string, matchId: string): Promise<string[]> {
+  const { data, error } = await supabase.functions.invoke('suggest-playoff-topics', {
+    body: { seasonId, matchId },
+  });
+  if (error) throw error;
+  if ((data as any)?.error) throw new Error((data as any).error);
+  return ((data as any)?.topics || []) as string[];
+}
+
+/** Higher seed locks in a topic → creates the draft + participants and links to the match. */
+export async function startPlayoffMatch(matchId: string, topic: string) {
+  const { data, error } = await supabase.functions.invoke('start-playoff-match', {
+    body: { matchId, topic },
+  });
+  if (error) throw error;
+  if ((data as any)?.error) throw new Error((data as any).error);
+  return data as { ok: boolean; draft_id: string };
+}
+
+/** Live subscription to playoff matches for a season — re-fetches whenever any row changes. */
+export function usePlayoffMatchesLive(seasonId: string | undefined) {
+  const [matches, setMatches] = useState<PlayoffMatch[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetch = useCallback(async () => {
+    if (!seasonId) { setLoading(false); return; }
+    const { data } = await supabase
+      .from('draft_playoff_matches' as any)
+      .select('*')
+      .eq('season_id', seasonId)
+      .order('round')
+      .order('match_number');
+    setMatches((data || []) as unknown as PlayoffMatch[]);
+    setLoading(false);
+  }, [seasonId]);
+
+  useEffect(() => {
+    fetch();
+    if (!seasonId) return;
+    const ch = supabase
+      .channel(`playoff-matches-${seasonId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'draft_playoff_matches', filter: `season_id=eq.${seasonId}` }, () => fetch())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [seasonId, fetch]);
+
+  return { matches, loading, refetch: fetch };
 }
 
 /** Renumber all regular-season entries sequentially (1, 2, 3…) by current week_number order */

@@ -464,6 +464,7 @@ export type Database = {
           seed_a: number
           seed_b: number
           status: string
+          topic_picker_user_id: string | null
           updated_at: string
           user_a: string | null
           user_b: string | null
@@ -479,6 +480,7 @@ export type Database = {
           seed_a: number
           seed_b: number
           status?: string
+          topic_picker_user_id?: string | null
           updated_at?: string
           user_a?: string | null
           user_b?: string | null
@@ -494,6 +496,7 @@ export type Database = {
           seed_a?: number
           seed_b?: number
           status?: string
+          topic_picker_user_id?: string | null
           updated_at?: string
           user_a?: string | null
           user_b?: string | null

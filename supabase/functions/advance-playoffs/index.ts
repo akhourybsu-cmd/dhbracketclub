@@ -1,4 +1,5 @@
 // Advance a season's playoffs: trigger transition, set winners, generate next round.
+// Higher seed picks topic for each match. Finals = best-of-3 with rotating picker.
 // Idempotent — safe to call repeatedly.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -7,21 +8,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-async function generateMatchDraft(supabase: any, seasonId: string, matchId: string) {
-  const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-playoff-draft`;
-  const r = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-    },
-    body: JSON.stringify({ seasonId, matchId }),
-  });
-  if (!r.ok) {
-    const t = await r.text();
-    console.error("generate-playoff-draft failed", r.status, t);
-  }
-  return r.ok;
+/** Returns the user with the better (lower-numbered) seed. */
+function higherSeedUser(userA: string, seedA: number, userB: string, seedB: number): string {
+  return seedA <= seedB ? userA : userB;
+}
+function lowerSeedUser(userA: string, seedA: number, userB: string, seedB: number): string {
+  return seedA <= seedB ? userB : userA;
 }
 
 Deno.serve(async (req) => {
@@ -57,7 +49,6 @@ Deno.serve(async (req) => {
       const completedCount = (regEntries || []).filter((e: any) => e.drafts?.status === "complete").length;
 
       if (completedCount >= totalRegular) {
-        // Get top 5 from standings
         const { data: standings } = await supabase
           .from("draft_season_standings").select("*")
           .eq("season_id", seasonId)
@@ -74,7 +65,6 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Assign seeds 1–5
         for (let i = 0; i < standings.length; i++) {
           await supabase.from("draft_season_standings")
             .update({ playoff_seed: i + 1, rank: i + 1 })
@@ -84,7 +74,7 @@ Deno.serve(async (req) => {
         await supabase.from("draft_seasons").update({ status: "playoffs" }).eq("id", seasonId);
         log.push("transitioned to playoffs");
 
-        // Create QF (#4 vs #5) if needed
+        // Create QF (#4 vs #5) — picker = higher seed (#4)
         const { data: existingQF } = await supabase
           .from("draft_playoff_matches").select("*")
           .eq("season_id", seasonId).eq("round", "qf");
@@ -93,7 +83,7 @@ Deno.serve(async (req) => {
           const seed4 = standings[3];
           const seed5 = standings[4];
           if (seed4 && seed5) {
-            const { data: newMatch } = await supabase.from("draft_playoff_matches").insert({
+            await supabase.from("draft_playoff_matches").insert({
               season_id: seasonId,
               round: "qf",
               match_number: 1,
@@ -101,10 +91,10 @@ Deno.serve(async (req) => {
               seed_b: 5,
               user_a: seed4.user_id,
               user_b: seed5.user_id,
-              status: "pending",
-            }).select().single();
-            if (newMatch) await generateMatchDraft(supabase, seasonId, newMatch.id);
-            log.push("created QF");
+              topic_picker_user_id: seed4.user_id,
+              status: "awaiting_topic",
+            });
+            log.push("created QF (awaiting topic)");
           }
         }
       } else {
@@ -114,7 +104,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ─── PHASE 2: SCORE COMPLETED MATCHES + ADVANCE ───
+    // ─── PHASE 2: SCORE COMPLETED MATCHES ───
     const { data: matches } = await supabase
       .from("draft_playoff_matches").select("*")
       .eq("season_id", seasonId)
@@ -126,7 +116,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Score any complete matches missing winner
     for (const m of matches) {
       if (m.draft_id && m.status !== "complete") {
         const { data: draftRow } = await supabase
@@ -150,70 +139,112 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Refresh standings
+    // Refresh standings to know seeds
     const { data: top5 } = await supabase
       .from("draft_season_standings").select("*")
       .eq("season_id", seasonId)
       .not("playoff_seed", "is", null)
       .order("playoff_seed");
 
-    const seedUser = (n: number) => top5?.find((s: any) => s.playoff_seed === n)?.user_id;
+    const seedUser = (n: number) => top5?.find((s: any) => s.playoff_seed === n)?.user_id as string | undefined;
 
     const qfMatches = matches.filter((m: any) => m.round === "qf");
     const sfMatches = matches.filter((m: any) => m.round === "sf");
-    const finalMatches = matches.filter((m: any) => m.round === "final");
+    const finalMatches = matches.filter((m: any) => m.round === "final").sort((a: any, b: any) => a.match_number - b.match_number);
 
     const qfDone = qfMatches.length > 0 && qfMatches.every((m: any) => m.status === "complete");
     const sfDone = sfMatches.length === 2 && sfMatches.every((m: any) => m.status === "complete");
-    const finalDone = finalMatches.length === 1 && finalMatches[0].status === "complete";
 
-    // Generate Semis once QF complete
+    // ─── PHASE 3: GENERATE SEMIS ───
     if (qfDone && sfMatches.length === 0) {
-      const qfWinner = qfMatches[0].winner_user_id;
+      const qfWinner = qfMatches[0].winner_user_id as string;
       const qfWinnerSeed = qfWinner === qfMatches[0].user_a ? qfMatches[0].seed_a : qfMatches[0].seed_b;
       const seed1 = seedUser(1);
       const seed2 = seedUser(2);
       const seed3 = seedUser(3);
 
       if (seed1 && seed2 && seed3 && qfWinner) {
-        const { data: sf1 } = await supabase.from("draft_playoff_matches").insert({
+        // SF1: #1 vs QF winner — picker = #1 (better seed)
+        await supabase.from("draft_playoff_matches").insert({
           season_id: seasonId, round: "sf", match_number: 1,
-          seed_a: 1, seed_b: qfWinnerSeed, user_a: seed1, user_b: qfWinner,
-          status: "pending",
-        }).select().single();
-        const { data: sf2 } = await supabase.from("draft_playoff_matches").insert({
+          seed_a: 1, seed_b: qfWinnerSeed,
+          user_a: seed1, user_b: qfWinner,
+          topic_picker_user_id: seed1,
+          status: "awaiting_topic",
+        });
+        // SF2: #2 vs #3 — picker = #2
+        await supabase.from("draft_playoff_matches").insert({
           season_id: seasonId, round: "sf", match_number: 2,
-          seed_a: 2, seed_b: 3, user_a: seed2, user_b: seed3,
-          status: "pending",
-        }).select().single();
-        if (sf1) await generateMatchDraft(supabase, seasonId, sf1.id);
-        if (sf2) await generateMatchDraft(supabase, seasonId, sf2.id);
-        log.push("created SFs");
+          seed_a: 2, seed_b: 3,
+          user_a: seed2, user_b: seed3,
+          topic_picker_user_id: seed2,
+          status: "awaiting_topic",
+        });
+        log.push("created SFs (awaiting topics)");
       }
     }
 
-    // Generate Final once both SFs complete
+    // ─── PHASE 4: GENERATE FINALS GAME 1 ───
     if (sfDone && finalMatches.length === 0) {
       const sf1 = sfMatches.find((m: any) => m.match_number === 1);
       const sf2 = sfMatches.find((m: any) => m.match_number === 2);
       if (sf1?.winner_user_id && sf2?.winner_user_id) {
         const sf1WinnerSeed = sf1.winner_user_id === sf1.user_a ? sf1.seed_a : sf1.seed_b;
         const sf2WinnerSeed = sf2.winner_user_id === sf2.user_a ? sf2.seed_a : sf2.seed_b;
-        const { data: fin } = await supabase.from("draft_playoff_matches").insert({
+        const higherSeed = sf1WinnerSeed <= sf2WinnerSeed ? sf1.winner_user_id : sf2.winner_user_id;
+        await supabase.from("draft_playoff_matches").insert({
           season_id: seasonId, round: "final", match_number: 1,
           seed_a: sf1WinnerSeed, seed_b: sf2WinnerSeed,
           user_a: sf1.winner_user_id, user_b: sf2.winner_user_id,
-          status: "pending",
-        }).select().single();
-        if (fin) await generateMatchDraft(supabase, seasonId, fin.id);
-        log.push("created Final");
+          topic_picker_user_id: higherSeed,
+          status: "awaiting_topic",
+        });
+        log.push("created Final G1 (awaiting topic)");
       }
     }
 
-    // Mark season complete
-    if (finalDone && season.status !== "complete") {
-      await supabase.from("draft_seasons").update({ status: "complete" }).eq("id", seasonId);
-      log.push("season complete");
+    // ─── PHASE 5: FINALS BEST-OF-3 PROGRESSION ───
+    if (finalMatches.length > 0) {
+      // Determine series state from completed finals matches
+      const completedFinals = finalMatches.filter((m: any) => m.status === "complete" && m.winner_user_id);
+      // Build win counts per user
+      const winCount: Record<string, number> = {};
+      for (const m of completedFinals) {
+        winCount[m.winner_user_id as string] = (winCount[m.winner_user_id as string] || 0) + 1;
+      }
+      const players = [finalMatches[0].user_a as string, finalMatches[0].user_b as string];
+      const seedOf: Record<string, number> = {
+        [finalMatches[0].user_a as string]: finalMatches[0].seed_a,
+        [finalMatches[0].user_b as string]: finalMatches[0].seed_b,
+      };
+      const higherSeed = seedOf[players[0]] <= seedOf[players[1]] ? players[0] : players[1];
+      const lowerSeed = higherSeed === players[0] ? players[1] : players[0];
+
+      const seriesWinner = players.find(p => (winCount[p] || 0) >= 2);
+
+      if (seriesWinner) {
+        // Series clinched. Mark season complete (idempotent).
+        if (season.status !== "complete") {
+          await supabase.from("draft_seasons").update({ status: "complete" }).eq("id", seasonId);
+          log.push(`season complete, champion ${seriesWinner}`);
+        }
+      } else if (completedFinals.length === finalMatches.length) {
+        // No clinch yet AND all created finals are done → create next game
+        const nextMatchNumber = finalMatches.length + 1;
+        if (nextMatchNumber <= 3) {
+          // Picker rotation: G1 = higher, G2 = lower, G3 = higher
+          const picker = nextMatchNumber === 2 ? lowerSeed : higherSeed;
+          const g1 = finalMatches[0];
+          await supabase.from("draft_playoff_matches").insert({
+            season_id: seasonId, round: "final", match_number: nextMatchNumber,
+            seed_a: g1.seed_a, seed_b: g1.seed_b,
+            user_a: g1.user_a, user_b: g1.user_b,
+            topic_picker_user_id: picker,
+            status: "awaiting_topic",
+          });
+          log.push(`created Final G${nextMatchNumber} (awaiting topic)`);
+        }
+      }
     }
 
     return new Response(JSON.stringify({ status: "ok", log }), {
