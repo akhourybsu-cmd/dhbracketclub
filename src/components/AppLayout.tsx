@@ -18,17 +18,23 @@ const navItems = [
 ];
 
 const sidebarModules = [
+  { type: 'divider', label: 'Social' },
   { path: '/dashboard', label: 'Home', icon: LayoutDashboard },
   { path: '/chat', label: 'Chat', icon: MessageSquareText },
-  { path: '/shared', label: 'Shared', icon: Link2 },
-  { path: '/lore', label: 'Lore', icon: ScrollText },
   { path: '/feed', label: 'Feed', icon: Newspaper },
   { path: '/events', label: 'Events', icon: CalendarDays },
+  { path: '/lore', label: 'Lore', icon: ScrollText },
   { type: 'divider', label: 'Compete' },
-  { path: '/brackets', label: 'Brackets', icon: Trophy },
-  { path: '/rankings', label: 'Rankings', icon: BarChart3 },
-  { path: '/polls', label: 'Polls', icon: MessageCircle },
+  { path: '/compete', label: 'Compete Hub', icon: Swords },
   { path: '/drafts', label: 'Drafts', icon: Bookmark },
+  { path: '/pickem', label: "Pick'em", icon: Trophy },
+  { path: '/lockbox', label: 'Lockbox', icon: Lock },
+  { path: '/brackets', label: 'Brackets', icon: Trophy },
+  { type: 'divider', label: 'More' },
+  { path: '/polls', label: 'Polls', icon: MessageCircle },
+  { path: '/rankings', label: 'Rankings', icon: BarChart3 },
+  { path: '/shared', label: 'Shared Media', icon: Link2 },
+  { path: '/posts', label: 'Posts', icon: FileText },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
