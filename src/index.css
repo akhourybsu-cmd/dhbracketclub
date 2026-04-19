@@ -412,6 +412,49 @@
     background: linear-gradient(90deg, hsl(var(--border) / 0.5), transparent);
   }
 
+  /* ═══ Command Strip Chip (hero season summary) ═══ */
+  .command-chip {
+    @apply flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold tracking-tight;
+    background: hsl(var(--surface-elevated));
+    border: 1px solid hsl(var(--border) / 0.4);
+    transition: all 0.2s ease;
+  }
+  .command-chip:hover {
+    border-color: hsl(var(--gold) / 0.4);
+    background: hsl(var(--surface-elevated) / 0.8);
+  }
+  .command-chip-label {
+    @apply text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70;
+  }
+
+  /* ═══ Needs-attention stripe (gold left border, urgent action) ═══ */
+  .attention-card {
+    @apply relative overflow-hidden rounded-xl px-3.5 py-3;
+    background: linear-gradient(90deg, hsl(var(--gold) / 0.10), hsl(var(--gold) / 0.02));
+    border: 1px solid hsl(var(--gold) / 0.22);
+  }
+  .light .attention-card {
+    background: linear-gradient(90deg, hsl(var(--gold) / 0.14), hsl(var(--gold) / 0.04));
+    border-color: hsl(var(--gold) / 0.3);
+  }
+  .attention-card::before {
+    content: '';
+    @apply absolute left-0 top-0 bottom-0 w-[3px];
+    background: hsl(var(--gold));
+    box-shadow: 0 0 12px hsl(var(--gold) / 0.5);
+  }
+
+  /* Draft card "your turn" gold left edge */
+  .draft-your-turn {
+    position: relative;
+  }
+  .draft-your-turn::before {
+    content: '';
+    @apply absolute left-0 top-2 bottom-2 w-[3px] rounded-r-full;
+    background: hsl(var(--gold));
+    box-shadow: 0 0 10px hsl(var(--gold) / 0.55);
+  }
+
   /* ═══ Stat card ═══ */
   .stat-card {
     @apply glass-card p-4 text-center flex flex-col items-center justify-center gap-1;
