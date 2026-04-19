@@ -765,6 +765,114 @@ function LifetimeStatsCard({ userId }: { userId?: string }) {
   );
 }
 
+/* ── NFL Pick'em featured card ── */
+function PickemCompeteCard() {
+  const { user } = useAuth();
+  const [season, setSeason] = useState<any>(null);
+  const [week, setWeek] = useState<any>(null);
+  const [pickedCount, setPickedCount] = useState(0);
+  const [totalGames, setTotalGames] = useState(0);
+  const [myStanding, setMyStanding] = useState<any>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const { data: s } = await (supabase as any)
+        .from('nfl_seasons').select('*')
+        .order('year', { ascending: false }).limit(1).maybeSingle();
+      if (!mounted || !s) return;
+      setSeason(s);
+
+      const { data: w } = await (supabase as any)
+        .from('nfl_weeks').select('*')
+        .eq('season_id', s.id).eq('week_number', s.current_week).maybeSingle();
+      if (!mounted) return;
+      setWeek(w);
+
+      if (w) {
+        const { count: gameCount } = await (supabase as any)
+          .from('nfl_games').select('id', { count: 'exact', head: true }).eq('week_id', w.id);
+        setTotalGames(gameCount || 0);
+
+        if (user) {
+          const { count: pickCount } = await (supabase as any)
+            .from('nfl_picks').select('id', { count: 'exact', head: true })
+            .eq('week_id', w.id).eq('user_id', user.id);
+          setPickedCount(pickCount || 0);
+        }
+      }
+
+      if (user) {
+        const { data: st } = await (supabase as any)
+          .from('nfl_season_standings').select('rank, total_correct, total_picked')
+          .eq('season_id', s.id).eq('user_id', user.id).maybeSingle();
+        if (mounted) setMyStanding(st);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [user]);
+
+  const isLive = season?.status === 'active' && week?.status !== 'upcoming';
+  const remaining = Math.max(0, totalGames - pickedCount);
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+      <div className="glass-card p-4 relative overflow-hidden" style={{
+        borderLeft: '3px solid hsl(var(--gold))',
+      }}>
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{
+            background: 'linear-gradient(135deg, hsl(var(--gold) / 0.22), hsl(var(--gold) / 0.05))',
+          }}>
+            <Target className="w-5 h-5" style={{ color: 'hsl(var(--gold))' }} />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h2 className="font-bold text-[15px] tracking-tight">NFL Pick'em</h2>
+              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold" style={{
+                background: 'hsl(var(--gold) / 0.15)', color: 'hsl(var(--gold))',
+              }}>SEASON</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground/70">
+              {season ? (
+                isLive
+                  ? `${week?.label || `Week ${season.current_week}`} · ${remaining > 0 ? `${remaining} games left to pick` : 'All picks in'}`
+                  : season.status === 'upcoming' ? 'Season starts soon' : season.name
+              ) : 'Loading…'}
+            </p>
+          </div>
+        </div>
+
+        {myStanding && (
+          <div className="flex gap-3 mb-3 text-[10px] text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Trophy className="w-3 h-3" />
+              #{myStanding.rank ?? '—'} · {myStanding.total_correct}/{myStanding.total_picked}
+            </span>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <Link to="/pickem" className="flex-1">
+            <button className="w-full h-9 rounded-lg bg-muted/50 text-[11px] font-bold text-foreground/80 hover:bg-muted/60 transition-colors flex items-center justify-center gap-1.5">
+              Open Pick'em <ChevronRight className="w-3 h-3" />
+            </button>
+          </Link>
+          {isLive && remaining > 0 && week && (
+            <Link to={`/pickem/week/${week.week_number}`}>
+              <button className="h-9 px-3 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1.5" style={{
+                background: 'hsl(var(--gold) / 0.18)', color: 'hsl(var(--gold))',
+              }}>
+                <Target className="w-3 h-3" /> Make Picks
+              </button>
+            </Link>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 /* ── Archived modules card ── */
 function ArchivedModesCard() {
   const archived = [
@@ -965,6 +1073,7 @@ export default function CompetePage() {
           </TabsContent>
 
           <TabsContent value="more" className="space-y-3">
+            <PickemCompeteCard />
             <ArchivedModesCard />
           </TabsContent>
         </Tabs>
