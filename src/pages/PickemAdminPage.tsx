@@ -18,6 +18,7 @@ export default function PickemAdminPage() {
 
   const [activeWeekId, setActiveWeekId] = useState<string | null>(null);
   const { games, refetch: refetchGames } = useWeekGames(activeWeekId || undefined);
+  const [newGame, setNewGame] = useState({ away: '', home: '', kickoff: '' });
 
   useEffect(() => {
     if (!user) return;
