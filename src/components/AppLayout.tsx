@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState, useCallback } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { LayoutDashboard, MessageSquareText, CalendarDays, Swords, Newspaper, User, Trophy, BarChart3, MessageCircle, Bookmark, Link2, ScrollText } from 'lucide-react';
+import { LayoutDashboard, MessageSquareText, CalendarDays, Swords, Newspaper, User, Trophy, BarChart3, MessageCircle, Bookmark, Link2, ScrollText, Lock, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -18,17 +18,23 @@ const navItems = [
 ];
 
 const sidebarModules = [
+  { type: 'divider', label: 'Social' },
   { path: '/dashboard', label: 'Home', icon: LayoutDashboard },
   { path: '/chat', label: 'Chat', icon: MessageSquareText },
-  { path: '/shared', label: 'Shared', icon: Link2 },
-  { path: '/lore', label: 'Lore', icon: ScrollText },
   { path: '/feed', label: 'Feed', icon: Newspaper },
   { path: '/events', label: 'Events', icon: CalendarDays },
+  { path: '/lore', label: 'Lore', icon: ScrollText },
   { type: 'divider', label: 'Compete' },
-  { path: '/brackets', label: 'Brackets', icon: Trophy },
-  { path: '/rankings', label: 'Rankings', icon: BarChart3 },
-  { path: '/polls', label: 'Polls', icon: MessageCircle },
+  { path: '/compete', label: 'Compete Hub', icon: Swords },
   { path: '/drafts', label: 'Drafts', icon: Bookmark },
+  { path: '/pickem', label: "Pick'em", icon: Trophy },
+  { path: '/lockbox', label: 'Lockbox', icon: Lock },
+  { path: '/brackets', label: 'Brackets', icon: Trophy },
+  { type: 'divider', label: 'More' },
+  { path: '/polls', label: 'Polls', icon: MessageCircle },
+  { path: '/rankings', label: 'Rankings', icon: BarChart3 },
+  { path: '/shared', label: 'Shared Media', icon: Link2 },
+  { path: '/posts', label: 'Posts', icon: FileText },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -120,10 +126,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
       return location.pathname.startsWith('/brackets') || location.pathname.startsWith('/pools');
     }
     if (path === '/compete') {
-      return location.pathname === '/compete' || location.pathname.startsWith('/brackets') || location.pathname.startsWith('/pools') || location.pathname.startsWith('/rankings') || location.pathname.startsWith('/polls') || location.pathname.startsWith('/drafts');
+      return location.pathname === '/compete';
     }
     if (path === '/feed') {
-      return location.pathname === '/feed' || location.pathname.startsWith('/posts');
+      return location.pathname === '/feed';
+    }
+    if (path === '/posts') {
+      return location.pathname.startsWith('/posts');
     }
     if (path === '/lore') {
       return location.pathname.startsWith('/lore');
