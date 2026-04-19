@@ -1069,6 +1069,25 @@ export default function CompetePage() {
     }
   }, [season?.id, standings, entries, standingsLoading, entriesLoading, refetchStandings]);
 
+  // Auto-advance playoffs (idempotent): on mount + visibility, when in regular_season or playoffs
+  useEffect(() => {
+    if (!season?.id) return;
+    if (season.status !== 'regular_season' && season.status !== 'playoffs') return;
+    let cancelled = false;
+    const tryAdvance = () => {
+      advancePlayoffs(season.id).then(() => {
+        if (!cancelled) {
+          refetchEntries();
+          refetchStandings();
+        }
+      }).catch(err => console.error('Auto-advance failed:', err));
+    };
+    tryAdvance();
+    const onVis = () => { if (document.visibilityState === 'visible') tryAdvance(); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => { cancelled = true; document.removeEventListener('visibilitychange', onVis); };
+  }, [season?.id, season?.status, refetchEntries, refetchStandings]);
+
   return (
     <div className="pb-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
