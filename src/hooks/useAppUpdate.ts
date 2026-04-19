@@ -5,6 +5,9 @@ import { fetchRemoteBuildId, nukeAndReload } from '@/lib/forceUpdate';
 
 const CHECK_INTERVAL_MS = 30 * 1000;
 const AUTO_NUKE_DELAY_MS = 10 * 1000;
+// If we've been open this long without seeing a build change, do a soft reload
+// on next focus to defeat aggressive Android Chrome caching of /version.json.
+const STALE_BUNDLE_FALLBACK_MS = 5 * 60 * 1000;
 
 /**
  * Universal update detector. Independent of the service worker — fetches
@@ -16,6 +19,9 @@ export function useAppUpdate() {
   const localBuildId = typeof __BUILD_ID__ !== 'undefined' ? __BUILD_ID__ : 'dev';
   const promptedRef = useRef(false);
   const autoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSuccessfulProbeRef = useRef<number>(Date.now());
+  const mountedAtRef = useRef<number>(Date.now());
+  const softReloadedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,6 +51,7 @@ export function useAppUpdate() {
       if (cancelled || promptedRef.current) return;
       const remote = await fetchRemoteBuildId();
       if (cancelled || !remote) return;
+      lastSuccessfulProbeRef.current = Date.now();
       // Only prompt when both ids look like real build stamps and differ.
       if (remote !== localBuildId && localBuildId !== 'dev' && remote !== 'dev') {
         triggerUpdate();
@@ -56,7 +63,25 @@ export function useAppUpdate() {
     const interval = setInterval(check, CHECK_INTERVAL_MS);
 
     const onVisibility = () => {
-      if (document.visibilityState === 'visible') void check();
+      if (document.visibilityState !== 'visible') return;
+      void check();
+      // Android fallback: if the JS bundle has been alive for >5min and we
+      // haven't seen a build id update in that window, the cached bundle may
+      // never see /version.json. Soft-reload once to force a fresh fetch.
+      const aliveFor = Date.now() - mountedAtRef.current;
+      const sinceProbe = Date.now() - lastSuccessfulProbeRef.current;
+      if (
+        !softReloadedRef.current &&
+        !promptedRef.current &&
+        aliveFor > STALE_BUNDLE_FALLBACK_MS &&
+        sinceProbe > STALE_BUNDLE_FALLBACK_MS &&
+        localBuildId !== 'dev'
+      ) {
+        softReloadedRef.current = true;
+        const url = new URL(window.location.href);
+        url.searchParams.set('_v', Date.now().toString());
+        window.location.replace(url.toString());
+      }
     };
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('focus', check);
@@ -79,6 +104,7 @@ export function useAppUpdate() {
     void (async () => {
       const remote = await fetchRemoteBuildId();
       if (!remote) return;
+      lastSuccessfulProbeRef.current = Date.now();
       if (remote !== localBuildId && localBuildId !== 'dev' && remote !== 'dev') {
         if (promptedRef.current) return;
         promptedRef.current = true;

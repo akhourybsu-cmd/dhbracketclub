@@ -29,14 +29,20 @@ export async function nukeAndReload(): Promise<void> {
 
 /**
  * Fetch the deployed build id from /version.json, bypassing every cache layer.
+ * Uses `cache: 'reload'` (more reliably honored on Android Chrome than
+ * `no-store`) plus a query-string buster.
  * Returns null on failure (offline, 404, etc.) so callers can no-op.
  */
 export async function fetchRemoteBuildId(): Promise<string | null> {
   try {
-    const res = await fetch(`/version.json?t=${Date.now()}`, {
-      cache: 'no-store',
-      headers: { 'cache-control': 'no-cache' },
+    const req = new Request(`/version.json?t=${Date.now()}`, {
+      cache: 'reload',
+      headers: {
+        'cache-control': 'no-cache',
+        pragma: 'no-cache',
+      },
     });
+    const res = await fetch(req);
     if (!res.ok) return null;
     const data = await res.json();
     return typeof data?.buildId === 'string' ? data.buildId : null;

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, BarChart3, CalendarDays, Bookmark, Bell, AtSign, Lock } from 'lucide-react';
+import { MessageCircle, BarChart3, CalendarDays, Bookmark, Bell, AtSign, Lock, RefreshCw } from 'lucide-react';
 import { useNotificationPreferences, NotificationPreferences } from '@/hooks/useNotificationPreferences';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { nukeAndReload } from '@/lib/forceUpdate';
 import { toast } from 'sonner';
 
 const PREF_ITEMS: {
@@ -29,6 +30,8 @@ export default function NotificationPreferencesSection() {
   const { play } = useSoundEffect();
   const { user } = useAuth();
   const [testingSend, setTestingSend] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const buildId = typeof __BUILD_ID__ !== 'undefined' ? __BUILD_ID__ : 'dev';
 
   if (loading) return null;
 
@@ -101,6 +104,26 @@ export default function NotificationPreferencesSection() {
           </Button>
         </div>
       )}
+
+      <div className="pt-2 border-t border-border/40 space-y-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full gap-2 text-xs"
+          onClick={async () => {
+            setUpdating(true);
+            toast.loading('Clearing cache and reloading…');
+            await nukeAndReload();
+          }}
+          disabled={updating}
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${updating ? 'animate-spin' : ''}`} />
+          {updating ? 'Updating…' : 'Check for updates'}
+        </Button>
+        <p className="text-[9px] text-muted-foreground/60 text-center font-mono">
+          build {String(buildId).slice(0, 12)}
+        </p>
+      </div>
     </div>
   );
 }
