@@ -656,9 +656,75 @@ export default function DashboardPage() {
 
 
 
+      {/* ═══ League Snapshot ═══ */}
+      {season && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.18 }} className="mb-7">
+          <div className="section-divider mb-3">
+            <h2 className="section-header mb-0">
+              <Swords className="w-3.5 h-3.5 inline-block mr-1.5 text-primary" />
+              League
+            </h2>
+            <Link to="/compete" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors inline-flex items-center gap-1">
+              View League <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <Link to="/compete" className="block group">
+            <div className="glass-card arena-edge p-4 transition-all duration-200 group-hover:border-primary/20">
+              <div className="flex items-center justify-between mb-3 relative z-10">
+                <div className="min-w-0">
+                  <p className="text-[13px] font-extrabold tracking-tight truncate">{season.name}</p>
+                  <p className="text-[10px] text-muted-foreground/70 font-medium">
+                    {season.status === 'playoffs' ? 'Playoffs in progress' : `Draft ${regularEntriesCount} of ${seasonTarget}`}
+                  </p>
+                </div>
+                {season.status === 'playoffs' ? (
+                  <span className="status-pill" style={{ background: 'hsl(var(--gold) / 0.15)', color: 'hsl(var(--gold))' }}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse mr-1" />
+                    Live
+                  </span>
+                ) : (
+                  <span className="status-pill bg-primary/10 text-primary">{seasonProgress}%</span>
+                )}
+              </div>
+
+              {/* Top 3 podium */}
+              {standings.length > 0 && (
+                <div className="space-y-1 mb-3 relative z-10">
+                  {standings.slice(0, 3).map((s, idx) => {
+                    const colors = ['hsl(var(--gold))', 'hsl(var(--muted-foreground))', 'hsl(35 60% 55%)'];
+                    return (
+                      <div key={s.id} className="flex items-center gap-2">
+                        <span className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-extrabold flex-shrink-0" style={{
+                          background: `${colors[idx]}22`, color: colors[idx],
+                        }}>{idx + 1}</span>
+                        <span className={cn("text-[11px] font-semibold truncate flex-1", s.user_id === user?.id && "text-primary")}>
+                          {s.profiles?.display_name || 'Unknown'}{s.user_id === user?.id ? ' (you)' : ''}
+                        </span>
+                        <span className="text-[11px] font-mono font-bold tabular-nums">{s.season_points}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Progress bar (regular season) */}
+              {season.status !== 'playoffs' && seasonTarget > 0 && (
+                <div className="h-1 rounded-full overflow-hidden relative z-10" style={{ background: 'hsl(var(--muted) / 0.4)' }}>
+                  <div className="h-full transition-all duration-500" style={{
+                    width: `${seasonProgress}%`,
+                    background: 'linear-gradient(90deg, hsl(var(--gold) / 0.7), hsl(var(--gold)))',
+                    boxShadow: '0 0 8px hsl(var(--gold) / 0.4)',
+                  }} />
+                </div>
+              )}
+            </div>
+          </Link>
+        </motion.div>
+      )}
+
       {/* ═══ Drafts (above Brackets) ═══ */}
       {(() => {
-        const visibleDrafts = drafts.filter((d: any) => d.status === 'in_progress' || d.status === 'setup' || !dismissedIds.has(`draft-${d.id}`));
+        const visibleDrafts = sortedDrafts.filter((d: any) => d.status === 'in_progress' || d.status === 'setup' || !dismissedIds.has(`draft-${d.id}`));
         if (visibleDrafts.length === 0) return null;
         return (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
@@ -670,47 +736,54 @@ export default function DashboardPage() {
               <Link to="/drafts" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors">View All</Link>
             </div>
             <div className="space-y-2 mb-7">
-              {visibleDrafts.slice(0, 3).map((d: any, i: number) => (
-                <motion.div key={d.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 + i * 0.04 }}>
-                  <Link to={`/drafts/${d.id}`} className="block group">
-                    <div className="glass-card p-3.5 transition-all duration-200 group-hover:border-gold/15">
-                      <div className="flex items-center gap-3 relative z-10">
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{
-                          background: d.status === 'completed' ? 'hsl(var(--muted) / 0.5)' : 'linear-gradient(135deg, hsl(var(--gold) / 0.15), hsl(var(--gold) / 0.04))',
-                        }}>
-                          <Bookmark className={cn("w-4 h-4", d.status === 'completed' ? "text-muted-foreground/60" : "")} style={d.status !== 'completed' ? { color: 'hsl(var(--gold))' } : {}} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-bold text-[13px] truncate tracking-tight">{d.topic}</h3>
-                          <p className="text-[10px] text-muted-foreground/70 font-medium">
-                            {d.num_rounds} rounds • {d.status === 'in_progress' ? 'In Progress' : d.status === 'setup' ? 'Setup' : 'Complete'}
-                          </p>
-                          {d.status === 'in_progress' && d.current_pick_user_id && (
-                            <p className="text-[10px] font-semibold mt-0.5" style={{ color: d.current_pick_user_id === user?.id ? 'hsl(var(--gold))' : 'hsl(var(--success))' }}>
-                              🎯 {d.current_pick_user_id === user?.id ? 'Your pick!' : `${d.current_pick_profiles?.display_name || 'Someone'}'s pick`}
+              {visibleDrafts.slice(0, 3).map((d: any, i: number) => {
+                const isYourTurn = d.status === 'in_progress' && d.current_pick_user_id === user?.id;
+                const someoneElseTurn = d.status === 'in_progress' && d.current_pick_user_id && d.current_pick_user_id !== user?.id;
+                return (
+                  <motion.div key={d.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 + i * 0.04 }}>
+                    <Link to={`/drafts/${d.id}`} className="block group">
+                      <div className={cn("glass-card p-3.5 transition-all duration-200 group-hover:border-gold/15", isYourTurn && "draft-your-turn")}>
+                        <div className="flex items-center gap-3 relative z-10">
+                          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{
+                            background: d.status === 'completed' ? 'hsl(var(--muted) / 0.5)' : 'linear-gradient(135deg, hsl(var(--gold) / 0.15), hsl(var(--gold) / 0.04))',
+                          }}>
+                            <Bookmark className={cn("w-4 h-4", d.status === 'completed' ? "text-muted-foreground/60" : "")} style={d.status !== 'completed' ? { color: 'hsl(var(--gold))' } : {}} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-bold text-[13px] truncate tracking-tight">{d.topic}</h3>
+                            <p className="text-[10px] text-muted-foreground/70 font-medium">
+                              {d.num_rounds} rounds • {d.status === 'in_progress' ? 'In Progress' : d.status === 'setup' ? 'Setup' : 'Complete'}
                             </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <span className={cn(
-                            "status-pill",
-                            d.status === 'in_progress' ? 'bg-success/10 text-success' : d.status === 'setup' ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
-                          )}>
-                            {d.status === 'in_progress' ? 'In Progress' : d.status === 'setup' ? 'Setup' : 'Complete'}
-                          </span>
-                          {d.status !== 'in_progress' && d.status !== 'setup' ? (
-                            <button onClick={(e) => dismissItem(`draft-${d.id}`, e)} className="p-2.5 -m-1 rounded-md text-muted-foreground/40 hover:text-foreground active:text-foreground transition-colors" aria-label="Dismiss draft">
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          ) : (
-                            <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60" />
-                          )}
+                            {someoneElseTurn && (
+                              <p className="text-[10px] font-semibold mt-0.5 flex items-center gap-1" style={{ color: 'hsl(var(--success))' }}>
+                                <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                                On the clock: {d.current_pick_profiles?.display_name || 'Someone'}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <span className={cn(
+                              "status-pill",
+                              isYourTurn ? '' :
+                              d.status === 'in_progress' ? 'bg-success/10 text-success' :
+                              d.status === 'setup' ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
+                            )} style={isYourTurn ? { background: 'hsl(var(--gold))', color: 'hsl(var(--background))' } : undefined}>
+                              {isYourTurn ? 'Your turn' : d.status === 'in_progress' ? 'Live' : d.status === 'setup' ? 'Setup' : 'Complete'}
+                            </span>
+                            {d.status !== 'in_progress' && d.status !== 'setup' ? (
+                              <button onClick={(e) => dismissItem(`draft-${d.id}`, e)} className="p-2.5 -m-1 rounded-md text-muted-foreground/40 hover:text-foreground active:text-foreground transition-colors" aria-label="Dismiss draft">
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            ) : (
+                              <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60" />
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
+                    </Link>
+                  </motion.div>
+                );
+              })}
             </div>
           </motion.div>
         );
