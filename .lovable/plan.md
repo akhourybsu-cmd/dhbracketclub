@@ -1,40 +1,47 @@
 
 
-## NFL Pick'em — Comprehensive Test Plan
+User wants to refactor Pick'em away from 2025 (which had no participants) and set up 2026 as the first real season. Since no one picked, we can safely archive/delete the 2025 data and start fresh.
 
-I'll test the new feature end-to-end across DB, edge functions, and UI. Read-only mode means I can inspect data and call edge functions, but any bugs found will be reported back for fixes in default mode.
+Let me check current state first, then propose.
 
-### Test sequence
+Current state (from prior context):
+- One `nfl_seasons` row for 2025, status likely 'active'
+- 16 Week 1 games imported via ESPN sync for 2025
+- ESPN team `external_id`s backfilled on `nfl_teams` (reusable, season-agnostic)
+- No picks/tiebreakers/standings rows (no participants)
 
-**1. Database integrity** (via `supabase--read_query`)
-- Confirm all 8 `nfl_*` tables exist and are populated correctly
-- Verify 32 teams seeded with ESPN `external_id` backfilled
-- Check season row exists with sane defaults
-- Verify `is_pick_unlocked`, `recompute_nfl_week_status` functions present
-- Inspect RLS policies on picks/tiebreakers
+## Plan: Pick'em → 2026 as inaugural season
 
-**2. Edge functions** (via `supabase--curl_edge_functions` + logs)
-- `sync-nfl-week`: call for 2025 season Week 1 — confirm games upserted, week row created, ESPN team mapping works
-- Check `nfl_games` populated, `nfl_weeks.status` auto-derived by trigger
-- `score-nfl-week`: call against a synced week — confirm idempotent, no errors when no finals yet
-- Check function logs for any silent failures
+### 1. Archive 2025 data
+- Mark existing `nfl_seasons` row (2025) as `status = 'complete'` and rename to `"2025 NFL Season (Archived – Preview)"` so it's preserved for reference but visually demoted
+- Delete the 16 imported `nfl_games` rows + the `nfl_weeks` row(s) for 2025 (zero-impact: no picks reference them)
+- Keeps `nfl_teams` untouched (already season-agnostic with ESPN IDs)
 
-**3. UI flow** (via browser tools)
-- Navigate `/compete` → More tab → confirm NFL Pick'em card visible
-- `/pickem` home: season header, CTA, standings snapshot render
-- `/pickem/week/1`: game cards render, team logos load, tap-to-pick works, lock states correct, tiebreaker input visible
-- `/pickem/standings`, `/pickem/history`, `/pickem/rules`: render without errors
-- `/pickem/admin` (Alex K only): sync buttons work, "Import full season" present
-- Mobile viewport (411×734): tap targets ≥44px, no overflow, safe-area respected
-- Console clean of errors
+### 2. Create 2026 NFL Season as the new active season
+- Insert new `nfl_seasons` row:
+  - `year: 2026`
+  - `name: "2026 NFL Season"`
+  - `status: 'upcoming'` (flips to 'active' once Week 1 games sync close to kickoff)
+  - `current_week: 1`
+  - `starts_at`: ~Sept 10, 2026 (Thursday — NFL Week 1 traditional opener)
+  - `ends_at`: ~Jan 4, 2027 (end of regular season)
+- Active-season hook (`useActiveSeason`) already prefers `status='active'` and falls back to most recent — so the 2026 row will surface immediately for everyone
 
-**4. Lock enforcement**
-- Verify `is_pick_unlocked` blocks picks on past kickoffs (RLS test via direct query)
+### 3. Admin can sync 2026 schedule when ready
+- ESPN endpoint already accepts `?dates={year}&seasontype=2&week={n}` — no code change needed
+- Admin opens `/pickem/admin`, clicks "Import full season schedule" once 2026 data is published by ESPN (typically May 2026)
+- Until then the home page shows the "season hasn't started" empty state
 
-**5. Realtime**
-- Confirm subscriptions on `nfl_games` and standings tables fire (passive check via channel registration)
+### 4. Optional polish
+- Add a small "Inaugural Season" badge/copy on `PickemHomePage` for 2026 to mark it as the first real run
+- Keep the archived 2025 row hidden from any selectors (only `status IN ('upcoming','active')` shows in pickers — already the case in `useActiveSeason`)
 
-### Reporting
+### Files touched
+- One data migration (archive 2025 + insert 2026 + delete stale games/weeks) — single SQL operation
+- Optional: `src/pages/PickemHomePage.tsx` — small "Inaugural Season" tag for 2026
 
-After the run I'll deliver: ✅ what works, ⚠️ what's flaky, ❌ what's broken — plus a prioritized fix list. If issues are found I'll stop and surface them before any code changes.
+### What the user sees after
+- `/pickem` shows "2026 NFL Season — Upcoming" with empty-state CTA
+- Admin dashboard ready to import the 2026 schedule when ESPN publishes it
+- 2025 row archived and out of the way
 
