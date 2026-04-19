@@ -23,6 +23,7 @@ import {
   addDraftToSeason,
   removeDraftFromSeason,
   recalculateSeasonStandings,
+  advancePlayoffs,
   getSeasonDraftTarget,
   type SeasonStanding,
 } from '@/hooks/useDraftSeasons';
@@ -416,6 +417,11 @@ function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; m
     const s = seeds.find(s => s.playoff_seed === seed);
     return s ? (s.profiles as any)?.display_name || '?' : 'TBD';
   };
+  const getNameByUser = (userId: string | null) => {
+    if (!userId) return 'TBD';
+    const s = standings.find(s => s.user_id === userId);
+    return (s?.profiles as any)?.display_name || '?';
+  };
 
   if (seeds.length === 0 && matches.length === 0) {
     return (
@@ -431,11 +437,49 @@ function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; m
     );
   }
 
-  const roundLabels: Record<string, string> = {
-    play_in: 'Play-In',
-    semifinal: 'Semifinal',
-    final: 'Championship',
-    third_place: '3rd Place',
+  const qfMatches = matches.filter(m => m.round === 'qf').sort((a, b) => a.match_number - b.match_number);
+  const sfMatches = matches.filter(m => m.round === 'sf').sort((a, b) => a.match_number - b.match_number);
+  const finalMatches = matches.filter(m => m.round === 'final');
+  const champion = finalMatches[0]?.status === 'complete' ? finalMatches[0].winner_user_id : null;
+
+  const MatchCard = ({ m, placeholder }: { m?: any; placeholder?: { roundLabel: string } }) => {
+    if (!m) {
+      return (
+        <div className="rounded-lg bg-muted/20 p-2.5 border border-dashed border-border/20 text-center">
+          <p className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider">{placeholder?.roundLabel}</p>
+          <p className="text-[10px] text-muted-foreground/50 mt-1">Awaiting prior round</p>
+        </div>
+      );
+    }
+    const statusLabel = m.status === 'complete' ? 'Final' : m.status === 'in_progress' ? 'Live' : 'Pending';
+    const statusClass = m.status === 'complete' ? 'bg-primary/15 text-primary' : m.status === 'in_progress' ? 'bg-success/15 text-success' : 'bg-muted text-muted-foreground';
+    return (
+      <div className="rounded-lg bg-muted/30 p-2.5 border border-border/15 space-y-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/70">M{m.match_number}</span>
+          <span className={cn('text-[8px] font-bold px-1.5 py-0.5 rounded', statusClass)}>{statusLabel}</span>
+        </div>
+        <div className="space-y-0.5">
+          <p className={cn('text-[10px] font-bold flex items-center gap-1', m.winner_user_id === m.user_a && 'text-gold')}>
+            <span className="text-muted-foreground/70">#{m.seed_a}</span>
+            <span className="truncate">{getNameByUser(m.user_a)}</span>
+            {m.winner_user_id === m.user_a && <Trophy className="w-2.5 h-2.5 ml-auto" style={{ color: 'hsl(var(--gold))' }} />}
+          </p>
+          <p className={cn('text-[10px] font-bold flex items-center gap-1', m.winner_user_id === m.user_b && 'text-gold')}>
+            <span className="text-muted-foreground/70">#{m.seed_b}</span>
+            <span className="truncate">{getNameByUser(m.user_b)}</span>
+            {m.winner_user_id === m.user_b && <Trophy className="w-2.5 h-2.5 ml-auto" style={{ color: 'hsl(var(--gold))' }} />}
+          </p>
+        </div>
+        {m.draft_id && (
+          <Link to={`/drafts/${m.draft_id}`} className="block">
+            <div className="text-[9px] font-bold text-center py-1 rounded bg-gold/10 hover:bg-gold/15 transition-colors flex items-center justify-center gap-1" style={{ color: 'hsl(var(--gold))' }}>
+              Open Draft <ChevronRight className="w-2.5 h-2.5" />
+            </div>
+          </Link>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -446,79 +490,77 @@ function PlayoffPicture({ standings, matches }: { standings: SeasonStanding[]; m
           Playoff Picture
         </h3>
 
+        {champion && (
+          <div className="mb-4 p-3 rounded-lg text-center" style={{
+            background: 'linear-gradient(135deg, hsl(var(--gold) / 0.2), hsl(var(--gold) / 0.05))',
+            border: '1px solid hsl(var(--gold) / 0.3)',
+          }}>
+            <Trophy className="w-6 h-6 mx-auto mb-1" style={{ color: 'hsl(var(--gold))' }} />
+            <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Champion</p>
+            <p className="text-[14px] font-black mt-0.5" style={{ color: 'hsl(var(--gold))' }}>{getNameByUser(champion)}</p>
+          </div>
+        )}
+
         {matches.length > 0 ? (
-          <div className="space-y-2">
-            {matches.map(m => (
-              <div key={m.id} className="flex items-center gap-2 p-3 rounded-lg bg-muted/30">
-                <span className="text-[10px] font-bold text-muted-foreground w-20 flex-shrink-0">{roundLabels[m.round] || m.round}</span>
-                <div className="flex-1 flex items-center justify-center gap-3">
-                  <span className={cn('text-[11px] font-bold', m.winner_user_id === m.user_a ? 'text-gold' : '')}>#{m.seed_a}</span>
-                  <span className="text-[9px] text-muted-foreground">vs</span>
-                  <span className={cn('text-[11px] font-bold', m.winner_user_id === m.user_b ? 'text-gold' : '')}>#{m.seed_b}</span>
-                </div>
-                <span className={cn('status-pill text-[9px]', m.status === 'complete' ? 'bg-primary/10 text-primary' : m.status === 'in_progress' ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground')}>
-                  {m.status === 'complete' ? 'Done' : m.status === 'in_progress' ? 'Live' : 'Pending'}
-                </span>
-              </div>
-            ))}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="space-y-2">
+              <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/50 text-center">QF</p>
+              <MatchCard m={qfMatches[0]} placeholder={{ roundLabel: 'QF' }} />
+            </div>
+            <div className="space-y-2">
+              <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/50 text-center">Semis</p>
+              <MatchCard m={sfMatches[0]} placeholder={{ roundLabel: 'SF 1' }} />
+              <MatchCard m={sfMatches[1]} placeholder={{ roundLabel: 'SF 2' }} />
+            </div>
+            <div className="space-y-2">
+              <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/50 text-center">Final</p>
+              <MatchCard m={finalMatches[0]} placeholder={{ roundLabel: 'Final' }} />
+            </div>
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="space-y-2">
-              <div className="grid grid-cols-3 gap-2 mb-3">
-                {['Play-In', 'Semis', 'Finals'].map(r => (
-                  <div key={r} className="text-center">
-                    <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/50">{r}</span>
-                  </div>
-                ))}
-              </div>
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {['Play-In', 'Semis', 'Finals'].map(r => (
+                <div key={r} className="text-center">
+                  <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/50">{r}</span>
+                </div>
+              ))}
+            </div>
 
-              <div className="grid grid-cols-3 gap-2 items-center">
-                <div className="rounded-lg bg-muted/30 p-2.5 border border-border/10">
-                  <p className="text-[10px] font-bold">#{4} <span className="text-muted-foreground font-normal">{getName(4)}</span></p>
-                  <p className="text-[10px] font-bold mt-1">#{5} <span className="text-muted-foreground font-normal">{getName(5)}</span></p>
-                </div>
-                <div className="rounded-lg bg-muted/30 p-2.5 border border-border/10 relative">
-                  <p className="text-[10px] font-bold">#{1} <span className="text-muted-foreground font-normal">{getName(1)}</span></p>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <span className="text-[8px] font-bold px-1.5 py-0.5 rounded" style={{
-                      background: 'hsl(var(--gold) / 0.15)',
-                      color: 'hsl(var(--gold))',
-                    }}>BYE</span>
-                  </div>
-                  <div className="h-px bg-border/20 my-1.5" />
-                  <p className="text-[9px] text-muted-foreground">vs Play-In ✦</p>
-                </div>
-                <div className="rounded-lg p-2.5 border border-gold/15 relative" style={{
-                  background: 'hsl(var(--gold) / 0.05)',
-                }}>
-                  <div className="text-center">
-                    <Trophy className="w-4 h-4 mx-auto mb-1" style={{ color: 'hsl(var(--gold) / 0.5)' }} />
-                    <p className="text-[9px] font-bold" style={{ color: 'hsl(var(--gold))' }}>Championship</p>
-                    <p className="text-[8px] text-muted-foreground mt-0.5">Semi winners</p>
-                  </div>
-                </div>
+            <div className="grid grid-cols-3 gap-2 items-center">
+              <div className="rounded-lg bg-muted/30 p-2.5 border border-border/10">
+                <p className="text-[10px] font-bold">#{4} <span className="text-muted-foreground font-normal">{getName(4)}</span></p>
+                <p className="text-[10px] font-bold mt-1">#{5} <span className="text-muted-foreground font-normal">{getName(5)}</span></p>
               </div>
-
-              <div className="grid grid-cols-3 gap-2 items-center">
-                <div />
-                <div className="rounded-lg bg-muted/30 p-2.5 border border-border/10">
-                  <p className="text-[10px] font-bold">#{2} <span className="text-muted-foreground font-normal">{getName(2)}</span></p>
-                  <div className="h-px bg-border/20 my-1.5" />
-                  <p className="text-[10px] font-bold">#{3} <span className="text-muted-foreground font-normal">{getName(3)}</span></p>
+              <div className="rounded-lg bg-muted/30 p-2.5 border border-border/10">
+                <p className="text-[10px] font-bold">#{1} <span className="text-muted-foreground font-normal">{getName(1)}</span></p>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'hsl(var(--gold) / 0.15)', color: 'hsl(var(--gold))' }}>BYE</span>
                 </div>
-                <div className="rounded-lg bg-muted/20 p-2.5 border border-border/10">
-                  <div className="text-center">
-                    <Medal className="w-3.5 h-3.5 mx-auto mb-1 text-muted-foreground/40" />
-                    <p className="text-[9px] font-bold text-muted-foreground">3rd Place</p>
-                    <p className="text-[8px] text-muted-foreground/60 mt-0.5">Semi losers</p>
-                  </div>
+                <div className="h-px bg-border/20 my-1.5" />
+                <p className="text-[9px] text-muted-foreground">vs Play-In ✦</p>
+              </div>
+              <div className="rounded-lg p-2.5 border border-gold/15" style={{ background: 'hsl(var(--gold) / 0.05)' }}>
+                <div className="text-center">
+                  <Trophy className="w-4 h-4 mx-auto mb-1" style={{ color: 'hsl(var(--gold) / 0.5)' }} />
+                  <p className="text-[9px] font-bold" style={{ color: 'hsl(var(--gold))' }}>Championship</p>
+                  <p className="text-[8px] text-muted-foreground mt-0.5">Semi winners</p>
                 </div>
               </div>
             </div>
 
+            <div className="grid grid-cols-3 gap-2 items-center">
+              <div />
+              <div className="rounded-lg bg-muted/30 p-2.5 border border-border/10">
+                <p className="text-[10px] font-bold">#{2} <span className="text-muted-foreground font-normal">{getName(2)}</span></p>
+                <div className="h-px bg-border/20 my-1.5" />
+                <p className="text-[10px] font-bold">#{3} <span className="text-muted-foreground font-normal">{getName(3)}</span></p>
+              </div>
+              <div />
+            </div>
+
             <p className="text-[9px] text-muted-foreground/50 text-center pt-1">
-              All 5 players qualify · #1 seed earns a first-round bye
+              All 5 players qualify · #1, #2, #3 get first-round byes
             </p>
           </div>
         )}
