@@ -22,7 +22,10 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         navigateFallbackDenylist: [/^\/~oauth/],
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // Note: 'html' intentionally excluded so index.html is always
+        // fetched fresh via the NetworkFirst navigation route below.
+        // This prevents installed PWAs from serving a stale app shell.
+        globPatterns: ["**/*.{js,css,ico,png,svg,woff2}"],
         importScripts: ["/sw-push.js"],
         skipWaiting: true,
         clientsClaim: true,
