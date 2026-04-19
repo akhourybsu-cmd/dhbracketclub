@@ -3,7 +3,7 @@
 //
 // SW_VERSION: bump this string to force the browser to detect a SW change
 // and trigger an update on installed PWAs (Android/iOS).
-const SW_VERSION = '2025-04-19-3-dashboard';
+const SW_VERSION = '2026-04-19-bootstrap-probe';
 self.__SW_VERSION = SW_VERSION;
 
 // Take control immediately on install so updates apply without waiting
@@ -11,20 +11,25 @@ self.addEventListener('install', () => {
   self.skipWaiting();
 });
 
-// On activation, clear ALL old caches to prevent stale data
+// On activation: nuke ALL caches (including old workbox precaches) and claim clients.
+// This ensures the bootstrap probe in index.html sees a fresh /version.json.
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          // Keep only workbox-precache caches (they're versioned)
-          if (!cacheName.includes('workbox-precache')) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    (async () => {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map((name) => caches.delete(name).catch(() => false)));
+      await self.clients.claim();
+    })()
   );
+});
+
+// NEVER intercept /version.json — it must always hit the network so the
+// bootstrap probe in index.html can detect new deploys.
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  if (url.pathname === '/version.json') {
+    event.respondWith(fetch(event.request, { cache: 'no-store' }).catch(() => new Response('{}', { headers: { 'content-type': 'application/json' } })));
+  }
 });
 
 self.addEventListener('push', (event) => {
