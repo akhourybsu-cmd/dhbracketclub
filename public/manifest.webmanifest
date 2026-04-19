@@ -6,7 +6,7 @@
   "background_color": "#0D1210",
   "display": "standalone",
   "orientation": "portrait",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
   "icons": [
     {
       "src": "/pwa-icon-512.png",
