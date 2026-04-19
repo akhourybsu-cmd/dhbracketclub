@@ -1290,7 +1290,7 @@ export default function CompetePage() {
                 {isCommissioner && <CommissionerPanel season={season} entries={entries} onUpdate={handleSeasonUpdate} />}
                 <NextDraftCard entries={entries} totalDrafts={totalDrafts} />
                 <StandingsCard standings={standings} userId={user?.id} />
-                <PlayoffPicture standings={standings} matches={matches} />
+                <PlayoffPicture standings={standings} matches={matches} seasonId={season?.id} />
                 <SeasonDraftHistory entries={entries} totalDrafts={totalDrafts} />
                 <LifetimeStatsCard userId={user?.id} />
 
