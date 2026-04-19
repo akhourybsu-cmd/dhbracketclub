@@ -170,15 +170,21 @@ export default function ChatPage() {
       chIds.forEach((id: string) => { if (!meta.has(id)) meta.set(id, { unread: false }); });
       setChannelMeta(meta);
 
-      // Only auto-select on initial load (no channel selected yet)
+      // Only auto-select on initial load (no channel selected yet).
+      // On mobile we keep the user on the channel-list view so nothing feels artificially "active";
+      // on desktop we auto-open the saved/default channel because the sidebar always shows the list.
       if (!selectedChannelRef.current) {
+        const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches;
         let target: Channel | undefined;
         try {
           const savedId = localStorage.getItem('last_chat_channel_id');
           if (savedId) target = (chs as Channel[]).find(c => c.id === savedId);
         } catch {}
         if (!target) target = (chs as Channel[]).find(c => c.is_default) || (chs[0] as Channel);
-        if (target) { setSelectedChannel(target); setShowChannelList(false); }
+        if (target) {
+          setSelectedChannel(target);
+          if (isDesktop) setShowChannelList(false);
+        }
       } else {
         // If the currently selected channel still exists, refresh its data from the fetch
         const refreshed = (chs as Channel[]).find(c => c.id === selectedChannelRef.current!.id);
