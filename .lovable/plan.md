@@ -1,70 +1,63 @@
 
 
-## Desktop Sidebar Sync — Reflect All Current Features
+## Mobile Platform Deep Review
 
-### Problem
-The desktop sidebar in `src/components/AppLayout.tsx` is out of sync with the app. It's missing several flagship modules that exist as full routes and are surfaced on mobile:
+Goal: systematic audit of the mobile experience (411×734 viewport) — verify every module is wired up, navigates correctly, renders without overflow, and updates in real-time. Identify loose ends and produce a prioritized fix list before changing any code.
 
-**Missing from desktop sidebar:**
-- `/compete` — the Compete hub (on mobile bottom nav, central to the app)
-- `/lockbox` — DH Lockbox daily competition
-- `/pickem` — NFL Pick'em (just polished for 2026 season)
-- `/posts` — Posts/discussions module
+### Approach — read-only audit in 4 sweeps
 
-**Mis-prioritized:**
-- Polls + Rankings are surfaced as top-level Compete items, but memory says they're archived under "More" with Drafts as flagship
-- Drafts (flagship per memory) is buried at the bottom of Compete group
-- No visual priority for the league/seasonal aesthetic
+**Sweep 1 — Navigation & shell integrity**
+- `AppLayout.tsx` mobile bottom-nav (5 tabs: Home/Compete/Chat/More/Profile)
+- Verify every route in `App.tsx` is reachable and `ProtectedRoute` works
+- Confirm safe-area insets, 4.5rem nav height, no content obscured
+- Check the recent desktop-sidebar reorg didn't regress mobile
 
-### Plan — reorganize `sidebarModules` in `AppLayout.tsx`
+**Sweep 2 — Module-by-module functionality** (read each main page + its hook)
+| Module | Page(s) | Hook(s) / data path |
+|---|---|---|
+| Dashboard | DashboardPage | Drafts/Brackets/Events priority sort, presence |
+| Drafts | DraftsList, DraftDetail, CreateDraft | useDraftSeasons, useDraftResults, draftTurn |
+| Pick'em | PickemHome, PickemWeek, PickemWeekResults, Standings, History, Rules | usePickem, usePickSuggestion |
+| Lockbox | LockboxPage, LockboxCrackPage | useLockbox |
+| Chat | ChatPage | useChatMessages, useChatActions, useChatRealtime, presence |
+| Lore | LorePage, LoreDetail | useLoreEntries |
+| Events | EventsPage, EventDetail | (RSVP + thread) |
+| Compete | CompetePage | hub routing |
+| Polls/Rankings/Posts | (archived in More) | basic reachability |
+| Profile | ProfilePage + AdminHub | avatar, notifications, admin gating |
 
-Restructure into 4 logical sections matching the actual app hierarchy and mobile nav:
+**Sweep 3 — Cross-cutting concerns**
+- Realtime subscriptions: chat messages, presence, draft picks, lockbox cracks
+- Push notifications: VAPID fetch, subscription persistence, throttle behavior
+- PWA update flow: confirm probe + ChunkLoadError recovery still wired after recent changes
+- Auth: login/signup/reset flow, session persistence, ProtectedRoute redirects
+- AI flows: suggestions, draft enrichment, draft reports, dispute resolution
+- Edge function health: spot-check logs for `enrich-draft-picks`, `score-nfl-week`, `finalize-lockbox-day`, `send-push-notification`
+- Mobile interaction standards: 44px touch targets, no-truncation policy, image lazy/async decoding
 
-```
-SOCIAL
-  Home          /dashboard
-  Chat          /chat       (with unread badge)
-  Feed          /feed
-  Events        /events
-  Lore          /lore
+**Sweep 4 — Live preview QA at 411×734**
+- Browser-test each main route for: overflow, broken layouts, tap-target size, empty-state correctness, loading skeletons, console errors
 
-COMPETE  (Drafts-first per flagship priority)
-  Compete Hub   /compete
-  Drafts        /drafts     (flagship)
-  Pick'em       /pickem     (NFL season)
-  Lockbox       /lockbox    (daily)
-  Brackets      /brackets
+### Deliverable
 
-MORE  (archived modes per memory)
-  Polls         /polls
-  Rankings      /rankings
-  Shared Media  /shared
-  Posts         /posts
+A categorized findings report with:
+- ✅ Verified working
+- ⚠️ Minor polish opportunities
+- 🔴 Real bugs / loose ends needing fixes
 
-(footer)
-  Theme toggle
-  Profile       /profile
-```
-
-### Visual + behavior
-- Keep current `nav-item` styling, dividers as section eyebrows (same `text-[8px] uppercase tracking-[0.2em]` pattern already used)
-- Add appropriate Lucide icons: `Swords` (Compete), `Bookmark` (Drafts), `Trophy` (Pick'em), `Lock` (Lockbox), `LayoutGrid` or keep `Trophy` for Brackets
-- Update `isNavActive` to handle `/lockbox`, `/pickem`, and so `/compete` only matches `=== '/compete'` (not all sub-routes, since each sub-module gets its own sidebar entry)
-- Keep all unread-badge and animation behavior intact
-- No mobile bottom-nav change (5-tab structure is correct per memory)
-
-### Files touched
-- `src/components/AppLayout.tsx` — only the `sidebarModules` array, icon imports, and the `isNavActive` logic for `/compete`
+Then propose a follow-up implementation plan only for the 🔴 items, scoped tightly so we don't redesign anything.
 
 ### Out of scope
-- No new routes, no new pages
-- No mobile nav changes
-- No Electron packaging (the `useful-context` mentioned it but no Electron setup exists in the project — "desktop app" here = the desktop web sidebar)
-- No styling redesign
+- No redesign, no new features
+- No mobile native (Capacitor) work — PWA only
+- No edge function rewrites unless a real bug surfaces
 
-### QA after build
-- Resize to ≥1024px: every section visible, all items navigable
-- Active highlight works for each new entry (Lockbox, Pick'em, Compete, Posts)
-- Chat unread badge still renders
-- Mobile (411×734): bottom nav unchanged, no regression
+### Files to inspect (read-only)
+- `src/App.tsx`, `src/components/AppLayout.tsx`, `src/components/ProtectedRoute.tsx`
+- All pages listed above + their primary hooks
+- Recent edits: `src/main.tsx`, `src/lib/forceUpdate.ts`, `src/hooks/useAppUpdate.ts`, `src/components/profile/AdminHub.tsx`
+- Edge function logs (spot-check) via supabase tools
+
+### After audit
+Present findings inline in chat with a prioritized fix plan you can approve before any code changes.
 
