@@ -515,6 +515,15 @@ export async function removeDraftFromSeason(draftId: string) {
   }
 }
 
+/** Trigger playoff advancement (transition + winner scoring + next-round generation) */
+export async function advancePlayoffs(seasonId: string) {
+  const { data, error } = await supabase.functions.invoke('advance-playoffs', {
+    body: { seasonId },
+  });
+  if (error) throw error;
+  return data;
+}
+
 /** Renumber all regular-season entries sequentially (1, 2, 3…) by current week_number order */
 async function renumberSeasonEntries(seasonId: string) {
   const { data: remaining } = await supabase
