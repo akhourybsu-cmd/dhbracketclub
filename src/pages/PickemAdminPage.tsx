@@ -188,7 +188,7 @@ export default function PickemAdminPage() {
 
       {/* Season */}
       {season && (
-        <div className="glass-card p-4 space-y-2">
+        <div className="glass-card p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Season</p>
@@ -196,6 +196,23 @@ export default function PickemAdminPage() {
               <p className="text-[11px] text-muted-foreground">Status: <span className="font-bold">{season.status}</span> · Current week: {season.current_week}</p>
             </div>
             {season.status !== 'active' && <Button size="sm" onClick={activateSeason}>Activate</Button>}
+          </div>
+          <div className="rounded-lg bg-primary/5 border border-primary/20 p-2.5 space-y-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-primary">ESPN Schedule Sync</p>
+            <p className="text-[11px] text-muted-foreground">Pulls schedule + live/final scores from ESPN. Idempotent — safe to re-run.</p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full"
+              onClick={importFullSeason}
+              disabled={importingSeason}
+            >
+              {importingSeason ? (
+                <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Importing {importProgress?.done}/{importProgress?.total}…</>
+              ) : (
+                <><Download className="w-3 h-3 mr-1" /> Import full {season.year} regular season</>
+              )}
+            </Button>
           </div>
         </div>
       )}
@@ -232,9 +249,23 @@ export default function PickemAdminPage() {
       {/* Games for active week */}
       {activeWeekId && (
         <div className="glass-card p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="font-extrabold text-[13px]">Games — {weeks.find(w => w.id === activeWeekId)?.label}</h2>
-            <Button size="sm" onClick={scoreWeek}><Calculator className="w-3 h-3 mr-1" /> Score Week</Button>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="font-extrabold text-[13px] truncate">Games — {weeks.find(w => w.id === activeWeekId)?.label}</h2>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const wn = weeks.find(w => w.id === activeWeekId)?.week_number;
+                  if (wn) syncWeekFromEspn(wn);
+                }}
+                disabled={syncingWeek}
+              >
+                {syncingWeek ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <RefreshCw className="w-3 h-3 mr-1" />}
+                Sync
+              </Button>
+              <Button size="sm" onClick={scoreWeek}><Calculator className="w-3 h-3 mr-1" /> Score</Button>
+            </div>
           </div>
 
           {/* Tiebreaker selector */}
