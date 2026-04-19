@@ -510,6 +510,33 @@ export default function DashboardPage() {
         </div>
       </motion.div>
 
+      {/* ═══ Needs Your Attention ═══ */}
+      {attentionItems.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="space-y-1.5 mb-5"
+        >
+          {attentionItems.map((item) => (
+            <Link key={item.id} to={item.to} className="block group">
+              <div className="attention-card flex items-center gap-3 transition-transform group-active:scale-[0.99]">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{
+                  background: 'linear-gradient(135deg, hsl(var(--gold) / 0.2), hsl(var(--gold) / 0.06))',
+                }}>
+                  <item.icon className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12px] font-extrabold tracking-tight leading-tight" style={{ color: 'hsl(var(--gold))' }}>{item.label}</p>
+                  {item.sub && <p className="text-[10px] text-muted-foreground/80 font-medium truncate mt-0.5">{item.sub}</p>}
+                </div>
+                <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
+              </div>
+            </Link>
+          ))}
+        </motion.div>
+      )}
+
       {/* ═══ Quick Create ═══ */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
@@ -518,14 +545,21 @@ export default function DashboardPage() {
         className="grid grid-cols-4 gap-1.5 sm:gap-2 mb-7"
       >
         {[
+          { to: '/drafts/create', icon: Bookmark, label: 'Draft', color: 'gold', primary: true },
           { to: '/lore', icon: ScrollText, label: 'Lore', color: 'lore' },
-          { to: '/drafts/create', icon: Bookmark, label: 'Draft', color: 'gold' },
           { to: '/pools/create', icon: Trophy, label: 'Bracket', color: 'primary' },
           { to: '/lockbox', icon: Shield, label: 'Lockbox', color: 'destructive' },
         ].map((item, i) => (
           <motion.div key={item.to} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 + i * 0.04 }}>
             <Link to={item.to}>
-              <div className="action-tile py-3">
+              <div
+                className="action-tile py-3"
+                style={item.primary ? {
+                  background: 'linear-gradient(135deg, hsl(var(--gold) / 0.12), hsl(var(--gold) / 0.03))',
+                  borderColor: 'hsl(var(--gold) / 0.3)',
+                  boxShadow: '0 0 18px hsl(var(--gold) / 0.12)',
+                } : undefined}
+              >
                 <Plus className="w-3 h-3 absolute top-2 right-2 text-muted-foreground/70" />
                 <item.icon className="w-5 h-5 mx-auto mb-1.5 relative z-10" style={{ color: `hsl(var(--${item.color}))` }} />
                 <p className="text-[10px] font-bold relative z-10">{item.label}</p>
