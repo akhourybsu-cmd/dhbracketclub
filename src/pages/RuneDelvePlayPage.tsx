@@ -70,6 +70,8 @@ export default function RuneDelvePlayPage() {
   const sealedTilesActive = activeMechanics.includes('sealed_tiles');
   const telegraphActive = activeMechanics.includes('telegraphed_attacks');
   const corruptionActive = activeMechanics.includes('corrupted_tiles');
+  const secondaryObjective = ((level?.modifiers as any)?.secondary_objective ?? null) as SecondaryObjective | null;
+  const bossRule = ((level?.modifiers as any)?.boss_rule ?? null) as BossRuleId | null;
 
   // Build deterministic state.
   useEffect(() => {
