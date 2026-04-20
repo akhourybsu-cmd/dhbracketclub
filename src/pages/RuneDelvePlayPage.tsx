@@ -41,21 +41,43 @@ export default function RuneDelvePlayPage() {
 
   const [grid, setGrid] = useState<RuneType[][] | null>(null);
   const [combat, setCombat] = useState<CombatState | null>(null);
+  const [seals, setSeals] = useState<Set<string>>(new Set());
   const [rngTick, setRngTick] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [flashId, setFlashId] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [introMechanic, setIntroMechanic] = useState<MechanicId | null>(null);
   const [endState, setEndState] = useState<null | { cleared: boolean; reason: 'cleared' | 'defeated' | 'timeout'; score: number; isNewBest: boolean }>(null);
+
+  // Resolve mechanics for this level. Prefer the persisted row, fall back
+  // to the deterministic helper so legacy/transient rows still work.
+  const activeMechanics = useMemo<MechanicId[]>(() => {
+    const stored = (level?.modifiers as any)?.mechanics as MechanicId[] | undefined;
+    if (stored?.length) return stored;
+    return level ? mechanicsForLevel(level.level_number) : [];
+  }, [level]);
+  const sealedTilesActive = activeMechanics.includes('sealed_tiles');
 
   // Build deterministic state.
   useEffect(() => {
     if (!level || !hero) return;
     const rng = mulberry32(level.generation_seed);
     setGrid(generateBoard(rng));
+    setSeals(buildInitialSeals(level.generation_seed, sealedTilesActive));
     const enemies: Enemy[] = (level.enemy_config ?? []).map((e: any, i: number) => ({
       id: e.id ?? `e${i}`, name: e.name, emoji: e.emoji, hp: e.hp, maxHp: e.maxHp ?? e.hp, damage: e.damage,
     }));
     setCombat(initialCombat(enemies, level.turn_limit));
+  }, [level, hero, sealedTilesActive]);
+
+  // One-time intro modal for any brand-new mechanic taught at this level.
+  useEffect(() => {
+    if (!level || !hero) return;
+    const intro = (level.modifiers as any)?.intro_mechanic ?? introMechanicForLevel(level.level_number);
+    if (!intro) return;
+    try {
+      if (!localStorage.getItem(seenMechanicKey(intro))) setIntroMechanic(intro);
+    } catch {}
   }, [level, hero]);
 
   const refillRng = useMemo(() => {
