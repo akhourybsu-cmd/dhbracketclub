@@ -19,10 +19,14 @@ interface Props {
   onChainComplete: (chain: Cell[]) => void;
   /** Set of `${r}-${c}` keys that are currently sealed and uninteractable. */
   seals?: Set<string>;
+  /** Set of `${r}-${c}` keys that are corrupted (chain-able but costly). */
+  corruptedCells?: Set<string>;
+  /** Subset of `corruptedCells` that are active spreaders. */
+  corruptionSources?: Set<string>;
 }
 
 // Mobile-first rune board with pointer-driven chain selection.
-export function RuneBoard({ grid, disabled, onChainComplete, seals }: Props) {
+export function RuneBoard({ grid, disabled, onChainComplete, seals, corruptedCells, corruptionSources }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [chain, setChain] = useState<Cell[]>([]);
   const draggingRef = useRef(false);
