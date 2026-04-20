@@ -50,7 +50,7 @@ export default function RuneDelvePlayPage() {
     return mulberry32(dungeon.seed + 1000 + rngTick);
   }, [dungeon, rngTick]);
 
-  if (myRun) {
+  if (myRun && !endState) {
     return (
       <div className="space-y-4">
         <Link to="/rune-delve" className="back-link"><ArrowLeft className="w-4 h-4" /> Back</Link>

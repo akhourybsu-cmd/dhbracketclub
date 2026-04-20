@@ -108,7 +108,13 @@ export default function RuneDelveHomePage() {
   }
 
   if (heroLoading || !hero || !dungeon) {
-    return <div className="space-y-3"><div className="h-32 rounded-2xl skeleton-shimmer" /><div className="h-24 rounded-2xl skeleton-shimmer" /></div>;
+    return (
+      <div className="space-y-3">
+        <Link to="/compete" className="back-link">← Back to Compete</Link>
+        <div className="h-32 rounded-2xl skeleton-shimmer" />
+        <div className="h-24 rounded-2xl skeleton-shimmer" />
+      </div>
+    );
   }
 
   const cls = getClass(hero.class);
@@ -204,7 +210,7 @@ export default function RuneDelveHomePage() {
                 <div key={r.id} className="flex items-center gap-2.5 text-[12px]">
                   <span className="w-5 font-mono font-bold text-muted-foreground">#{r.rank}</span>
                   {r.hero?.class && <ClassBadge cls={r.hero.class as HeroClass} size="sm" />}
-                  <span className="flex-1 truncate font-semibold">{r.profile.display_name}</span>
+                  <span className="flex-1 truncate font-semibold">{r.hero?.hero_name ?? r.profile.display_name}</span>
                   {r.dungeon_cleared && <span className="text-[9px] font-bold text-success">CLEAR</span>}
                   <span className="font-mono font-bold tabular-nums" style={{ color: 'hsl(var(--gold))' }}>{r.score.toLocaleString()}</span>
                 </div>

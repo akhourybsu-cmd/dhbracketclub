@@ -43,17 +43,29 @@ export default function RuneDelveResultsPage() {
     { label: 'XP Earned', value: run.xp_earned, icon: Sparkles },
   ];
 
+  const outcome = run.dungeon_cleared
+    ? { label: 'Dungeon Cleared', emoji: '🏆', accent: 'gold' as const }
+    : run.hp_remaining <= 0
+      ? { label: 'Defeated', emoji: '💀', accent: 'destructive' as const }
+      : { label: 'Out of Turns', emoji: '⏳', accent: 'muted' as const };
+
+  const headerBg = outcome.accent === 'gold'
+    ? 'linear-gradient(160deg, hsl(var(--gold) / 0.15), hsl(var(--gold) / 0.04))'
+    : outcome.accent === 'destructive'
+      ? 'linear-gradient(160deg, hsl(var(--destructive) / 0.14), hsl(var(--destructive) / 0.04))'
+      : 'linear-gradient(160deg, hsl(var(--primary) / 0.10), hsl(var(--accent) / 0.04))';
+  const headerBorder = outcome.accent === 'gold'
+    ? 'hsl(var(--gold) / 0.3)'
+    : outcome.accent === 'destructive'
+      ? 'hsl(var(--destructive) / 0.35)'
+      : undefined;
+
   return (
     <div className="space-y-4 pb-8">
       <Confetti active={showConfetti} />
       <Link to="/rune-delve" className="back-link"><ArrowLeft className="w-4 h-4" /> Home</Link>
 
-      <div className="glass-card p-6 text-center" style={{
-        background: run.dungeon_cleared
-          ? 'linear-gradient(160deg, hsl(var(--gold) / 0.15), hsl(var(--gold) / 0.04))'
-          : 'linear-gradient(160deg, hsl(var(--primary) / 0.10), hsl(var(--accent) / 0.04))',
-        borderColor: run.dungeon_cleared ? 'hsl(var(--gold) / 0.3)' : undefined,
-      }}>
+      <div className="glass-card p-6 text-center" style={{ background: headerBg, borderColor: headerBorder }}>
         {hero && (
           <div className="flex items-center justify-center gap-2 mb-2">
             <ClassBadge cls={hero.class} size="sm" />
@@ -61,9 +73,9 @@ export default function RuneDelveResultsPage() {
             <span className="text-[10px] font-bold text-muted-foreground">Lv {levelFromXp(hero.xp).level} {getClass(hero.class).name}</span>
           </div>
         )}
-        <p className="text-3xl mb-1">{run.dungeon_cleared ? '🏆' : '🗝️'}</p>
+        <p className="text-3xl mb-1">{outcome.emoji}</p>
         <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
-          {run.dungeon_cleared ? 'Dungeon Cleared' : 'Run Complete'}
+          {outcome.label}
         </p>
         <p className="font-mono text-4xl font-extrabold tabular-nums mb-2" style={{ color: 'hsl(var(--gold))' }}>
           {run.score.toLocaleString()}
