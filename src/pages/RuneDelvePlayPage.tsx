@@ -47,9 +47,11 @@ export default function RuneDelvePlayPage() {
   const { data: progress } = useMyProgress();
   const { data: level } = useLevel(levelNumber);
   const { data: existingRun } = useMyLevelRun(level?.id);
+  const { data: classTracks } = useAllClassProgress();
   const submit = useSubmitLevelRun();
   const advance = useAdvanceProgress();
   const updateHero = useUpdateHero();
+  const updateClass = useUpdateClassProgress();
 
   const [grid, setGrid] = useState<RuneType[][] | null>(null);
   const [combat, setCombat] = useState<CombatState | null>(null);
