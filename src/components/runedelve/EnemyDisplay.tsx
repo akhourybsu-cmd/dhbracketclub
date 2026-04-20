@@ -21,13 +21,10 @@ export function EnemyDisplay({ enemies, flashId }: Props) {
             style={{ opacity: dead ? 0.3 : 1 }}
           >
             <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl"
+              className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl rd-enemy-frame ${e.name?.startsWith('Elite') ? 'is-elite' : ''}`}
               style={{
-                background: dead
-                  ? 'hsl(var(--muted) / 0.4)'
-                  : 'linear-gradient(160deg, hsl(var(--card)), hsl(var(--surface-overlay)))',
-                border: '1px solid hsl(var(--border) / 0.6)',
                 filter: dead ? 'grayscale(1)' : 'none',
+                opacity: dead ? 0.5 : 1,
               }}
             >
               {dead ? '💀' : e.emoji}

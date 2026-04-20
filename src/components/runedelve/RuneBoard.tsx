@@ -126,11 +126,9 @@ export function RuneBoard({ grid, disabled, onChainComplete }: Props) {
       <div
         ref={containerRef}
         className={cn(
-          'w-full max-w-[400px] p-2 rounded-2xl select-none',
+          'w-full max-w-[400px] p-2.5 rounded-2xl select-none rd-board-frame',
         )}
         style={{
-          background: 'linear-gradient(160deg, hsl(var(--surface-overlay) / 0.6), hsl(var(--surface) / 0.4))',
-          border: '1px solid hsl(var(--border) / 0.5)',
           touchAction: 'none',
         }}
       >
