@@ -11,10 +11,19 @@ import { applyChain, enemiesAttack, endTurn, initialCombat, isRunOver, useAbilit
 import { calculateScore, xpForRun } from '@/lib/runedelve/scoring';
 import { levelFromXp } from '@/lib/runedelve/classConfig';
 import { objectiveLabel, type ObjectiveType } from '@/lib/runedelve/levelGenerator';
+import {
+  mechanicsForLevel,
+  introMechanicForLevel,
+  seenMechanicKey,
+  type MechanicId,
+} from '@/lib/runedelve/mechanics';
+import { buildInitialSeals, sealsBrokenByChain } from '@/lib/runedelve/sealedTiles';
 import { RuneBoard } from '@/components/runedelve/RuneBoard';
 import { EnemyDisplay } from '@/components/runedelve/EnemyDisplay';
 import { HeroStatusBar } from '@/components/runedelve/HeroStatusBar';
 import { HowToPlaySheet } from '@/components/runedelve/HowToPlaySheet';
+import { MechanicIntroSheet } from '@/components/runedelve/MechanicIntroSheet';
+import { MechanicBanner } from '@/components/runedelve/MechanicBanner';
 import { format } from 'date-fns';
 
 export default function RuneDelvePlayPage() {
