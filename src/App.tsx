@@ -56,6 +56,12 @@ const PickemStandingsPage = lazy(() => import("./pages/PickemStandingsPage"));
 const PickemHistoryPage = lazy(() => import("./pages/PickemHistoryPage"));
 const PickemRulesPage = lazy(() => import("./pages/PickemRulesPage"));
 const PickemAdminPage = lazy(() => import("./pages/PickemAdminPage"));
+const RuneDelveHomePage = lazy(() => import("./pages/RuneDelveHomePage"));
+const RuneDelvePlayPage = lazy(() => import("./pages/RuneDelvePlayPage"));
+const RuneDelveResultsPage = lazy(() => import("./pages/RuneDelveResultsPage"));
+const RuneDelveLeaderboardPage = lazy(() => import("./pages/RuneDelveLeaderboardPage"));
+const RuneDelveHeroPage = lazy(() => import("./pages/RuneDelveHeroPage"));
+const RuneDelveHistoryPage = lazy(() => import("./pages/RuneDelveHistoryPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -165,6 +171,14 @@ function AnimatedRoutes() {
         <Route path="/pickem/history" element={<ProtectedPage><PickemHistoryPage /></ProtectedPage>} />
         <Route path="/pickem/rules" element={<ProtectedPage><PickemRulesPage /></ProtectedPage>} />
         <Route path="/pickem/admin" element={<ProtectedPage><PickemAdminPage /></ProtectedPage>} />
+
+        {/* Rune Delve module */}
+        <Route path="/rune-delve" element={<ProtectedPage><RuneDelveHomePage /></ProtectedPage>} />
+        <Route path="/rune-delve/play" element={<ProtectedPage><RuneDelvePlayPage /></ProtectedPage>} />
+        <Route path="/rune-delve/results" element={<ProtectedPage><RuneDelveResultsPage /></ProtectedPage>} />
+        <Route path="/rune-delve/leaderboard" element={<ProtectedPage><RuneDelveLeaderboardPage /></ProtectedPage>} />
+        <Route path="/rune-delve/hero" element={<ProtectedPage><RuneDelveHeroPage /></ProtectedPage>} />
+        <Route path="/rune-delve/history" element={<ProtectedPage><RuneDelveHistoryPage /></ProtectedPage>} />
 
         <Route path="/profile" element={<ProtectedPage><ProfilePage /></ProtectedPage>} />
         <Route path="*" element={<Suspense fallback={<PageFallback />}><NotFound /></Suspense>} />

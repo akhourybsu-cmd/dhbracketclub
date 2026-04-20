@@ -101,6 +101,45 @@ function LockboxCompeteCard() {
   );
 }
 
+/* ── Rune Delve card — featured daily puzzle ── */
+function RuneDelveCompeteCard() {
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+      <div className="glass-card p-5 relative overflow-hidden" style={{
+        background: 'linear-gradient(160deg, hsl(var(--primary) / 0.14), hsl(var(--accent) / 0.06) 60%, transparent)',
+        borderLeft: '3px solid hsl(var(--primary))',
+      }}>
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{
+            background: 'linear-gradient(135deg, hsl(var(--primary) / 0.25), hsl(var(--primary) / 0.08))',
+          }}>
+            <Sparkles className="w-5 h-5" style={{ color: 'hsl(var(--primary))' }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="font-extrabold text-[16px] tracking-tight">Rune Delve</h2>
+              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-primary/15 text-primary uppercase tracking-wider">Daily</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground/80">Match runes. Crush enemies. Climb the daily board.</p>
+          </div>
+        </div>
+        <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
+          Today's shared dungeon awaits. Chain runes, charge your class ability, and post a score before midnight.
+        </p>
+        <Link to="/rune-delve">
+          <button className="w-full h-11 rounded-xl text-[12px] font-extrabold flex items-center justify-center gap-2 btn-press" style={{
+            background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85))',
+            color: 'hsl(var(--primary-foreground))',
+            boxShadow: '0 6px 20px hsl(var(--primary) / 0.35)',
+          }}>
+            <Sparkles className="w-4 h-4" /> Enter the Dungeon
+          </button>
+        </Link>
+      </div>
+    </motion.div>
+  );
+}
+
 /* ══════════════════════════════════════════════════════════
    SEASON HERO BANNER — draft-count based progress
    ══════════════════════════════════════════════════════════ */
@@ -1270,8 +1309,8 @@ export default function CompetePage() {
         <Tabs defaultValue="league" className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-4">
             <TabsTrigger value="league" className="text-[11px] font-bold">🏆 League</TabsTrigger>
-            <TabsTrigger value="lockbox" className="text-[11px] font-bold">🔒 Lockbox</TabsTrigger>
-            <TabsTrigger value="more" className="text-[11px] font-bold">📦 More</TabsTrigger>
+            <TabsTrigger value="runedelve" className="text-[11px] font-bold">✨ Rune Delve</TabsTrigger>
+            <TabsTrigger value="other" className="text-[11px] font-bold">📦 Other</TabsTrigger>
           </TabsList>
 
           <TabsContent value="league" className="space-y-3">
@@ -1317,11 +1356,12 @@ export default function CompetePage() {
             )}
           </TabsContent>
 
-          <TabsContent value="lockbox" className="space-y-3">
-            <LockboxCompeteCard />
+          <TabsContent value="runedelve" className="space-y-3">
+            <RuneDelveCompeteCard />
           </TabsContent>
 
-          <TabsContent value="more" className="space-y-3">
+          <TabsContent value="other" className="space-y-3">
+            <LockboxCompeteCard />
             <PickemCompeteCard />
             <ArchivedModesCard />
           </TabsContent>
