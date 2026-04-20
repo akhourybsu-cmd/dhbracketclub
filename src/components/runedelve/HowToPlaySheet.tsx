@@ -31,7 +31,8 @@ export function HowToPlaySheet({ open, onOpenChange, heroClass }: Props) {
           <div className="space-y-5 pt-2">
             {/* Goal */}
             <Section title="🎯 Goal">
-              <p>Defeat every enemy in the daily dungeon within <b>10 turns</b>. The faster and cleaner the clear, the higher your score.</p>
+              <p>Progress through a shared <b>level-based campaign</b>. Each level has its own objective — defeat all enemies, survive a set number of turns, reach a target score, or take down an elite. Clear a level to unlock the next one.</p>
+              <p className="mt-1.5">Every player faces the <b>same level</b> with the same board, enemies, and turn limit — your score is what sets you apart.</p>
             </Section>
 
             {/* Controls */}
@@ -102,12 +103,12 @@ export function HowToPlaySheet({ open, onOpenChange, heroClass }: Props) {
             </Section>
 
             {/* Progression */}
-            <Section title="🌟 XP, Streaks & Fairness">
-              <p>Your hero earns XP every run (~score ÷ 30, up to 120 + 20 for clears). Levels unlock <b>cosmetic titles only</b> — no stat boosts. Daily competition stays fair for everyone.</p>
-              <p className="mt-1.5">Play every day to keep your streak alive. Miss a day and it resets to 0.</p>
+            <Section title="🌟 XP, Levels & Chapters</span>">
+              <p>Your hero earns XP every run (~score ÷ 30, up to 120 + 20 for clears). Hero levels unlock <b>cosmetic titles only</b> — no stat boosts, so the campaign stays fair for everyone.</p>
+              <p className="mt-1.5">The campaign is split into <b>chapters of 50 levels</b>. Every chapter introduces a new twist — tougher enemies, elites, or tighter move economies. Replay any cleared level to chase a higher best score.</p>
             </Section>
 
-            <p className="text-[10px] text-center text-muted-foreground pt-2">Same dungeon for everyone, every day · New challenge at midnight UTC</p>
+            <p className="text-[10px] text-center text-muted-foreground pt-2">Shared campaign · Same level, same board for every player</p>
           </div>
         </ScrollArea>
       </SheetContent>
