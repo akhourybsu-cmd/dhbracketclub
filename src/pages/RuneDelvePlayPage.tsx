@@ -291,7 +291,7 @@ export default function RuneDelvePlayPage() {
           <button
             onClick={() => setHelpOpen(true)}
             aria-label="How to play"
-            className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary btn-press"
+            className="w-11 h-11 -mr-2 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary btn-press"
           >
             <HelpCircle className="w-4 h-4" />
           </button>
@@ -334,17 +334,17 @@ export default function RuneDelvePlayPage() {
       {/* Boss-rule banner — Band 5 milestone levels. */}
       {bossRule && (
         <div
-          className="glass-card px-3 py-2 flex items-center gap-2"
+          className="glass-card px-3 py-2 flex items-start gap-2"
           style={{
             background: 'linear-gradient(135deg, hsl(var(--destructive) / 0.14), hsl(var(--gold) / 0.08))',
             borderColor: 'hsl(var(--destructive) / 0.4)',
           }}
         >
-          <span className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center gap-1"
+          <span className="shrink-0 text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center gap-1 mt-0.5"
             style={{ background: 'hsl(var(--destructive) / 0.2)', color: 'hsl(var(--destructive))' }}>
             <Crown className="w-3 h-3" /> {getBossRule(bossRule).label}
           </span>
-          <span className="text-[11px] font-semibold flex-1">{getBossRule(bossRule).rule}</span>
+          <span className="text-[11px] font-semibold flex-1 min-w-0 leading-snug">{getBossRule(bossRule).rule}</span>
         </div>
       )}
       <EnemyDisplay enemies={combat.enemies} flashId={flashId} />
@@ -361,15 +361,15 @@ export default function RuneDelvePlayPage() {
 
       <div className="grid grid-cols-3 gap-2">
         <div className="glass-card p-2 text-center">
-          <p className="text-[8px] font-bold text-muted-foreground uppercase">Damage</p>
+          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Damage</p>
           <p className="text-sm font-extrabold tabular-nums">{combat.totalDamage}</p>
         </div>
         <div className="glass-card p-2 text-center">
-          <p className="text-[8px] font-bold text-muted-foreground uppercase">Defeated</p>
+          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Defeated</p>
           <p className="text-sm font-extrabold tabular-nums">{combat.enemiesDefeated}</p>
         </div>
         <div className="glass-card p-2 text-center">
-          <p className="text-[8px] font-bold text-muted-foreground uppercase">Best Chain</p>
+          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Best Chain</p>
           <p className="text-sm font-extrabold tabular-nums">{combat.longestChain}</p>
         </div>
       </div>
@@ -393,7 +393,9 @@ export default function RuneDelvePlayPage() {
       {endState && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center px-6 backdrop-blur-md bg-background/70 animate-in fade-in"
-          onClick={() => navigate(`/rune-delve/results/${level.level_number}`)}
+          // Don't allow tap-outside to navigate while the run is still being saved —
+          // prevents an orphaned in-flight write and a missed leaderboard update.
+          onClick={() => { if (!submitting) navigate(`/rune-delve/results/${level.level_number}`); }}
         >
           <div className="glass-card p-6 max-w-sm w-full text-center space-y-3" onClick={e => e.stopPropagation()}>
             <div className="flex justify-center">
