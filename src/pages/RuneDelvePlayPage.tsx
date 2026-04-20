@@ -19,6 +19,13 @@ import {
 } from '@/lib/runedelve/mechanics';
 import { buildInitialSeals, sealsBrokenByChain } from '@/lib/runedelve/sealedTiles';
 import { applyInitialIntents } from '@/lib/runedelve/telegraph';
+import {
+  buildInitialCorruption,
+  spreadCorruption,
+  resolveChainAgainstCorruption,
+  emptyCorruption,
+  type CorruptionState,
+} from '@/lib/runedelve/corruptedTiles';
 import { RuneBoard } from '@/components/runedelve/RuneBoard';
 import { EnemyDisplay } from '@/components/runedelve/EnemyDisplay';
 import { HeroStatusBar } from '@/components/runedelve/HeroStatusBar';
