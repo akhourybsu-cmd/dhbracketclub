@@ -120,7 +120,11 @@ export default function RuneDelveHomePage() {
   }
 
   const cls = getClass(hero.class);
-  const lvl = levelFromXp(hero.xp);
+  const activeTrack = (classTracks ?? []).find(t => t.class === hero.class);
+  const activeXp = activeTrack?.xp ?? hero.xp;
+  const activeLevel = activeTrack?.level ?? hero.level;
+  const activeTitle = activeTrack?.cosmetic_title ?? hero.cosmetic_title ?? titleForLevel(activeLevel, hero.class);
+  const lvl = levelFromXp(activeXp);
   const xpPct = Math.round((lvl.intoLevel / lvl.needed) * 100);
   const currentLevel = progress.highest_unlocked_level;
   const chapter = chapterFor(currentLevel);
