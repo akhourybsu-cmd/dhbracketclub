@@ -3,6 +3,7 @@ import { useNavigate, Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft, HelpCircle, Trophy, Skull, Hourglass } from 'lucide-react';
 import { useRuneDelveHero, useUpdateHero } from '@/hooks/useRuneDelveHero';
+import { useAllClassProgress, useUpdateClassProgress } from '@/hooks/useRuneDelveClassProgress';
 import { useLevel, useMyLevelRun, useSubmitLevelRun, useAdvanceProgress, useMyProgress } from '@/hooks/useRuneDelveCampaign';
 import { mulberry32 } from '@/lib/runedelve/prng';
 import { generateBoard, type RuneType, type Enemy } from '@/lib/runedelve/dungeonGenerator';
