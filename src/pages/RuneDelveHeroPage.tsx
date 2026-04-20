@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Flame, Trophy } from 'lucide-react';
+import { ArrowLeft, Flame, Trophy, Lock, Sparkles } from 'lucide-react';
 import { useRuneDelveHero, useUpdateHero } from '@/hooks/useRuneDelveHero';
-import { CLASS_LIST, getClass, levelFromXp, titleForLevel, type HeroClass } from '@/lib/runedelve/classConfig';
+import { CLASS_LIST, getClass, levelFromXp, titleForLevel, titleLadderFor, type HeroClass } from '@/lib/runedelve/classConfig';
 import { ClassBadge } from '@/components/runedelve/ClassBadge';
 import { useState } from 'react';
 import { toast } from 'sonner';
