@@ -182,6 +182,11 @@ export default function RuneDelvePlayPage() {
       ? enemiesAttack(next, telegraphActive)
       : endTurn(next);
     if ((after as any).heavyFired) toast.error('⚡ Heavy strike!', { duration: 1200 });
+    // Ability still consumes a turn — corruption advances.
+    if (corruptionActive && corruption.sources.size) {
+      setCorruption(spreadCorruption(corruption, rngTick, level.generation_seed, seals));
+      setRngTick(t => t + 1);
+    }
     setCombat(after);
     const status = checkObjective(after, level.turn_limit, objType, level.objective_target);
     if (status.over) void finalize(after, status.cleared);
