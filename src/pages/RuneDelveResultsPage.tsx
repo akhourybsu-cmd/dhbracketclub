@@ -119,14 +119,24 @@ export default function RuneDelveResultsPage() {
 
       {/* Mechanic recap — what was active on this level */}
       {(() => {
-        const stored = (level.modifiers as any)?.mechanics as MechanicId[] | undefined;
-        const mechs = stored?.length ? stored : mechanicsForLevel(levelNumber);
-        const secondary = (level.modifiers as any)?.secondary_objective as SecondaryObjective | null;
-        const bossRule = (level.modifiers as any)?.boss_rule as BossRuleId | null;
+        const mods = (level.modifiers ?? {}) as {
+          mechanics?: MechanicId[];
+          secondary_objective?: SecondaryObjective | null;
+          boss_rule?: BossRuleId | null;
+        };
+        const mechs = mods.mechanics?.length ? mods.mechanics : mechanicsForLevel(levelNumber);
+        const secondary = mods.secondary_objective ?? null;
+        const bossRule = mods.boss_rule ?? null;
         if (!mechs.length && !secondary && !bossRule) return null;
+        const recapTitle = run.dungeon_cleared ? 'This level featured' : 'What you faced';
+        const secondaryWasMet = secondary
+          ? (secondary.type === 'min_hp' ? run.hp_remaining >= secondary.target
+            : secondary.type === 'min_chain' ? run.longest_chain >= secondary.target
+            : run.turns_used <= secondary.target)
+          : false;
         return (
           <div className="glass-card p-3 space-y-2">
-            <h3 className="font-bold text-[12px] flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-primary" /> This level featured</h3>
+            <h3 className="font-bold text-[12px] flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-primary" /> {recapTitle}</h3>
             <div className="flex flex-wrap gap-1.5">
               {mechs.map(id => {
                 const m = getMechanic(id);
@@ -146,6 +156,9 @@ export default function RuneDelveResultsPage() {
             {secondary && (
               <p className="text-[11px] text-muted-foreground">
                 <span className="font-bold text-foreground">Bonus goal:</span> {secondaryLabel(secondary)}
+                {run.dungeon_cleared && secondaryWasMet && (
+                  <span className="ml-1.5 font-extrabold" style={{ color: 'hsl(var(--gold))' }}>+250</span>
+                )}
               </p>
             )}
           </div>

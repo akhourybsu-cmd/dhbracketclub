@@ -102,6 +102,9 @@ export default function RuneDelveLevelMapPage() {
             const lvlMechanics = mechanicsForLevel(lvl.level_number);
             const newestMechanic = lvlMechanics.length ? getMechanic(lvlMechanics[lvlMechanics.length - 1]) : null;
             const introId = introMechanicForLevel(lvl.level_number);
+            const mods = (lvl.modifiers ?? {}) as { secondary_objective?: unknown; boss_rule?: unknown };
+            const hasSecondary = !!mods.secondary_objective;
+            const hasBossRule = !!mods.boss_rule;
             return (
               <button
                 key={lvl.level_number}
@@ -185,6 +188,12 @@ export default function RuneDelveLevelMapPage() {
                 {objType !== 'defeat_all' && isUnlocked && (
                   <span className="text-[7px] font-bold uppercase tracking-wider text-primary mt-0.5 truncate w-full text-center">
                     {objType === 'survive' ? 'Survive' : objType === 'reach_score' ? 'Score' : 'Elite'}
+                  </span>
+                )}
+                {/* Corner glyphs — bonus goal & boss rule hints. */}
+                {(hasSecondary || hasBossRule) && isUnlocked && (
+                  <span className="absolute bottom-1 right-1 text-[10px] leading-none" aria-hidden>
+                    {hasBossRule ? '👑' : '🎯'}
                   </span>
                 )}
               </button>
