@@ -147,9 +147,10 @@ export default function RuneDelvePlayPage() {
       nextCorruption = r.next;
     }
 
-    const afterEnemies = next.enemies.some(e => e.hp > 0)
+    let afterEnemies = next.enemies.some(e => e.hp > 0)
       ? enemiesAttack(next, telegraphActive, bossRule)
       : endTurn(next);
+    if (bossRule) afterEnemies = applyBossTurnEffects(afterEnemies, bossRule);
     if ((afterEnemies as any).heavyFired) toast.error('⚡ Heavy strike!', { duration: 1200 });
     const newGrid = resolveBoard(grid, chain, refillRng, seals);
 
@@ -183,9 +184,10 @@ export default function RuneDelvePlayPage() {
       toast.info('Ability not ready — fill mana orbs first.');
       return;
     }
-    const after = next.enemies.some(e => e.hp > 0)
+    let after = next.enemies.some(e => e.hp > 0)
       ? enemiesAttack(next, telegraphActive, bossRule)
       : endTurn(next);
+    if (bossRule) after = applyBossTurnEffects(after, bossRule);
     if ((after as any).heavyFired) toast.error('⚡ Heavy strike!', { duration: 1200 });
     // Ability still consumes a turn — corruption advances.
     if (corruptionActive && corruption.sources.size) {
