@@ -72,7 +72,8 @@ export function RuneBoard({ grid, disabled, onChainComplete }: Props) {
     if (disabled) return;
     e.preventDefault();
     draggingRef.current = true;
-    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    // Do NOT setPointerCapture — capturing on the first cell prevents
+    // pointermove from reporting the correct elementFromPoint for sibling cells on iOS.
     setChain([{ r, c }]);
   };
 

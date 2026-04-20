@@ -7,7 +7,7 @@ import { useTodayDungeon, useMyTodayRun, useSubmitRun } from '@/hooks/useRuneDel
 import { mulberry32 } from '@/lib/runedelve/prng';
 import { generateBoard, type RuneType, type Enemy } from '@/lib/runedelve/dungeonGenerator';
 import { isValidChain, resolveBoard, type Cell } from '@/lib/runedelve/boardEngine';
-import { applyChain, enemiesAttack, initialCombat, isRunOver, useAbility, type CombatState } from '@/lib/runedelve/combatEngine';
+import { applyChain, enemiesAttack, endTurn, initialCombat, isRunOver, useAbility, type CombatState } from '@/lib/runedelve/combatEngine';
 import { calculateScore, xpForRun } from '@/lib/runedelve/scoring';
 import { levelFromXp } from '@/lib/runedelve/classConfig';
 import { RuneBoard } from '@/components/runedelve/RuneBoard';
@@ -70,7 +70,8 @@ export default function RuneDelvePlayPage() {
     const type = grid[chain[0].r][chain[0].c];
     const { next, resolution } = applyChain(combat, type, chain.length, hero.class);
     if (resolution.enemyKills.length) setFlashId(resolution.enemyKills[0]);
-    const afterEnemies = next.enemies.some(e => e.hp > 0) ? enemiesAttack(next) : next;
+    // Enemies attack only if any are still alive; otherwise just consume the turn.
+    const afterEnemies = next.enemies.some(e => e.hp > 0) ? enemiesAttack(next) : endTurn(next);
     const newGrid = resolveBoard(grid, chain, refillRng);
     setRngTick(t => t + 1);
     setGrid(newGrid);
@@ -88,7 +89,7 @@ export default function RuneDelvePlayPage() {
       toast.info('Ability not ready — fill mana orbs first.');
       return;
     }
-    const after = next.enemies.some(e => e.hp > 0) ? enemiesAttack(next) : next;
+    const after = next.enemies.some(e => e.hp > 0) ? enemiesAttack(next) : endTurn(next);
     setCombat(after);
     const status = isRunOver(after);
     if (status.over) void finalize(after, status.cleared);
@@ -154,7 +155,7 @@ export default function RuneDelvePlayPage() {
       <div className="flex items-center justify-between">
         <Link to="/rune-delve" className="back-link"><ArrowLeft className="w-4 h-4" /> Exit</Link>
         <div className="text-[11px] font-bold text-muted-foreground tabular-nums">
-          Turn {dungeon.max_turns - combat.turnsRemaining + 1} / {dungeon.max_turns}
+          Turn {Math.min(dungeon.max_turns, dungeon.max_turns - combat.turnsRemaining + 1)} / {dungeon.max_turns}
         </div>
       </div>
 
