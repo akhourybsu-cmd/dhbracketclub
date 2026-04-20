@@ -181,7 +181,10 @@ export function generateLevel(level: number): LevelDefinition {
     turn_limit: turnLimitFor(level),
     objective_type: objective.type,
     objective_target: objective.target,
-    modifiers: {},
+    modifiers: {
+      mechanics: mechanicsForLevel(level),
+      intro_mechanic: introMechanicForLevel(level),
+    },
   };
 }
 
