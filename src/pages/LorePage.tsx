@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ScrollText, Plus, Search, Dices, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,7 @@ export default function LorePage() {
   const [filter, setFilter] = useState<{ value: string; kind: 'type' | 'status' | 'all' }>(FILTERS[0]);
   const [search, setSearch] = useState('');
   const [addOpen, setAddOpen] = useState(false);
+  const navigate = useNavigate();
 
   const queryFilters = useMemo(() => ({
     type: filter.kind === 'type' ? filter.value : undefined,
@@ -41,7 +42,7 @@ export default function LorePage() {
   const onRandom = () => {
     if (!entries || entries.length === 0) return;
     const pick = entries[Math.floor(Math.random() * entries.length)];
-    window.location.href = `/lore/${pick.id}`;
+    navigate(`/lore/${pick.id}`);
   };
 
   return (

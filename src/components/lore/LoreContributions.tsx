@@ -131,7 +131,10 @@ function ContributionRow({
     if (!confirm('Delete this addition?')) return;
     del(
       { id: contribution.id, loreId },
-      { onError: (e: any) => toast.error(e?.message || 'Could not delete') },
+      {
+        onSuccess: () => toast.success('Removed'),
+        onError: (e: any) => toast.error(e?.message || 'Could not delete'),
+      },
     );
   };
 
@@ -199,21 +202,21 @@ function ContributionRow({
       </div>
 
       {isOwner && !editing && (
-        <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+        <div className="flex flex-col gap-0.5 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
           <button
             onClick={() => setEditing(true)}
-            className="p-1.5 rounded-md text-muted-foreground/60 hover:text-foreground"
+            className="p-2.5 rounded-md text-muted-foreground/60 hover:text-foreground min-w-[44px] min-h-[44px] inline-flex items-center justify-center"
             aria-label="Edit"
           >
-            <Pencil className="w-3.5 h-3.5" />
+            <Pencil className="w-4 h-4" />
           </button>
           <button
             onClick={onDelete}
             disabled={deleting}
-            className="p-1.5 rounded-md text-muted-foreground/60 hover:text-destructive"
+            className="p-2.5 rounded-md text-muted-foreground/60 hover:text-destructive min-w-[44px] min-h-[44px] inline-flex items-center justify-center"
             aria-label="Delete"
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
       )}
