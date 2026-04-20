@@ -109,12 +109,21 @@ export default function RuneDelvePlayPage() {
   const objType = level.objective_type as ObjectiveType;
 
   const handleChain = (chain: Cell[]) => {
-    if (!isValidChain(grid, chain)) return;
+    if (!isValidChain(grid, chain, seals)) return;
     const type = grid[chain[0].r][chain[0].c];
     const { next, resolution } = applyChain(combat, type, chain.length, hero.class);
     if (resolution.enemyKills.length) setFlashId(resolution.enemyKills[0]);
     const afterEnemies = next.enemies.some(e => e.hp > 0) ? enemiesAttack(next) : endTurn(next);
-    const newGrid = resolveBoard(grid, chain, refillRng);
+    const newGrid = resolveBoard(grid, chain, refillRng, seals);
+    // Break any seals adjacent to the matched cells.
+    if (seals.size) {
+      const broken = sealsBrokenByChain(seals, chain);
+      if (broken.length) {
+        const next = new Set(seals);
+        broken.forEach(k => next.delete(k));
+        setSeals(next);
+      }
+    }
     setRngTick(t => t + 1);
     setGrid(newGrid);
     setCombat(afterEnemies);
