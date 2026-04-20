@@ -1,14 +1,18 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Trophy, Swords, Heart, Clock, Sparkles } from 'lucide-react';
 import { useTodayDungeon, useMyTodayRun, useDailyLeaderboard } from '@/hooks/useRuneDelve';
+import { useRuneDelveHero } from '@/hooks/useRuneDelveHero';
 import { useAuth } from '@/contexts/AuthContext';
 import { Confetti } from '@/components/Confetti';
+import { ClassBadge } from '@/components/runedelve/ClassBadge';
+import { getClass, levelFromXp } from '@/lib/runedelve/classConfig';
 import { useEffect, useState } from 'react';
 
 export default function RuneDelveResultsPage() {
   const { user } = useAuth();
   const { data: dungeon } = useTodayDungeon();
   const { data: run } = useMyTodayRun(dungeon?.id);
+  const { data: hero } = useRuneDelveHero();
   const { data: leaderboard } = useDailyLeaderboard(dungeon?.id);
   const [showConfetti, setShowConfetti] = useState(false);
   const myRank = leaderboard?.find(l => l.user_id === user?.id)?.rank;

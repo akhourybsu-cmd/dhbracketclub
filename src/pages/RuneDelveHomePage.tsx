@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Sparkles, Trophy, Flame, ChevronRight, Swords } from 'lucide-react';
 import { useRuneDelveHero, useEnsureHero } from '@/hooks/useRuneDelveHero';
 import { useTodayDungeon, useMyTodayRun, useDailyLeaderboard } from '@/hooks/useRuneDelve';
-import { CLASS_LIST, getClass, levelFromXp, type HeroClass } from '@/lib/runedelve/classConfig';
+import { CLASS_LIST, getClass, levelFromXp, titleForLevel, type HeroClass } from '@/lib/runedelve/classConfig';
 import { ClassBadge } from '@/components/runedelve/ClassBadge';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -154,7 +154,8 @@ export default function RuneDelveHomePage() {
         <div className="glass-card p-4 flex items-center gap-3 btn-press">
           <ClassBadge cls={hero.class} size="lg" />
           <div className="flex-1 min-w-0">
-            <p className="font-extrabold text-[14px] truncate">{hero.hero_name} <span className="text-[10px] text-muted-foreground font-bold">· {cls.name}</span></p>
+            <p className="font-extrabold text-[14px] truncate">{hero.hero_name}{titleForLevel(lvl.level) && <span className="text-[10px] font-bold text-primary ml-1">· {titleForLevel(lvl.level)}</span>}</p>
+            <p className="text-[10px] text-muted-foreground font-bold mt-0.5">{cls.name} · Lv {lvl.level}</p>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-[10px] font-bold text-muted-foreground">Lv {lvl.level}</span>
               <div className="flex-1 h-1.5 rounded-full bg-muted/50 overflow-hidden">
