@@ -47,6 +47,7 @@ export function RuneBoard({ grid, disabled, onChainComplete, seals }: Props) {
 
   const tryAddCell = useCallback((target: Cell) => {
     if (disabled) return;
+    if (seals?.has(cellKey(target))) return;
     setChain(prev => {
       if (!prev.length) {
         return [target];
@@ -68,7 +69,7 @@ export function RuneBoard({ grid, disabled, onChainComplete, seals }: Props) {
       play('tap');
       return [...prev, target];
     });
-  }, [disabled, grid, play]);
+  }, [disabled, grid, play, seals]);
 
   const cellFromPoint = (x: number, y: number): Cell | null => {
     const el = document.elementFromPoint(x, y) as HTMLElement | null;
