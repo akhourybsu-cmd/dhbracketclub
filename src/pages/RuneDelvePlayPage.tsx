@@ -26,8 +26,9 @@ import {
   emptyCorruption,
   type CorruptionState,
 } from '@/lib/runedelve/corruptedTiles';
-import { secondaryMet, secondaryShort, type SecondaryObjective } from '@/lib/runedelve/layeredGoals';
-import { getBossRule, type BossRuleId } from '@/lib/runedelve/bossRules';
+import { secondaryMet, secondaryShort, secondaryLabel, type SecondaryObjective } from '@/lib/runedelve/layeredGoals';
+import { getBossRule, applyBossTurnEffects, type BossRuleId } from '@/lib/runedelve/bossRules';
+import { Crown, Target } from 'lucide-react';
 import { RuneBoard } from '@/components/runedelve/RuneBoard';
 import { EnemyDisplay } from '@/components/runedelve/EnemyDisplay';
 import { HeroStatusBar } from '@/components/runedelve/HeroStatusBar';
@@ -146,9 +147,10 @@ export default function RuneDelvePlayPage() {
       nextCorruption = r.next;
     }
 
-    const afterEnemies = next.enemies.some(e => e.hp > 0)
+    let afterEnemies = next.enemies.some(e => e.hp > 0)
       ? enemiesAttack(next, telegraphActive, bossRule)
       : endTurn(next);
+    if (bossRule) afterEnemies = applyBossTurnEffects(afterEnemies, bossRule);
     if ((afterEnemies as any).heavyFired) toast.error('⚡ Heavy strike!', { duration: 1200 });
     const newGrid = resolveBoard(grid, chain, refillRng, seals);
 
@@ -172,7 +174,7 @@ export default function RuneDelvePlayPage() {
     setGrid(newGrid);
     setCombat(afterEnemies);
 
-    const status = checkObjective(afterEnemies, level.turn_limit, objType, level.objective_target);
+    const status = checkObjective(afterEnemies, level.turn_limit, objType, level.objective_target, secondaryObjective);
     if (status.over) void finalize(afterEnemies, status.cleared);
   };
 
@@ -182,9 +184,10 @@ export default function RuneDelvePlayPage() {
       toast.info('Ability not ready — fill mana orbs first.');
       return;
     }
-    const after = next.enemies.some(e => e.hp > 0)
+    let after = next.enemies.some(e => e.hp > 0)
       ? enemiesAttack(next, telegraphActive, bossRule)
       : endTurn(next);
+    if (bossRule) after = applyBossTurnEffects(after, bossRule);
     if ((after as any).heavyFired) toast.error('⚡ Heavy strike!', { duration: 1200 });
     // Ability still consumes a turn — corruption advances.
     if (corruptionActive && corruption.sources.size) {
@@ -192,7 +195,7 @@ export default function RuneDelvePlayPage() {
       setRngTick(t => t + 1);
     }
     setCombat(after);
-    const status = checkObjective(after, level.turn_limit, objType, level.objective_target);
+    const status = checkObjective(after, level.turn_limit, objType, level.objective_target, secondaryObjective);
     if (status.over) void finalize(after, status.cleared);
   };
 
@@ -258,7 +261,7 @@ export default function RuneDelvePlayPage() {
     }
   }
 
-  const status = checkObjective(combat, level.turn_limit, objType, level.objective_target);
+  const status = checkObjective(combat, level.turn_limit, objType, level.objective_target, secondaryObjective);
   const turnDisplay = Math.min(
     level.turn_limit,
     Math.max(1, level.turn_limit - combat.turnsRemaining + (status.over ? 0 : 1)),
@@ -295,6 +298,42 @@ export default function RuneDelvePlayPage() {
         {existingRun && <span className="text-[10px] font-mono font-bold tabular-nums text-muted-foreground">Best {existingRun.score.toLocaleString()}</span>}
       </div>
 
+      {/* Layered Goals — secondary objective pill (Band 4). */}
+      {secondaryObjective && (() => {
+        const met = secondaryMet(secondaryObjective, combat, level.turn_limit);
+        return (
+          <div
+            className="glass-card px-3 py-2 flex items-center gap-2"
+            style={{ borderColor: met ? 'hsl(var(--primary) / 0.45)' : undefined }}
+          >
+            <span className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center gap-1"
+              style={{ background: 'hsl(var(--accent) / 0.18)', color: 'hsl(var(--accent-foreground, var(--foreground)))' }}>
+              <Target className="w-3 h-3" /> Bonus
+            </span>
+            <span className="text-[12px] font-bold flex-1 truncate">{secondaryLabel(secondaryObjective)}</span>
+            <span className={`text-[10px] font-extrabold tabular-nums ${met ? 'text-primary' : 'text-muted-foreground'}`}>
+              {met ? '✓ Met' : secondaryShort(secondaryObjective)}
+            </span>
+          </div>
+        );
+      })()}
+
+      {/* Boss-rule banner — Band 5 milestone levels. */}
+      {bossRule && (
+        <div
+          className="glass-card px-3 py-2 flex items-center gap-2"
+          style={{
+            background: 'linear-gradient(135deg, hsl(var(--destructive) / 0.14), hsl(var(--gold) / 0.08))',
+            borderColor: 'hsl(var(--destructive) / 0.4)',
+          }}
+        >
+          <span className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center gap-1"
+            style={{ background: 'hsl(var(--destructive) / 0.2)', color: 'hsl(var(--destructive))' }}>
+            <Crown className="w-3 h-3" /> {getBossRule(bossRule).label}
+          </span>
+          <span className="text-[11px] font-semibold flex-1">{getBossRule(bossRule).rule}</span>
+        </div>
+      )}
       <EnemyDisplay enemies={combat.enemies} flashId={flashId} />
       <HeroStatusBar state={combat} cls={hero.class} onAbility={handleAbility} />
 
@@ -385,21 +424,30 @@ export default function RuneDelvePlayPage() {
   );
 }
 
-// Objective-aware end check.
-function checkObjective(state: CombatState, maxTurns: number, type: ObjectiveType, target: number) {
+// Objective-aware end check. Layered goals (Band 4) require BOTH primary and
+// secondary to be satisfied for a clear; primary failure is still a fail.
+function checkObjective(
+  state: CombatState,
+  maxTurns: number,
+  type: ObjectiveType,
+  target: number,
+  secondary: SecondaryObjective | null,
+) {
+  const wrap = (r: { over: boolean; cleared: boolean }) => {
+    if (!r.over || !r.cleared || !secondary) return r;
+    return { over: true, cleared: secondaryMet(secondary, state, maxTurns) };
+  };
   const base = isRunOver(state);
   if (type === 'survive') {
-    // Cleared if you outlast the move budget without dying. Defeated only if HP=0.
     if (state.hp <= 0) return { over: true, cleared: false };
-    if (state.turnsRemaining <= 0) return { over: true, cleared: true };
+    if (state.turnsRemaining <= 0) return wrap({ over: true, cleared: true });
     return { over: false, cleared: false };
   }
   if (type === 'reach_score') {
     if (state.totalDamage * 1 + state.enemiesDefeated * 200 + state.longestChain * 25 >= target) {
-      return { over: true, cleared: true };
+      return wrap({ over: true, cleared: true });
     }
-    return base;
+    return wrap(base);
   }
-  // defeat_all + defeat_elite both clear when every enemy is dead.
-  return base;
+  return wrap(base);
 }

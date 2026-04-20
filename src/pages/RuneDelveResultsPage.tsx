@@ -6,6 +6,9 @@ import { Confetti } from '@/components/Confetti';
 import { ClassBadge } from '@/components/runedelve/ClassBadge';
 import { getClass, levelFromXp } from '@/lib/runedelve/classConfig';
 import { starsFor } from '@/lib/runedelve/levelGenerator';
+import { mechanicsForLevel, getMechanic, type MechanicId } from '@/lib/runedelve/mechanics';
+import { getBossRule, type BossRuleId } from '@/lib/runedelve/bossRules';
+import { secondaryLabel, type SecondaryObjective } from '@/lib/runedelve/layeredGoals';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -113,6 +116,41 @@ export default function RuneDelveResultsPage() {
           );
         })}
       </div>
+
+      {/* Mechanic recap — what was active on this level */}
+      {(() => {
+        const stored = (level.modifiers as any)?.mechanics as MechanicId[] | undefined;
+        const mechs = stored?.length ? stored : mechanicsForLevel(levelNumber);
+        const secondary = (level.modifiers as any)?.secondary_objective as SecondaryObjective | null;
+        const bossRule = (level.modifiers as any)?.boss_rule as BossRuleId | null;
+        if (!mechs.length && !secondary && !bossRule) return null;
+        return (
+          <div className="glass-card p-3 space-y-2">
+            <h3 className="font-bold text-[12px] flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-primary" /> This level featured</h3>
+            <div className="flex flex-wrap gap-1.5">
+              {mechs.map(id => {
+                const m = getMechanic(id);
+                return (
+                  <span key={id} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-muted/40 text-[10px] font-bold">
+                    <span>{m.icon}</span>{m.name}
+                  </span>
+                );
+              })}
+              {bossRule && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold"
+                  style={{ background: 'hsl(var(--destructive) / 0.18)', color: 'hsl(var(--destructive))' }}>
+                  👑 {getBossRule(bossRule).label}
+                </span>
+              )}
+            </div>
+            {secondary && (
+              <p className="text-[11px] text-muted-foreground">
+                <span className="font-bold text-foreground">Bonus goal:</span> {secondaryLabel(secondary)}
+              </p>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Top scores for this level */}
       {topRuns && topRuns.length > 0 && (
