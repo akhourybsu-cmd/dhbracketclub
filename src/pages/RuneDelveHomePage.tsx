@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Sparkles, Trophy, Flame, ChevronRight, Swords, BookOpen, Map } from 'lucide-react';
 import { useRuneDelveHero, useEnsureHero } from '@/hooks/useRuneDelveHero';
+import { useAllClassProgress } from '@/hooks/useRuneDelveClassProgress';
 import { useMyProgress, useCampaignLeaderboard } from '@/hooks/useRuneDelveCampaign';
 import { CLASS_LIST, getClass, levelFromXp, titleForLevel, type HeroClass } from '@/lib/runedelve/classConfig';
 import { chapterFor, chapterMeta } from '@/lib/runedelve/levelGenerator';
