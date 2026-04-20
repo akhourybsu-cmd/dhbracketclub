@@ -151,7 +151,10 @@ export function RuneBoard({ grid, disabled, onChainComplete, seals, corruptedCel
           {grid.map((row, r) =>
             row.map((rune, c) => {
               const isSel = chainSet.has(`${r}-${c}`);
-              const isSealed = seals?.has(`${r}-${c}`) ?? false;
+              const k = `${r}-${c}`;
+              const isSealed = seals?.has(k) ?? false;
+              const isCorrupted = corruptedCells?.has(k) ?? false;
+              const isSource = corruptionSources?.has(k) ?? false;
               return (
                 <RuneCell
                   key={`${r}-${c}`}
@@ -161,6 +164,8 @@ export function RuneBoard({ grid, disabled, onChainComplete, seals, corruptedCel
                   size={cellSize}
                   selected={isSel}
                   sealed={isSealed}
+                  corrupted={isCorrupted}
+                  corruptionSource={isSource}
                   onPointerDown={handlePointerDown(r, c)}
                 />
               );
