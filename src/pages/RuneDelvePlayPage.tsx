@@ -56,6 +56,7 @@ export default function RuneDelvePlayPage() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [introMechanic, setIntroMechanic] = useState<MechanicId | null>(null);
   const [endState, setEndState] = useState<null | { cleared: boolean; reason: 'cleared' | 'defeated' | 'timeout'; score: number; isNewBest: boolean }>(null);
+  const [corruption, setCorruption] = useState<CorruptionState>(emptyCorruption);
 
   // Resolve mechanics for this level. Prefer the persisted row, fall back
   // to the deterministic helper so legacy/transient rows still work.
@@ -66,13 +67,16 @@ export default function RuneDelvePlayPage() {
   }, [level]);
   const sealedTilesActive = activeMechanics.includes('sealed_tiles');
   const telegraphActive = activeMechanics.includes('telegraphed_attacks');
+  const corruptionActive = activeMechanics.includes('corrupted_tiles');
 
   // Build deterministic state.
   useEffect(() => {
     if (!level || !hero) return;
     const rng = mulberry32(level.generation_seed);
     setGrid(generateBoard(rng));
-    setSeals(buildInitialSeals(level.generation_seed, sealedTilesActive));
+    const seals = buildInitialSeals(level.generation_seed, sealedTilesActive);
+    setSeals(seals);
+    setCorruption(buildInitialCorruption(level.generation_seed, corruptionActive, level.level_number, seals));
     let enemies: Enemy[] = (level.enemy_config ?? []).map((e: any, i: number) => ({
       id: e.id ?? `e${i}`, name: e.name, emoji: e.emoji, hp: e.hp, maxHp: e.maxHp ?? e.hp, damage: e.damage,
     }));
