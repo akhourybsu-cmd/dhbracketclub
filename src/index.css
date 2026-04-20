@@ -886,3 +886,201 @@
     display: none;
   }
 }
+
+/* ═══════════════════════════════════════════════════
+   RUNE DELVE — fantasy mode skin (scoped via .rd-mode)
+   Lightweight, mobile-first ornaments. Does not change
+   layout or component behavior — only visual atmosphere.
+   ═══════════════════════════════════════════════════ */
+.rd-mode {
+  /* Arcane accents — separate from app-wide tokens */
+  --rd-arcane: 265 80% 68%;          /* violet glow */
+  --rd-ember: 18 90% 58%;            /* torchlight */
+  --rd-rune-blue: 215 80% 62%;
+  --rd-rune-green: 145 65% 50%;
+  --rd-rune-gold: 45 92% 56%;
+  --rd-stone: 230 12% 10%;
+  --rd-stone-edge: 230 16% 16%;
+  position: relative;
+}
+
+/* Subtle dungeon backdrop — torchlit vignette + arcane sigil glow.
+   Sits behind content; does not catch pointer events. */
+.rd-mode::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 35% at 80% 8%, hsl(var(--rd-arcane) / 0.10), transparent 60%),
+    radial-gradient(ellipse 55% 30% at 12% 6%, hsl(var(--rd-ember) / 0.07), transparent 60%),
+    radial-gradient(ellipse 90% 60% at 50% 110%, hsl(var(--rd-stone) / 0.6), transparent 70%);
+}
+
+/* Ornate divider — twin lines + diamond, evokes engraved metal */
+.rd-mode .rd-ornament {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: hsl(var(--muted-foreground) / 0.7);
+}
+.rd-mode .rd-ornament::before,
+.rd-mode .rd-ornament::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    hsl(var(--gold) / 0.45) 30%,
+    hsl(var(--gold) / 0.45) 70%,
+    transparent
+  );
+}
+.rd-mode .rd-ornament-glyph {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: hsl(var(--gold) / 0.85);
+}
+
+/* Carved frame — used on hero card / continue banner */
+.rd-mode .rd-carved {
+  position: relative;
+  background:
+    linear-gradient(160deg, hsl(var(--rd-stone-edge) / 0.7), hsl(var(--rd-stone) / 0.5)),
+    var(--gradient-card-shine);
+  border: 1px solid hsl(var(--gold) / 0.18);
+  box-shadow:
+    inset 0 1px 0 hsl(var(--gold) / 0.08),
+    inset 0 -1px 0 hsl(0 0% 0% / 0.3),
+    0 4px 18px rgba(0, 0, 0, 0.35);
+}
+.rd-mode .rd-carved::after {
+  /* faint top accent line, like an inlaid rune channel */
+  content: '';
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    hsl(var(--gold) / 0.45),
+    transparent
+  );
+  pointer-events: none;
+}
+
+/* Sigil corners — tiny L-brackets evoking carved stone, mobile-friendly */
+.rd-mode .rd-sigil-corners {
+  position: relative;
+}
+.rd-mode .rd-sigil-corners::before,
+.rd-mode .rd-sigil-corners::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 1px solid hsl(var(--gold) / 0.5);
+  pointer-events: none;
+}
+.rd-mode .rd-sigil-corners::before {
+  top: 6px; left: 6px;
+  border-right: none; border-bottom: none;
+}
+.rd-mode .rd-sigil-corners::after {
+  bottom: 6px; right: 6px;
+  border-left: none; border-top: none;
+}
+
+/* Rune tile — engraved gem look. Selected state keeps existing glow. */
+.rd-mode .rd-tile {
+  background:
+    radial-gradient(circle at 30% 25%, hsl(var(--foreground) / 0.05), transparent 55%),
+    linear-gradient(160deg, hsl(var(--rd-stone-edge)), hsl(var(--rd-stone)));
+  border: 1px solid hsl(var(--gold) / 0.18);
+  box-shadow:
+    inset 0 1px 0 hsl(var(--foreground) / 0.06),
+    inset 0 -2px 4px hsl(0 0% 0% / 0.45),
+    0 2px 4px hsl(0 0% 0% / 0.3);
+}
+
+/* Arcane board frame */
+.rd-mode .rd-board-frame {
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 50%, hsl(var(--rd-arcane) / 0.06), transparent 70%),
+    linear-gradient(160deg, hsl(var(--rd-stone-edge) / 0.8), hsl(var(--rd-stone) / 0.6));
+  border: 1px solid hsl(var(--gold) / 0.22);
+  box-shadow:
+    inset 0 0 30px hsl(0 0% 0% / 0.5),
+    inset 0 1px 0 hsl(var(--gold) / 0.12),
+    0 8px 28px rgba(0, 0, 0, 0.4);
+}
+
+/* Enemy portrait frame — fantasy card vibe */
+.rd-mode .rd-enemy-frame {
+  background:
+    radial-gradient(circle at 50% 30%, hsl(var(--destructive) / 0.10), transparent 65%),
+    linear-gradient(160deg, hsl(var(--rd-stone-edge)), hsl(var(--rd-stone)));
+  border: 1px solid hsl(var(--destructive) / 0.35);
+  box-shadow:
+    inset 0 1px 0 hsl(var(--foreground) / 0.06),
+    inset 0 -1px 0 hsl(0 0% 0% / 0.5),
+    0 2px 8px hsl(0 0% 0% / 0.35);
+}
+.rd-mode .rd-enemy-frame.is-elite {
+  border-color: hsl(var(--gold) / 0.6);
+  box-shadow:
+    inset 0 1px 0 hsl(var(--gold) / 0.15),
+    inset 0 -1px 0 hsl(0 0% 0% / 0.5),
+    0 0 14px hsl(var(--gold) / 0.25);
+}
+
+/* Arcane CTA — primary "Continue" / "Next" feel */
+.rd-mode .rd-arcane-btn {
+  position: relative;
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+  color: white;
+  box-shadow:
+    var(--shadow-glow),
+    inset 0 1px 0 hsl(0 0% 100% / 0.2),
+    inset 0 -1px 0 hsl(0 0% 0% / 0.25);
+}
+.rd-mode .rd-arcane-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, hsl(0 0% 100% / 0.08), transparent 40%);
+}
+
+/* Faint floating rune motes (decorative, behind content) */
+@keyframes rd-mote-float {
+  0%, 100% { transform: translateY(0) translateX(0); opacity: 0.4; }
+  50% { transform: translateY(-8px) translateX(2px); opacity: 0.8; }
+}
+.rd-mode .rd-mote {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: hsl(var(--rd-arcane) / 0.7);
+  box-shadow: 0 0 8px hsl(var(--rd-arcane) / 0.6);
+  animation: rd-mote-float 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+.rd-mode .rd-mote-2 {
+  background: hsl(var(--rd-ember) / 0.7);
+  box-shadow: 0 0 8px hsl(var(--rd-ember) / 0.6);
+  animation-duration: 6s;
+  animation-delay: 1.2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rd-mode .rd-mote { animation: none; }
+}
