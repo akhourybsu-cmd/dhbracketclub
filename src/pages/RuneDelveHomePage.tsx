@@ -18,45 +18,66 @@ export default function RuneDelveHomePage() {
   const { data: leaderboard } = useDailyLeaderboard(dungeon?.id);
   const ensureHero = useEnsureHero();
   const [picking, setPicking] = useState<HeroClass | null>(null);
+  const [heroName, setHeroName] = useState('');
 
-  // First-time class selection
+  // First-time hero creation: name + class
   if (!heroLoading && user && !hero) {
+    const trimmed = heroName.trim();
+    const canBegin = !!picking && trimmed.length >= 2 && !ensureHero.isPending;
     return (
       <div className="space-y-5 pb-8">
         <Link to="/compete" className="back-link">← Back to Compete</Link>
         <div className="text-center space-y-2">
           <h1 className="page-header-title flex items-center gap-2 justify-center">
-            <Sparkles className="w-5 h-5 text-primary" /> Choose your hero
+            <Sparkles className="w-5 h-5 text-primary" /> Forge your hero
           </h1>
-          <p className="text-xs text-muted-foreground">Pick a class to enter the daily dungeon. You can change later.</p>
+          <p className="text-xs text-muted-foreground px-4">Name your champion and choose a class. Your hero persists across every daily delve.</p>
         </div>
-        <div className="grid grid-cols-1 gap-2.5">
-          {CLASS_LIST.map(c => (
-            <button
-              key={c.id}
-              onClick={() => setPicking(c.id)}
-              className={cn(
-                'glass-card p-4 text-left flex items-center gap-3 btn-press',
-                picking === c.id && 'border-primary/50',
-              )}
-              style={picking === c.id ? { boxShadow: 'var(--shadow-glow)' } : undefined}
-            >
-              <ClassBadge cls={c.id} size="lg" />
-              <div className="flex-1 min-w-0">
-                <p className="font-extrabold text-[14px]">{c.name} <span className="text-xs">{c.emoji}</span></p>
-                <p className="text-[11px] text-muted-foreground">{c.passive}</p>
-                <p className="text-[10px] mt-0.5" style={{ color: `hsl(var(--${c.color}))` }}>
-                  ⚡ {c.abilityName}: {c.abilityDesc}
-                </p>
-              </div>
-            </button>
-          ))}
+
+        <div className="glass-card p-4 space-y-2">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Hero name</label>
+          <input
+            value={heroName}
+            onChange={e => setHeroName(e.target.value)}
+            placeholder="e.g. Thalia Stormvein"
+            maxLength={24}
+            autoFocus
+            className="form-input w-full px-3 text-base font-bold"
+          />
+          <p className="text-[10px] text-muted-foreground">{trimmed.length}/24 · You can rename later.</p>
         </div>
+
+        <div className="space-y-2">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">Choose a class</p>
+          <div className="grid grid-cols-1 gap-2.5">
+            {CLASS_LIST.map(c => (
+              <button
+                key={c.id}
+                onClick={() => setPicking(c.id)}
+                className={cn(
+                  'glass-card p-4 text-left flex items-center gap-3 btn-press',
+                  picking === c.id && 'border-primary/50',
+                )}
+                style={picking === c.id ? { boxShadow: 'var(--shadow-glow)' } : undefined}
+              >
+                <ClassBadge cls={c.id} size="lg" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-extrabold text-[14px]">{c.name} <span className="text-xs">{c.emoji}</span></p>
+                  <p className="text-[11px] text-muted-foreground">{c.passive}</p>
+                  <p className="text-[10px] mt-0.5" style={{ color: `hsl(var(--${c.color}))` }}>
+                    ⚡ {c.abilityName}: {c.abilityDesc}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <button
-          disabled={!picking || ensureHero.isPending}
+          disabled={!canBegin}
           onClick={async () => {
-            if (!picking) return;
-            await ensureHero.mutateAsync({ cls: picking });
+            if (!picking || trimmed.length < 2) return;
+            await ensureHero.mutateAsync({ cls: picking, hero_name: trimmed });
           }}
           className="w-full h-12 rounded-xl font-extrabold text-sm btn-press disabled:opacity-50"
           style={{
@@ -65,7 +86,7 @@ export default function RuneDelveHomePage() {
             boxShadow: 'var(--shadow-glow)',
           }}
         >
-          {ensureHero.isPending ? 'Summoning…' : 'Begin your delve'}
+          {ensureHero.isPending ? 'Summoning…' : trimmed.length < 2 ? 'Name your hero' : !picking ? 'Pick a class' : `Begin ${trimmed}'s journey`}
         </button>
       </div>
     );
