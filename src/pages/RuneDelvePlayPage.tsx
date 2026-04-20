@@ -18,6 +18,7 @@ import {
   type MechanicId,
 } from '@/lib/runedelve/mechanics';
 import { buildInitialSeals, sealsBrokenByChain } from '@/lib/runedelve/sealedTiles';
+import { applyInitialIntents } from '@/lib/runedelve/telegraph';
 import { RuneBoard } from '@/components/runedelve/RuneBoard';
 import { EnemyDisplay } from '@/components/runedelve/EnemyDisplay';
 import { HeroStatusBar } from '@/components/runedelve/HeroStatusBar';
@@ -57,6 +58,7 @@ export default function RuneDelvePlayPage() {
     return level ? mechanicsForLevel(level.level_number) : [];
   }, [level]);
   const sealedTilesActive = activeMechanics.includes('sealed_tiles');
+  const telegraphActive = activeMechanics.includes('telegraphed_attacks');
 
   // Build deterministic state.
   useEffect(() => {
@@ -64,11 +66,12 @@ export default function RuneDelvePlayPage() {
     const rng = mulberry32(level.generation_seed);
     setGrid(generateBoard(rng));
     setSeals(buildInitialSeals(level.generation_seed, sealedTilesActive));
-    const enemies: Enemy[] = (level.enemy_config ?? []).map((e: any, i: number) => ({
+    let enemies: Enemy[] = (level.enemy_config ?? []).map((e: any, i: number) => ({
       id: e.id ?? `e${i}`, name: e.name, emoji: e.emoji, hp: e.hp, maxHp: e.maxHp ?? e.hp, damage: e.damage,
     }));
+    if (telegraphActive) enemies = applyInitialIntents(enemies, level.generation_seed, level.level_number);
     setCombat(initialCombat(enemies, level.turn_limit));
-  }, [level, hero, sealedTilesActive]);
+  }, [level, hero, sealedTilesActive, telegraphActive]);
 
   // One-time intro modal for any brand-new mechanic taught at this level.
   useEffect(() => {
@@ -113,7 +116,10 @@ export default function RuneDelvePlayPage() {
     const type = grid[chain[0].r][chain[0].c];
     const { next, resolution } = applyChain(combat, type, chain.length, hero.class);
     if (resolution.enemyKills.length) setFlashId(resolution.enemyKills[0]);
-    const afterEnemies = next.enemies.some(e => e.hp > 0) ? enemiesAttack(next) : endTurn(next);
+    const afterEnemies = next.enemies.some(e => e.hp > 0)
+      ? enemiesAttack(next, telegraphActive)
+      : endTurn(next);
+    if ((afterEnemies as any).heavyFired) toast.error('⚡ Heavy strike!', { duration: 1200 });
     const newGrid = resolveBoard(grid, chain, refillRng, seals);
     // Break any seals adjacent to the matched cells.
     if (seals.size) {
@@ -138,7 +144,10 @@ export default function RuneDelvePlayPage() {
       toast.info('Ability not ready — fill mana orbs first.');
       return;
     }
-    const after = next.enemies.some(e => e.hp > 0) ? enemiesAttack(next) : endTurn(next);
+    const after = next.enemies.some(e => e.hp > 0)
+      ? enemiesAttack(next, telegraphActive)
+      : endTurn(next);
+    if ((after as any).heavyFired) toast.error('⚡ Heavy strike!', { duration: 1200 });
     setCombat(after);
     const status = checkObjective(after, level.turn_limit, objType, level.objective_target);
     if (status.over) void finalize(after, status.cleared);

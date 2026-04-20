@@ -11,6 +11,10 @@ export interface Enemy {
   hp: number;
   maxHp: number;
   damage: number;
+  /** Telegraphed Attacks (Band 2). Turns until this enemy unleashes a heavy strike. */
+  intent?: number;
+  /** Max charge — what intent resets to after firing. */
+  intentMax?: number;
 }
 
 export interface DungeonConfig {
