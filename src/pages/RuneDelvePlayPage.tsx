@@ -26,6 +26,8 @@ import {
   emptyCorruption,
   type CorruptionState,
 } from '@/lib/runedelve/corruptedTiles';
+import { secondaryMet, secondaryShort, type SecondaryObjective } from '@/lib/runedelve/layeredGoals';
+import { getBossRule, type BossRuleId } from '@/lib/runedelve/bossRules';
 import { RuneBoard } from '@/components/runedelve/RuneBoard';
 import { EnemyDisplay } from '@/components/runedelve/EnemyDisplay';
 import { HeroStatusBar } from '@/components/runedelve/HeroStatusBar';
