@@ -4,7 +4,7 @@ import { Sparkles, Trophy, Flame, ChevronRight, Swords, BookOpen, Map } from 'lu
 import { useRuneDelveHero, useEnsureHero } from '@/hooks/useRuneDelveHero';
 import { useMyProgress, useCampaignLeaderboard } from '@/hooks/useRuneDelveCampaign';
 import { CLASS_LIST, getClass, levelFromXp, titleForLevel, type HeroClass } from '@/lib/runedelve/classConfig';
-import { chapterFor } from '@/lib/runedelve/levelGenerator';
+import { chapterFor, chapterMeta } from '@/lib/runedelve/levelGenerator';
 import { ClassBadge } from '@/components/runedelve/ClassBadge';
 import { HowToPlaySheet } from '@/components/runedelve/HowToPlaySheet';
 import { useEffect, useState } from 'react';
@@ -122,12 +122,19 @@ export default function RuneDelveHomePage() {
   const xpPct = Math.round((lvl.intoLevel / lvl.needed) * 100);
   const currentLevel = progress.highest_unlocked_level;
   const chapter = chapterFor(currentLevel);
+  const chapMeta = chapterMeta(chapter);
   const chapterStart = (chapter - 1) * 50 + 1;
   const chapterEnd = chapter * 50;
   const completedInChapter = Math.max(0, Math.min(50, progress.highest_completed_level - chapterStart + 1));
   const chapterPct = Math.round((completedInChapter / 50) * 100);
-  const myRank = leaderboard?.find(l => l.user_id === user?.id)?.rank;
-  const top3 = (leaderboard ?? []).slice(0, 3);
+  const sortedBoard = leaderboard ?? [];
+  const myRank = sortedBoard.find(l => l.user_id === user?.id)?.rank;
+  const top3 = sortedBoard.slice(0, 3);
+  // Friend comparison teaser — closest player ahead of you (if any).
+  const ahead = sortedBoard.find(
+    l => l.user_id !== user?.id && l.highest_completed_level > (progress.highest_completed_level ?? 0),
+  );
+  const aheadGap = ahead ? ahead.highest_completed_level - (progress.highest_completed_level ?? 0) : 0;
 
   return (
     <div className="space-y-4 pb-8">
