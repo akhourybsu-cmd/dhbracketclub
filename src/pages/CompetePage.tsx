@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   Trophy, BarChart3, MessageCircle, Bookmark, ChevronRight, Plus, Swords, Lock, Shield,
-  Calendar, Award, TrendingUp, Users, Archive, Crown, Target, Flame, Medal, ChevronDown, X
+  Calendar, Award, TrendingUp, Users, Archive, Crown, Target, Flame, Medal, ChevronDown, X, Sparkles
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -96,6 +96,45 @@ function LockboxCompeteCard() {
             )}
           </div>
         </div>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ── Rune Delve card — featured daily puzzle ── */
+function RuneDelveCompeteCard() {
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+      <div className="glass-card p-5 relative overflow-hidden" style={{
+        background: 'linear-gradient(160deg, hsl(var(--primary) / 0.14), hsl(var(--accent) / 0.06) 60%, transparent)',
+        borderLeft: '3px solid hsl(var(--primary))',
+      }}>
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{
+            background: 'linear-gradient(135deg, hsl(var(--primary) / 0.25), hsl(var(--primary) / 0.08))',
+          }}>
+            <Sparkles className="w-5 h-5" style={{ color: 'hsl(var(--primary))' }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="font-extrabold text-[16px] tracking-tight">Rune Delve</h2>
+              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-primary/15 text-primary uppercase tracking-wider">Daily</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground/80">Match runes. Crush enemies. Climb the daily board.</p>
+          </div>
+        </div>
+        <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
+          Today's shared dungeon awaits. Chain runes, charge your class ability, and post a score before midnight.
+        </p>
+        <Link to="/rune-delve">
+          <button className="w-full h-11 rounded-xl text-[12px] font-extrabold flex items-center justify-center gap-2 btn-press" style={{
+            background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85))',
+            color: 'hsl(var(--primary-foreground))',
+            boxShadow: '0 6px 20px hsl(var(--primary) / 0.35)',
+          }}>
+            <Sparkles className="w-4 h-4" /> Enter the Dungeon
+          </button>
+        </Link>
       </div>
     </motion.div>
   );
