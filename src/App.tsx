@@ -63,6 +63,7 @@ const RuneDelveResultsPage = lazy(() => import("./pages/RuneDelveResultsPage"));
 const RuneDelveLeaderboardPage = lazy(() => import("./pages/RuneDelveLeaderboardPage"));
 const RuneDelveHeroPage = lazy(() => import("./pages/RuneDelveHeroPage"));
 const RuneDelveHistoryPage = lazy(() => import("./pages/RuneDelveHistoryPage"));
+import { RuneDelveLayout } from "./components/runedelve/RuneDelveLayout";
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
