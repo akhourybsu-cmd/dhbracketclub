@@ -17,10 +17,12 @@ interface Props {
   grid: RuneType[][];
   disabled?: boolean;
   onChainComplete: (chain: Cell[]) => void;
+  /** Set of `${r}-${c}` keys that are currently sealed and uninteractable. */
+  seals?: Set<string>;
 }
 
 // Mobile-first rune board with pointer-driven chain selection.
-export function RuneBoard({ grid, disabled, onChainComplete }: Props) {
+export function RuneBoard({ grid, disabled, onChainComplete, seals }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [chain, setChain] = useState<Cell[]>([]);
   const draggingRef = useRef(false);
