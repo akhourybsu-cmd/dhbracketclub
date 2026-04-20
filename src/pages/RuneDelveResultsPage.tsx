@@ -43,29 +43,24 @@ export default function RuneDelveResultsPage() {
     { label: 'XP Earned', value: run.xp_earned, icon: Sparkles },
   ];
 
+  const outcome = run.dungeon_cleared
+    ? { label: 'Dungeon Cleared', emoji: '🏆', accent: 'gold' as const }
+    : run.hp_remaining <= 0
+      ? { label: 'Defeated', emoji: '💀', accent: 'destructive' as const }
+      : { label: 'Out of Turns', emoji: '⏳', accent: 'muted' as const };
+
+  const headerBg = outcome.accent === 'gold'
+    ? 'linear-gradient(160deg, hsl(var(--gold) / 0.15), hsl(var(--gold) / 0.04))'
+    : outcome.accent === 'destructive'
+      ? 'linear-gradient(160deg, hsl(var(--destructive) / 0.14), hsl(var(--destructive) / 0.04))'
+      : 'linear-gradient(160deg, hsl(var(--primary) / 0.10), hsl(var(--accent) / 0.04))';
+  const headerBorder = outcome.accent === 'gold'
+    ? 'hsl(var(--gold) / 0.3)'
+    : outcome.accent === 'destructive'
+      ? 'hsl(var(--destructive) / 0.35)'
+      : undefined;
+
   return (
-    <div className="space-y-4 pb-8">
-      <Confetti active={showConfetti} />
-      <Link to="/rune-delve" className="back-link"><ArrowLeft className="w-4 h-4" /> Home</Link>
-
-      const outcome = run.dungeon_cleared
-        ? { label: 'Dungeon Cleared', emoji: '🏆', accent: 'gold' as const }
-        : run.hp_remaining <= 0
-          ? { label: 'Defeated', emoji: '💀', accent: 'destructive' as const }
-          : { label: 'Out of Turns', emoji: '⏳', accent: 'muted' as const };
-
-      const headerBg = outcome.accent === 'gold'
-        ? 'linear-gradient(160deg, hsl(var(--gold) / 0.15), hsl(var(--gold) / 0.04))'
-        : outcome.accent === 'destructive'
-          ? 'linear-gradient(160deg, hsl(var(--destructive) / 0.14), hsl(var(--destructive) / 0.04))'
-          : 'linear-gradient(160deg, hsl(var(--primary) / 0.10), hsl(var(--accent) / 0.04))';
-      const headerBorder = outcome.accent === 'gold'
-        ? 'hsl(var(--gold) / 0.3)'
-        : outcome.accent === 'destructive'
-          ? 'hsl(var(--destructive) / 0.35)'
-          : undefined;
-
-      return (
     <div className="space-y-4 pb-8">
       <Confetti active={showConfetti} />
       <Link to="/rune-delve" className="back-link"><ArrowLeft className="w-4 h-4" /> Home</Link>
