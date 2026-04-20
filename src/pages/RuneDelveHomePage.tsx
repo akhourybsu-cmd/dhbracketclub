@@ -1,13 +1,16 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sparkles, Trophy, Flame, ChevronRight, Swords } from 'lucide-react';
+import { Sparkles, Trophy, Flame, ChevronRight, Swords, BookOpen } from 'lucide-react';
 import { useRuneDelveHero, useEnsureHero } from '@/hooks/useRuneDelveHero';
 import { useTodayDungeon, useMyTodayRun, useDailyLeaderboard } from '@/hooks/useRuneDelve';
 import { CLASS_LIST, getClass, levelFromXp, titleForLevel, type HeroClass } from '@/lib/runedelve/classConfig';
 import { ClassBadge } from '@/components/runedelve/ClassBadge';
-import { useState } from 'react';
+import { HowToPlaySheet } from '@/components/runedelve/HowToPlaySheet';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+
+const HELP_SEEN_KEY = 'rune_delve_seen_help';
 
 export default function RuneDelveHomePage() {
   const navigate = useNavigate();
