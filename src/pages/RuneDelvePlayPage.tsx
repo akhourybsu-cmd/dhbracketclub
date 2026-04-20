@@ -298,6 +298,42 @@ export default function RuneDelvePlayPage() {
         {existingRun && <span className="text-[10px] font-mono font-bold tabular-nums text-muted-foreground">Best {existingRun.score.toLocaleString()}</span>}
       </div>
 
+      {/* Layered Goals — secondary objective pill (Band 4). */}
+      {secondaryObjective && (() => {
+        const met = secondaryMet(secondaryObjective, combat, level.turn_limit);
+        return (
+          <div
+            className="glass-card px-3 py-2 flex items-center gap-2"
+            style={{ borderColor: met ? 'hsl(var(--primary) / 0.45)' : undefined }}
+          >
+            <span className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center gap-1"
+              style={{ background: 'hsl(var(--accent) / 0.18)', color: 'hsl(var(--accent-foreground, var(--foreground)))' }}>
+              <Target className="w-3 h-3" /> Bonus
+            </span>
+            <span className="text-[12px] font-bold flex-1 truncate">{secondaryLabel(secondaryObjective)}</span>
+            <span className={`text-[10px] font-extrabold tabular-nums ${met ? 'text-primary' : 'text-muted-foreground'}`}>
+              {met ? '✓ Met' : secondaryShort(secondaryObjective)}
+            </span>
+          </div>
+        );
+      })()}
+
+      {/* Boss-rule banner — Band 5 milestone levels. */}
+      {bossRule && (
+        <div
+          className="glass-card px-3 py-2 flex items-center gap-2"
+          style={{
+            background: 'linear-gradient(135deg, hsl(var(--destructive) / 0.14), hsl(var(--gold) / 0.08))',
+            borderColor: 'hsl(var(--destructive) / 0.4)',
+          }}
+        >
+          <span className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center gap-1"
+            style={{ background: 'hsl(var(--destructive) / 0.2)', color: 'hsl(var(--destructive))' }}>
+            <Crown className="w-3 h-3" /> {getBossRule(bossRule).label}
+          </span>
+          <span className="text-[11px] font-semibold flex-1">{getBossRule(bossRule).rule}</span>
+        </div>
+      )}
       <EnemyDisplay enemies={combat.enemies} flashId={flashId} />
       <HeroStatusBar state={combat} cls={hero.class} onAbility={handleAbility} />
 
