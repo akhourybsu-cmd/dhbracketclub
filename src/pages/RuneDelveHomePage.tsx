@@ -108,7 +108,13 @@ export default function RuneDelveHomePage() {
   }
 
   if (heroLoading || !hero || !dungeon) {
-    return <div className="space-y-3"><div className="h-32 rounded-2xl skeleton-shimmer" /><div className="h-24 rounded-2xl skeleton-shimmer" /></div>;
+    return (
+      <div className="space-y-3">
+        <Link to="/compete" className="back-link">← Back to Compete</Link>
+        <div className="h-32 rounded-2xl skeleton-shimmer" />
+        <div className="h-24 rounded-2xl skeleton-shimmer" />
+      </div>
+    );
   }
 
   const cls = getClass(hero.class);
