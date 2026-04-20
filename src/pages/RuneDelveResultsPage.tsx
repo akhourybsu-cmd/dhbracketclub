@@ -54,6 +54,13 @@ export default function RuneDelveResultsPage() {
           : 'linear-gradient(160deg, hsl(var(--primary) / 0.10), hsl(var(--accent) / 0.04))',
         borderColor: run.dungeon_cleared ? 'hsl(var(--gold) / 0.3)' : undefined,
       }}>
+        {hero && (
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <ClassBadge cls={hero.class} size="sm" />
+            <p className="text-[12px] font-extrabold truncate max-w-[200px]">{hero.hero_name}</p>
+            <span className="text-[10px] font-bold text-muted-foreground">Lv {levelFromXp(hero.xp).level} {getClass(hero.class).name}</span>
+          </div>
+        )}
         <p className="text-3xl mb-1">{run.dungeon_cleared ? '🏆' : '🗝️'}</p>
         <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
           {run.dungeon_cleared ? 'Dungeon Cleared' : 'Run Complete'}
