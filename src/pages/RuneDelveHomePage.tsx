@@ -1,30 +1,30 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sparkles, Trophy, Flame, ChevronRight, Swords, BookOpen } from 'lucide-react';
+import { Sparkles, Trophy, Flame, ChevronRight, Swords, BookOpen, Map } from 'lucide-react';
 import { useRuneDelveHero, useEnsureHero } from '@/hooks/useRuneDelveHero';
-import { useTodayDungeon, useMyTodayRun, useDailyLeaderboard } from '@/hooks/useRuneDelve';
+import { useMyProgress, useCampaignLeaderboard } from '@/hooks/useRuneDelveCampaign';
 import { CLASS_LIST, getClass, levelFromXp, titleForLevel, type HeroClass } from '@/lib/runedelve/classConfig';
+import { chapterFor } from '@/lib/runedelve/levelGenerator';
 import { ClassBadge } from '@/components/runedelve/ClassBadge';
 import { HowToPlaySheet } from '@/components/runedelve/HowToPlaySheet';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 
-const HELP_SEEN_KEY = 'rune_delve_seen_help';
+const HELP_SEEN_KEY = 'rune_delve_seen_help_v2';
 
 export default function RuneDelveHomePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: hero, isLoading: heroLoading } = useRuneDelveHero();
-  const { data: dungeon } = useTodayDungeon();
-  const { data: myRun } = useMyTodayRun(dungeon?.id);
-  const { data: leaderboard } = useDailyLeaderboard(dungeon?.id);
+  const { data: progress } = useMyProgress();
+  const { data: leaderboard } = useCampaignLeaderboard();
   const ensureHero = useEnsureHero();
   const [picking, setPicking] = useState<HeroClass | null>(null);
   const [heroName, setHeroName] = useState('');
   const [helpOpen, setHelpOpen] = useState(false);
 
-  // First-visit auto-open of help sheet (after hero exists).
+  // First-visit auto-open of help sheet.
   useEffect(() => {
     if (!hero) return;
     try {
@@ -46,7 +46,7 @@ export default function RuneDelveHomePage() {
           <h1 className="page-header-title flex items-center gap-2 justify-center">
             <Sparkles className="w-5 h-5 text-primary" /> Forge your hero
           </h1>
-          <p className="text-xs text-muted-foreground px-4">Name your champion and choose a class. Your hero persists across every daily delve.</p>
+          <p className="text-xs text-muted-foreground px-4">Name your champion and choose a class. Your hero persists across the entire campaign.</p>
         </div>
 
         <div className="glass-card p-4 space-y-2">
@@ -107,7 +107,7 @@ export default function RuneDelveHomePage() {
     );
   }
 
-  if (heroLoading || !hero || !dungeon) {
+  if (heroLoading || !hero || !progress) {
     return (
       <div className="space-y-3">
         <Link to="/compete" className="back-link">← Back to Compete</Link>
@@ -120,6 +120,12 @@ export default function RuneDelveHomePage() {
   const cls = getClass(hero.class);
   const lvl = levelFromXp(hero.xp);
   const xpPct = Math.round((lvl.intoLevel / lvl.needed) * 100);
+  const currentLevel = progress.highest_unlocked_level;
+  const chapter = chapterFor(currentLevel);
+  const chapterStart = (chapter - 1) * 50 + 1;
+  const chapterEnd = chapter * 50;
+  const completedInChapter = Math.max(0, Math.min(50, progress.highest_completed_level - chapterStart + 1));
+  const chapterPct = Math.round((completedInChapter / 50) * 100);
   const myRank = leaderboard?.find(l => l.user_id === user?.id)?.rank;
   const top3 = (leaderboard ?? []).slice(0, 3);
 
@@ -127,46 +133,46 @@ export default function RuneDelveHomePage() {
     <div className="space-y-4 pb-8">
       <Link to="/compete" className="back-link">← Back to Compete</Link>
 
-      {/* Today's challenge banner */}
+      {/* Continue banner */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
         <div className="glass-card p-5 relative overflow-hidden" style={{
           background: 'linear-gradient(160deg, hsl(var(--primary) / 0.12), hsl(var(--accent) / 0.06))',
           borderColor: 'hsl(var(--primary) / 0.2)',
         }}>
           <div className="flex items-center gap-2 mb-2">
-            <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-primary/15 text-primary tracking-wider">DAILY</span>
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+            <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-primary/15 text-primary tracking-wider">CHAPTER {chapter}</span>
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Levels {chapterStart}–{chapterEnd}</span>
           </div>
           <h2 className="text-xl font-extrabold tracking-tight mb-0.5">Rune Delve</h2>
-          <p className="text-[11px] font-bold text-primary/90 mb-2">Welcome back, {hero.hero_name}</p>
-          <p className="text-xs text-muted-foreground mb-3">
-            Defeat {dungeon.enemy_config?.length ?? 2} enemies in {dungeon.max_turns} turns. Chain runes to attack, charge mana, heal, and guard.
-          </p>
-          {myRun ? (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-muted-foreground">Today's score</span>
-                <span className="font-mono text-lg font-extrabold" style={{ color: 'hsl(var(--gold))' }}>{myRun.score.toLocaleString()}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <Link to="/rune-delve/results" className="h-10 rounded-lg bg-muted/40 flex items-center justify-center text-[11px] font-bold gap-1">View Results <ChevronRight className="w-3 h-3" /></Link>
-                <Link to="/rune-delve/leaderboard" className="h-10 rounded-lg bg-primary/15 text-primary flex items-center justify-center text-[11px] font-bold gap-1">Leaderboard <Trophy className="w-3 h-3" /></Link>
-              </div>
-              <p className="text-[10px] text-center text-muted-foreground mt-1">Come back tomorrow for a new dungeon.</p>
+          <p className="text-[11px] font-bold text-primary/90 mb-3">Welcome back, {hero.hero_name}</p>
+
+          <div className="space-y-2 mb-3">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="font-bold text-muted-foreground">Chapter {chapter} progress</span>
+              <span className="font-mono font-bold tabular-nums">{completedInChapter}/50</span>
             </div>
-          ) : (
-            <button
-              onClick={() => navigate('/rune-delve/play')}
-              className="w-full h-12 rounded-xl font-extrabold text-sm btn-press flex items-center justify-center gap-2"
-              style={{
-                background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)))',
-                color: 'white',
-                boxShadow: 'var(--shadow-glow)',
-              }}
-            >
-              <Swords className="w-4 h-4" /> Enter Dungeon
-            </button>
-          )}
+            <div className="h-1.5 rounded-full bg-muted/50 overflow-hidden">
+              <div className="h-full bg-primary" style={{ width: `${chapterPct}%` }} />
+            </div>
+          </div>
+
+          <button
+            onClick={() => navigate(`/rune-delve/play/${currentLevel}`)}
+            className="w-full h-12 rounded-xl font-extrabold text-sm btn-press flex items-center justify-center gap-2"
+            style={{
+              background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)))',
+              color: 'white',
+              boxShadow: 'var(--shadow-glow)',
+            }}
+          >
+            <Swords className="w-4 h-4" /> Continue · Level {currentLevel}
+          </button>
+          <Link
+            to="/rune-delve/levels"
+            className="mt-2 w-full h-10 rounded-lg bg-muted/40 flex items-center justify-center gap-1.5 text-[12px] font-bold btn-press"
+          >
+            <Map className="w-3.5 h-3.5" /> Level Map
+          </Link>
         </div>
       </motion.div>
 
@@ -188,18 +194,18 @@ export default function RuneDelveHomePage() {
               <span className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground">
                 <Flame className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} /> {hero.current_streak}-day streak
               </span>
-              <span className="text-[10px] text-muted-foreground">· Best {hero.best_streak}</span>
+              <span className="text-[10px] text-muted-foreground">· {progress.total_levels_cleared} cleared</span>
             </div>
           </div>
           <ChevronRight className="w-4 h-4 text-muted-foreground" />
         </div>
       </Link>
 
-      {/* Leaderboard preview */}
+      {/* Campaign leaderboard preview */}
       <Link to="/rune-delve/leaderboard" className="block">
         <div className="glass-card p-4 btn-press">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="font-bold text-[13px] flex items-center gap-1.5"><Trophy className="w-3.5 h-3.5 text-gold" /> Today's Leaderboard</h3>
+            <h3 className="font-bold text-[13px] flex items-center gap-1.5"><Trophy className="w-3.5 h-3.5 text-gold" /> Campaign Leaders</h3>
             {myRank && <span className="text-[10px] text-muted-foreground">You: #{myRank}</span>}
           </div>
           {top3.length === 0 ? (
@@ -211,8 +217,7 @@ export default function RuneDelveHomePage() {
                   <span className="w-5 font-mono font-bold text-muted-foreground">#{r.rank}</span>
                   {r.hero?.class && <ClassBadge cls={r.hero.class as HeroClass} size="sm" />}
                   <span className="flex-1 truncate font-semibold">{r.hero?.hero_name ?? r.profile.display_name}</span>
-                  {r.dungeon_cleared && <span className="text-[9px] font-bold text-success">CLEAR</span>}
-                  <span className="font-mono font-bold tabular-nums" style={{ color: 'hsl(var(--gold))' }}>{r.score.toLocaleString()}</span>
+                  <span className="font-mono font-bold tabular-nums" style={{ color: 'hsl(var(--gold))' }}>L{r.highest_completed_level}</span>
                 </div>
               ))}
             </div>
