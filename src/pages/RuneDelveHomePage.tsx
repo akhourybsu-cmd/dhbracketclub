@@ -1,13 +1,16 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sparkles, Trophy, Flame, ChevronRight, Swords } from 'lucide-react';
+import { Sparkles, Trophy, Flame, ChevronRight, Swords, BookOpen } from 'lucide-react';
 import { useRuneDelveHero, useEnsureHero } from '@/hooks/useRuneDelveHero';
 import { useTodayDungeon, useMyTodayRun, useDailyLeaderboard } from '@/hooks/useRuneDelve';
 import { CLASS_LIST, getClass, levelFromXp, titleForLevel, type HeroClass } from '@/lib/runedelve/classConfig';
 import { ClassBadge } from '@/components/runedelve/ClassBadge';
-import { useState } from 'react';
+import { HowToPlaySheet } from '@/components/runedelve/HowToPlaySheet';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+
+const HELP_SEEN_KEY = 'rune_delve_seen_help';
 
 export default function RuneDelveHomePage() {
   const navigate = useNavigate();
@@ -19,6 +22,18 @@ export default function RuneDelveHomePage() {
   const ensureHero = useEnsureHero();
   const [picking, setPicking] = useState<HeroClass | null>(null);
   const [heroName, setHeroName] = useState('');
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  // First-visit auto-open of help sheet (after hero exists).
+  useEffect(() => {
+    if (!hero) return;
+    try {
+      if (!localStorage.getItem(HELP_SEEN_KEY)) {
+        setHelpOpen(true);
+        localStorage.setItem(HELP_SEEN_KEY, '1');
+      }
+    } catch {}
+  }, [hero]);
 
   // First-time hero creation: name + class
   if (!heroLoading && user && !hero) {
@@ -199,11 +214,21 @@ export default function RuneDelveHomePage() {
         </div>
       </Link>
 
+      {/* How to play */}
+      <button
+        onClick={() => setHelpOpen(true)}
+        className="w-full glass-card p-3 flex items-center justify-center gap-2 text-[12px] font-bold btn-press text-primary"
+      >
+        <BookOpen className="w-3.5 h-3.5" /> How to Play
+      </button>
+
       {/* Footer links */}
       <div className="grid grid-cols-2 gap-2">
         <Link to="/rune-delve/history" className="glass-card p-3 text-center text-[12px] font-bold btn-press">History →</Link>
         <Link to="/rune-delve/hero" className="glass-card p-3 text-center text-[12px] font-bold btn-press">Hero →</Link>
       </div>
+
+      <HowToPlaySheet open={helpOpen} onOpenChange={setHelpOpen} heroClass={hero.class} />
     </div>
   );
 }

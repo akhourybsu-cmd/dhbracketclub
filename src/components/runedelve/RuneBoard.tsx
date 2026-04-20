@@ -1,8 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { RuneCell } from './RuneCell';
 import { BOARD_SIZE, type RuneType } from '@/lib/runedelve/dungeonGenerator';
 import { isAdjacent, cellKey, type Cell } from '@/lib/runedelve/boardEngine';
+import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { cn } from '@/lib/utils';
+
+const RUNE_PREVIEW: Record<RuneType, { glyph: string; label: string; effect: (n: number) => string }> = {
+  red: { glyph: '⚔', label: 'Attack', effect: (n) => `${n * 8} dmg` },
+  blue: { glyph: '✦', label: 'Mana', effect: (n) => `+${n >= 5 ? 2 : 1} orb${n >= 5 ? 's' : ''}` },
+  green: { glyph: '❀', label: 'Heal', effect: (n) => `+${n * 6} HP` },
+  gold: { glyph: '◈', label: 'Guard', effect: (n) => `+${1 + Math.floor(n / 3)} shield` },
+};
 
 interface Props {
   grid: RuneType[][];
@@ -15,6 +24,7 @@ export function RuneBoard({ grid, disabled, onChainComplete }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [chain, setChain] = useState<Cell[]>([]);
   const draggingRef = useRef(false);
+  const { play } = useSoundEffect();
 
   // Compute cell size from container width — keeps board crisp on any phone.
   const [cellSize, setCellSize] = useState(56);
@@ -49,13 +59,14 @@ export function RuneBoard({ grid, disabled, onChainComplete }: Props) {
       if (!isAdjacent(last, target)) return prev;
       const startType = grid[prev[0].r]?.[prev[0].c];
       if (grid[target.r]?.[target.c] !== startType) return prev;
-      // light haptic feedback on add
+      // light haptic + audio feedback on add
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-        try { (navigator as any).vibrate?.(8); } catch {}
+        try { (navigator as any).vibrate?.(12); } catch {}
       }
+      play('tap');
       return [...prev, target];
     });
-  }, [disabled, grid]);
+  }, [disabled, grid, play]);
 
   const cellFromPoint = (x: number, y: number): Cell | null => {
     const el = document.elementFromPoint(x, y) as HTMLElement | null;
@@ -89,7 +100,13 @@ export function RuneBoard({ grid, disabled, onChainComplete }: Props) {
       draggingRef.current = false;
       setChain(prev => {
         if (prev.length >= 3) {
+          if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+            try { (navigator as any).vibrate?.(25); } catch {}
+          }
+          play('success');
           onChainComplete(prev);
+        } else if (prev.length > 0) {
+          toast('Need 3+ runes to chain', { duration: 1500 });
         }
         return [];
       });
@@ -144,9 +161,14 @@ export function RuneBoard({ grid, disabled, onChainComplete }: Props) {
           )}
         </div>
       </div>
-      {chain.length > 0 && (
-        <div className="mt-3 text-[11px] font-bold text-muted-foreground tabular-nums">
-          Chain: {chain.length}{chain.length < 3 ? ' (need 3+)' : ''} · {chainType?.toUpperCase()}
+      {chain.length > 0 && chainType && (
+        <div className="mt-3 flex items-center gap-2 text-[12px] font-bold tabular-nums">
+          <span className="text-base">{RUNE_PREVIEW[chainType].glyph}</span>
+          <span>{RUNE_PREVIEW[chainType].label}</span>
+          <span className="text-muted-foreground">·</span>
+          <span className={cn(chain.length >= 3 ? 'text-primary' : 'text-muted-foreground')}>
+            {chain.length >= 3 ? RUNE_PREVIEW[chainType].effect(chain.length) : `${chain.length}/3`}
+          </span>
         </div>
       )}
     </div>
