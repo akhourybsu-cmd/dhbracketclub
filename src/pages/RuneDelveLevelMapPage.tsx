@@ -51,26 +51,23 @@ export default function RuneDelveLevelMapPage() {
         </div>
       </div>
 
-      {/* Chapter switcher */}
+      {/* Chapter switcher — always allows preview; per-level lock pips still gate play. */}
       <div className="flex gap-2 overflow-x-auto -mx-1 px-1 scrollbar-none">
         {[1, 2, 3].map(ch => {
-          const reachable = chapter === ch || chapterFor(highestUnlocked) >= ch;
+          const reached = chapterFor(highestUnlocked) >= ch;
           const isCurrent = chapter === ch;
           return (
             <button
               key={ch}
-              onClick={() => reachable && setChapter(ch)}
-              disabled={!reachable}
+              onClick={() => setChapter(ch)}
               className={cn(
                 'shrink-0 px-3.5 h-9 rounded-xl text-[11px] font-extrabold flex items-center gap-1.5 btn-press border',
                 isCurrent
                   ? 'bg-primary/15 text-primary border-primary/40'
-                  : reachable
-                    ? 'bg-muted/30 text-foreground border-border/40'
-                    : 'bg-muted/10 text-muted-foreground border-border/20 opacity-50',
+                  : 'bg-muted/30 text-foreground border-border/40',
               )}
             >
-              {!reachable && <Lock className="w-3 h-3" />}
+              {!reached && <Lock className="w-3 h-3 opacity-60" />}
               Ch {ch}
               <span className="text-[9px] text-muted-foreground font-bold">L{(ch - 1) * 50 + 1}</span>
             </button>

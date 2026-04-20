@@ -24,15 +24,21 @@ export interface LevelDefinition {
    * `mechanicsForLevel(n)` helper when the column is missing or empty (true
    * for any level row that was created before the mechanic system existed).
    */
-  modifiers: {
-    mechanics?: MechanicId[];
-    intro_mechanic?: MechanicId | null;
-    /** Band 4 — present on levels with the multi_objective mechanic. */
-    secondary_objective?: SecondaryObjective | null;
-    /** Band 5 — present on milestone boss levels (130, 140, 150). */
-    boss_rule?: BossRuleId | null;
-    [k: string]: unknown;
-  };
+  modifiers: LevelModifiers;
+}
+
+/**
+ * Canonical shape of `LevelDefinition.modifiers`. Exported so play/results
+ * pages can cast `level.modifiers as LevelModifiers` instead of `as any`.
+ */
+export interface LevelModifiers {
+  mechanics?: MechanicId[];
+  intro_mechanic?: MechanicId | null;
+  /** Band 4 — present on levels with the multi_objective mechanic. */
+  secondary_objective?: SecondaryObjective | null;
+  /** Band 5 — present on milestone boss levels (130, 140, 150). */
+  boss_rule?: BossRuleId | null;
+  [k: string]: unknown;
 }
 
 const ENEMY_TEMPLATES: Array<{ name: string; emoji: string; hp: number; damage: number; tier: number }> = [
