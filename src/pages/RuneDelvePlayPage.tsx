@@ -11,10 +11,19 @@ import { applyChain, enemiesAttack, endTurn, initialCombat, isRunOver, useAbilit
 import { calculateScore, xpForRun } from '@/lib/runedelve/scoring';
 import { levelFromXp } from '@/lib/runedelve/classConfig';
 import { objectiveLabel, type ObjectiveType } from '@/lib/runedelve/levelGenerator';
+import {
+  mechanicsForLevel,
+  introMechanicForLevel,
+  seenMechanicKey,
+  type MechanicId,
+} from '@/lib/runedelve/mechanics';
+import { buildInitialSeals, sealsBrokenByChain } from '@/lib/runedelve/sealedTiles';
 import { RuneBoard } from '@/components/runedelve/RuneBoard';
 import { EnemyDisplay } from '@/components/runedelve/EnemyDisplay';
 import { HeroStatusBar } from '@/components/runedelve/HeroStatusBar';
 import { HowToPlaySheet } from '@/components/runedelve/HowToPlaySheet';
+import { MechanicIntroSheet } from '@/components/runedelve/MechanicIntroSheet';
+import { MechanicBanner } from '@/components/runedelve/MechanicBanner';
 import { format } from 'date-fns';
 
 export default function RuneDelvePlayPage() {
@@ -32,21 +41,43 @@ export default function RuneDelvePlayPage() {
 
   const [grid, setGrid] = useState<RuneType[][] | null>(null);
   const [combat, setCombat] = useState<CombatState | null>(null);
+  const [seals, setSeals] = useState<Set<string>>(new Set());
   const [rngTick, setRngTick] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [flashId, setFlashId] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [introMechanic, setIntroMechanic] = useState<MechanicId | null>(null);
   const [endState, setEndState] = useState<null | { cleared: boolean; reason: 'cleared' | 'defeated' | 'timeout'; score: number; isNewBest: boolean }>(null);
+
+  // Resolve mechanics for this level. Prefer the persisted row, fall back
+  // to the deterministic helper so legacy/transient rows still work.
+  const activeMechanics = useMemo<MechanicId[]>(() => {
+    const stored = (level?.modifiers as any)?.mechanics as MechanicId[] | undefined;
+    if (stored?.length) return stored;
+    return level ? mechanicsForLevel(level.level_number) : [];
+  }, [level]);
+  const sealedTilesActive = activeMechanics.includes('sealed_tiles');
 
   // Build deterministic state.
   useEffect(() => {
     if (!level || !hero) return;
     const rng = mulberry32(level.generation_seed);
     setGrid(generateBoard(rng));
+    setSeals(buildInitialSeals(level.generation_seed, sealedTilesActive));
     const enemies: Enemy[] = (level.enemy_config ?? []).map((e: any, i: number) => ({
       id: e.id ?? `e${i}`, name: e.name, emoji: e.emoji, hp: e.hp, maxHp: e.maxHp ?? e.hp, damage: e.damage,
     }));
     setCombat(initialCombat(enemies, level.turn_limit));
+  }, [level, hero, sealedTilesActive]);
+
+  // One-time intro modal for any brand-new mechanic taught at this level.
+  useEffect(() => {
+    if (!level || !hero) return;
+    const intro = (level.modifiers as any)?.intro_mechanic ?? introMechanicForLevel(level.level_number);
+    if (!intro) return;
+    try {
+      if (!localStorage.getItem(seenMechanicKey(intro))) setIntroMechanic(intro);
+    } catch {}
   }, [level, hero]);
 
   const refillRng = useMemo(() => {
@@ -78,12 +109,21 @@ export default function RuneDelvePlayPage() {
   const objType = level.objective_type as ObjectiveType;
 
   const handleChain = (chain: Cell[]) => {
-    if (!isValidChain(grid, chain)) return;
+    if (!isValidChain(grid, chain, seals)) return;
     const type = grid[chain[0].r][chain[0].c];
     const { next, resolution } = applyChain(combat, type, chain.length, hero.class);
     if (resolution.enemyKills.length) setFlashId(resolution.enemyKills[0]);
     const afterEnemies = next.enemies.some(e => e.hp > 0) ? enemiesAttack(next) : endTurn(next);
-    const newGrid = resolveBoard(grid, chain, refillRng);
+    const newGrid = resolveBoard(grid, chain, refillRng, seals);
+    // Break any seals adjacent to the matched cells.
+    if (seals.size) {
+      const broken = sealsBrokenByChain(seals, chain);
+      if (broken.length) {
+        const next = new Set(seals);
+        broken.forEach(k => next.delete(k));
+        setSeals(next);
+      }
+    }
     setRngTick(t => t + 1);
     setGrid(newGrid);
     setCombat(afterEnemies);

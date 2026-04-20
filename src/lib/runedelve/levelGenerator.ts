@@ -1,6 +1,7 @@
 // Deterministic level generator. Same level number → same level for everyone.
 import { mulberry32, rngInt } from './prng';
 import type { Enemy } from './dungeonGenerator';
+import { mechanicsForLevel, introMechanicForLevel, type MechanicId } from './mechanics';
 
 export type ObjectiveType = 'defeat_all' | 'survive' | 'reach_score' | 'defeat_elite';
 
@@ -14,7 +15,18 @@ export interface LevelDefinition {
   turn_limit: number;
   objective_type: ObjectiveType;
   objective_target: number;
-  modifiers: Record<string, unknown>;
+  /**
+   * `modifiers` is the canonical place where mechanic tags live so the level
+   * row in the database carries them. The shape is intentionally small and
+   * forward-compatible — readers should fall back to the deterministic
+   * `mechanicsForLevel(n)` helper when the column is missing or empty (true
+   * for any level row that was created before the mechanic system existed).
+   */
+  modifiers: {
+    mechanics?: MechanicId[];
+    intro_mechanic?: MechanicId | null;
+    [k: string]: unknown;
+  };
 }
 
 const ENEMY_TEMPLATES: Array<{ name: string; emoji: string; hp: number; damage: number; tier: number }> = [
@@ -169,7 +181,10 @@ export function generateLevel(level: number): LevelDefinition {
     turn_limit: turnLimitFor(level),
     objective_type: objective.type,
     objective_target: objective.target,
-    modifiers: {},
+    modifiers: {
+      mechanics: mechanicsForLevel(level),
+      intro_mechanic: introMechanicForLevel(level),
+    },
   };
 }
 

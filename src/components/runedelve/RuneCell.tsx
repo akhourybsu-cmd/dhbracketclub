@@ -14,6 +14,8 @@ interface Props {
   type: RuneType;
   selected?: boolean;
   invalid?: boolean;
+  /** When true, this cell is sealed — uninteractable until broken. */
+  sealed?: boolean;
   size?: number;
   onPointerDown?: (e: React.PointerEvent) => void;
   onPointerEnter?: (e: React.PointerEvent) => void;
@@ -21,20 +23,21 @@ interface Props {
   dataC: number;
 }
 
-export function RuneCell({ type, selected, invalid, size = 56, onPointerDown, onPointerEnter, dataR, dataC }: Props) {
+export function RuneCell({ type, selected, invalid, sealed, size = 56, onPointerDown, onPointerEnter, dataR, dataC }: Props) {
   const meta = RUNE_META[type];
   return (
     <div
-      data-rune-cell
+      data-rune-cell={sealed ? undefined : true}
       data-r={dataR}
       data-c={dataC}
-      onPointerDown={onPointerDown}
-      onPointerEnter={onPointerEnter}
+      onPointerDown={sealed ? undefined : onPointerDown}
+      onPointerEnter={sealed ? undefined : onPointerEnter}
       className={cn(
         'relative flex items-center justify-center rounded-xl select-none transition-transform',
-        !selected && 'rd-tile',
+        !selected && !sealed && 'rd-tile',
         selected && 'scale-110 z-10 border',
         invalid && 'opacity-50',
+        sealed && 'rd-tile-sealed',
       )}
       style={{
         width: size,
@@ -47,17 +50,33 @@ export function RuneCell({ type, selected, invalid, size = 56, onPointerDown, on
             }
           : {}),
         touchAction: 'none',
+        cursor: sealed ? 'not-allowed' : undefined,
       }}
+      aria-label={sealed ? `Sealed ${meta.label} rune` : `${meta.label} rune`}
     >
-      <span
-        className="text-2xl font-extrabold leading-none"
-        style={{
-          color: selected ? '#fff' : meta.color,
-          textShadow: selected ? '0 1px 4px rgba(0,0,0,0.5)' : 'none',
-        }}
-      >
-        {meta.glyph}
-      </span>
+      {sealed ? (
+        // Sealed state: show the lock prominently, dim the underlying glyph.
+        <>
+          <span
+            className="absolute inset-0 flex items-center justify-center text-2xl opacity-25"
+            style={{ color: meta.color }}
+            aria-hidden
+          >
+            {meta.glyph}
+          </span>
+          <span className="relative text-xl leading-none" aria-hidden>🔒</span>
+        </>
+      ) : (
+        <span
+          className="text-2xl font-extrabold leading-none"
+          style={{
+            color: selected ? '#fff' : meta.color,
+            textShadow: selected ? '0 1px 4px rgba(0,0,0,0.5)' : 'none',
+          }}
+        >
+          {meta.glyph}
+        </span>
+      )}
     </div>
   );
 }

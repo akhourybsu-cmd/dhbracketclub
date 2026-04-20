@@ -17,10 +17,12 @@ interface Props {
   grid: RuneType[][];
   disabled?: boolean;
   onChainComplete: (chain: Cell[]) => void;
+  /** Set of `${r}-${c}` keys that are currently sealed and uninteractable. */
+  seals?: Set<string>;
 }
 
 // Mobile-first rune board with pointer-driven chain selection.
-export function RuneBoard({ grid, disabled, onChainComplete }: Props) {
+export function RuneBoard({ grid, disabled, onChainComplete, seals }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [chain, setChain] = useState<Cell[]>([]);
   const draggingRef = useRef(false);
@@ -45,6 +47,7 @@ export function RuneBoard({ grid, disabled, onChainComplete }: Props) {
 
   const tryAddCell = useCallback((target: Cell) => {
     if (disabled) return;
+    if (seals?.has(cellKey(target))) return;
     setChain(prev => {
       if (!prev.length) {
         return [target];
@@ -66,7 +69,7 @@ export function RuneBoard({ grid, disabled, onChainComplete }: Props) {
       play('tap');
       return [...prev, target];
     });
-  }, [disabled, grid, play]);
+  }, [disabled, grid, play, seals]);
 
   const cellFromPoint = (x: number, y: number): Cell | null => {
     const el = document.elementFromPoint(x, y) as HTMLElement | null;
@@ -144,6 +147,7 @@ export function RuneBoard({ grid, disabled, onChainComplete }: Props) {
           {grid.map((row, r) =>
             row.map((rune, c) => {
               const isSel = chainSet.has(`${r}-${c}`);
+              const isSealed = seals?.has(`${r}-${c}`) ?? false;
               return (
                 <RuneCell
                   key={`${r}-${c}`}
@@ -152,6 +156,7 @@ export function RuneBoard({ grid, disabled, onChainComplete }: Props) {
                   type={rune}
                   size={cellSize}
                   selected={isSel}
+                  sealed={isSealed}
                   onPointerDown={handlePointerDown(r, c)}
                 />
               );
