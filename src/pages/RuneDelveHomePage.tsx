@@ -18,6 +18,7 @@ export default function RuneDelveHomePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: hero, isLoading: heroLoading } = useRuneDelveHero();
+  const { data: classTracks } = useAllClassProgress();
   const { data: progress } = useMyProgress();
   const { data: leaderboard } = useCampaignLeaderboard();
   const ensureHero = useEnsureHero();
