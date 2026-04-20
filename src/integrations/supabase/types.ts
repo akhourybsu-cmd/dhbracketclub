@@ -2833,6 +2833,45 @@ export type Database = {
           },
         ]
       }
+      rune_delve_class_progress: {
+        Row: {
+          class: string
+          cosmetic_title: string | null
+          created_at: string
+          id: string
+          level: number
+          lifetime_runs: number
+          lifetime_score: number
+          updated_at: string
+          user_id: string
+          xp: number
+        }
+        Insert: {
+          class: string
+          cosmetic_title?: string | null
+          created_at?: string
+          id?: string
+          level?: number
+          lifetime_runs?: number
+          lifetime_score?: number
+          updated_at?: string
+          user_id: string
+          xp?: number
+        }
+        Update: {
+          class?: string
+          cosmetic_title?: string | null
+          created_at?: string
+          id?: string
+          level?: number
+          lifetime_runs?: number
+          lifetime_score?: number
+          updated_at?: string
+          user_id?: string
+          xp?: number
+        }
+        Relationships: []
+      }
       rune_delve_dungeons: {
         Row: {
           created_at: string

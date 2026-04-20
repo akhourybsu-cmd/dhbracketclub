@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Sparkles, Trophy, Flame, ChevronRight, Swords, BookOpen, Map } from 'lucide-react';
 import { useRuneDelveHero, useEnsureHero } from '@/hooks/useRuneDelveHero';
+import { useAllClassProgress } from '@/hooks/useRuneDelveClassProgress';
 import { useMyProgress, useCampaignLeaderboard } from '@/hooks/useRuneDelveCampaign';
 import { CLASS_LIST, getClass, levelFromXp, titleForLevel, type HeroClass } from '@/lib/runedelve/classConfig';
 import { chapterFor, chapterMeta } from '@/lib/runedelve/levelGenerator';
@@ -17,6 +18,7 @@ export default function RuneDelveHomePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: hero, isLoading: heroLoading } = useRuneDelveHero();
+  const { data: classTracks } = useAllClassProgress();
   const { data: progress } = useMyProgress();
   const { data: leaderboard } = useCampaignLeaderboard();
   const ensureHero = useEnsureHero();
@@ -118,7 +120,11 @@ export default function RuneDelveHomePage() {
   }
 
   const cls = getClass(hero.class);
-  const lvl = levelFromXp(hero.xp);
+  const activeTrack = (classTracks ?? []).find(t => t.class === hero.class);
+  const activeXp = activeTrack?.xp ?? hero.xp;
+  const activeLevel = activeTrack?.level ?? hero.level;
+  const activeTitle = activeTrack?.cosmetic_title ?? hero.cosmetic_title ?? titleForLevel(activeLevel, hero.class);
+  const lvl = levelFromXp(activeXp);
   const xpPct = Math.round((lvl.intoLevel / lvl.needed) * 100);
   const currentLevel = progress.highest_unlocked_level;
   const chapter = chapterFor(currentLevel);
@@ -190,14 +196,14 @@ export default function RuneDelveHomePage() {
           <ClassBadge cls={hero.class} size="lg" />
           <div className="flex-1 min-w-0">
             <p className="font-extrabold text-[14px] truncate">{hero.hero_name}</p>
-            {(hero.cosmetic_title ?? titleForLevel(lvl.level, hero.class)) && (
+            {activeTitle && (
               <p className="text-[10px] font-bold text-primary truncate">
-                ✦ {hero.cosmetic_title ?? titleForLevel(lvl.level, hero.class)}
+                ✦ {activeTitle}
               </p>
             )}
-            <p className="text-[10px] text-muted-foreground font-bold mt-0.5">{cls.name} · Lv {lvl.level}</p>
+            <p className="text-[10px] text-muted-foreground font-bold mt-0.5">{cls.name} · Lv {activeLevel}</p>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-[10px] font-bold text-muted-foreground">Lv {lvl.level}</span>
+              <span className="text-[10px] font-bold text-muted-foreground">Lv {activeLevel}</span>
               <div className="flex-1 h-1.5 rounded-full bg-muted/50 overflow-hidden">
                 <div className="h-full bg-primary" style={{ width: `${xpPct}%` }} />
               </div>
