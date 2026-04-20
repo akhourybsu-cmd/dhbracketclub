@@ -26,6 +26,8 @@ import {
   emptyCorruption,
   type CorruptionState,
 } from '@/lib/runedelve/corruptedTiles';
+import { secondaryMet, secondaryShort, type SecondaryObjective } from '@/lib/runedelve/layeredGoals';
+import { getBossRule, type BossRuleId } from '@/lib/runedelve/bossRules';
 import { RuneBoard } from '@/components/runedelve/RuneBoard';
 import { EnemyDisplay } from '@/components/runedelve/EnemyDisplay';
 import { HeroStatusBar } from '@/components/runedelve/HeroStatusBar';
@@ -68,6 +70,8 @@ export default function RuneDelvePlayPage() {
   const sealedTilesActive = activeMechanics.includes('sealed_tiles');
   const telegraphActive = activeMechanics.includes('telegraphed_attacks');
   const corruptionActive = activeMechanics.includes('corrupted_tiles');
+  const secondaryObjective = ((level?.modifiers as any)?.secondary_objective ?? null) as SecondaryObjective | null;
+  const bossRule = ((level?.modifiers as any)?.boss_rule ?? null) as BossRuleId | null;
 
   // Build deterministic state.
   useEffect(() => {
@@ -125,7 +129,7 @@ export default function RuneDelvePlayPage() {
   const handleChain = (chain: Cell[]) => {
     if (!isValidChain(grid, chain, seals)) return;
     const type = grid[chain[0].r][chain[0].c];
-    const { next, resolution } = applyChain(combat, type, chain.length, hero.class);
+    const { next, resolution } = applyChain(combat, type, chain.length, hero.class, bossRule);
     if (resolution.enemyKills.length) setFlashId(resolution.enemyKills[0]);
 
     // Apply corruption: HP cost for matching corrupted cells, then strip them.
@@ -143,7 +147,7 @@ export default function RuneDelvePlayPage() {
     }
 
     const afterEnemies = next.enemies.some(e => e.hp > 0)
-      ? enemiesAttack(next, telegraphActive)
+      ? enemiesAttack(next, telegraphActive, bossRule)
       : endTurn(next);
     if ((afterEnemies as any).heavyFired) toast.error('⚡ Heavy strike!', { duration: 1200 });
     const newGrid = resolveBoard(grid, chain, refillRng, seals);
@@ -173,13 +177,13 @@ export default function RuneDelvePlayPage() {
   };
 
   const handleAbility = () => {
-    const { next, ok } = useAbility(combat, hero.class);
+    const { next, ok } = useAbility(combat, hero.class, bossRule);
     if (!ok) {
       toast.info('Ability not ready — fill mana orbs first.');
       return;
     }
     const after = next.enemies.some(e => e.hp > 0)
-      ? enemiesAttack(next, telegraphActive)
+      ? enemiesAttack(next, telegraphActive, bossRule)
       : endTurn(next);
     if ((after as any).heavyFired) toast.error('⚡ Heavy strike!', { duration: 1200 });
     // Ability still consumes a turn — corruption advances.

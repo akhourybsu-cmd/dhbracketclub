@@ -2,6 +2,12 @@ import type { Enemy } from './dungeonGenerator';
 import type { HeroClass } from './classConfig';
 import type { RuneType } from './dungeonGenerator';
 import { resolveEnemyAttack, tickIntents } from './telegraph';
+import {
+  applyBossTurnEffects,
+  enemyDamageMultiplier,
+  filterTargetable,
+  type BossRuleId,
+} from './bossRules';
 
 export interface CombatState {
   hp: number;
@@ -54,6 +60,7 @@ export function applyChain(
   type: RuneType,
   length: number,
   cls: HeroClass,
+  bossRule: BossRuleId | null = null,
 ): { next: CombatState; resolution: ChainResolution } {
   const next: CombatState = { ...state, enemies: state.enemies.map(e => ({ ...e })) };
   const resolution: ChainResolution = {
@@ -70,16 +77,18 @@ export function applyChain(
       dmg = Math.round(dmg * 2);
       next.shadowstepActive = false;
     }
-    // Damage first living enemy.
-    const target = next.enemies.find(e => e.hp > 0);
+    // Damage first TARGETABLE enemy. Boss rules can hide the final foe.
+    const targets = filterTargetable(bossRule, next.enemies);
+    const target = targets[0];
     if (target) {
-      const applied = Math.min(dmg, target.hp);
-      target.hp -= applied;
+      const live = next.enemies.find(e => e.id === target.id)!;
+      const applied = Math.min(dmg, live.hp);
+      live.hp -= applied;
       resolution.damageDealt = applied;
       next.totalDamage += applied;
-      if (target.hp <= 0) {
+      if (live.hp <= 0) {
         next.enemiesDefeated += 1;
-        resolution.enemyKills.push(target.id);
+        resolution.enemyKills.push(live.id);
       }
     }
   } else if (type === 'blue') {
@@ -109,19 +118,31 @@ export function applyChain(
 // After player chain, enemies act. Returns next state.
 // When `telegraphed` is true, intents tick first, then enemies whose intent
 // hit 0 deal a heavy strike (and reset). Otherwise behaves like classic damage.
-export function enemiesAttack(state: CombatState, telegraphed = false): CombatState & { heavyFired?: boolean } {
+// `bossRule` (Band 5) can mutate per-enemy outgoing damage (enrager) and
+// trigger end-of-turn effects (regenerator).
+export function enemiesAttack(
+  state: CombatState,
+  telegraphed = false,
+  bossRule: BossRuleId | null = null,
+): CombatState & { heavyFired?: boolean } {
   const ticked = telegraphed ? tickIntents(state.enemies) : state.enemies;
   let next: CombatState = { ...state, enemies: ticked.map(e => ({ ...e })) };
   let heavyFired = false;
   if (telegraphed) {
+    // Apply enrager multiplier in-place by temporarily scaling each enemy's
+    // damage for the resolve call, then restoring (telegraph reads `damage`).
+    const original = next.enemies.map(e => e.damage);
+    next.enemies.forEach(e => { e.damage = Math.round(e.damage * enemyDamageMultiplier(bossRule, e)); });
     const r = resolveEnemyAttack(next.enemies, next.shieldTurns > 0);
-    next.enemies = r.enemies;
+    next.enemies = r.enemies.map((e, i) => ({ ...e, damage: original[i] ?? e.damage }));
     heavyFired = r.heavyFired;
     if (next.shieldTurns > 0) next.shieldTurns -= 1;
     next.hp = Math.max(0, next.hp - r.totalDamage);
   } else {
     let totalIncoming = 0;
-    for (const e of next.enemies) if (e.hp > 0) totalIncoming += e.damage;
+    for (const e of next.enemies) {
+      if (e.hp > 0) totalIncoming += Math.round(e.damage * enemyDamageMultiplier(bossRule, e));
+    }
     if (next.shieldTurns > 0) {
       totalIncoming = Math.round(totalIncoming * 0.4);
       next.shieldTurns -= 1;
@@ -129,6 +150,8 @@ export function enemiesAttack(state: CombatState, telegraphed = false): CombatSt
     next.hp = Math.max(0, next.hp - totalIncoming);
   }
   next.turnsRemaining = Math.max(0, next.turnsRemaining - 1);
+  // Boss-rule end-of-turn effects (e.g. regenerator).
+  next = applyBossTurnEffects(next, bossRule);
   return { ...next, heavyFired };
 }
 
@@ -147,13 +170,19 @@ export function isRunOver(state: CombatState): { over: boolean; cleared: boolean
   return { over: false, cleared: false };
 }
 
-export function useAbility(state: CombatState, cls: HeroClass): { next: CombatState; ok: boolean } {
+export function useAbility(
+  state: CombatState,
+  cls: HeroClass,
+  bossRule: BossRuleId | null = null,
+): { next: CombatState; ok: boolean } {
   if (state.mana < MAX_MANA) return { next: state, ok: false };
   const next: CombatState = { ...state, mana: 0, abilityUsed: true, enemies: state.enemies.map(e => ({ ...e })) };
+  const targetable = filterTargetable(bossRule, next.enemies);
+  const targetableIds = new Set(targetable.map(e => e.id));
   if (cls === 'warrior') {
-    // Cleave: 40 dmg to all
+    // Cleave: 40 dmg to all targetable enemies (last_stand can shield the boss).
     for (const e of next.enemies) {
-      if (e.hp > 0) {
+      if (e.hp > 0 && targetableIds.has(e.id)) {
         const applied = Math.min(40, e.hp);
         e.hp -= applied;
         next.totalDamage += applied;
@@ -161,12 +190,13 @@ export function useAbility(state: CombatState, cls: HeroClass): { next: CombatSt
       }
     }
   } else if (cls === 'mage') {
-    const t = next.enemies.find(e => e.hp > 0);
+    const t = targetable[0];
     if (t) {
-      const applied = Math.min(80, t.hp);
-      t.hp -= applied;
+      const live = next.enemies.find(e => e.id === t.id)!;
+      const applied = Math.min(80, live.hp);
+      live.hp -= applied;
       next.totalDamage += applied;
-      if (t.hp <= 0) next.enemiesDefeated += 1;
+      if (live.hp <= 0) next.enemiesDefeated += 1;
     }
   } else if (cls === 'rogue') {
     next.shadowstepActive = true;
