@@ -2899,6 +2899,30 @@ export type Database = {
         }
         Relationships: []
       }
+      rune_delve_failure_rewards: {
+        Row: {
+          failure_count: number
+          id: string
+          last_awarded_at: string
+          level_number: number
+          user_id: string
+        }
+        Insert: {
+          failure_count?: number
+          id?: string
+          last_awarded_at?: string
+          level_number: number
+          user_id: string
+        }
+        Update: {
+          failure_count?: number
+          id?: string
+          last_awarded_at?: string
+          level_number?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       rune_delve_heroes: {
         Row: {
           best_streak: number
@@ -3007,6 +3031,36 @@ export type Database = {
         }
         Relationships: []
       }
+      rune_delve_loadouts: {
+        Row: {
+          class: string
+          id: string
+          slot_1: string | null
+          slot_2: string | null
+          slot_3: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          class: string
+          id?: string
+          slot_1?: string | null
+          slot_2?: string | null
+          slot_3?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          class?: string
+          id?: string
+          slot_1?: string | null
+          slot_2?: string | null
+          slot_3?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       rune_delve_progress: {
         Row: {
           created_at: string
@@ -3036,6 +3090,30 @@ export type Database = {
           id?: string
           total_levels_cleared?: number
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      rune_delve_relic_unlocks: {
+        Row: {
+          acquired_at: string
+          acquired_at_level: number
+          id: string
+          relic_id: string
+          user_id: string
+        }
+        Insert: {
+          acquired_at?: string
+          acquired_at_level?: number
+          id?: string
+          relic_id: string
+          user_id: string
+        }
+        Update: {
+          acquired_at?: string
+          acquired_at_level?: number
+          id?: string
+          relic_id?: string
           user_id?: string
         }
         Relationships: []
@@ -3120,6 +3198,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      rune_delve_wallet: {
+        Row: {
+          created_at: string
+          lifetime_shards_earned: number
+          shards: number
+          slots_unlocked: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          lifetime_shards_earned?: number
+          shards?: number
+          slots_unlocked?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          lifetime_shards_earned?: number
+          shards?: number
+          slots_unlocked?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       scoring_rules: {
         Row: {
