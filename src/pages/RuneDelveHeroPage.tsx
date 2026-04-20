@@ -1,7 +1,19 @@
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Flame, Trophy, Lock, Sparkles } from 'lucide-react';
+import { ArrowLeft, Flame, Trophy, Lock, Sparkles, Check } from 'lucide-react';
 import { useRuneDelveHero, useUpdateHero } from '@/hooks/useRuneDelveHero';
-import { CLASS_LIST, getClass, levelFromXp, titleForLevel, titleLadderFor, type HeroClass } from '@/lib/runedelve/classConfig';
+import {
+  useAllClassProgress,
+  useEnsureClassProgress,
+  type ClassProgress,
+} from '@/hooks/useRuneDelveClassProgress';
+import {
+  CLASS_LIST,
+  getClass,
+  levelFromXp,
+  titleForLevel,
+  titleLadderFor,
+  type HeroClass,
+} from '@/lib/runedelve/classConfig';
 import { ClassBadge } from '@/components/runedelve/ClassBadge';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -9,34 +21,57 @@ import { cn } from '@/lib/utils';
 
 export default function RuneDelveHeroPage() {
   const { data: hero } = useRuneDelveHero();
+  const { data: tracks } = useAllClassProgress();
   const updateHero = useUpdateHero();
-  const [editing, setEditing] = useState(false);
+  const ensureClass = useEnsureClassProgress();
+
+  const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState('');
-  const [pickClass, setPickClass] = useState<HeroClass | null>(null);
+  const [confirmSwitch, setConfirmSwitch] = useState<HeroClass | null>(null);
 
   if (!hero) return <div className="h-32 rounded-2xl skeleton-shimmer" />;
 
-  const cls = getClass(hero.class);
-  const lvl = levelFromXp(hero.xp);
+  // Active class snapshot is the source of truth for level/XP/title display.
+  const trackByClass = new Map<HeroClass, ClassProgress>();
+  (tracks ?? []).forEach(t => trackByClass.set(t.class, t));
+  const activeTrack = trackByClass.get(hero.class);
+  const activeXp = activeTrack?.xp ?? hero.xp;
+  const activeLevel = activeTrack?.level ?? hero.level;
+  const lvl = levelFromXp(activeXp);
   const xpPct = Math.round((lvl.intoLevel / lvl.needed) * 100);
-  const title = hero.cosmetic_title ?? titleForLevel(lvl.level, hero.class);
+  const cls = getClass(hero.class);
+  const title = activeTrack?.cosmetic_title ?? titleForLevel(activeLevel, hero.class);
   const ladder = titleLadderFor(hero.class);
 
-  const save = async () => {
-    const patch: any = {};
-    if (name && name !== hero.hero_name) patch.hero_name = name;
-    if (pickClass && pickClass !== hero.class) {
-      patch.class = pickClass;
-      // Re-equip class-appropriate title at current level on class change.
-      patch.cosmetic_title = titleForLevel(lvl.level, pickClass);
-    }
-    if (Object.keys(patch).length === 0) { setEditing(false); return; }
+  const saveName = async () => {
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === hero.hero_name) { setEditingName(false); return; }
     try {
-      await updateHero.mutateAsync(patch);
-      toast.success('Hero updated');
-      setEditing(false);
+      await updateHero.mutateAsync({ hero_name: trimmed });
+      toast.success('Hero renamed');
+      setEditingName(false);
     } catch (e: any) {
-      toast.error(e?.message ?? 'Could not update hero');
+      toast.error(e?.message ?? 'Could not rename');
+    }
+  };
+
+  const switchClass = async (next: HeroClass) => {
+    if (next === hero.class) { setConfirmSwitch(null); return; }
+    try {
+      // Make sure the destination class has a saved track (lazy create).
+      const track = await ensureClass.mutateAsync(next);
+      const equippedTitle = track.cosmetic_title ?? titleForLevel(track.level, next);
+      // Hero record now mirrors the new active class's track for legacy reads.
+      await updateHero.mutateAsync({
+        class: next,
+        xp: track.xp,
+        level: track.level,
+        cosmetic_title: equippedTitle,
+      } as any);
+      toast.success(`Switched to ${getClass(next).name} · Lv ${track.level}`);
+      setConfirmSwitch(null);
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Could not switch class');
     }
   };
 
@@ -44,14 +79,16 @@ export default function RuneDelveHeroPage() {
     <div className="space-y-4 pb-8">
       <Link to="/rune-delve" className="back-link"><ArrowLeft className="w-4 h-4" /> Back</Link>
 
+      {/* ── Persistent hero identity ─────────────────────────────────── */}
       <div className="glass-card p-5 text-center">
         <div className="flex justify-center mb-3"><ClassBadge cls={hero.class} size="lg" /></div>
-        {editing ? (
+        {editingName ? (
           <input
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder={hero.hero_name}
             maxLength={24}
+            autoFocus
             className="form-input text-center w-full mb-2 px-3"
           />
         ) : (
@@ -62,29 +99,110 @@ export default function RuneDelveHeroPage() {
             ✦ {title}
           </p>
         )}
-        <p className="text-[10px] font-bold text-muted-foreground mt-0.5 uppercase tracking-wider">{cls.name} · Lv {lvl.level}</p>
+        <p className="text-[10px] font-bold text-muted-foreground mt-0.5 uppercase tracking-wider">
+          Active · {cls.name} · Lv {activeLevel}
+        </p>
 
         <div className="mt-3">
           <div className="h-2 rounded-full bg-muted/50 overflow-hidden">
             <div className="h-full bg-primary" style={{ width: `${xpPct}%` }} />
           </div>
-          <p className="text-[10px] font-mono text-muted-foreground mt-1 tabular-nums">{lvl.intoLevel} / {lvl.needed} XP</p>
+          <p className="text-[10px] font-mono text-muted-foreground mt-1 tabular-nums">{lvl.intoLevel} / {lvl.needed} XP · this class</p>
         </div>
 
         <div className="grid grid-cols-3 gap-2 mt-4">
           <div><p className="font-mono font-extrabold text-base tabular-nums flex items-center justify-center gap-1"><Flame className="w-3.5 h-3.5 text-gold" />{hero.current_streak}</p><p className="text-[9px] font-bold text-muted-foreground uppercase">Streak</p></div>
-          <div><p className="font-mono font-extrabold text-base tabular-nums">{hero.lifetime_runs}</p><p className="text-[9px] font-bold text-muted-foreground uppercase">Runs</p></div>
-          <div><p className="font-mono font-extrabold text-base tabular-nums">{hero.lifetime_score.toLocaleString()}</p><p className="text-[9px] font-bold text-muted-foreground uppercase">Total Score</p></div>
+          <div><p className="font-mono font-extrabold text-base tabular-nums">{hero.lifetime_runs}</p><p className="text-[9px] font-bold text-muted-foreground uppercase">Lifetime Runs</p></div>
+          <div><p className="font-mono font-extrabold text-base tabular-nums">{hero.lifetime_score.toLocaleString()}</p><p className="text-[9px] font-bold text-muted-foreground uppercase">Lifetime Score</p></div>
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {editingName ? (
+            <>
+              <button onClick={() => { setEditingName(false); setName(''); }} className="h-9 rounded-lg bg-muted/40 text-[11px] font-bold btn-press">Cancel</button>
+              <button onClick={saveName} className="h-9 rounded-lg bg-primary text-primary-foreground text-[11px] font-bold btn-press">Save</button>
+            </>
+          ) : (
+            <button
+              onClick={() => { setEditingName(true); setName(hero.hero_name); }}
+              className="col-span-2 h-9 rounded-lg bg-muted/40 text-[11px] font-bold btn-press"
+            >
+              Rename hero
+            </button>
+          )}
         </div>
       </div>
 
+      {/* ── Active class — passive + ability ─────────────────────────── */}
       <div className="glass-card p-4">
-        <h3 className="font-bold text-[13px] mb-2">Class · {cls.name}</h3>
+        <h3 className="font-bold text-[13px] mb-2">Active class · {cls.name}</h3>
         <p className="text-[11px] text-muted-foreground mb-1"><span className="font-bold text-foreground">Passive:</span> {cls.passive}</p>
         <p className="text-[11px] text-muted-foreground"><span className="font-bold text-foreground">Ability:</span> {cls.abilityName} — {cls.abilityDesc}</p>
       </div>
 
-      {/* Class title ladder — cosmetic prestige only */}
+      {/* ── Per-class progression ladder ─────────────────────────────── */}
+      <div className="glass-card p-4 space-y-2">
+        <h3 className="font-bold text-[13px] flex items-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5 text-primary" /> Class Progression
+        </h3>
+        <p className="text-[10px] text-muted-foreground">
+          Each class keeps its own level and titles. Switching loads that class's saved progress — nothing is wiped.
+        </p>
+        <div className="space-y-2 mt-1">
+          {CLASS_LIST.map(c => {
+            const track = trackByClass.get(c.id);
+            const isActive = c.id === hero.class;
+            const tLevel = track?.level ?? 1;
+            const tTitle = track?.cosmetic_title ?? titleForLevel(tLevel, c.id);
+            const tXp = track?.xp ?? 0;
+            const xpInfo = levelFromXp(tXp);
+            const pct = Math.round((xpInfo.intoLevel / xpInfo.needed) * 100);
+            return (
+              <button
+                key={c.id}
+                disabled={isActive || ensureClass.isPending || updateHero.isPending}
+                onClick={() => setConfirmSwitch(c.id)}
+                className={cn(
+                  'w-full text-left rounded-xl p-3 border transition-all btn-press flex items-start gap-3 min-w-0',
+                  isActive
+                    ? 'bg-primary/10 border-primary/40'
+                    : 'bg-muted/20 border-border/40 hover:border-primary/30',
+                )}
+              >
+                <ClassBadge cls={c.id} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="font-extrabold text-[12px]">{c.name}</span>
+                    <span className="font-mono text-[10px] font-bold tabular-nums text-muted-foreground">Lv {tLevel}</span>
+                    {isActive && (
+                      <span className="ml-auto inline-flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider text-primary">
+                        <Check className="w-2.5 h-2.5" /> Active
+                      </span>
+                    )}
+                  </div>
+                  {tTitle && (
+                    <p className="text-[10px] font-bold truncate" style={{ color: 'hsl(var(--primary))' }}>
+                      ✦ {tTitle}
+                    </p>
+                  )}
+                  <div className="mt-1 h-1 rounded-full bg-muted/50 overflow-hidden">
+                    <div className="h-full bg-primary/70" style={{ width: `${pct}%` }} />
+                  </div>
+                  <p className="text-[9px] font-mono text-muted-foreground tabular-nums mt-0.5">
+                    {xpInfo.intoLevel}/{xpInfo.needed} XP
+                    {track && track.lifetime_runs > 0 && ` · ${track.lifetime_runs} runs`}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[9px] text-muted-foreground italic mt-2 px-0.5">
+          Switch class only between levels. Class change is disabled mid-run.
+        </p>
+      </div>
+
+      {/* ── Title ladder for active class ────────────────────────────── */}
       <div className="glass-card p-4">
         <h3 className="font-bold text-[13px] mb-1 flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 text-primary" /> {cls.name} Titles
@@ -92,7 +210,7 @@ export default function RuneDelveHeroPage() {
         <p className="text-[10px] text-muted-foreground mb-3">Cosmetic prestige earned at milestone hero levels.</p>
         <div className="space-y-1">
           {ladder.map(({ level, title: t }) => {
-            const unlocked = lvl.level >= level;
+            const unlocked = activeLevel >= level;
             const isCurrent = t === title;
             return (
               <div
@@ -118,37 +236,54 @@ export default function RuneDelveHeroPage() {
         </div>
       </div>
 
-      {editing ? (
-        <div className="space-y-2">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">Change class</p>
-          <div className="grid grid-cols-2 gap-2">
-            {CLASS_LIST.map(c => (
-              <button
-                key={c.id}
-                onClick={() => setPickClass(c.id)}
-                className={cn('glass-card p-3 text-left btn-press', (pickClass ?? hero.class) === c.id && 'border-primary/50')}
-              >
-                <div className="flex items-center gap-2"><ClassBadge cls={c.id} size="sm" /><span className="font-bold text-[12px]">{c.name}</span></div>
-                <p className="text-[10px] text-muted-foreground mt-1">{c.passive}</p>
-              </button>
-            ))}
-          </div>
-          <div className="grid grid-cols-2 gap-2 mt-2">
-            <button onClick={() => { setEditing(false); setName(''); setPickClass(null); }} className="h-10 rounded-lg bg-muted/40 text-xs font-bold btn-press">Cancel</button>
-            <button onClick={save} disabled={updateHero.isPending} className="h-10 rounded-lg bg-primary text-primary-foreground text-xs font-bold btn-press disabled:opacity-50">Save</button>
-          </div>
-        </div>
-      ) : (
-        <button onClick={() => { setEditing(true); setName(hero.hero_name); }} className="w-full h-11 rounded-xl bg-muted/40 text-xs font-bold btn-press">Edit hero</button>
-      )}
-
       <Link to="/rune-delve/leaderboard" className="block">
         <div className="glass-card p-3 flex items-center gap-2 btn-press">
           <Trophy className="w-4 h-4 text-gold" />
-          <span className="text-xs font-bold flex-1">View today's leaderboard</span>
+          <span className="text-xs font-bold flex-1">View campaign leaderboard</span>
           <span className="text-xs text-muted-foreground">→</span>
         </div>
       </Link>
+
+      {/* ── Switch confirm modal ─────────────────────────────────────── */}
+      {confirmSwitch && (() => {
+        const target = getClass(confirmSwitch);
+        const targetTrack = trackByClass.get(confirmSwitch);
+        const targetLevel = targetTrack?.level ?? 1;
+        const fresh = !targetTrack || targetTrack.xp === 0;
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center px-6 backdrop-blur-md bg-background/70 animate-in fade-in"
+            onClick={() => setConfirmSwitch(null)}
+          >
+            <div className="glass-card p-5 max-w-sm w-full space-y-3" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center gap-3">
+                <ClassBadge cls={confirmSwitch} size="lg" />
+                <div className="min-w-0">
+                  <p className="font-extrabold text-[15px]">Switch to {target.name}?</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {fresh
+                      ? 'Fresh class — starts at Lv 1.'
+                      : `Loads your saved progress · Lv ${targetLevel}.`}
+                  </p>
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Your <span className="font-bold text-foreground">{cls.name}</span> progress (Lv {activeLevel}) is saved and stays untouched.
+              </p>
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button onClick={() => setConfirmSwitch(null)} className="h-10 rounded-lg bg-muted/40 text-xs font-bold btn-press">Cancel</button>
+                <button
+                  onClick={() => switchClass(confirmSwitch)}
+                  disabled={updateHero.isPending || ensureClass.isPending}
+                  className="h-10 rounded-lg bg-primary text-primary-foreground text-xs font-bold btn-press disabled:opacity-50"
+                >
+                  Switch class
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
