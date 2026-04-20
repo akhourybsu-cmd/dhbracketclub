@@ -32,20 +32,20 @@ export function RuneCell({ type, selected, invalid, size = 56, onPointerDown, on
       onPointerEnter={onPointerEnter}
       className={cn(
         'relative flex items-center justify-center rounded-xl select-none transition-transform',
-        'border',
-        selected && 'scale-110 z-10',
+        !selected && 'rd-tile',
+        selected && 'scale-110 z-10 border',
         invalid && 'opacity-50',
       )}
       style={{
         width: size,
         height: size,
-        background: selected
-          ? `radial-gradient(circle at 50% 40%, ${meta.color}, ${meta.color} 60%, transparent 100%)`
-          : `linear-gradient(160deg, hsl(var(--card)), hsl(var(--surface-overlay)))`,
-        borderColor: selected ? meta.color : 'hsl(var(--border) / 0.6)',
-        boxShadow: selected
-          ? `0 0 18px ${meta.glow}, inset 0 0 8px rgba(255,255,255,0.15)`
-          : 'inset 0 1px 0 hsl(var(--foreground) / 0.04)',
+        ...(selected
+          ? {
+              background: `radial-gradient(circle at 50% 40%, ${meta.color}, ${meta.color} 60%, transparent 100%)`,
+              borderColor: meta.color,
+              boxShadow: `0 0 22px ${meta.glow}, inset 0 0 10px rgba(255,255,255,0.18)`,
+            }
+          : {}),
         touchAction: 'none',
       }}
     >
