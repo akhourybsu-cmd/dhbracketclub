@@ -1,6 +1,7 @@
 import type { Enemy } from './dungeonGenerator';
 import type { HeroClass } from './classConfig';
 import type { RuneType } from './dungeonGenerator';
+import { resolveEnemyAttack, tickIntents } from './telegraph';
 
 export interface CombatState {
   hp: number;
@@ -106,17 +107,29 @@ export function applyChain(
 }
 
 // After player chain, enemies act. Returns next state.
-export function enemiesAttack(state: CombatState): CombatState {
-  const next: CombatState = { ...state, enemies: state.enemies.map(e => ({ ...e })) };
-  let totalIncoming = 0;
-  for (const e of next.enemies) if (e.hp > 0) totalIncoming += e.damage;
-  if (next.shieldTurns > 0) {
-    totalIncoming = Math.round(totalIncoming * 0.4);
-    next.shieldTurns -= 1;
+// When `telegraphed` is true, intents tick first, then enemies whose intent
+// hit 0 deal a heavy strike (and reset). Otherwise behaves like classic damage.
+export function enemiesAttack(state: CombatState, telegraphed = false): CombatState & { heavyFired?: boolean } {
+  const ticked = telegraphed ? tickIntents(state.enemies) : state.enemies;
+  let next: CombatState = { ...state, enemies: ticked.map(e => ({ ...e })) };
+  let heavyFired = false;
+  if (telegraphed) {
+    const r = resolveEnemyAttack(next.enemies, next.shieldTurns > 0);
+    next.enemies = r.enemies;
+    heavyFired = r.heavyFired;
+    if (next.shieldTurns > 0) next.shieldTurns -= 1;
+    next.hp = Math.max(0, next.hp - r.totalDamage);
+  } else {
+    let totalIncoming = 0;
+    for (const e of next.enemies) if (e.hp > 0) totalIncoming += e.damage;
+    if (next.shieldTurns > 0) {
+      totalIncoming = Math.round(totalIncoming * 0.4);
+      next.shieldTurns -= 1;
+    }
+    next.hp = Math.max(0, next.hp - totalIncoming);
   }
-  next.hp = Math.max(0, next.hp - totalIncoming);
   next.turnsRemaining = Math.max(0, next.turnsRemaining - 1);
-  return next;
+  return { ...next, heavyFired };
 }
 
 // Always decrement the turn counter at the end of the player's action,
