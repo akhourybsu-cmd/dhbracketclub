@@ -174,16 +174,16 @@ function AnimatedRoutes() {
         <Route path="/pickem/admin" element={<ProtectedPage><PickemAdminPage /></ProtectedPage>} />
 
         {/* Rune Delve module — campaign */}
-        <Route path="/rune-delve" element={<ProtectedPage><RuneDelveHomePage /></ProtectedPage>} />
-        <Route path="/rune-delve/levels" element={<ProtectedPage><RuneDelveLevelMapPage /></ProtectedPage>} />
-        <Route path="/rune-delve/play/:levelNumber" element={<ProtectedPage><RuneDelvePlayPage /></ProtectedPage>} />
-        <Route path="/rune-delve/results/:levelNumber" element={<ProtectedPage><RuneDelveResultsPage /></ProtectedPage>} />
+        <Route path="/rune-delve" element={<ProtectedPage><RuneDelveLayout><RuneDelveHomePage /></RuneDelveLayout></ProtectedPage>} />
+        <Route path="/rune-delve/levels" element={<ProtectedPage><RuneDelveLayout><RuneDelveLevelMapPage /></RuneDelveLayout></ProtectedPage>} />
+        <Route path="/rune-delve/play/:levelNumber" element={<ProtectedPage><RuneDelveLayout><RuneDelvePlayPage /></RuneDelveLayout></ProtectedPage>} />
+        <Route path="/rune-delve/results/:levelNumber" element={<ProtectedPage><RuneDelveLayout><RuneDelveResultsPage /></RuneDelveLayout></ProtectedPage>} />
         {/* Back-compat redirects from old daily routes */}
         <Route path="/rune-delve/play" element={<Navigate to="/rune-delve/levels" replace />} />
         <Route path="/rune-delve/results" element={<Navigate to="/rune-delve" replace />} />
-        <Route path="/rune-delve/leaderboard" element={<ProtectedPage><RuneDelveLeaderboardPage /></ProtectedPage>} />
-        <Route path="/rune-delve/hero" element={<ProtectedPage><RuneDelveHeroPage /></ProtectedPage>} />
-        <Route path="/rune-delve/history" element={<ProtectedPage><RuneDelveHistoryPage /></ProtectedPage>} />
+        <Route path="/rune-delve/leaderboard" element={<ProtectedPage><RuneDelveLayout><RuneDelveLeaderboardPage /></RuneDelveLayout></ProtectedPage>} />
+        <Route path="/rune-delve/hero" element={<ProtectedPage><RuneDelveLayout><RuneDelveHeroPage /></RuneDelveLayout></ProtectedPage>} />
+        <Route path="/rune-delve/history" element={<ProtectedPage><RuneDelveLayout><RuneDelveHistoryPage /></RuneDelveLayout></ProtectedPage>} />
 
         <Route path="/profile" element={<ProtectedPage><ProfilePage /></ProtectedPage>} />
         <Route path="*" element={<Suspense fallback={<PageFallback />}><NotFound /></Suspense>} />
