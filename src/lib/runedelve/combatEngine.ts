@@ -119,6 +119,13 @@ export function enemiesAttack(state: CombatState): CombatState {
   return next;
 }
 
+// Always decrement the turn counter at the end of the player's action,
+// even if the chain (or ability) killed every enemy and we skip the enemy phase.
+// Without this the killing-blow turn doesn't count, inflating "turns remaining" score.
+export function endTurn(state: CombatState): CombatState {
+  return { ...state, turnsRemaining: Math.max(0, state.turnsRemaining - 1) };
+}
+
 export function isRunOver(state: CombatState): { over: boolean; cleared: boolean } {
   const allDead = state.enemies.every(e => e.hp <= 0);
   if (allDead) return { over: true, cleared: true };
