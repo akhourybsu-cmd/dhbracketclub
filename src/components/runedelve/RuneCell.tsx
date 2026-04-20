@@ -16,6 +16,10 @@ interface Props {
   invalid?: boolean;
   /** When true, this cell is sealed — uninteractable until broken. */
   sealed?: boolean;
+  /** Corrupted overlay — chain-able but costs HP. */
+  corrupted?: boolean;
+  /** Source of corruption (spreads each turn). Implies corrupted. */
+  corruptionSource?: boolean;
   size?: number;
   onPointerDown?: (e: React.PointerEvent) => void;
   onPointerEnter?: (e: React.PointerEvent) => void;
@@ -23,7 +27,7 @@ interface Props {
   dataC: number;
 }
 
-export function RuneCell({ type, selected, invalid, sealed, size = 56, onPointerDown, onPointerEnter, dataR, dataC }: Props) {
+export function RuneCell({ type, selected, invalid, sealed, corrupted, corruptionSource, size = 56, onPointerDown, onPointerEnter, dataR, dataC }: Props) {
   const meta = RUNE_META[type];
   return (
     <div
