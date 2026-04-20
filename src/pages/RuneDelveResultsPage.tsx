@@ -1,39 +1,44 @@
-import { Link } from 'react-router-dom';
-import { ArrowLeft, Trophy, Swords, Heart, Clock, Sparkles } from 'lucide-react';
-import { useTodayDungeon, useMyTodayRun, useDailyLeaderboard } from '@/hooks/useRuneDelve';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Trophy, Swords, Heart, Clock, Sparkles, ChevronRight, Star } from 'lucide-react';
+import { useLevel, useMyLevelRun, useLevelBestScores, useMyProgress } from '@/hooks/useRuneDelveCampaign';
 import { useRuneDelveHero } from '@/hooks/useRuneDelveHero';
-import { useAuth } from '@/contexts/AuthContext';
 import { Confetti } from '@/components/Confetti';
 import { ClassBadge } from '@/components/runedelve/ClassBadge';
 import { getClass, levelFromXp } from '@/lib/runedelve/classConfig';
+import { starsFor } from '@/lib/runedelve/levelGenerator';
 import { useEffect, useState } from 'react';
+import { cn } from '@/lib/utils';
 
 export default function RuneDelveResultsPage() {
-  const { user } = useAuth();
-  const { data: dungeon } = useTodayDungeon();
-  const { data: run } = useMyTodayRun(dungeon?.id);
+  const navigate = useNavigate();
+  const { levelNumber: levelParam } = useParams<{ levelNumber: string }>();
+  const levelNumber = Math.max(1, parseInt(levelParam ?? '1', 10) || 1);
+
+  const { data: level } = useLevel(levelNumber);
+  const { data: run } = useMyLevelRun(level?.id);
   const { data: hero } = useRuneDelveHero();
-  const { data: leaderboard } = useDailyLeaderboard(dungeon?.id);
+  const { data: progress } = useMyProgress();
+  const { data: topRuns } = useLevelBestScores(level?.id);
   const [showConfetti, setShowConfetti] = useState(false);
-  const myRank = leaderboard?.find(l => l.user_id === user?.id)?.rank;
 
   useEffect(() => {
-    if (run?.dungeon_cleared || (myRank && myRank <= 3)) {
+    if (run?.dungeon_cleared) {
       setShowConfetti(true);
       const t = setTimeout(() => setShowConfetti(false), 2500);
       return () => clearTimeout(t);
     }
-  }, [run?.dungeon_cleared, myRank]);
+  }, [run?.dungeon_cleared]);
 
-  if (!run) {
+  if (!run || !level) {
     return (
       <div className="space-y-4">
         <Link to="/rune-delve" className="back-link"><ArrowLeft className="w-4 h-4" /> Back</Link>
-        <div className="glass-card p-6 text-center text-xs text-muted-foreground">No run yet today. Enter the dungeon!</div>
+        <div className="glass-card p-6 text-center text-xs text-muted-foreground">No run yet for this level. Enter the dungeon!</div>
       </div>
     );
   }
 
+  const stars = starsFor(run.score, levelNumber, run.dungeon_cleared);
   const stats = [
     { label: 'Damage', value: run.total_damage, icon: Swords },
     { label: 'Defeated', value: run.enemies_defeated, icon: Trophy },
@@ -44,7 +49,7 @@ export default function RuneDelveResultsPage() {
   ];
 
   const outcome = run.dungeon_cleared
-    ? { label: 'Dungeon Cleared', emoji: '🏆', accent: 'gold' as const }
+    ? { label: `Level ${levelNumber} Cleared`, emoji: '🏆', accent: 'gold' as const }
     : run.hp_remaining <= 0
       ? { label: 'Defeated', emoji: '💀', accent: 'destructive' as const }
       : { label: 'Out of Turns', emoji: '⏳', accent: 'muted' as const };
@@ -60,6 +65,9 @@ export default function RuneDelveResultsPage() {
       ? 'hsl(var(--destructive) / 0.35)'
       : undefined;
 
+  const nextLevel = levelNumber + 1;
+  const nextUnlocked = (progress?.highest_unlocked_level ?? 1) >= nextLevel;
+
   return (
     <div className="space-y-4 pb-8">
       <Confetti active={showConfetti} />
@@ -74,13 +82,21 @@ export default function RuneDelveResultsPage() {
           </div>
         )}
         <p className="text-3xl mb-1">{outcome.emoji}</p>
-        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
-          {outcome.label}
-        </p>
+        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">{outcome.label}</p>
         <p className="font-mono text-4xl font-extrabold tabular-nums mb-2" style={{ color: 'hsl(var(--gold))' }}>
           {run.score.toLocaleString()}
         </p>
-        {myRank && <p className="text-xs font-bold text-muted-foreground">Today's rank: #{myRank}</p>}
+        {run.dungeon_cleared && (
+          <div className="flex items-center justify-center gap-1 mt-2">
+            {[1,2,3].map(s => (
+              <Star
+                key={s}
+                className={cn('w-6 h-6', s <= stars ? 'fill-current' : 'opacity-30')}
+                style={{ color: 'hsl(var(--gold))' }}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -98,11 +114,47 @@ export default function RuneDelveResultsPage() {
         })}
       </div>
 
+      {/* Top scores for this level */}
+      {topRuns && topRuns.length > 0 && (
+        <div className="glass-card p-3">
+          <h3 className="font-bold text-[12px] mb-2 flex items-center gap-1.5"><Trophy className="w-3.5 h-3.5 text-gold" /> Top scores · Level {levelNumber}</h3>
+          <div className="space-y-1.5">
+            {topRuns.slice(0, 5).map((r: any) => (
+              <div key={r.id} className="flex items-center gap-2 text-[11px]">
+                <span className="w-4 font-mono font-bold text-muted-foreground">#{r.rank}</span>
+                <span className="flex-1 truncate font-semibold">{r.hero?.hero_name ?? 'Hero'}</span>
+                <span className="font-mono font-bold tabular-nums" style={{ color: 'hsl(var(--gold))' }}>{r.score.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Action bar */}
       <div className="grid grid-cols-2 gap-2">
-        <Link to="/rune-delve/leaderboard" className="h-11 rounded-xl bg-primary/15 text-primary flex items-center justify-center text-xs font-bold btn-press gap-1.5">
-          <Trophy className="w-4 h-4" /> Leaderboard
-        </Link>
-        <Link to="/rune-delve" className="h-11 rounded-xl bg-muted/40 flex items-center justify-center text-xs font-bold btn-press">Done</Link>
+        <button
+          onClick={() => navigate(`/rune-delve/play/${levelNumber}`)}
+          className="h-11 rounded-xl bg-muted/40 flex items-center justify-center text-xs font-bold btn-press"
+        >
+          Retry
+        </button>
+        {run.dungeon_cleared && nextUnlocked ? (
+          <button
+            onClick={() => navigate(`/rune-delve/play/${nextLevel}`)}
+            className="h-11 rounded-xl font-extrabold text-xs btn-press flex items-center justify-center gap-1.5"
+            style={{
+              background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)))',
+              color: 'white',
+              boxShadow: 'var(--shadow-glow)',
+            }}
+          >
+            Next Level <ChevronRight className="w-4 h-4" />
+          </button>
+        ) : (
+          <Link to="/rune-delve/levels" className="h-11 rounded-xl bg-primary/15 text-primary flex items-center justify-center text-xs font-bold btn-press gap-1.5">
+            Level Map
+          </Link>
+        )}
       </div>
     </div>
   );
