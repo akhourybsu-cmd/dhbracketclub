@@ -6,6 +6,8 @@ export interface ScoreInputs {
   longestChain: number;
   cleared: boolean;
   rogueBonus?: boolean; // applies +50% if rogue and chain>=5 was used
+  /** Band 4: secondary objective satisfied — flat +250 line item. */
+  secondaryBonus?: boolean;
 }
 
 export interface ScoreBreakdown {
@@ -16,6 +18,7 @@ export interface ScoreBreakdown {
   chainPts: number;
   clearBonus: number;
   rogueBonus: number;
+  secondaryBonus: number;
   total: number;
 }
 
@@ -26,10 +29,11 @@ export function calculateScore(i: ScoreInputs): ScoreBreakdown {
   const turnsPts = Math.max(0, i.turnsRemaining) * 50;
   const chainPts = i.longestChain * 25;
   const clearBonus = i.cleared ? 500 : 0;
-  let total = damage + enemiesPts + hpPts + turnsPts + chainPts + clearBonus;
+  const secondaryBonus = i.secondaryBonus ? 250 : 0;
+  let total = damage + enemiesPts + hpPts + turnsPts + chainPts + clearBonus + secondaryBonus;
   const rogueBonus = i.rogueBonus ? Math.round(total * 0.05) : 0;
   total += rogueBonus;
-  return { damage, enemiesPts, hpPts, turnsPts, chainPts, clearBonus, rogueBonus, total };
+  return { damage, enemiesPts, hpPts, turnsPts, chainPts, clearBonus, rogueBonus, secondaryBonus, total };
 }
 
 // XP earned scales with score, capped to keep progression gentle.

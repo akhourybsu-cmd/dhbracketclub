@@ -14,6 +14,10 @@ interface Props {
  * One-time intro modal for a brand-new mechanic. Designed for a 411px-wide
  * phone first: oversized icon, single-line title, one short rule, a clear
  * primary CTA. Avoids tutorial walls — players read this once and move on.
+ *
+ * IMPORTANT: This is intro-only. The play page only mounts it when
+ * `introMechanicForLevel(n)` returns non-null — i.e. on band-opener levels
+ * (26, 51, 76, 101, 126). Combine/layered levels never re-trigger it.
  */
 export function MechanicIntroSheet({ open, onOpenChange, mechanicId, onBegin, levelNumber }: Props) {
   const m = getMechanic(mechanicId);

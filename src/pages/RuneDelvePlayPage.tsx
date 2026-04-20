@@ -27,7 +27,7 @@ import {
   type CorruptionState,
 } from '@/lib/runedelve/corruptedTiles';
 import { secondaryMet, secondaryShort, secondaryLabel, type SecondaryObjective } from '@/lib/runedelve/layeredGoals';
-import { getBossRule, applyBossTurnEffects, type BossRuleId } from '@/lib/runedelve/bossRules';
+import { getBossRule, type BossRuleId } from '@/lib/runedelve/bossRules';
 import { Crown, Target } from 'lucide-react';
 import { RuneBoard } from '@/components/runedelve/RuneBoard';
 import { EnemyDisplay } from '@/components/runedelve/EnemyDisplay';
@@ -133,6 +133,16 @@ export default function RuneDelvePlayPage() {
     const { next, resolution } = applyChain(combat, type, chain.length, hero.class, bossRule);
     if (resolution.enemyKills.length) setFlashId(resolution.enemyKills[0]);
 
+    // Last Stand feedback: red chain landed but the boss is shielded → 0 dmg.
+    if (
+      bossRule === 'last_stand' &&
+      type === 'red' &&
+      resolution.damageDealt === 0 &&
+      combat.enemies.some(e => e.hp > 0)
+    ) {
+      toast('🛡️ Boss is shielded — defeat the others first', { duration: 1600 });
+    }
+
     // Apply corruption: HP cost for matching corrupted cells, then strip them.
     let nextCorruption = corruption;
     if (corruptionActive && corruption.cells.size) {
@@ -147,10 +157,10 @@ export default function RuneDelvePlayPage() {
       nextCorruption = r.next;
     }
 
-    let afterEnemies = next.enemies.some(e => e.hp > 0)
+    // enemiesAttack already runs applyBossTurnEffects internally — do NOT call it again here.
+    const afterEnemies = next.enemies.some(e => e.hp > 0)
       ? enemiesAttack(next, telegraphActive, bossRule)
       : endTurn(next);
-    if (bossRule) afterEnemies = applyBossTurnEffects(afterEnemies, bossRule);
     if ((afterEnemies as any).heavyFired) toast.error('⚡ Heavy strike!', { duration: 1200 });
     const newGrid = resolveBoard(grid, chain, refillRng, seals);
 
@@ -184,10 +194,10 @@ export default function RuneDelvePlayPage() {
       toast.info('Ability not ready — fill mana orbs first.');
       return;
     }
-    let after = next.enemies.some(e => e.hp > 0)
+    // enemiesAttack already runs applyBossTurnEffects internally.
+    const after = next.enemies.some(e => e.hp > 0)
       ? enemiesAttack(next, telegraphActive, bossRule)
       : endTurn(next);
-    if (bossRule) after = applyBossTurnEffects(after, bossRule);
     if ((after as any).heavyFired) toast.error('⚡ Heavy strike!', { duration: 1200 });
     // Ability still consumes a turn — corruption advances.
     if (corruptionActive && corruption.sources.size) {
@@ -211,6 +221,9 @@ export default function RuneDelvePlayPage() {
       longestChain: final.longestChain,
       cleared,
       rogueBonus: final.rogueBonusTriggered && hero.class === 'rogue',
+      secondaryBonus: cleared && secondaryObjective
+        ? secondaryMet(secondaryObjective, final, level.turn_limit)
+        : false,
     });
     const xp = xpForRun(breakdown.total, cleared);
     const reason: 'cleared' | 'defeated' | 'timeout' = cleared ? 'cleared' : final.hp <= 0 ? 'defeated' : 'timeout';
