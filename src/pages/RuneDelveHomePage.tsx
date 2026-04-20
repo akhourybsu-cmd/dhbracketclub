@@ -22,6 +22,18 @@ export default function RuneDelveHomePage() {
   const ensureHero = useEnsureHero();
   const [picking, setPicking] = useState<HeroClass | null>(null);
   const [heroName, setHeroName] = useState('');
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  // First-visit auto-open of help sheet (after hero exists).
+  useEffect(() => {
+    if (!hero) return;
+    try {
+      if (!localStorage.getItem(HELP_SEEN_KEY)) {
+        setHelpOpen(true);
+        localStorage.setItem(HELP_SEEN_KEY, '1');
+      }
+    } catch {}
+  }, [hero]);
 
   // First-time hero creation: name + class
   if (!heroLoading && user && !hero) {
