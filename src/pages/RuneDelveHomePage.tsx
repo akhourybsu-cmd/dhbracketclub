@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Sparkles, Trophy, Flame, ChevronRight, Swords } from 'lucide-react';
 import { useRuneDelveHero, useEnsureHero } from '@/hooks/useRuneDelveHero';
 import { useTodayDungeon, useMyTodayRun, useDailyLeaderboard } from '@/hooks/useRuneDelve';
-import { CLASS_LIST, getClass, levelFromXp, type HeroClass } from '@/lib/runedelve/classConfig';
+import { CLASS_LIST, getClass, levelFromXp, titleForLevel, type HeroClass } from '@/lib/runedelve/classConfig';
 import { ClassBadge } from '@/components/runedelve/ClassBadge';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -18,45 +18,66 @@ export default function RuneDelveHomePage() {
   const { data: leaderboard } = useDailyLeaderboard(dungeon?.id);
   const ensureHero = useEnsureHero();
   const [picking, setPicking] = useState<HeroClass | null>(null);
+  const [heroName, setHeroName] = useState('');
 
-  // First-time class selection
+  // First-time hero creation: name + class
   if (!heroLoading && user && !hero) {
+    const trimmed = heroName.trim();
+    const canBegin = !!picking && trimmed.length >= 2 && !ensureHero.isPending;
     return (
       <div className="space-y-5 pb-8">
         <Link to="/compete" className="back-link">← Back to Compete</Link>
         <div className="text-center space-y-2">
           <h1 className="page-header-title flex items-center gap-2 justify-center">
-            <Sparkles className="w-5 h-5 text-primary" /> Choose your hero
+            <Sparkles className="w-5 h-5 text-primary" /> Forge your hero
           </h1>
-          <p className="text-xs text-muted-foreground">Pick a class to enter the daily dungeon. You can change later.</p>
+          <p className="text-xs text-muted-foreground px-4">Name your champion and choose a class. Your hero persists across every daily delve.</p>
         </div>
-        <div className="grid grid-cols-1 gap-2.5">
-          {CLASS_LIST.map(c => (
-            <button
-              key={c.id}
-              onClick={() => setPicking(c.id)}
-              className={cn(
-                'glass-card p-4 text-left flex items-center gap-3 btn-press',
-                picking === c.id && 'border-primary/50',
-              )}
-              style={picking === c.id ? { boxShadow: 'var(--shadow-glow)' } : undefined}
-            >
-              <ClassBadge cls={c.id} size="lg" />
-              <div className="flex-1 min-w-0">
-                <p className="font-extrabold text-[14px]">{c.name} <span className="text-xs">{c.emoji}</span></p>
-                <p className="text-[11px] text-muted-foreground">{c.passive}</p>
-                <p className="text-[10px] mt-0.5" style={{ color: `hsl(var(--${c.color}))` }}>
-                  ⚡ {c.abilityName}: {c.abilityDesc}
-                </p>
-              </div>
-            </button>
-          ))}
+
+        <div className="glass-card p-4 space-y-2">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Hero name</label>
+          <input
+            value={heroName}
+            onChange={e => setHeroName(e.target.value)}
+            placeholder="e.g. Thalia Stormvein"
+            maxLength={24}
+            autoFocus
+            className="form-input w-full px-3 text-base font-bold"
+          />
+          <p className="text-[10px] text-muted-foreground">{trimmed.length}/24 · You can rename later.</p>
         </div>
+
+        <div className="space-y-2">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">Choose a class</p>
+          <div className="grid grid-cols-1 gap-2.5">
+            {CLASS_LIST.map(c => (
+              <button
+                key={c.id}
+                onClick={() => setPicking(c.id)}
+                className={cn(
+                  'glass-card p-4 text-left flex items-center gap-3 btn-press',
+                  picking === c.id && 'border-primary/50',
+                )}
+                style={picking === c.id ? { boxShadow: 'var(--shadow-glow)' } : undefined}
+              >
+                <ClassBadge cls={c.id} size="lg" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-extrabold text-[14px]">{c.name} <span className="text-xs">{c.emoji}</span></p>
+                  <p className="text-[11px] text-muted-foreground">{c.passive}</p>
+                  <p className="text-[10px] mt-0.5" style={{ color: `hsl(var(--${c.color}))` }}>
+                    ⚡ {c.abilityName}: {c.abilityDesc}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <button
-          disabled={!picking || ensureHero.isPending}
+          disabled={!canBegin}
           onClick={async () => {
-            if (!picking) return;
-            await ensureHero.mutateAsync({ cls: picking });
+            if (!picking || trimmed.length < 2) return;
+            await ensureHero.mutateAsync({ cls: picking, hero_name: trimmed });
           }}
           className="w-full h-12 rounded-xl font-extrabold text-sm btn-press disabled:opacity-50"
           style={{
@@ -65,7 +86,7 @@ export default function RuneDelveHomePage() {
             boxShadow: 'var(--shadow-glow)',
           }}
         >
-          {ensureHero.isPending ? 'Summoning…' : 'Begin your delve'}
+          {ensureHero.isPending ? 'Summoning…' : trimmed.length < 2 ? 'Name your hero' : !picking ? 'Pick a class' : `Begin ${trimmed}'s journey`}
         </button>
       </div>
     );
@@ -95,7 +116,8 @@ export default function RuneDelveHomePage() {
             <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-primary/15 text-primary tracking-wider">DAILY</span>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</span>
           </div>
-          <h2 className="text-xl font-extrabold tracking-tight mb-1">Rune Delve</h2>
+          <h2 className="text-xl font-extrabold tracking-tight mb-0.5">Rune Delve</h2>
+          <p className="text-[11px] font-bold text-primary/90 mb-2">Welcome back, {hero.hero_name}</p>
           <p className="text-xs text-muted-foreground mb-3">
             Defeat {dungeon.enemy_config?.length ?? 2} enemies in {dungeon.max_turns} turns. Chain runes to attack, charge mana, heal, and guard.
           </p>
@@ -132,7 +154,8 @@ export default function RuneDelveHomePage() {
         <div className="glass-card p-4 flex items-center gap-3 btn-press">
           <ClassBadge cls={hero.class} size="lg" />
           <div className="flex-1 min-w-0">
-            <p className="font-extrabold text-[14px] truncate">{hero.hero_name} <span className="text-[10px] text-muted-foreground font-bold">· {cls.name}</span></p>
+            <p className="font-extrabold text-[14px] truncate">{hero.hero_name}{titleForLevel(lvl.level) && <span className="text-[10px] font-bold text-primary ml-1">· {titleForLevel(lvl.level)}</span>}</p>
+            <p className="text-[10px] text-muted-foreground font-bold mt-0.5">{cls.name} · Lv {lvl.level}</p>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-[10px] font-bold text-muted-foreground">Lv {lvl.level}</span>
               <div className="flex-1 h-1.5 rounded-full bg-muted/50 overflow-hidden">

@@ -145,12 +145,12 @@ export function useDailyLeaderboard(dungeonId: string | undefined) {
           .from('profiles').select('id, display_name, avatar_url').in('id', userIds);
         profiles = Object.fromEntries((pdata ?? []).map((p: any) => [p.id, p]));
       }
-      // Fetch hero classes/streaks for badge display.
-      let heroes: Record<string, { class: string; current_streak: number; level: number }> = {};
+      // Fetch hero identity for richer leaderboard rows.
+      let heroes: Record<string, { class: string; current_streak: number; level: number; hero_name: string; cosmetic_title: string | null }> = {};
       if (userIds.length) {
         const { data: hdata } = await (supabase as any)
           .from('rune_delve_heroes')
-          .select('user_id, class, current_streak, level')
+          .select('user_id, class, current_streak, level, hero_name, cosmetic_title')
           .in('user_id', userIds);
         heroes = Object.fromEntries((hdata ?? []).map((h: any) => [h.user_id, h]));
       }

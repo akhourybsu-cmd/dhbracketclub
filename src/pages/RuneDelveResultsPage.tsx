@@ -1,14 +1,18 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Trophy, Swords, Heart, Clock, Sparkles } from 'lucide-react';
 import { useTodayDungeon, useMyTodayRun, useDailyLeaderboard } from '@/hooks/useRuneDelve';
+import { useRuneDelveHero } from '@/hooks/useRuneDelveHero';
 import { useAuth } from '@/contexts/AuthContext';
 import { Confetti } from '@/components/Confetti';
+import { ClassBadge } from '@/components/runedelve/ClassBadge';
+import { getClass, levelFromXp } from '@/lib/runedelve/classConfig';
 import { useEffect, useState } from 'react';
 
 export default function RuneDelveResultsPage() {
   const { user } = useAuth();
   const { data: dungeon } = useTodayDungeon();
   const { data: run } = useMyTodayRun(dungeon?.id);
+  const { data: hero } = useRuneDelveHero();
   const { data: leaderboard } = useDailyLeaderboard(dungeon?.id);
   const [showConfetti, setShowConfetti] = useState(false);
   const myRank = leaderboard?.find(l => l.user_id === user?.id)?.rank;
@@ -50,6 +54,13 @@ export default function RuneDelveResultsPage() {
           : 'linear-gradient(160deg, hsl(var(--primary) / 0.10), hsl(var(--accent) / 0.04))',
         borderColor: run.dungeon_cleared ? 'hsl(var(--gold) / 0.3)' : undefined,
       }}>
+        {hero && (
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <ClassBadge cls={hero.class} size="sm" />
+            <p className="text-[12px] font-extrabold truncate max-w-[200px]">{hero.hero_name}</p>
+            <span className="text-[10px] font-bold text-muted-foreground">Lv {levelFromXp(hero.xp).level} {getClass(hero.class).name}</span>
+          </div>
+        )}
         <p className="text-3xl mb-1">{run.dungeon_cleared ? '🏆' : '🗝️'}</p>
         <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
           {run.dungeon_cleared ? 'Dungeon Cleared' : 'Run Complete'}
