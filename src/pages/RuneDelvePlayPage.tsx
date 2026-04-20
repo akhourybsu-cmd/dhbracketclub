@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, HelpCircle, Trophy, Skull, Hourglass } from 'lucide-react';
 import { useRuneDelveHero } from '@/hooks/useRuneDelveHero';
 import { useTodayDungeon, useMyTodayRun, useSubmitRun } from '@/hooks/useRuneDelve';
 import { mulberry32 } from '@/lib/runedelve/prng';
@@ -13,6 +13,7 @@ import { levelFromXp } from '@/lib/runedelve/classConfig';
 import { RuneBoard } from '@/components/runedelve/RuneBoard';
 import { EnemyDisplay } from '@/components/runedelve/EnemyDisplay';
 import { HeroStatusBar } from '@/components/runedelve/HeroStatusBar';
+import { HowToPlaySheet } from '@/components/runedelve/HowToPlaySheet';
 import { useUpdateHero } from '@/hooks/useRuneDelveHero';
 import { format } from 'date-fns';
 
@@ -29,6 +30,8 @@ export default function RuneDelvePlayPage() {
   const [rngTick, setRngTick] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [flashId, setFlashId] = useState<string | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [endState, setEndState] = useState<null | { cleared: boolean; reason: 'cleared' | 'defeated' | 'timeout'; score: number }>(null);
 
   // Build deterministic state on first load.
   useEffect(() => {
