@@ -6,6 +6,9 @@ import { Confetti } from '@/components/Confetti';
 import { ClassBadge } from '@/components/runedelve/ClassBadge';
 import { getClass, levelFromXp } from '@/lib/runedelve/classConfig';
 import { starsFor } from '@/lib/runedelve/levelGenerator';
+import { mechanicsForLevel, getMechanic, type MechanicId } from '@/lib/runedelve/mechanics';
+import { getBossRule, type BossRuleId } from '@/lib/runedelve/bossRules';
+import { secondaryLabel, type SecondaryObjective } from '@/lib/runedelve/layeredGoals';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
