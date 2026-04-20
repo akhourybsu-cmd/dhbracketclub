@@ -1,0 +1,196 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+
+export interface RuneWallet {
+  user_id: string;
+  shards: number;
+  lifetime_shards_earned: number;
+  slots_unlocked: number;
+}
+
+export function useRuneWallet() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['rune-delve-wallet', user?.id],
+    enabled: !!user,
+    staleTime: 30_000,
+    queryFn: async (): Promise<RuneWallet | null> => {
+      if (!user) return null;
+      const { data, error } = await (supabase as any)
+        .from('rune_delve_wallet')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error && error.code !== 'PGRST116') throw error;
+      if (data) return data as RuneWallet;
+      // Lazy create with defaults.
+      const { data: created, error: insErr } = await (supabase as any)
+        .from('rune_delve_wallet')
+        .insert({ user_id: user.id, shards: 0, lifetime_shards_earned: 0, slots_unlocked: 2 })
+        .select()
+        .single();
+      if (insErr) throw insErr;
+      return created as RuneWallet;
+    },
+  });
+}
+
+export function useEarnShards() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (amount: number): Promise<RuneWallet> => {
+      if (!user) throw new Error('Not authenticated');
+      if (amount <= 0) throw new Error('Amount must be positive');
+      // Read-modify-write — RLS already scopes to this user.
+      const { data: current } = await (supabase as any)
+        .from('rune_delve_wallet')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      const start: RuneWallet = current ?? { user_id: user.id, shards: 0, lifetime_shards_earned: 0, slots_unlocked: 2 };
+      const { data, error } = await (supabase as any)
+        .from('rune_delve_wallet')
+        .upsert({
+          user_id: user.id,
+          shards: start.shards + amount,
+          lifetime_shards_earned: start.lifetime_shards_earned + amount,
+          slots_unlocked: start.slots_unlocked,
+        }, { onConflict: 'user_id' })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as RuneWallet;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['rune-delve-wallet', user?.id] });
+    },
+  });
+}
+
+export function useSpendShards() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (amount: number): Promise<RuneWallet> => {
+      if (!user) throw new Error('Not authenticated');
+      const { data: current } = await (supabase as any)
+        .from('rune_delve_wallet')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (!current || current.shards < amount) throw new Error('Not enough Rune Shards');
+      const { data, error } = await (supabase as any)
+        .from('rune_delve_wallet')
+        .update({ shards: current.shards - amount })
+        .eq('user_id', user.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as RuneWallet;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['rune-delve-wallet', user?.id] });
+    },
+  });
+}
+
+export function useUnlockSlot() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (newSlotCount: number): Promise<RuneWallet> => {
+      if (!user) throw new Error('Not authenticated');
+      const { data, error } = await (supabase as any)
+        .from('rune_delve_wallet')
+        .update({ slots_unlocked: newSlotCount })
+        .eq('user_id', user.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as RuneWallet;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['rune-delve-wallet', user?.id] });
+    },
+  });
+}
+
+// Failure tracker — drives diminishing-returns curve. Resets on clear.
+export interface FailureRow {
+  level_number: number;
+  failure_count: number;
+  last_awarded_at: string;
+}
+
+export function useFailureRow(levelNumber: number | null) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['rune-delve-failure', user?.id, levelNumber],
+    enabled: !!user && levelNumber != null,
+    staleTime: 0,
+    queryFn: async (): Promise<FailureRow | null> => {
+      if (!user || levelNumber == null) return null;
+      const { data } = await (supabase as any)
+        .from('rune_delve_failure_rewards')
+        .select('level_number, failure_count, last_awarded_at')
+        .eq('user_id', user.id)
+        .eq('level_number', levelNumber)
+        .maybeSingle();
+      return data as FailureRow | null;
+    },
+  });
+}
+
+export function useBumpFailure() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (levelNumber: number): Promise<number> => {
+      if (!user) throw new Error('Not authenticated');
+      const { data: existing } = await (supabase as any)
+        .from('rune_delve_failure_rewards')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('level_number', levelNumber)
+        .maybeSingle();
+      const next = (existing?.failure_count ?? 0) + 1;
+      const { error } = await (supabase as any)
+        .from('rune_delve_failure_rewards')
+        .upsert({
+          user_id: user.id,
+          level_number: levelNumber,
+          failure_count: next,
+          last_awarded_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,level_number' });
+      if (error) throw error;
+      return next;
+    },
+    onSuccess: (_, levelNumber) => {
+      qc.invalidateQueries({ queryKey: ['rune-delve-failure', user?.id, levelNumber] });
+    },
+  });
+}
+
+export function useResetFailure() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (levelNumber: number) => {
+      if (!user) throw new Error('Not authenticated');
+      // Just zero it — don't delete, so we keep timestamps for analytics later.
+      await (supabase as any)
+        .from('rune_delve_failure_rewards')
+        .upsert({
+          user_id: user.id,
+          level_number: levelNumber,
+          failure_count: 0,
+          last_awarded_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,level_number' });
+    },
+    onSuccess: (_, levelNumber) => {
+      qc.invalidateQueries({ queryKey: ['rune-delve-failure', user?.id, levelNumber] });
+    },
+  });
+}
