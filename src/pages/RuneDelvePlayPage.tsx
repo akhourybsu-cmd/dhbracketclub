@@ -452,12 +452,25 @@ function checkObjective(
   };
   const base = isRunOver(state);
   if (type === 'survive') {
+    // Defeat is defeat (HP gone). Surviving the full turn budget = clear.
+    // ALSO: if the player happens to wipe every enemy, that's a clear too —
+    // otherwise the run drags on with nothing to do.
     if (state.hp <= 0) return { over: true, cleared: false };
+    if (state.enemies.every(e => e.hp <= 0)) return wrap({ over: true, cleared: true });
     if (state.turnsRemaining <= 0) return wrap({ over: true, cleared: true });
     return { over: false, cleared: false };
   }
   if (type === 'reach_score') {
-    if (state.totalDamage * 1 + state.enemiesDefeated * 200 + state.longestChain * 25 >= target) {
+    // Use the same shape as calculateScore (without clear/secondary/rogue
+    // bonuses, which only apply at finalize time). Keeps the in-play check
+    // honest with the score the player actually sees on the results screen.
+    const liveScore =
+      state.totalDamage +
+      state.enemiesDefeated * 200 +
+      Math.max(0, state.hp) * 5 +
+      Math.max(0, state.turnsRemaining) * 50 +
+      state.longestChain * 25;
+    if (liveScore >= target) {
       return wrap({ over: true, cleared: true });
     }
     return wrap(base);

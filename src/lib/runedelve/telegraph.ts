@@ -29,12 +29,17 @@ export function applyInitialIntents(enemies: Enemy[], seed: number, level: numbe
   const rng = mulberry32(seed ^ 0x7e1e9);
   const baseCharge = level >= 65 ? 3 : 2;
   return enemies.map((e, i) => {
-    // Stagger so the first enemy fires soonest, others arrive later.
+    // Stagger so the first enemy fires soonest, others arrive later. We clamp
+    // the result to a MINIMUM of 1 so no enemy starts at 0 (which would let
+    // them heavy-strike on the player's very first action — felt unfair and
+    // unreadable in playtests).
     const offset = i === 0 ? 0 : rngInt(rng, 2); // 0 or 1
+    const raw = baseCharge - (i % (baseCharge + 1)) + offset;
+    const clamped = Math.max(1, Math.min(baseCharge, raw || baseCharge));
     return {
       ...e,
       intentMax: baseCharge,
-      intent: Math.min(baseCharge, baseCharge - i % (baseCharge + 1) + offset) || baseCharge,
+      intent: clamped,
     };
   });
 }
