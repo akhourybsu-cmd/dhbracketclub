@@ -2,6 +2,8 @@
 import { mulberry32, rngInt } from './prng';
 import type { Enemy } from './dungeonGenerator';
 import { mechanicsForLevel, introMechanicForLevel, type MechanicId } from './mechanics';
+import { rollSecondaryObjective, type SecondaryObjective } from './layeredGoals';
+import { bossRuleForLevel, type BossRuleId } from './bossRules';
 
 export type ObjectiveType = 'defeat_all' | 'survive' | 'reach_score' | 'defeat_elite';
 
@@ -25,6 +27,10 @@ export interface LevelDefinition {
   modifiers: {
     mechanics?: MechanicId[];
     intro_mechanic?: MechanicId | null;
+    /** Band 4 — present on levels with the multi_objective mechanic. */
+    secondary_objective?: SecondaryObjective | null;
+    /** Band 5 — present on milestone boss levels (130, 140, 150). */
+    boss_rule?: BossRuleId | null;
     [k: string]: unknown;
   };
 }
