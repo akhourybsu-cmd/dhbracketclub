@@ -42,6 +42,25 @@ export function chapterFor(level: number): number {
   return Math.max(1, Math.ceil(level / 50));
 }
 
+// Fantasy chapter names — only used for flavor.
+const CHAPTER_NAMES: Record<number, { name: string; subtitle: string }> = {
+  1: { name: 'The Ember Caves',      subtitle: 'Where every delver begins.' },
+  2: { name: 'The Crystal Hollow',   subtitle: 'Frost and cursed steel await.' },
+  3: { name: 'The Shattered Vault',  subtitle: 'Ancient drakes stir below.' },
+};
+export function chapterMeta(chapter: number): { name: string; subtitle: string } {
+  return CHAPTER_NAMES[chapter] ?? { name: `Depth ${chapter}`, subtitle: 'Uncharted runes.' };
+}
+
+// Milestone levels worth highlighting on the map (boss-like beats).
+export function isMilestoneLevel(level: number): boolean {
+  if (level === 1) return false;
+  return level % 10 === 0 || level % 50 === 1; // every 10, plus chapter openers
+}
+export function isChapterOpener(level: number): boolean {
+  return level > 1 && (level - 1) % 50 === 0;
+}
+
 // 1..5 difficulty tier — visible label for the player.
 export function difficultyTierFor(level: number): number {
   if (level <= 10) return 1;

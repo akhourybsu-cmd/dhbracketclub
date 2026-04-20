@@ -4,7 +4,7 @@ import { Sparkles, Trophy, Flame, ChevronRight, Swords, BookOpen, Map } from 'lu
 import { useRuneDelveHero, useEnsureHero } from '@/hooks/useRuneDelveHero';
 import { useMyProgress, useCampaignLeaderboard } from '@/hooks/useRuneDelveCampaign';
 import { CLASS_LIST, getClass, levelFromXp, titleForLevel, type HeroClass } from '@/lib/runedelve/classConfig';
-import { chapterFor } from '@/lib/runedelve/levelGenerator';
+import { chapterFor, chapterMeta } from '@/lib/runedelve/levelGenerator';
 import { ClassBadge } from '@/components/runedelve/ClassBadge';
 import { HowToPlaySheet } from '@/components/runedelve/HowToPlaySheet';
 import { useEffect, useState } from 'react';
@@ -122,12 +122,19 @@ export default function RuneDelveHomePage() {
   const xpPct = Math.round((lvl.intoLevel / lvl.needed) * 100);
   const currentLevel = progress.highest_unlocked_level;
   const chapter = chapterFor(currentLevel);
+  const chapMeta = chapterMeta(chapter);
   const chapterStart = (chapter - 1) * 50 + 1;
   const chapterEnd = chapter * 50;
   const completedInChapter = Math.max(0, Math.min(50, progress.highest_completed_level - chapterStart + 1));
   const chapterPct = Math.round((completedInChapter / 50) * 100);
-  const myRank = leaderboard?.find(l => l.user_id === user?.id)?.rank;
-  const top3 = (leaderboard ?? []).slice(0, 3);
+  const sortedBoard = leaderboard ?? [];
+  const myRank = sortedBoard.find(l => l.user_id === user?.id)?.rank;
+  const top3 = sortedBoard.slice(0, 3);
+  // Friend comparison teaser — closest player ahead of you (if any).
+  const ahead = sortedBoard.find(
+    l => l.user_id !== user?.id && l.highest_completed_level > (progress.highest_completed_level ?? 0),
+  );
+  const aheadGap = ahead ? ahead.highest_completed_level - (progress.highest_completed_level ?? 0) : 0;
 
   return (
     <div className="space-y-4 pb-8">
@@ -139,11 +146,12 @@ export default function RuneDelveHomePage() {
           background: 'linear-gradient(160deg, hsl(var(--primary) / 0.12), hsl(var(--accent) / 0.06))',
           borderColor: 'hsl(var(--primary) / 0.2)',
         }}>
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-primary/15 text-primary tracking-wider">CHAPTER {chapter}</span>
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Levels {chapterStart}–{chapterEnd}</span>
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L{chapterStart}–{chapterEnd}</span>
           </div>
-          <h2 className="text-xl font-extrabold tracking-tight mb-0.5">Rune Delve</h2>
+          <h2 className="text-xl font-extrabold tracking-tight leading-tight">{chapMeta.name}</h2>
+          <p className="text-[11px] text-muted-foreground mb-1">{chapMeta.subtitle}</p>
           <p className="text-[11px] font-bold text-primary/90 mb-3">Welcome back, {hero.hero_name}</p>
 
           <div className="space-y-2 mb-3">
@@ -152,7 +160,7 @@ export default function RuneDelveHomePage() {
               <span className="font-mono font-bold tabular-nums">{completedInChapter}/50</span>
             </div>
             <div className="h-1.5 rounded-full bg-muted/50 overflow-hidden">
-              <div className="h-full bg-primary" style={{ width: `${chapterPct}%` }} />
+              <div className="h-full bg-primary transition-all" style={{ width: `${chapterPct}%` }} />
             </div>
           </div>
 
@@ -208,6 +216,14 @@ export default function RuneDelveHomePage() {
             <h3 className="font-bold text-[13px] flex items-center gap-1.5"><Trophy className="w-3.5 h-3.5 text-gold" /> Campaign Leaders</h3>
             {myRank && <span className="text-[10px] text-muted-foreground">You: #{myRank}</span>}
           </div>
+          {ahead && (
+            <div className="mb-2 px-2.5 py-1.5 rounded-lg bg-accent/10 border border-accent/25 flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold text-accent truncate">
+                {aheadGap === 1 ? '1 level' : `${aheadGap} levels`} behind {ahead.hero?.hero_name ?? ahead.profile.display_name ?? 'a rival'}
+              </span>
+              <ChevronRight className="w-3.5 h-3.5 text-accent shrink-0" />
+            </div>
+          )}
           {top3.length === 0 ? (
             <p className="text-[11px] text-center text-muted-foreground py-2">Be the first to delve.</p>
           ) : (
