@@ -189,7 +189,12 @@ export default function RuneDelveHomePage() {
         <div className="glass-card p-4 flex items-center gap-3 btn-press">
           <ClassBadge cls={hero.class} size="lg" />
           <div className="flex-1 min-w-0">
-            <p className="font-extrabold text-[14px] truncate">{hero.hero_name}{titleForLevel(lvl.level) && <span className="text-[10px] font-bold text-primary ml-1">· {titleForLevel(lvl.level)}</span>}</p>
+            <p className="font-extrabold text-[14px] truncate">{hero.hero_name}</p>
+            {(hero.cosmetic_title ?? titleForLevel(lvl.level, hero.class)) && (
+              <p className="text-[10px] font-bold text-primary truncate">
+                ✦ {hero.cosmetic_title ?? titleForLevel(lvl.level, hero.class)}
+              </p>
+            )}
             <p className="text-[10px] text-muted-foreground font-bold mt-0.5">{cls.name} · Lv {lvl.level}</p>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-[10px] font-bold text-muted-foreground">Lv {lvl.level}</span>

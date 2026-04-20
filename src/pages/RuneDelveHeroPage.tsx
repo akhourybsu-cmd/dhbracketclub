@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Flame, Trophy } from 'lucide-react';
+import { ArrowLeft, Flame, Trophy, Lock, Sparkles } from 'lucide-react';
 import { useRuneDelveHero, useUpdateHero } from '@/hooks/useRuneDelveHero';
-import { CLASS_LIST, getClass, levelFromXp, titleForLevel, type HeroClass } from '@/lib/runedelve/classConfig';
+import { CLASS_LIST, getClass, levelFromXp, titleForLevel, titleLadderFor, type HeroClass } from '@/lib/runedelve/classConfig';
 import { ClassBadge } from '@/components/runedelve/ClassBadge';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -19,12 +19,17 @@ export default function RuneDelveHeroPage() {
   const cls = getClass(hero.class);
   const lvl = levelFromXp(hero.xp);
   const xpPct = Math.round((lvl.intoLevel / lvl.needed) * 100);
-  const title = titleForLevel(lvl.level);
+  const title = hero.cosmetic_title ?? titleForLevel(lvl.level, hero.class);
+  const ladder = titleLadderFor(hero.class);
 
   const save = async () => {
     const patch: any = {};
     if (name && name !== hero.hero_name) patch.hero_name = name;
-    if (pickClass && pickClass !== hero.class) patch.class = pickClass;
+    if (pickClass && pickClass !== hero.class) {
+      patch.class = pickClass;
+      // Re-equip class-appropriate title at current level on class change.
+      patch.cosmetic_title = titleForLevel(lvl.level, pickClass);
+    }
     if (Object.keys(patch).length === 0) { setEditing(false); return; }
     try {
       await updateHero.mutateAsync(patch);
@@ -50,9 +55,14 @@ export default function RuneDelveHeroPage() {
             className="form-input text-center w-full mb-2 px-3"
           />
         ) : (
-          <h2 className="text-xl font-extrabold tracking-tight">{hero.hero_name}</h2>
+          <h2 className="text-xl font-extrabold tracking-tight break-words">{hero.hero_name}</h2>
         )}
-        <p className="text-[11px] font-bold text-muted-foreground mt-0.5">{cls.name} · Lv {lvl.level}{title && ` · ${title}`}</p>
+        {title && (
+          <p className="text-[12px] font-extrabold mt-1 break-words" style={{ color: 'hsl(var(--primary))' }}>
+            ✦ {title}
+          </p>
+        )}
+        <p className="text-[10px] font-bold text-muted-foreground mt-0.5 uppercase tracking-wider">{cls.name} · Lv {lvl.level}</p>
 
         <div className="mt-3">
           <div className="h-2 rounded-full bg-muted/50 overflow-hidden">
@@ -62,9 +72,9 @@ export default function RuneDelveHeroPage() {
         </div>
 
         <div className="grid grid-cols-3 gap-2 mt-4">
-          <div><p className="font-mono font-extrabold text-base tabular-nums flex items-center justify-center gap-1"><Flame className="w-3.5 h-3.5 text-gold" />{hero.current_streak}</p><p className="text-[8px] font-bold text-muted-foreground uppercase">Streak</p></div>
-          <div><p className="font-mono font-extrabold text-base tabular-nums">{hero.lifetime_runs}</p><p className="text-[8px] font-bold text-muted-foreground uppercase">Runs</p></div>
-          <div><p className="font-mono font-extrabold text-base tabular-nums">{hero.lifetime_score.toLocaleString()}</p><p className="text-[8px] font-bold text-muted-foreground uppercase">Total Score</p></div>
+          <div><p className="font-mono font-extrabold text-base tabular-nums flex items-center justify-center gap-1"><Flame className="w-3.5 h-3.5 text-gold" />{hero.current_streak}</p><p className="text-[9px] font-bold text-muted-foreground uppercase">Streak</p></div>
+          <div><p className="font-mono font-extrabold text-base tabular-nums">{hero.lifetime_runs}</p><p className="text-[9px] font-bold text-muted-foreground uppercase">Runs</p></div>
+          <div><p className="font-mono font-extrabold text-base tabular-nums">{hero.lifetime_score.toLocaleString()}</p><p className="text-[9px] font-bold text-muted-foreground uppercase">Total Score</p></div>
         </div>
       </div>
 
@@ -72,6 +82,40 @@ export default function RuneDelveHeroPage() {
         <h3 className="font-bold text-[13px] mb-2">Class · {cls.name}</h3>
         <p className="text-[11px] text-muted-foreground mb-1"><span className="font-bold text-foreground">Passive:</span> {cls.passive}</p>
         <p className="text-[11px] text-muted-foreground"><span className="font-bold text-foreground">Ability:</span> {cls.abilityName} — {cls.abilityDesc}</p>
+      </div>
+
+      {/* Class title ladder — cosmetic prestige only */}
+      <div className="glass-card p-4">
+        <h3 className="font-bold text-[13px] mb-1 flex items-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5 text-primary" /> {cls.name} Titles
+        </h3>
+        <p className="text-[10px] text-muted-foreground mb-3">Cosmetic prestige earned at milestone hero levels.</p>
+        <div className="space-y-1">
+          {ladder.map(({ level, title: t }) => {
+            const unlocked = lvl.level >= level;
+            const isCurrent = t === title;
+            return (
+              <div
+                key={level}
+                className={cn(
+                  'flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg',
+                  isCurrent && 'bg-primary/10 border border-primary/30',
+                  !unlocked && 'opacity-45',
+                )}
+              >
+                <span className="w-8 font-mono text-[10px] font-bold text-muted-foreground tabular-nums">L{level}</span>
+                <span className={cn('flex-1 text-[12px] font-bold break-words min-w-0', isCurrent && 'text-primary')}>
+                  {t}
+                </span>
+                {!unlocked ? (
+                  <Lock className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                ) : isCurrent ? (
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-primary flex-shrink-0">Equipped</span>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {editing ? (

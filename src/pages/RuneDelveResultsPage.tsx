@@ -4,7 +4,7 @@ import { useLevel, useMyLevelRun, useLevelBestScores, useMyProgress } from '@/ho
 import { useRuneDelveHero } from '@/hooks/useRuneDelveHero';
 import { Confetti } from '@/components/Confetti';
 import { ClassBadge } from '@/components/runedelve/ClassBadge';
-import { getClass, levelFromXp } from '@/lib/runedelve/classConfig';
+import { getClass, levelFromXp, titleForLevel } from '@/lib/runedelve/classConfig';
 import { starsFor } from '@/lib/runedelve/levelGenerator';
 import { mechanicsForLevel, getMechanic, type MechanicId } from '@/lib/runedelve/mechanics';
 import { getBossRule, type BossRuleId } from '@/lib/runedelve/bossRules';
@@ -78,10 +78,17 @@ export default function RuneDelveResultsPage() {
 
       <div className="glass-card p-6 text-center" style={{ background: headerBg, borderColor: headerBorder }}>
         {hero && (
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <ClassBadge cls={hero.class} size="sm" />
-            <p className="text-[12px] font-extrabold truncate max-w-[200px]">{hero.hero_name}</p>
-            <span className="text-[10px] font-bold text-muted-foreground">Lv {levelFromXp(hero.xp).level} {getClass(hero.class).name}</span>
+          <div className="space-y-1 mb-2">
+            <div className="flex items-center justify-center gap-2">
+              <ClassBadge cls={hero.class} size="sm" />
+              <p className="text-[12px] font-extrabold truncate max-w-[200px]">{hero.hero_name}</p>
+              <span className="text-[10px] font-bold text-muted-foreground">Lv {levelFromXp(hero.xp).level} {getClass(hero.class).name}</span>
+            </div>
+            {(hero.cosmetic_title ?? titleForLevel(levelFromXp(hero.xp).level, hero.class)) && (
+              <p className="text-[10px] font-extrabold text-primary">
+                ✦ {hero.cosmetic_title ?? titleForLevel(levelFromXp(hero.xp).level, hero.class)}
+              </p>
+            )}
           </div>
         )}
         <p className="text-3xl mb-1">{outcome.emoji}</p>
