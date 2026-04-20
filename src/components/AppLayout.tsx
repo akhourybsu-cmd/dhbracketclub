@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState, useCallback, useRef } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { LayoutDashboard, MessageSquareText, CalendarDays, Swords, Newspaper, User, Trophy, BarChart3, MessageCircle, Bookmark, Link2, ScrollText, Lock, FileText } from 'lucide-react';
+import { LayoutDashboard, MessageSquareText, CalendarDays, Swords, Newspaper, User, Trophy, BarChart3, MessageCircle, Bookmark, Link2, ScrollText, Lock, FileText, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -27,10 +27,11 @@ const sidebarModules = [
   { type: 'divider', label: 'Compete' },
   { path: '/compete', label: 'Compete Hub', icon: Swords },
   { path: '/drafts', label: 'Drafts', icon: Bookmark },
+  { path: '/rune-delve', label: 'Rune Delve', icon: Sparkles },
   { path: '/pickem', label: "Pick'em", icon: Trophy },
-  { path: '/lockbox', label: 'Lockbox', icon: Lock },
   { path: '/brackets', label: 'Brackets', icon: Trophy },
-  { type: 'divider', label: 'More' },
+  { type: 'divider', label: 'Other' },
+  { path: '/lockbox', label: 'Lockbox', icon: Lock },
   { path: '/polls', label: 'Polls', icon: MessageCircle },
   { path: '/rankings', label: 'Rankings', icon: BarChart3 },
   { path: '/shared', label: 'Shared Media', icon: Link2 },
