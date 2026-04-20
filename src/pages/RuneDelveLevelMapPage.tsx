@@ -102,6 +102,9 @@ export default function RuneDelveLevelMapPage() {
             const milestone = isMilestoneLevel(lvl.level_number);
             const opener = isChapterOpener(lvl.level_number);
             const objType = lvl.objective_type as ObjectiveType;
+            const lvlMechanics = mechanicsForLevel(lvl.level_number);
+            const newestMechanic = lvlMechanics.length ? getMechanic(lvlMechanics[lvlMechanics.length - 1]) : null;
+            const introId = introMechanicForLevel(lvl.level_number);
             return (
               <button
                 key={lvl.level_number}
@@ -138,9 +141,25 @@ export default function RuneDelveLevelMapPage() {
                   <Crown className="w-3.5 h-3.5 absolute top-1.5 right-1.5" style={{ color: 'hsl(var(--gold))' }} />
                 )}
 
-                {/* Chapter opener gleam */}
-                {opener && isUnlocked && (
+                {/* Chapter opener gleam (only when no mechanic icon would collide) */}
+                {opener && isUnlocked && !newestMechanic && (
                   <Sparkles className="w-3 h-3 absolute top-1.5 left-1.5" style={{ color: 'hsl(var(--accent))' }} />
+                )}
+
+                {/* Mechanic icon (top-left) — and NEW pip if this level introduces it */}
+                {newestMechanic && isUnlocked && (
+                  <span
+                    className="absolute top-1 left-1 inline-flex items-center justify-center w-4 h-4 rounded-md bg-background/70 border border-primary/30 text-[10px] leading-none"
+                    title={newestMechanic.name}
+                    aria-label={`Mechanic: ${newestMechanic.name}`}
+                  >
+                    {newestMechanic.icon}
+                  </span>
+                )}
+                {introId && isUnlocked && (
+                  <span className="absolute -top-1 -left-1 px-1 py-px rounded-sm text-[7px] font-extrabold uppercase tracking-wider bg-primary text-primary-foreground shadow">
+                    New
+                  </span>
                 )}
 
                 {/* "Next up" subtle pulse on current level */}
