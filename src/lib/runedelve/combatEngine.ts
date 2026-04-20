@@ -2,6 +2,12 @@ import type { Enemy } from './dungeonGenerator';
 import type { HeroClass } from './classConfig';
 import type { RuneType } from './dungeonGenerator';
 import { resolveEnemyAttack, tickIntents } from './telegraph';
+import {
+  applyBossTurnEffects,
+  enemyDamageMultiplier,
+  filterTargetable,
+  type BossRuleId,
+} from './bossRules';
 
 export interface CombatState {
   hp: number;
