@@ -82,7 +82,7 @@ export default function RuneDelvePlayPage() {
     }));
     if (telegraphActive) enemies = applyInitialIntents(enemies, level.generation_seed, level.level_number);
     setCombat(initialCombat(enemies, level.turn_limit));
-  }, [level, hero, sealedTilesActive, telegraphActive]);
+  }, [level, hero, sealedTilesActive, telegraphActive, corruptionActive]);
 
   // One-time intro modal for any brand-new mechanic taught at this level.
   useEffect(() => {
