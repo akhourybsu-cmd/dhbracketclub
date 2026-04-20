@@ -170,13 +170,19 @@ export function isRunOver(state: CombatState): { over: boolean; cleared: boolean
   return { over: false, cleared: false };
 }
 
-export function useAbility(state: CombatState, cls: HeroClass): { next: CombatState; ok: boolean } {
+export function useAbility(
+  state: CombatState,
+  cls: HeroClass,
+  bossRule: BossRuleId | null = null,
+): { next: CombatState; ok: boolean } {
   if (state.mana < MAX_MANA) return { next: state, ok: false };
   const next: CombatState = { ...state, mana: 0, abilityUsed: true, enemies: state.enemies.map(e => ({ ...e })) };
+  const targetable = filterTargetable(bossRule, next.enemies);
+  const targetableIds = new Set(targetable.map(e => e.id));
   if (cls === 'warrior') {
-    // Cleave: 40 dmg to all
+    // Cleave: 40 dmg to all targetable enemies (last_stand can shield the boss).
     for (const e of next.enemies) {
-      if (e.hp > 0) {
+      if (e.hp > 0 && targetableIds.has(e.id)) {
         const applied = Math.min(40, e.hp);
         e.hp -= applied;
         next.totalDamage += applied;
@@ -184,12 +190,13 @@ export function useAbility(state: CombatState, cls: HeroClass): { next: CombatSt
       }
     }
   } else if (cls === 'mage') {
-    const t = next.enemies.find(e => e.hp > 0);
+    const t = targetable[0];
     if (t) {
-      const applied = Math.min(80, t.hp);
-      t.hp -= applied;
+      const live = next.enemies.find(e => e.id === t.id)!;
+      const applied = Math.min(80, live.hp);
+      live.hp -= applied;
       next.totalDamage += applied;
-      if (t.hp <= 0) next.enemiesDefeated += 1;
+      if (live.hp <= 0) next.enemiesDefeated += 1;
     }
   } else if (cls === 'rogue') {
     next.shadowstepActive = true;
