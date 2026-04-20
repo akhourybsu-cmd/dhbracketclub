@@ -41,7 +41,7 @@ export default function RuneDelveResultsPage() {
 
   return (
     <div className="space-y-4 pb-8">
-      {showConfetti && <Confetti />}
+      <Confetti active={showConfetti} />
       <Link to="/rune-delve" className="back-link"><ArrowLeft className="w-4 h-4" /> Home</Link>
 
       <div className="glass-card p-6 text-center" style={{
