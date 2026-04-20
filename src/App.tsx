@@ -57,6 +57,7 @@ const PickemHistoryPage = lazy(() => import("./pages/PickemHistoryPage"));
 const PickemRulesPage = lazy(() => import("./pages/PickemRulesPage"));
 const PickemAdminPage = lazy(() => import("./pages/PickemAdminPage"));
 const RuneDelveHomePage = lazy(() => import("./pages/RuneDelveHomePage"));
+const RuneDelveLevelMapPage = lazy(() => import("./pages/RuneDelveLevelMapPage"));
 const RuneDelvePlayPage = lazy(() => import("./pages/RuneDelvePlayPage"));
 const RuneDelveResultsPage = lazy(() => import("./pages/RuneDelveResultsPage"));
 const RuneDelveLeaderboardPage = lazy(() => import("./pages/RuneDelveLeaderboardPage"));
@@ -172,10 +173,14 @@ function AnimatedRoutes() {
         <Route path="/pickem/rules" element={<ProtectedPage><PickemRulesPage /></ProtectedPage>} />
         <Route path="/pickem/admin" element={<ProtectedPage><PickemAdminPage /></ProtectedPage>} />
 
-        {/* Rune Delve module */}
+        {/* Rune Delve module — campaign */}
         <Route path="/rune-delve" element={<ProtectedPage><RuneDelveHomePage /></ProtectedPage>} />
-        <Route path="/rune-delve/play" element={<ProtectedPage><RuneDelvePlayPage /></ProtectedPage>} />
-        <Route path="/rune-delve/results" element={<ProtectedPage><RuneDelveResultsPage /></ProtectedPage>} />
+        <Route path="/rune-delve/levels" element={<ProtectedPage><RuneDelveLevelMapPage /></ProtectedPage>} />
+        <Route path="/rune-delve/play/:levelNumber" element={<ProtectedPage><RuneDelvePlayPage /></ProtectedPage>} />
+        <Route path="/rune-delve/results/:levelNumber" element={<ProtectedPage><RuneDelveResultsPage /></ProtectedPage>} />
+        {/* Back-compat redirects from old daily routes */}
+        <Route path="/rune-delve/play" element={<Navigate to="/rune-delve/levels" replace />} />
+        <Route path="/rune-delve/results" element={<Navigate to="/rune-delve" replace />} />
         <Route path="/rune-delve/leaderboard" element={<ProtectedPage><RuneDelveLeaderboardPage /></ProtectedPage>} />
         <Route path="/rune-delve/hero" element={<ProtectedPage><RuneDelveHeroPage /></ProtectedPage>} />
         <Route path="/rune-delve/history" element={<ProtectedPage><RuneDelveHistoryPage /></ProtectedPage>} />
