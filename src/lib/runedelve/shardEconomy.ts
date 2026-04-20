@@ -1,0 +1,100 @@
+// ─── Rune Shards economy ──────────────────────────────────────────────────
+// Shard rewards for clears, replays, and failed attempts.
+// Failure rewards use diminishing returns per-level so retries always pay
+// SOMETHING (anti-frustration) but pure farming dies off fast.
+
+export interface ClearShardArgs {
+  levelNumber: number;
+  isFirstClear: boolean;
+  bossClear: boolean;       // L25/50/75/100/125/150
+  chapterCleared: boolean;  // first time finishing a chapter
+  compassEquipped: boolean; // Wanderer's Compass relic
+}
+
+export interface FailShardArgs {
+  levelNumber: number;
+  failureCount: number;     // count INCLUDING this failure
+  enemiesKilled: number;
+  totalEnemies: number;
+  turnsUsed: number;
+  turnLimit: number;
+  bossPhaseReached: number; // 0..3
+  bossHasRule: boolean;
+  compassEquipped: boolean;
+}
+
+export interface ShardBreakdown {
+  base: number;
+  bonuses: { label: string; amount: number }[];
+  multiplier: number;       // diminishing-returns or compass
+  total: number;
+}
+
+const baseClearValue = (level: number) => 10 + level;
+const baseReplayValue = (level: number) => 3 + Math.floor(level / 10);
+
+export function computeClearShards(args: ClearShardArgs): ShardBreakdown {
+  const base = args.isFirstClear ? baseClearValue(args.levelNumber) : baseReplayValue(args.levelNumber);
+  const bonuses: { label: string; amount: number }[] = [];
+  if (args.bossClear) bonuses.push({ label: 'Boss bonus', amount: 50 });
+  if (args.chapterCleared) bonuses.push({ label: 'Chapter complete', amount: 200 });
+  const multiplier = args.compassEquipped ? 1.15 : 1;
+  const subtotal = base + bonuses.reduce((s, b) => s + b.amount, 0);
+  const total = Math.max(1, Math.round(subtotal * multiplier));
+  return { base, bonuses, multiplier, total };
+}
+
+// Diminishing returns curve per level — resets when the level is cleared.
+// 1st: 100%, 2nd: 70%, 3rd: 50%, 4th: 30%, 5th+: 15%
+export function failureMultiplier(failureCount: number): number {
+  if (failureCount <= 1) return 1.0;
+  if (failureCount === 2) return 0.7;
+  if (failureCount === 3) return 0.5;
+  if (failureCount === 4) return 0.3;
+  return 0.15;
+}
+
+export function computeFailureShards(args: FailShardArgs): ShardBreakdown {
+  // Progress factor 0.4..1.0 — even a feeble attempt earns something (40%).
+  const enemyP = args.totalEnemies > 0 ? args.enemiesKilled / args.totalEnemies : 0;
+  const turnP = args.turnLimit > 0 ? Math.min(1, args.turnsUsed / args.turnLimit) : 0;
+  const bossP = args.bossHasRule ? args.bossPhaseReached / 3 : 0;
+  const objectiveP = args.bossHasRule ? bossP : enemyP;
+
+  const progress = 0.4 + 0.6 * (enemyP * 0.4 + objectiveP * 0.4 + turnP * 0.2);
+
+  // Gentle: 20% of clear value scaled by progress.
+  const baseClearVal = baseClearValue(args.levelNumber);
+  const base = Math.max(1, Math.round(baseClearVal * 0.2 * progress));
+
+  const dimMult = failureMultiplier(args.failureCount);
+  const compassMult = args.compassEquipped ? 1.15 : 1;
+  const multiplier = dimMult * compassMult;
+
+  const bonuses: { label: string; amount: number }[] = [];
+  // Surface the diminishing curve subtly in the breakdown when it kicks in.
+  if (dimMult < 1) {
+    const note = `Repeat fail ×${(dimMult).toFixed(2)}`;
+    bonuses.push({ label: note, amount: 0 });
+  }
+
+  const total = Math.max(1, Math.round(base * multiplier));
+  return { base, bonuses, multiplier, total };
+}
+
+// Slot-unlock threshold: any class hitting L50 grants a hero-wide 3rd slot.
+export function slotsForClassLevels(maxClassLevel: number): number {
+  return maxClassLevel >= 50 ? 3 : 2;
+}
+
+// Helper used by the Home unlock-banner heuristic.
+export function affordableNextRelicCost(currentShards: number, ownedIds: Set<string>): number | null {
+  // The cheapest UNOWNED relic the player can afford right now.
+  // Live-imported to avoid a circular dep at module top.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { RELIC_CATALOG } = require('./relics');
+  const candidates = RELIC_CATALOG
+    .filter((r: { id: string; cost: number }) => !ownedIds.has(r.id) && r.cost <= currentShards)
+    .sort((a: { cost: number }, b: { cost: number }) => b.cost - a.cost);
+  return candidates[0]?.cost ?? null;
+}

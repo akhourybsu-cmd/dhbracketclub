@@ -1,12 +1,16 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sparkles, Trophy, Flame, ChevronRight, Swords, BookOpen, Map } from 'lucide-react';
+import { Sparkles, Trophy, Flame, ChevronRight, Swords, BookOpen, Map, ShoppingBag, Shield } from 'lucide-react';
 import { useRuneDelveHero, useEnsureHero } from '@/hooks/useRuneDelveHero';
 import { useAllClassProgress } from '@/hooks/useRuneDelveClassProgress';
 import { useMyProgress, useCampaignLeaderboard } from '@/hooks/useRuneDelveCampaign';
+import { useRuneWallet } from '@/hooks/useRuneShards';
+import { useLoadout } from '@/hooks/useLoadout';
 import { CLASS_LIST, getClass, levelFromXp, titleForLevel, type HeroClass } from '@/lib/runedelve/classConfig';
 import { chapterFor, chapterMeta } from '@/lib/runedelve/levelGenerator';
 import { ClassBadge } from '@/components/runedelve/ClassBadge';
+import { ShardBalance } from '@/components/runedelve/ShardBalance';
+import { RELIC_BY_ID } from '@/lib/runedelve/relics';
 import { HowToPlaySheet } from '@/components/runedelve/HowToPlaySheet';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -21,6 +25,8 @@ export default function RuneDelveHomePage() {
   const { data: classTracks } = useAllClassProgress();
   const { data: progress } = useMyProgress();
   const { data: leaderboard } = useCampaignLeaderboard();
+  const { data: wallet } = useRuneWallet();
+  const { data: loadout } = useLoadout(hero?.class);
   const ensureHero = useEnsureHero();
   const [picking, setPicking] = useState<HeroClass | null>(null);
   const [heroName, setHeroName] = useState('');
@@ -144,7 +150,10 @@ export default function RuneDelveHomePage() {
 
   return (
     <div className="space-y-4 pb-8">
-      <Link to="/compete" className="back-link">← Back to Compete</Link>
+      <div className="flex items-center justify-between">
+        <Link to="/compete" className="back-link">← Back to Compete</Link>
+        <ShardBalance shards={wallet?.shards ?? 0} />
+      </div>
 
       {/* Continue banner */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
@@ -259,6 +268,34 @@ export default function RuneDelveHomePage() {
       >
         <BookOpen className="w-3.5 h-3.5" /> How to Play
       </button>
+
+      {/* Loadout preview + Shop/Armory tiles */}
+      {loadout && (() => {
+        const equipped = [loadout.slot_1, loadout.slot_2, loadout.slot_3].filter(Boolean) as string[];
+        return (
+          <Link to="/rune-delve/armory" className="block">
+            <div className="glass-card p-3 btn-press flex items-center gap-2.5">
+              <Shield className="w-4 h-4 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-extrabold">Active loadout · {getClass(hero.class).name}</p>
+                <p className="text-[10px] text-muted-foreground truncate">
+                  {equipped.length === 0 ? 'No relics equipped — tap to set up' : equipped.map(id => RELIC_BY_ID[id]?.name ?? '?').join(' · ')}
+                </p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+            </div>
+          </Link>
+        );
+      })()}
+
+      <div className="grid grid-cols-2 gap-2">
+        <Link to="/rune-delve/shop" className="glass-card p-3 text-center text-[12px] font-bold btn-press inline-flex items-center justify-center gap-1.5">
+          <ShoppingBag className="w-3.5 h-3.5 text-primary" /> Shop
+        </Link>
+        <Link to="/rune-delve/armory" className="glass-card p-3 text-center text-[12px] font-bold btn-press inline-flex items-center justify-center gap-1.5">
+          <Shield className="w-3.5 h-3.5 text-primary" /> Armory
+        </Link>
+      </div>
 
       {/* Footer links */}
       <div className="grid grid-cols-2 gap-2">

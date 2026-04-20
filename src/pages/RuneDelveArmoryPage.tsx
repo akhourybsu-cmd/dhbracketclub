@@ -1,0 +1,176 @@
+import { Link } from 'react-router-dom';
+import { ArrowLeft, Sparkles, ShoppingBag } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { toast } from 'sonner';
+import { useRuneDelveHero } from '@/hooks/useRuneDelveHero';
+import { useRuneWallet } from '@/hooks/useRuneShards';
+import { useRelicCollection } from '@/hooks/useRelicCollection';
+import { useLoadout, useUpdateLoadout } from '@/hooks/useLoadout';
+import { useAllClassProgress } from '@/hooks/useRuneDelveClassProgress';
+import { CLASS_LIST, getClass, type HeroClass } from '@/lib/runedelve/classConfig';
+import { RELIC_BY_ID, RELIC_CATALOG, type RelicDef } from '@/lib/runedelve/relics';
+import { ClassBadge } from '@/components/runedelve/ClassBadge';
+import { LoadoutSlot } from '@/components/runedelve/LoadoutSlot';
+import { RelicCard } from '@/components/runedelve/RelicCard';
+import { ShardBalance } from '@/components/runedelve/ShardBalance';
+import { cn } from '@/lib/utils';
+
+export default function RuneDelveArmoryPage() {
+  const { data: hero } = useRuneDelveHero();
+  const { data: wallet } = useRuneWallet();
+  const { data: owned } = useRelicCollection();
+  const { data: tracks } = useAllClassProgress();
+  const updateLoadout = useUpdateLoadout();
+
+  const [activeClass, setActiveClass] = useState<HeroClass | null>(null);
+  const cls = activeClass ?? hero?.class ?? 'warrior';
+  const { data: loadout } = useLoadout(cls);
+
+  const slotsUnlocked = wallet?.slots_unlocked ?? 2;
+  const ownedIds = useMemo(() => new Set((owned ?? []).map(o => o.relic_id)), [owned]);
+  const ownedRelics = useMemo(
+    () => RELIC_CATALOG.filter(r => ownedIds.has(r.id)),
+    [ownedIds],
+  );
+
+  const equipped: (string | null)[] = [
+    loadout?.slot_1 ?? null,
+    loadout?.slot_2 ?? null,
+    loadout?.slot_3 ?? null,
+  ];
+
+  const equip = async (relicId: string) => {
+    if (equipped.includes(relicId)) {
+      // already equipped — unequip
+      const newSlots = equipped.map(s => s === relicId ? null : s);
+      await save(newSlots);
+      return;
+    }
+    const firstEmpty = equipped.findIndex((s, i) => s === null && i < slotsUnlocked);
+    if (firstEmpty === -1) {
+      toast.error('All slots are full — tap an equipped relic to unequip first.');
+      return;
+    }
+    const newSlots = [...equipped];
+    newSlots[firstEmpty] = relicId;
+    await save(newSlots);
+  };
+
+  const unequip = async (slotIdx: number) => {
+    const newSlots = [...equipped];
+    newSlots[slotIdx] = null;
+    await save(newSlots);
+  };
+
+  const save = async (slots: (string | null)[]) => {
+    try {
+      await updateLoadout.mutateAsync({
+        cls,
+        slot_1: slots[0] ?? null,
+        slot_2: slots[1] ?? null,
+        slot_3: slots[2] ?? null,
+      });
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Could not update loadout');
+    }
+  };
+
+  if (!hero) return <div className="h-32 rounded-2xl skeleton-shimmer" />;
+
+  return (
+    <div className="space-y-4 pb-8">
+      <div className="flex items-center justify-between">
+        <Link to="/rune-delve" className="back-link"><ArrowLeft className="w-4 h-4" /> Back</Link>
+        <ShardBalance shards={wallet?.shards ?? 0} />
+      </div>
+
+      <div className="text-center space-y-1">
+        <h1 className="page-header-title flex items-center justify-center gap-2">
+          <Sparkles className="w-5 h-5 text-primary" /> Armory
+        </h1>
+        <p className="text-[11px] text-muted-foreground">Equip relics per class. Tap an owned relic to equip or unequip.</p>
+      </div>
+
+      {/* Class tabs — per-class loadouts */}
+      <div className="grid grid-cols-4 gap-1.5">
+        {CLASS_LIST.map(c => {
+          const track = tracks?.find(t => t.class === c.id);
+          const isActive = c.id === cls;
+          const isHeroClass = c.id === hero.class;
+          return (
+            <button
+              key={c.id}
+              onClick={() => setActiveClass(c.id)}
+              className={cn(
+                'h-14 rounded-lg flex flex-col items-center justify-center gap-0.5 btn-press text-[10px] font-extrabold',
+                isActive ? 'bg-primary/15 border border-primary/40' : 'bg-muted/30 border border-transparent',
+              )}
+            >
+              <ClassBadge cls={c.id} size="sm" />
+              <span className="leading-none">{c.name}{isHeroClass && ' ●'}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Active class loadout */}
+      <div className="glass-card p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-[13px]">{getClass(cls).name} loadout</h3>
+          <span className="text-[10px] text-muted-foreground font-bold">{equipped.filter((s, i) => s && i < slotsUnlocked).length}/{slotsUnlocked} slots</span>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {[0, 1, 2].map(i => {
+            const slotRelic: RelicDef | null = equipped[i] ? RELIC_BY_ID[equipped[i] as string] ?? null : null;
+            const locked = i >= slotsUnlocked;
+            return (
+              <LoadoutSlot
+                key={i}
+                relic={slotRelic}
+                locked={locked}
+                unlockHint={locked ? 'Lv 50 unlock' : undefined}
+                onClear={slotRelic ? () => unequip(i) : undefined}
+              />
+            );
+          })}
+        </div>
+        {slotsUnlocked < 3 && (
+          <p className="text-[10px] text-muted-foreground text-center italic">
+            Reach class level 50 in any class to unlock the 3rd relic slot.
+          </p>
+        )}
+      </div>
+
+      {/* Owned relics */}
+      <div className="space-y-2">
+        <h3 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+          Your relics ({ownedRelics.length})
+        </h3>
+        {ownedRelics.length === 0 ? (
+          <Link to="/rune-delve/shop" className="block">
+            <div className="glass-card p-5 text-center btn-press">
+              <ShoppingBag className="w-6 h-6 mx-auto mb-2 text-primary" />
+              <p className="text-[13px] font-extrabold mb-1">No relics yet</p>
+              <p className="text-[11px] text-muted-foreground mb-2">Visit the Shop to spend Rune Shards on your first relic.</p>
+              <span className="text-[11px] font-bold text-primary">Go to Shop →</span>
+            </div>
+          </Link>
+        ) : (
+          <div className="space-y-2">
+            {ownedRelics.map(r => {
+              const isEquipped = equipped.includes(r.id);
+              return (
+                <RelicCard
+                  key={r.id}
+                  relic={r}
+                  state={isEquipped ? 'equipped' : 'owned'}
+                  onClick={() => equip(r.id)}
+                />
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
