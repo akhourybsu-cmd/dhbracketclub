@@ -101,7 +101,7 @@ function LockboxCompeteCard() {
   );
 }
 
-/* ── Rune Delve card — featured daily puzzle ── */
+/* ── Rune Delve card — featured campaign mode ── */
 function RuneDelveCompeteCard() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
@@ -118,13 +118,13 @@ function RuneDelveCompeteCard() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="font-extrabold text-[16px] tracking-tight">Rune Delve</h2>
-              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-primary/15 text-primary uppercase tracking-wider">Daily</span>
+              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-primary/15 text-primary uppercase tracking-wider">Campaign</span>
             </div>
-            <p className="text-[11px] text-muted-foreground/80">Match runes. Crush enemies. Climb the daily board.</p>
+            <p className="text-[11px] text-muted-foreground/80">Match runes. Crush enemies. Descend the campaign.</p>
           </div>
         </div>
         <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
-          Today's shared dungeon awaits. Chain runes, charge your class ability, and post a score before midnight.
+          A 150-level shared campaign. Forge a hero, master five mechanics, and climb the leaderboard one level at a time.
         </p>
         <Link to="/rune-delve">
           <button className="w-full h-11 rounded-xl text-[12px] font-extrabold flex items-center justify-center gap-2 btn-press" style={{
@@ -132,7 +132,7 @@ function RuneDelveCompeteCard() {
             color: 'hsl(var(--primary-foreground))',
             boxShadow: '0 6px 20px hsl(var(--primary) / 0.35)',
           }}>
-            <Sparkles className="w-4 h-4" /> Enter the Dungeon
+            <Sparkles className="w-4 h-4" /> Continue Your Delve
           </button>
         </Link>
       </div>
