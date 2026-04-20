@@ -116,7 +116,8 @@ export default function RuneDelveHomePage() {
             <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-primary/15 text-primary tracking-wider">DAILY</span>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</span>
           </div>
-          <h2 className="text-xl font-extrabold tracking-tight mb-1">Rune Delve</h2>
+          <h2 className="text-xl font-extrabold tracking-tight mb-0.5">Rune Delve</h2>
+          <p className="text-[11px] font-bold text-primary/90 mb-2">Welcome back, {hero.hero_name}</p>
           <p className="text-xs text-muted-foreground mb-3">
             Defeat {dungeon.enemy_config?.length ?? 2} enemies in {dungeon.max_turns} turns. Chain runes to attack, charge mana, heal, and guard.
           </p>
