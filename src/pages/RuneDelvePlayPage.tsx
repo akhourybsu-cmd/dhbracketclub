@@ -230,6 +230,9 @@ export default function RuneDelvePlayPage() {
         </div>
       </div>
 
+      {/* Active mechanics strip — only when this level uses any mechanic */}
+      {activeMechanics.length > 0 && <MechanicBanner mechanics={activeMechanics} />}
+
       {/* Objective banner */}
       <div className="glass-card px-3 py-2 flex items-center gap-2">
         <span className="text-[9px] font-extrabold uppercase tracking-wider text-primary px-2 py-0.5 rounded-md bg-primary/15">Goal</span>
@@ -261,6 +264,20 @@ export default function RuneDelvePlayPage() {
       </div>
 
       <HowToPlaySheet open={helpOpen} onOpenChange={setHelpOpen} heroClass={hero.class} />
+
+      {/* One-time intro for a brand-new mechanic taught at this level. */}
+      {introMechanic && (
+        <MechanicIntroSheet
+          open={!!introMechanic}
+          onOpenChange={(o) => { if (!o) setIntroMechanic(null); }}
+          mechanicId={introMechanic}
+          levelNumber={level.level_number}
+          onBegin={() => {
+            try { localStorage.setItem(seenMechanicKey(introMechanic), '1'); } catch {}
+            setIntroMechanic(null);
+          }}
+        />
+      )}
 
       {endState && (
         <div
