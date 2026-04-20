@@ -9,7 +9,7 @@ import { generateBoard, type RuneType, type Enemy } from '@/lib/runedelve/dungeo
 import { isValidChain, resolveBoard, type Cell } from '@/lib/runedelve/boardEngine';
 import { applyChain, enemiesAttack, endTurn, initialCombat, isRunOver, useAbility, type CombatState } from '@/lib/runedelve/combatEngine';
 import { calculateScore, xpForRun } from '@/lib/runedelve/scoring';
-import { levelFromXp } from '@/lib/runedelve/classConfig';
+import { levelFromXp, newTitleUnlocked, titleForLevel } from '@/lib/runedelve/classConfig';
 import { objectiveLabel, type ObjectiveType } from '@/lib/runedelve/levelGenerator';
 import {
   mechanicsForLevel,
@@ -254,8 +254,12 @@ export default function RuneDelvePlayPage() {
         const yesterday = format(new Date(Date.now() - 86_400_000), 'yyyy-MM-dd');
         const continued = hero.last_run_date === yesterday;
         const newStreak = continued ? hero.current_streak + 1 : hero.last_run_date === today ? hero.current_streak : 1;
+        const prevLevel = hero.level;
         const newXp = hero.xp + xp;
         const newLevel = levelFromXp(newXp).level;
+        // Auto-equip highest unlocked class title (cosmetic only, no balance impact).
+        const equippedTitle = titleForLevel(newLevel, hero.class) ?? hero.cosmetic_title ?? null;
+        const titleUnlock = newTitleUnlocked(hero.class, prevLevel, newLevel);
         await updateHero.mutateAsync({
           xp: newXp,
           level: newLevel,
@@ -264,7 +268,16 @@ export default function RuneDelvePlayPage() {
           lifetime_runs: hero.lifetime_runs + 1,
           lifetime_score: hero.lifetime_score + breakdown.total,
           last_run_date: today,
+          cosmetic_title: equippedTitle,
         } as any);
+        if (titleUnlock) {
+          toast.success(`✨ New Title Unlocked — ${titleUnlock.next}`, {
+            description: titleUnlock.previous
+              ? `From ${titleUnlock.previous} · Lv ${newLevel}`
+              : `Equipped at Lv ${newLevel}`,
+            duration: 6000,
+          });
+        }
       }
       setTimeout(() => navigate(`/rune-delve/results/${level.level_number}`), 2500);
     } catch (e: any) {
