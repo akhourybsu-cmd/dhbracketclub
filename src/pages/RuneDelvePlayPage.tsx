@@ -112,6 +112,9 @@ export default function RuneDelvePlayPage() {
       rogueBonus: final.rogueBonusTriggered && hero.class === 'rogue',
     });
     const xp = xpForRun(breakdown.total, cleared);
+    // Determine end reason for the overlay.
+    const reason: 'cleared' | 'defeated' | 'timeout' = cleared ? 'cleared' : final.hp <= 0 ? 'defeated' : 'timeout';
+    setEndState({ cleared, reason, score: breakdown.total });
     try {
       await submit.mutateAsync({
         dungeon_id: dungeon.id,
@@ -144,21 +147,37 @@ export default function RuneDelvePlayPage() {
         lifetime_score: hero.lifetime_score + breakdown.total,
         last_run_date: today,
       } as any);
-      navigate('/rune-delve/results');
+      // Auto-advance after a brief beat so the player sees the outcome.
+      setTimeout(() => navigate('/rune-delve/results'), 2500);
     } catch (e: any) {
       toast.error(e?.message ?? 'Could not save run');
       setSubmitting(false);
+      setEndState(null);
     }
   }
 
   const status = isRunOver(combat);
+  // Turn counter: clamp to max_turns; show "10/10" while resolving the final turn.
+  const turnDisplay = Math.min(
+    dungeon.max_turns,
+    Math.max(1, dungeon.max_turns - combat.turnsRemaining + (status.over ? 0 : 1)),
+  );
 
   return (
-    <div className="space-y-4 pb-8">
+    <div className="space-y-4 pb-8 relative">
       <div className="flex items-center justify-between">
         <Link to="/rune-delve" className="back-link"><ArrowLeft className="w-4 h-4" /> Exit</Link>
-        <div className="text-[11px] font-bold text-muted-foreground tabular-nums">
-          Turn {Math.min(dungeon.max_turns, dungeon.max_turns - combat.turnsRemaining + 1)} / {dungeon.max_turns}
+        <div className="flex items-center gap-3">
+          <div className="text-[11px] font-bold text-muted-foreground tabular-nums">
+            Turn {turnDisplay} / {dungeon.max_turns}
+          </div>
+          <button
+            onClick={() => setHelpOpen(true)}
+            aria-label="How to play"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary btn-press"
+          >
+            <HelpCircle className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
@@ -181,6 +200,52 @@ export default function RuneDelvePlayPage() {
           <p className="text-sm font-extrabold tabular-nums">{combat.longestChain}</p>
         </div>
       </div>
+
+      <HowToPlaySheet open={helpOpen} onOpenChange={setHelpOpen} heroClass={hero.class} />
+
+      {endState && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-6 backdrop-blur-md bg-background/70 animate-in fade-in"
+          onClick={() => navigate('/rune-delve/results')}
+        >
+          <div className="glass-card p-6 max-w-sm w-full text-center space-y-3" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-center">
+              {endState.reason === 'cleared' && <Trophy className="w-12 h-12" style={{ color: 'hsl(var(--gold))' }} />}
+              {endState.reason === 'defeated' && <Skull className="w-12 h-12 text-destructive" />}
+              {endState.reason === 'timeout' && <Hourglass className="w-12 h-12 text-muted-foreground" />}
+            </div>
+            <div>
+              <h2 className="text-2xl font-extrabold tracking-tight">
+                {endState.reason === 'cleared' && 'Dungeon Cleared!'}
+                {endState.reason === 'defeated' && 'Defeated'}
+                {endState.reason === 'timeout' && 'Out of Turns'}
+              </h2>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                {endState.reason === 'cleared' && 'Every enemy fell to your blade.'}
+                {endState.reason === 'defeated' && 'Your hero fell in battle.'}
+                {endState.reason === 'timeout' && 'The dungeon outlasted you.'}
+              </p>
+            </div>
+            <div className="py-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Final Score</p>
+              <p className="text-3xl font-extrabold font-mono tabular-nums" style={{ color: 'hsl(var(--gold))' }}>
+                {endState.score.toLocaleString()}
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/rune-delve/results')}
+              className="w-full h-11 rounded-xl font-extrabold text-sm btn-press"
+              style={{
+                background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)))',
+                color: 'white',
+                boxShadow: 'var(--shadow-glow)',
+              }}
+            >
+              View Results
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
