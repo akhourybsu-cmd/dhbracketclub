@@ -157,6 +157,9 @@ export function generateLevel(level: number): LevelDefinition {
   const enemyCount = enemyCountFor(level, rng);
   const enemies: Enemy[] = [];
   const objective = objectiveFor(level, rng);
+  const turnLimit = turnLimitFor(level);
+  const mechanics = mechanicsForLevel(level);
+  const isBossLevel = bossRuleForLevel(level) != null;
 
   for (let i = 0; i < enemyCount; i++) {
     const t = pickTemplate(level, rng);
@@ -167,15 +170,28 @@ export function generateLevel(level: number): LevelDefinition {
       hp = Math.round(hp * 1.6);
       damage = Math.round(damage * 1.2);
     }
+    // Boss-rule levels: meaningfully beef up the final enemy so the rule lands.
+    if (isBossLevel && i === enemyCount - 1) {
+      hp = Math.round(hp * 1.8);
+      damage = Math.round(damage * 1.15);
+    }
     enemies.push({
       id: `e${i}`,
-      name: isElite ? `Elite ${t.name}` : t.name,
+      name: isBossLevel && i === enemyCount - 1
+        ? `Boss ${t.name}`
+        : isElite ? `Elite ${t.name}` : t.name,
       emoji: t.emoji,
       hp,
       maxHp: hp,
       damage,
     });
   }
+
+  // Layered Goals (Band 4): only when the multi_objective mechanic is active
+  // AND the primary isn't already a stretch target — keep them composable.
+  const wantsSecondary = mechanics.includes('multi_objective')
+    && (objective.type === 'defeat_all' || objective.type === 'defeat_elite');
+  const secondary = wantsSecondary ? rollSecondaryObjective(seed, level, turnLimit) : null;
 
   return {
     level_number: level,
@@ -184,12 +200,14 @@ export function generateLevel(level: number): LevelDefinition {
     generation_seed: seed,
     board_size: 5,
     enemy_config: enemies,
-    turn_limit: turnLimitFor(level),
+    turn_limit: turnLimit,
     objective_type: objective.type,
     objective_target: objective.target,
     modifiers: {
-      mechanics: mechanicsForLevel(level),
+      mechanics,
       intro_mechanic: introMechanicForLevel(level),
+      secondary_objective: secondary,
+      boss_rule: bossRuleForLevel(level),
     },
   };
 }
