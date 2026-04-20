@@ -27,7 +27,7 @@ import {
   type CorruptionState,
 } from '@/lib/runedelve/corruptedTiles';
 import { secondaryMet, secondaryShort, secondaryLabel, type SecondaryObjective } from '@/lib/runedelve/layeredGoals';
-import { getBossRule, applyBossTurnEffects, type BossRuleId } from '@/lib/runedelve/bossRules';
+import { getBossRule, type BossRuleId } from '@/lib/runedelve/bossRules';
 import { Crown, Target } from 'lucide-react';
 import { RuneBoard } from '@/components/runedelve/RuneBoard';
 import { EnemyDisplay } from '@/components/runedelve/EnemyDisplay';
