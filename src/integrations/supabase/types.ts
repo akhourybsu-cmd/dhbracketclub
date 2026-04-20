@@ -2911,20 +2911,112 @@ export type Database = {
         }
         Relationships: []
       }
+      rune_delve_levels: {
+        Row: {
+          board_size: number
+          chapter: number
+          created_at: string
+          difficulty_tier: number
+          enemy_config: Json
+          generation_seed: number
+          id: string
+          level_number: number
+          metadata: Json
+          modifiers: Json
+          objective_target: number
+          objective_type: string
+          starting_board_layout: Json | null
+          status: string
+          turn_limit: number
+          updated_at: string
+        }
+        Insert: {
+          board_size?: number
+          chapter?: number
+          created_at?: string
+          difficulty_tier?: number
+          enemy_config?: Json
+          generation_seed: number
+          id?: string
+          level_number: number
+          metadata?: Json
+          modifiers?: Json
+          objective_target?: number
+          objective_type?: string
+          starting_board_layout?: Json | null
+          status?: string
+          turn_limit?: number
+          updated_at?: string
+        }
+        Update: {
+          board_size?: number
+          chapter?: number
+          created_at?: string
+          difficulty_tier?: number
+          enemy_config?: Json
+          generation_seed?: number
+          id?: string
+          level_number?: number
+          metadata?: Json
+          modifiers?: Json
+          objective_target?: number
+          objective_type?: string
+          starting_board_layout?: Json | null
+          status?: string
+          turn_limit?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      rune_delve_progress: {
+        Row: {
+          created_at: string
+          current_chapter: number
+          highest_completed_level: number
+          highest_unlocked_level: number
+          id: string
+          total_levels_cleared: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_chapter?: number
+          highest_completed_level?: number
+          highest_unlocked_level?: number
+          id?: string
+          total_levels_cleared?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_chapter?: number
+          highest_completed_level?: number
+          highest_unlocked_level?: number
+          id?: string
+          total_levels_cleared?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       rune_delve_runs: {
         Row: {
           ability_used: boolean
           completed_at: string
           created_at: string
           dungeon_cleared: boolean
-          dungeon_id: string
+          dungeon_id: string | null
           enemies_defeated: number
           hero_class: string
           hp_remaining: number
           id: string
+          level_id: string | null
+          level_number: number | null
           longest_chain: number
           pick_log: Json
-          run_date: string
+          run_date: string | null
           score: number
           total_damage: number
           turns_used: number
@@ -2936,14 +3028,16 @@ export type Database = {
           completed_at?: string
           created_at?: string
           dungeon_cleared?: boolean
-          dungeon_id: string
+          dungeon_id?: string | null
           enemies_defeated?: number
           hero_class: string
           hp_remaining?: number
           id?: string
+          level_id?: string | null
+          level_number?: number | null
           longest_chain?: number
           pick_log?: Json
-          run_date: string
+          run_date?: string | null
           score?: number
           total_damage?: number
           turns_used?: number
@@ -2955,14 +3049,16 @@ export type Database = {
           completed_at?: string
           created_at?: string
           dungeon_cleared?: boolean
-          dungeon_id?: string
+          dungeon_id?: string | null
           enemies_defeated?: number
           hero_class?: string
           hp_remaining?: number
           id?: string
+          level_id?: string | null
+          level_number?: number | null
           longest_chain?: number
           pick_log?: Json
-          run_date?: string
+          run_date?: string | null
           score?: number
           total_damage?: number
           turns_used?: number
@@ -2975,6 +3071,13 @@ export type Database = {
             columns: ["dungeon_id"]
             isOneToOne: false
             referencedRelation: "rune_delve_dungeons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rune_delve_runs_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "rune_delve_levels"
             referencedColumns: ["id"]
           },
         ]
