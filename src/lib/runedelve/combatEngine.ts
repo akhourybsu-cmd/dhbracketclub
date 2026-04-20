@@ -118,19 +118,31 @@ export function applyChain(
 // After player chain, enemies act. Returns next state.
 // When `telegraphed` is true, intents tick first, then enemies whose intent
 // hit 0 deal a heavy strike (and reset). Otherwise behaves like classic damage.
-export function enemiesAttack(state: CombatState, telegraphed = false): CombatState & { heavyFired?: boolean } {
+// `bossRule` (Band 5) can mutate per-enemy outgoing damage (enrager) and
+// trigger end-of-turn effects (regenerator).
+export function enemiesAttack(
+  state: CombatState,
+  telegraphed = false,
+  bossRule: BossRuleId | null = null,
+): CombatState & { heavyFired?: boolean } {
   const ticked = telegraphed ? tickIntents(state.enemies) : state.enemies;
   let next: CombatState = { ...state, enemies: ticked.map(e => ({ ...e })) };
   let heavyFired = false;
   if (telegraphed) {
+    // Apply enrager multiplier in-place by temporarily scaling each enemy's
+    // damage for the resolve call, then restoring (telegraph reads `damage`).
+    const original = next.enemies.map(e => e.damage);
+    next.enemies.forEach(e => { e.damage = Math.round(e.damage * enemyDamageMultiplier(bossRule, e)); });
     const r = resolveEnemyAttack(next.enemies, next.shieldTurns > 0);
-    next.enemies = r.enemies;
+    next.enemies = r.enemies.map((e, i) => ({ ...e, damage: original[i] ?? e.damage }));
     heavyFired = r.heavyFired;
     if (next.shieldTurns > 0) next.shieldTurns -= 1;
     next.hp = Math.max(0, next.hp - r.totalDamage);
   } else {
     let totalIncoming = 0;
-    for (const e of next.enemies) if (e.hp > 0) totalIncoming += e.damage;
+    for (const e of next.enemies) {
+      if (e.hp > 0) totalIncoming += Math.round(e.damage * enemyDamageMultiplier(bossRule, e));
+    }
     if (next.shieldTurns > 0) {
       totalIncoming = Math.round(totalIncoming * 0.4);
       next.shieldTurns -= 1;
@@ -138,6 +150,8 @@ export function enemiesAttack(state: CombatState, telegraphed = false): CombatSt
     next.hp = Math.max(0, next.hp - totalIncoming);
   }
   next.turnsRemaining = Math.max(0, next.turnsRemaining - 1);
+  // Boss-rule end-of-turn effects (e.g. regenerator).
+  next = applyBossTurnEffects(next, bossRule);
   return { ...next, heavyFired };
 }
 
