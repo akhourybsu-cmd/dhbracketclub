@@ -1270,8 +1270,8 @@ export default function CompetePage() {
         <Tabs defaultValue="league" className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-4">
             <TabsTrigger value="league" className="text-[11px] font-bold">🏆 League</TabsTrigger>
-            <TabsTrigger value="lockbox" className="text-[11px] font-bold">🔒 Lockbox</TabsTrigger>
-            <TabsTrigger value="more" className="text-[11px] font-bold">📦 More</TabsTrigger>
+            <TabsTrigger value="runedelve" className="text-[11px] font-bold">✨ Rune Delve</TabsTrigger>
+            <TabsTrigger value="other" className="text-[11px] font-bold">📦 Other</TabsTrigger>
           </TabsList>
 
           <TabsContent value="league" className="space-y-3">
@@ -1317,11 +1317,12 @@ export default function CompetePage() {
             )}
           </TabsContent>
 
-          <TabsContent value="lockbox" className="space-y-3">
-            <LockboxCompeteCard />
+          <TabsContent value="runedelve" className="space-y-3">
+            <RuneDelveCompeteCard />
           </TabsContent>
 
-          <TabsContent value="more" className="space-y-3">
+          <TabsContent value="other" className="space-y-3">
+            <LockboxCompeteCard />
             <PickemCompeteCard />
             <ArchivedModesCard />
           </TabsContent>
