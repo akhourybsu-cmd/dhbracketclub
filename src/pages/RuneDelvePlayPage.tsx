@@ -127,20 +127,43 @@ export default function RuneDelvePlayPage() {
     const type = grid[chain[0].r][chain[0].c];
     const { next, resolution } = applyChain(combat, type, chain.length, hero.class);
     if (resolution.enemyKills.length) setFlashId(resolution.enemyKills[0]);
+
+    // Apply corruption: HP cost for matching corrupted cells, then strip them.
+    let nextCorruption = corruption;
+    if (corruptionActive && corruption.cells.size) {
+      const r = resolveChainAgainstCorruption(corruption, chain);
+      if (r.hpCost > 0) {
+        next.hp = Math.max(0, next.hp - r.hpCost);
+        toast.error(`☠️ -${r.hpCost} HP from corruption`, { duration: 1100 });
+      }
+      if (r.sourcesCleared > 0) {
+        toast.success(r.sourcesCleared > 1 ? `Sources cleansed!` : `Source cleansed!`, { duration: 1200 });
+      }
+      nextCorruption = r.next;
+    }
+
     const afterEnemies = next.enemies.some(e => e.hp > 0)
       ? enemiesAttack(next, telegraphActive)
       : endTurn(next);
     if ((afterEnemies as any).heavyFired) toast.error('⚡ Heavy strike!', { duration: 1200 });
     const newGrid = resolveBoard(grid, chain, refillRng, seals);
+
     // Break any seals adjacent to the matched cells.
     if (seals.size) {
       const broken = sealsBrokenByChain(seals, chain);
       if (broken.length) {
-        const next = new Set(seals);
-        broken.forEach(k => next.delete(k));
-        setSeals(next);
+        const nextSeals = new Set(seals);
+        broken.forEach(k => nextSeals.delete(k));
+        setSeals(nextSeals);
       }
     }
+
+    // Spread corruption AFTER the chain resolves (player's turn ended).
+    if (corruptionActive && nextCorruption.sources.size) {
+      nextCorruption = spreadCorruption(nextCorruption, rngTick, level.generation_seed, seals);
+    }
+    setCorruption(nextCorruption);
+
     setRngTick(t => t + 1);
     setGrid(newGrid);
     setCombat(afterEnemies);
