@@ -1493,6 +1493,13 @@ export type Database = {
             referencedRelation: "lore_entries"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "lore_contributions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       lore_entries: {
