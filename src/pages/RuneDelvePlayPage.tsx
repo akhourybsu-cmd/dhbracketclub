@@ -294,7 +294,14 @@ export default function RuneDelvePlayPage() {
       <EnemyDisplay enemies={combat.enemies} flashId={flashId} />
       <HeroStatusBar state={combat} cls={hero.class} onAbility={handleAbility} />
 
-      <RuneBoard grid={grid} disabled={status.over || submitting} onChainComplete={handleChain} />
+      <RuneBoard
+        grid={grid}
+        disabled={status.over || submitting}
+        onChainComplete={handleChain}
+        seals={seals}
+        corruptedCells={corruption.cells}
+        corruptionSources={corruption.sources}
+      />
 
       <div className="grid grid-cols-3 gap-2">
         <div className="glass-card p-2 text-center">
