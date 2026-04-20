@@ -96,12 +96,27 @@ export function introMechanicForLevel(level: number): MechanicId | null {
 }
 
 // Every mechanic that should be active on a given level number.
-// Mechanics turn on at their band start and remain available afterwards so
-// later levels can combine previously-taught mechanics (one new mechanic at
-// any time, plus at most one previously-learned mechanic — enforced in the
-// level generator).
+// Combine rule (mobile-first readability):
+//   • The mechanic of the level's CURRENT band is always active (the "primary").
+//   • The first 3 levels of any band run the new mechanic SOLO so players can
+//     learn it without distraction.
+//   • Otherwise, on roughly 1-in-3 levels we layer a SINGLE previously-taught
+//     mechanic on top — picked deterministically from the level number so two
+//     players see the same combo. This keeps deep levels fresh without ever
+//     piling 3+ mechanics onto a single phone screen.
 export function mechanicsForLevel(level: number): MechanicId[] {
-  return MECHANIC_LIST.filter(m => level >= m.introLevel).map(m => m.id);
+  const unlocked = MECHANIC_LIST.filter(m => level >= m.introLevel);
+  if (unlocked.length === 0) return [];
+  const primary = unlocked[unlocked.length - 1]; // band the level lives in
+  const isIntroPhase = level - primary.introLevel < 3; // first 3 levels of the band
+  if (isIntroPhase || unlocked.length === 1) return [primary.id];
+  // Deterministic combine cadence — every 3rd level past the intro phase.
+  const shouldCombine = (level - primary.introLevel) % 3 === 0;
+  if (!shouldCombine) return [primary.id];
+  // Pick one previously-taught mechanic; rotate by level so it varies.
+  const previous = unlocked.slice(0, -1);
+  const pick = previous[(level * 7) % previous.length];
+  return [pick.id, primary.id];
 }
 
 // localStorage key for "this user has already seen the intro for mechanic X".
