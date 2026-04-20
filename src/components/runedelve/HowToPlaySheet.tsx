@@ -103,7 +103,7 @@ export function HowToPlaySheet({ open, onOpenChange, heroClass }: Props) {
             </Section>
 
             {/* Progression */}
-            <Section title="🌟 XP, Levels & Chapters</span>">
+            <Section title="🌟 XP, Levels & Chapters">
               <p>Your hero earns XP every run (~score ÷ 30, up to 120 + 20 for clears). Hero levels unlock <b>cosmetic titles only</b> — no stat boosts, so the campaign stays fair for everyone.</p>
               <p className="mt-1.5">The campaign is split into <b>chapters of 50 levels</b>. Every chapter introduces a new twist — tougher enemies, elites, or tighter move economies. Replay any cleared level to chase a higher best score.</p>
             </Section>
