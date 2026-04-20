@@ -214,11 +214,21 @@ export default function RuneDelveHomePage() {
         </div>
       </Link>
 
+      {/* How to play */}
+      <button
+        onClick={() => setHelpOpen(true)}
+        className="w-full glass-card p-3 flex items-center justify-center gap-2 text-[12px] font-bold btn-press text-primary"
+      >
+        <BookOpen className="w-3.5 h-3.5" /> How to Play
+      </button>
+
       {/* Footer links */}
       <div className="grid grid-cols-2 gap-2">
         <Link to="/rune-delve/history" className="glass-card p-3 text-center text-[12px] font-bold btn-press">History →</Link>
         <Link to="/rune-delve/hero" className="glass-card p-3 text-center text-[12px] font-bold btn-press">Hero →</Link>
       </div>
+
+      <HowToPlaySheet open={helpOpen} onOpenChange={setHelpOpen} heroClass={hero.class} />
     </div>
   );
 }
