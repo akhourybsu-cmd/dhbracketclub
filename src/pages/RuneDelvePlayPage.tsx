@@ -265,6 +265,20 @@ export default function RuneDelvePlayPage() {
 
       <HowToPlaySheet open={helpOpen} onOpenChange={setHelpOpen} heroClass={hero.class} />
 
+      {/* One-time intro for a brand-new mechanic taught at this level. */}
+      {introMechanic && (
+        <MechanicIntroSheet
+          open={!!introMechanic}
+          onOpenChange={(o) => { if (!o) setIntroMechanic(null); }}
+          mechanicId={introMechanic}
+          levelNumber={level.level_number}
+          onBegin={() => {
+            try { localStorage.setItem(seenMechanicKey(introMechanic), '1'); } catch {}
+            setIntroMechanic(null);
+          }}
+        />
+      )}
+
       {endState && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center px-6 backdrop-blur-md bg-background/70 animate-in fade-in"

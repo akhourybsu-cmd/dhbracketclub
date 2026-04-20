@@ -10,6 +10,7 @@ import {
   isChapterOpener,
   type ObjectiveType,
 } from '@/lib/runedelve/levelGenerator';
+import { mechanicsForLevel, introMechanicForLevel, getMechanic } from '@/lib/runedelve/mechanics';
 import { cn } from '@/lib/utils';
 
 export default function RuneDelveLevelMapPage() {
