@@ -257,27 +257,49 @@ export default function RuneDelvePlayPage() {
         const yesterday = format(new Date(Date.now() - 86_400_000), 'yyyy-MM-dd');
         const continued = hero.last_run_date === yesterday;
         const newStreak = continued ? hero.current_streak + 1 : hero.last_run_date === today ? hero.current_streak : 1;
-        const prevLevel = hero.level;
-        const newXp = hero.xp + xp;
-        const newLevel = levelFromXp(newXp).level;
-        // Auto-equip highest unlocked class title (cosmetic only, no balance impact).
-        const equippedTitle = titleForLevel(newLevel, hero.class) ?? hero.cosmetic_title ?? null;
-        const titleUnlock = newTitleUnlocked(hero.class, prevLevel, newLevel);
+
+        // ── Per-class progression ──────────────────────────────────────
+        // XP, level, and class title belong to the ACTIVE CLASS track only.
+        // Other classes' saved progress is untouched.
+        const activeTrack = classTracks?.find(t => t.class === hero.class);
+        const prevClassXp = activeTrack?.xp ?? hero.xp;
+        const prevClassLevel = activeTrack?.level ?? hero.level;
+        const newClassXp = prevClassXp + xp;
+        const newClassLevel = levelFromXp(newClassXp).level;
+        const equippedClassTitle = titleForLevel(newClassLevel, hero.class) ?? activeTrack?.cosmetic_title ?? null;
+        const titleUnlock = newTitleUnlocked(hero.class, prevClassLevel, newClassLevel);
+
+        await updateClass.mutateAsync({
+          cls: hero.class,
+          patch: {
+            xp: newClassXp,
+            level: newClassLevel,
+            cosmetic_title: equippedClassTitle,
+            lifetime_runs: (activeTrack?.lifetime_runs ?? 0) + 1,
+            lifetime_score: (activeTrack?.lifetime_score ?? 0) + breakdown.total,
+          },
+        });
+
+        // Hero record holds persistent identity + global lifetime totals only.
+        // Mirror the active class's level/xp/title so legacy leaderboard
+        // queries that read from `rune_delve_heroes` still show the right
+        // active-class snapshot.
         await updateHero.mutateAsync({
-          xp: newXp,
-          level: newLevel,
+          xp: newClassXp,
+          level: newClassLevel,
+          cosmetic_title: equippedClassTitle,
           current_streak: newStreak,
           best_streak: Math.max(hero.best_streak, newStreak),
           lifetime_runs: hero.lifetime_runs + 1,
           lifetime_score: hero.lifetime_score + breakdown.total,
           last_run_date: today,
-          cosmetic_title: equippedTitle,
         } as any);
+
         if (titleUnlock) {
           toast.success(`✨ New Title Unlocked — ${titleUnlock.next}`, {
             description: titleUnlock.previous
-              ? `From ${titleUnlock.previous} · Lv ${newLevel}`
-              : `Equipped at Lv ${newLevel}`,
+              ? `From ${titleUnlock.previous} · ${hero.class} Lv ${newClassLevel}`
+              : `Equipped at ${hero.class} Lv ${newClassLevel}`,
             duration: 6000,
           });
         }
