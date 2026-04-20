@@ -19,6 +19,13 @@ import {
 } from '@/lib/runedelve/mechanics';
 import { buildInitialSeals, sealsBrokenByChain } from '@/lib/runedelve/sealedTiles';
 import { applyInitialIntents } from '@/lib/runedelve/telegraph';
+import {
+  buildInitialCorruption,
+  spreadCorruption,
+  resolveChainAgainstCorruption,
+  emptyCorruption,
+  type CorruptionState,
+} from '@/lib/runedelve/corruptedTiles';
 import { RuneBoard } from '@/components/runedelve/RuneBoard';
 import { EnemyDisplay } from '@/components/runedelve/EnemyDisplay';
 import { HeroStatusBar } from '@/components/runedelve/HeroStatusBar';
@@ -49,6 +56,7 @@ export default function RuneDelvePlayPage() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [introMechanic, setIntroMechanic] = useState<MechanicId | null>(null);
   const [endState, setEndState] = useState<null | { cleared: boolean; reason: 'cleared' | 'defeated' | 'timeout'; score: number; isNewBest: boolean }>(null);
+  const [corruption, setCorruption] = useState<CorruptionState>(emptyCorruption);
 
   // Resolve mechanics for this level. Prefer the persisted row, fall back
   // to the deterministic helper so legacy/transient rows still work.
@@ -59,19 +67,22 @@ export default function RuneDelvePlayPage() {
   }, [level]);
   const sealedTilesActive = activeMechanics.includes('sealed_tiles');
   const telegraphActive = activeMechanics.includes('telegraphed_attacks');
+  const corruptionActive = activeMechanics.includes('corrupted_tiles');
 
   // Build deterministic state.
   useEffect(() => {
     if (!level || !hero) return;
     const rng = mulberry32(level.generation_seed);
     setGrid(generateBoard(rng));
-    setSeals(buildInitialSeals(level.generation_seed, sealedTilesActive));
+    const seals = buildInitialSeals(level.generation_seed, sealedTilesActive);
+    setSeals(seals);
+    setCorruption(buildInitialCorruption(level.generation_seed, corruptionActive, level.level_number, seals));
     let enemies: Enemy[] = (level.enemy_config ?? []).map((e: any, i: number) => ({
       id: e.id ?? `e${i}`, name: e.name, emoji: e.emoji, hp: e.hp, maxHp: e.maxHp ?? e.hp, damage: e.damage,
     }));
     if (telegraphActive) enemies = applyInitialIntents(enemies, level.generation_seed, level.level_number);
     setCombat(initialCombat(enemies, level.turn_limit));
-  }, [level, hero, sealedTilesActive, telegraphActive]);
+  }, [level, hero, sealedTilesActive, telegraphActive, corruptionActive]);
 
   // One-time intro modal for any brand-new mechanic taught at this level.
   useEffect(() => {
@@ -116,20 +127,43 @@ export default function RuneDelvePlayPage() {
     const type = grid[chain[0].r][chain[0].c];
     const { next, resolution } = applyChain(combat, type, chain.length, hero.class);
     if (resolution.enemyKills.length) setFlashId(resolution.enemyKills[0]);
+
+    // Apply corruption: HP cost for matching corrupted cells, then strip them.
+    let nextCorruption = corruption;
+    if (corruptionActive && corruption.cells.size) {
+      const r = resolveChainAgainstCorruption(corruption, chain);
+      if (r.hpCost > 0) {
+        next.hp = Math.max(0, next.hp - r.hpCost);
+        toast.error(`☠️ -${r.hpCost} HP from corruption`, { duration: 1100 });
+      }
+      if (r.sourcesCleared > 0) {
+        toast.success(r.sourcesCleared > 1 ? `Sources cleansed!` : `Source cleansed!`, { duration: 1200 });
+      }
+      nextCorruption = r.next;
+    }
+
     const afterEnemies = next.enemies.some(e => e.hp > 0)
       ? enemiesAttack(next, telegraphActive)
       : endTurn(next);
     if ((afterEnemies as any).heavyFired) toast.error('⚡ Heavy strike!', { duration: 1200 });
     const newGrid = resolveBoard(grid, chain, refillRng, seals);
+
     // Break any seals adjacent to the matched cells.
     if (seals.size) {
       const broken = sealsBrokenByChain(seals, chain);
       if (broken.length) {
-        const next = new Set(seals);
-        broken.forEach(k => next.delete(k));
-        setSeals(next);
+        const nextSeals = new Set(seals);
+        broken.forEach(k => nextSeals.delete(k));
+        setSeals(nextSeals);
       }
     }
+
+    // Spread corruption AFTER the chain resolves (player's turn ended).
+    if (corruptionActive && nextCorruption.sources.size) {
+      nextCorruption = spreadCorruption(nextCorruption, rngTick, level.generation_seed, seals);
+    }
+    setCorruption(nextCorruption);
+
     setRngTick(t => t + 1);
     setGrid(newGrid);
     setCombat(afterEnemies);
@@ -148,6 +182,11 @@ export default function RuneDelvePlayPage() {
       ? enemiesAttack(next, telegraphActive)
       : endTurn(next);
     if ((after as any).heavyFired) toast.error('⚡ Heavy strike!', { duration: 1200 });
+    // Ability still consumes a turn — corruption advances.
+    if (corruptionActive && corruption.sources.size) {
+      setCorruption(spreadCorruption(corruption, rngTick, level.generation_seed, seals));
+      setRngTick(t => t + 1);
+    }
     setCombat(after);
     const status = checkObjective(after, level.turn_limit, objType, level.objective_target);
     if (status.over) void finalize(after, status.cleared);
@@ -255,7 +294,14 @@ export default function RuneDelvePlayPage() {
       <EnemyDisplay enemies={combat.enemies} flashId={flashId} />
       <HeroStatusBar state={combat} cls={hero.class} onAbility={handleAbility} />
 
-      <RuneBoard grid={grid} disabled={status.over || submitting} onChainComplete={handleChain} />
+      <RuneBoard
+        grid={grid}
+        disabled={status.over || submitting}
+        onChainComplete={handleChain}
+        seals={seals}
+        corruptedCells={corruption.cells}
+        corruptionSources={corruption.sources}
+      />
 
       <div className="grid grid-cols-3 gap-2">
         <div className="glass-card p-2 text-center">

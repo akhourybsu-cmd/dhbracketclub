@@ -16,6 +16,10 @@ interface Props {
   invalid?: boolean;
   /** When true, this cell is sealed — uninteractable until broken. */
   sealed?: boolean;
+  /** Corrupted overlay — chain-able but costs HP. */
+  corrupted?: boolean;
+  /** Source of corruption (spreads each turn). Implies corrupted. */
+  corruptionSource?: boolean;
   size?: number;
   onPointerDown?: (e: React.PointerEvent) => void;
   onPointerEnter?: (e: React.PointerEvent) => void;
@@ -23,7 +27,7 @@ interface Props {
   dataC: number;
 }
 
-export function RuneCell({ type, selected, invalid, sealed, size = 56, onPointerDown, onPointerEnter, dataR, dataC }: Props) {
+export function RuneCell({ type, selected, invalid, sealed, corrupted, corruptionSource, size = 56, onPointerDown, onPointerEnter, dataR, dataC }: Props) {
   const meta = RUNE_META[type];
   return (
     <div
@@ -38,6 +42,7 @@ export function RuneCell({ type, selected, invalid, sealed, size = 56, onPointer
         selected && 'scale-110 z-10 border',
         invalid && 'opacity-50',
         sealed && 'rd-tile-sealed',
+        corrupted && !sealed && 'rd-tile-corrupted',
       )}
       style={{
         width: size,
@@ -52,7 +57,12 @@ export function RuneCell({ type, selected, invalid, sealed, size = 56, onPointer
         touchAction: 'none',
         cursor: sealed ? 'not-allowed' : undefined,
       }}
-      aria-label={sealed ? `Sealed ${meta.label} rune` : `${meta.label} rune`}
+      aria-label={
+        sealed ? `Sealed ${meta.label} rune`
+        : corruptionSource ? `Corruption source on ${meta.label} rune`
+        : corrupted ? `Corrupted ${meta.label} rune`
+        : `${meta.label} rune`
+      }
     >
       {sealed ? (
         // Sealed state: show the lock prominently, dim the underlying glyph.
@@ -67,15 +77,28 @@ export function RuneCell({ type, selected, invalid, sealed, size = 56, onPointer
           <span className="relative text-xl leading-none" aria-hidden>🔒</span>
         </>
       ) : (
-        <span
-          className="text-2xl font-extrabold leading-none"
-          style={{
-            color: selected ? '#fff' : meta.color,
-            textShadow: selected ? '0 1px 4px rgba(0,0,0,0.5)' : 'none',
-          }}
-        >
-          {meta.glyph}
-        </span>
+        <>
+          <span
+            className="text-2xl font-extrabold leading-none"
+            style={{
+              color: selected ? '#fff' : meta.color,
+              textShadow: selected ? '0 1px 4px rgba(0,0,0,0.5)' : 'none',
+            }}
+          >
+            {meta.glyph}
+          </span>
+          {corrupted && (
+            <span
+              className={cn(
+                'absolute pointer-events-none leading-none',
+                corruptionSource ? 'top-0.5 right-0.5 text-[13px]' : 'top-0.5 right-0.5 text-[10px] opacity-80',
+              )}
+              aria-hidden
+            >
+              {corruptionSource ? '☠️' : '🦠'}
+            </span>
+          )}
+        </>
       )}
     </div>
   );

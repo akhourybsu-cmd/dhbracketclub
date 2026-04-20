@@ -19,10 +19,14 @@ interface Props {
   onChainComplete: (chain: Cell[]) => void;
   /** Set of `${r}-${c}` keys that are currently sealed and uninteractable. */
   seals?: Set<string>;
+  /** Set of `${r}-${c}` keys that are corrupted (chain-able but costly). */
+  corruptedCells?: Set<string>;
+  /** Subset of `corruptedCells` that are active spreaders. */
+  corruptionSources?: Set<string>;
 }
 
 // Mobile-first rune board with pointer-driven chain selection.
-export function RuneBoard({ grid, disabled, onChainComplete, seals }: Props) {
+export function RuneBoard({ grid, disabled, onChainComplete, seals, corruptedCells, corruptionSources }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [chain, setChain] = useState<Cell[]>([]);
   const draggingRef = useRef(false);
@@ -147,7 +151,10 @@ export function RuneBoard({ grid, disabled, onChainComplete, seals }: Props) {
           {grid.map((row, r) =>
             row.map((rune, c) => {
               const isSel = chainSet.has(`${r}-${c}`);
-              const isSealed = seals?.has(`${r}-${c}`) ?? false;
+              const k = `${r}-${c}`;
+              const isSealed = seals?.has(k) ?? false;
+              const isCorrupted = corruptedCells?.has(k) ?? false;
+              const isSource = corruptionSources?.has(k) ?? false;
               return (
                 <RuneCell
                   key={`${r}-${c}`}
@@ -157,6 +164,8 @@ export function RuneBoard({ grid, disabled, onChainComplete, seals }: Props) {
                   size={cellSize}
                   selected={isSel}
                   sealed={isSealed}
+                  corrupted={isCorrupted}
+                  corruptionSource={isSource}
                   onPointerDown={handlePointerDown(r, c)}
                 />
               );
