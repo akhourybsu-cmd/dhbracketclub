@@ -8,10 +8,11 @@ import { ReactNode } from 'react';
  */
 export function RuneDelveLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="rd-mode relative">
-      {/* Decorative ambient motes — non-interactive */}
-      <span className="rd-mote" aria-hidden style={{ top: '8%', left: '14%' }} />
-      <span className="rd-mote rd-mote-2" aria-hidden style={{ top: '18%', right: '10%' }} />
+    <div className="rd-mode relative overflow-hidden">
+      {/* Decorative ambient motes — non-interactive. Pinned to corners so they
+          never overlap interactive UI on narrow phones. */}
+      <span className="rd-mote" aria-hidden style={{ top: '4px', left: '6px' }} />
+      <span className="rd-mote rd-mote-2" aria-hidden style={{ top: '10px', right: '6px' }} />
       {children}
     </div>
   );

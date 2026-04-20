@@ -39,7 +39,8 @@ export function RuneBoard({ grid, disabled, onChainComplete, seals, corruptedCel
       const w = containerRef.current?.clientWidth ?? 320;
       const gap = 8;
       const usable = w - gap * (BOARD_SIZE - 1) - 16; // minus padding
-      setCellSize(Math.max(40, Math.floor(usable / BOARD_SIZE)));
+      // Touch-target minimum 44px for accessible drag input on small phones.
+      setCellSize(Math.max(44, Math.floor(usable / BOARD_SIZE)));
     };
     update();
     window.addEventListener('resize', update);

@@ -18,7 +18,8 @@ export function EnemyDisplay({ enemies, flashId }: Props) {
         return (
           <motion.div
             key={e.id}
-            animate={flashId === e.id ? { x: [-3, 3, -2, 2, 0] } : {}}
+            // `false` here suppresses spurious animation re-evaluation on every parent render.
+            animate={flashId === e.id ? { x: [-3, 3, -2, 2, 0] } : false}
             transition={{ duration: 0.3 }}
             className="flex flex-col items-center gap-1 min-w-[72px]"
             style={{ opacity: dead ? 0.3 : 1 }}
