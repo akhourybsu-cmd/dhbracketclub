@@ -2833,6 +2833,152 @@ export type Database = {
           },
         ]
       }
+      rune_delve_dungeons: {
+        Row: {
+          created_at: string
+          enemy_config: Json
+          id: string
+          max_turns: number
+          run_date: string
+          seed: number
+        }
+        Insert: {
+          created_at?: string
+          enemy_config?: Json
+          id?: string
+          max_turns?: number
+          run_date: string
+          seed: number
+        }
+        Update: {
+          created_at?: string
+          enemy_config?: Json
+          id?: string
+          max_turns?: number
+          run_date?: string
+          seed?: number
+        }
+        Relationships: []
+      }
+      rune_delve_heroes: {
+        Row: {
+          best_streak: number
+          class: string
+          cosmetic_title: string | null
+          created_at: string
+          current_streak: number
+          hero_name: string
+          id: string
+          last_run_date: string | null
+          level: number
+          lifetime_runs: number
+          lifetime_score: number
+          updated_at: string
+          user_id: string
+          xp: number
+        }
+        Insert: {
+          best_streak?: number
+          class?: string
+          cosmetic_title?: string | null
+          created_at?: string
+          current_streak?: number
+          hero_name?: string
+          id?: string
+          last_run_date?: string | null
+          level?: number
+          lifetime_runs?: number
+          lifetime_score?: number
+          updated_at?: string
+          user_id: string
+          xp?: number
+        }
+        Update: {
+          best_streak?: number
+          class?: string
+          cosmetic_title?: string | null
+          created_at?: string
+          current_streak?: number
+          hero_name?: string
+          id?: string
+          last_run_date?: string | null
+          level?: number
+          lifetime_runs?: number
+          lifetime_score?: number
+          updated_at?: string
+          user_id?: string
+          xp?: number
+        }
+        Relationships: []
+      }
+      rune_delve_runs: {
+        Row: {
+          ability_used: boolean
+          completed_at: string
+          created_at: string
+          dungeon_cleared: boolean
+          dungeon_id: string
+          enemies_defeated: number
+          hero_class: string
+          hp_remaining: number
+          id: string
+          longest_chain: number
+          pick_log: Json
+          run_date: string
+          score: number
+          total_damage: number
+          turns_used: number
+          user_id: string
+          xp_earned: number
+        }
+        Insert: {
+          ability_used?: boolean
+          completed_at?: string
+          created_at?: string
+          dungeon_cleared?: boolean
+          dungeon_id: string
+          enemies_defeated?: number
+          hero_class: string
+          hp_remaining?: number
+          id?: string
+          longest_chain?: number
+          pick_log?: Json
+          run_date: string
+          score?: number
+          total_damage?: number
+          turns_used?: number
+          user_id: string
+          xp_earned?: number
+        }
+        Update: {
+          ability_used?: boolean
+          completed_at?: string
+          created_at?: string
+          dungeon_cleared?: boolean
+          dungeon_id?: string
+          enemies_defeated?: number
+          hero_class?: string
+          hp_remaining?: number
+          id?: string
+          longest_chain?: number
+          pick_log?: Json
+          run_date?: string
+          score?: number
+          total_damage?: number
+          turns_used?: number
+          user_id?: string
+          xp_earned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rune_delve_runs_dungeon_id_fkey"
+            columns: ["dungeon_id"]
+            isOneToOne: false
+            referencedRelation: "rune_delve_dungeons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scoring_rules: {
         Row: {
           id: string
