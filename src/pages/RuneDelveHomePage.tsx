@@ -196,14 +196,14 @@ export default function RuneDelveHomePage() {
           <ClassBadge cls={hero.class} size="lg" />
           <div className="flex-1 min-w-0">
             <p className="font-extrabold text-[14px] truncate">{hero.hero_name}</p>
-            {(hero.cosmetic_title ?? titleForLevel(lvl.level, hero.class)) && (
+            {activeTitle && (
               <p className="text-[10px] font-bold text-primary truncate">
-                ✦ {hero.cosmetic_title ?? titleForLevel(lvl.level, hero.class)}
+                ✦ {activeTitle}
               </p>
             )}
-            <p className="text-[10px] text-muted-foreground font-bold mt-0.5">{cls.name} · Lv {lvl.level}</p>
+            <p className="text-[10px] text-muted-foreground font-bold mt-0.5">{cls.name} · Lv {activeLevel}</p>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-[10px] font-bold text-muted-foreground">Lv {lvl.level}</span>
+              <span className="text-[10px] font-bold text-muted-foreground">Lv {activeLevel}</span>
               <div className="flex-1 h-1.5 rounded-full bg-muted/50 overflow-hidden">
                 <div className="h-full bg-primary" style={{ width: `${xpPct}%` }} />
               </div>
