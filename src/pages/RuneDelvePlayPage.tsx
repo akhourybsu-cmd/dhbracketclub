@@ -173,7 +173,7 @@ export default function RuneDelvePlayPage() {
     setGrid(newGrid);
     setCombat(afterEnemies);
 
-    const status = checkObjective(afterEnemies, level.turn_limit, objType, level.objective_target);
+    const status = checkObjective(afterEnemies, level.turn_limit, objType, level.objective_target, secondaryObjective);
     if (status.over) void finalize(afterEnemies, status.cleared);
   };
 
@@ -193,7 +193,7 @@ export default function RuneDelvePlayPage() {
       setRngTick(t => t + 1);
     }
     setCombat(after);
-    const status = checkObjective(after, level.turn_limit, objType, level.objective_target);
+    const status = checkObjective(after, level.turn_limit, objType, level.objective_target, secondaryObjective);
     if (status.over) void finalize(after, status.cleared);
   };
 
@@ -259,7 +259,7 @@ export default function RuneDelvePlayPage() {
     }
   }
 
-  const status = checkObjective(combat, level.turn_limit, objType, level.objective_target);
+  const status = checkObjective(combat, level.turn_limit, objType, level.objective_target, secondaryObjective);
   const turnDisplay = Math.min(
     level.turn_limit,
     Math.max(1, level.turn_limit - combat.turnsRemaining + (status.over ? 0 : 1)),
@@ -386,21 +386,30 @@ export default function RuneDelvePlayPage() {
   );
 }
 
-// Objective-aware end check.
-function checkObjective(state: CombatState, maxTurns: number, type: ObjectiveType, target: number) {
+// Objective-aware end check. Layered goals (Band 4) require BOTH primary and
+// secondary to be satisfied for a clear; primary failure is still a fail.
+function checkObjective(
+  state: CombatState,
+  maxTurns: number,
+  type: ObjectiveType,
+  target: number,
+  secondary: SecondaryObjective | null,
+) {
+  const wrap = (r: { over: boolean; cleared: boolean }) => {
+    if (!r.over || !r.cleared || !secondary) return r;
+    return { over: true, cleared: secondaryMet(secondary, state, maxTurns) };
+  };
   const base = isRunOver(state);
   if (type === 'survive') {
-    // Cleared if you outlast the move budget without dying. Defeated only if HP=0.
     if (state.hp <= 0) return { over: true, cleared: false };
-    if (state.turnsRemaining <= 0) return { over: true, cleared: true };
+    if (state.turnsRemaining <= 0) return wrap({ over: true, cleared: true });
     return { over: false, cleared: false };
   }
   if (type === 'reach_score') {
     if (state.totalDamage * 1 + state.enemiesDefeated * 200 + state.longestChain * 25 >= target) {
-      return { over: true, cleared: true };
+      return wrap({ over: true, cleared: true });
     }
-    return base;
+    return wrap(base);
   }
-  // defeat_all + defeat_elite both clear when every enemy is dead.
-  return base;
+  return wrap(base);
 }
