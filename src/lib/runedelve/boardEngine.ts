@@ -6,7 +6,8 @@ export type Cell = { r: number; c: number };
 export function isAdjacent(a: Cell, b: Cell): boolean {
   const dr = Math.abs(a.r - b.r);
   const dc = Math.abs(a.c - b.c);
-  return (dr + dc) === 1; // orthogonal only
+  // 8-direction: orthogonal + diagonal neighbours.
+  return dr <= 1 && dc <= 1 && (dr + dc) > 0;
 }
 
 export function cellKey(c: Cell): string {
