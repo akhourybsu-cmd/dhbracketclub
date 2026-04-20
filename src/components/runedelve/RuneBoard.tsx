@@ -147,6 +147,7 @@ export function RuneBoard({ grid, disabled, onChainComplete, seals }: Props) {
           {grid.map((row, r) =>
             row.map((rune, c) => {
               const isSel = chainSet.has(`${r}-${c}`);
+              const isSealed = seals?.has(`${r}-${c}`) ?? false;
               return (
                 <RuneCell
                   key={`${r}-${c}`}
@@ -155,6 +156,7 @@ export function RuneBoard({ grid, disabled, onChainComplete, seals }: Props) {
                   type={rune}
                   size={cellSize}
                   selected={isSel}
+                  sealed={isSealed}
                   onPointerDown={handlePointerDown(r, c)}
                 />
               );
