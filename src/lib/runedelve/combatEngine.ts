@@ -60,6 +60,7 @@ export function applyChain(
   type: RuneType,
   length: number,
   cls: HeroClass,
+  bossRule: BossRuleId | null = null,
 ): { next: CombatState; resolution: ChainResolution } {
   const next: CombatState = { ...state, enemies: state.enemies.map(e => ({ ...e })) };
   const resolution: ChainResolution = {
@@ -76,16 +77,18 @@ export function applyChain(
       dmg = Math.round(dmg * 2);
       next.shadowstepActive = false;
     }
-    // Damage first living enemy.
-    const target = next.enemies.find(e => e.hp > 0);
+    // Damage first TARGETABLE enemy. Boss rules can hide the final foe.
+    const targets = filterTargetable(bossRule, next.enemies);
+    const target = targets[0];
     if (target) {
-      const applied = Math.min(dmg, target.hp);
-      target.hp -= applied;
+      const live = next.enemies.find(e => e.id === target.id)!;
+      const applied = Math.min(dmg, live.hp);
+      live.hp -= applied;
       resolution.damageDealt = applied;
       next.totalDamage += applied;
-      if (target.hp <= 0) {
+      if (live.hp <= 0) {
         next.enemiesDefeated += 1;
-        resolution.enemyKills.push(target.id);
+        resolution.enemyKills.push(live.id);
       }
     }
   } else if (type === 'blue') {
