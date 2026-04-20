@@ -1,43 +1,45 @@
 
 
-## Issue: Reaction overlay doesn't reliably appear on tap
+## Lore Submission Audit
 
-### Root causes (from inspecting `MessageBubble.tsx`)
+### What works correctly
+- **RLS for lore_entries**: Any authenticated user can create entries (`auth.uid() = created_by`). ✅
+- **RLS for lore_contributions**: Any authenticated user can add context, only owners can edit/delete their own. ✅
+- **RLS for lore_reactions**: Any authenticated user can react/unreact. ✅
+- **QuickAddLoreSheet**: Wired correctly to `useCreateLoreEntry`, uses `user.id` as `created_by`, navigates to detail on success.
+- **LoreContributions**: Insert/update/delete mutations all pass `user.id`, invalidate queries correctly.
+- **Edit/delete authorship**: Contribution rows only show pencil/trash to `isOwner` — others cannot edit each other's text. ✅
 
-1. **Drag swallowing tap** — outer `motion.div` has `drag="x"` for swipe-to-reply. Framer Motion's drag gesture often suppresses the synthetic `onClick` even on micro-movements (especially on mobile where finger jitter triggers a tiny drag). The tap is registered as a drag end, `onClick` never fires → overlay never opens.
+### Bugs / UX issues found
 
-2. **Each bubble owns its own `showOverlay` state** — tapping bubble B while bubble A's overlay is open doesn't close A. Then tapping A again toggles it shut. If user taps rapidly across bubbles, overlays appear stuck or unresponsive.
+**1. Edit/Delete buttons hidden on mobile (critical)**
+In `LoreContributions.tsx` line 202, the per-contribution edit/trash actions use `opacity-0 group-hover:opacity-100`. On touch devices there's no hover — **users cannot edit or delete their own contributions on mobile**. This breaks the feature on the primary platform (PWA).
+- Fix: always show the actions on mobile (e.g. `opacity-60 sm:opacity-0 sm:group-hover:opacity-100`), or render a small overflow menu.
 
-3. **Overlay clipping** — `absolute -top-11` places the bar 44px above the bubble. For the topmost visible message (just under the sticky chat header), the overlay renders behind/under the header and looks like nothing happened.
+**2. Touch targets below 44px**
+The pencil/trash buttons are `p-1.5` on a `w-3.5 h-3.5` icon (~26px total). Per `mem://ui/mobile-interaction-standards`, icon-only buttons should be 44px. Bump to `p-2.5` with `min-w-[44px] min-h-[44px]`.
 
-4. **Tap target conflict on links/images** — clicking inside a bubble that contains a link calls `e.stopPropagation()` on the anchor, which is correct, but the bubble's own `onClick` still triggers when tapping near (not on) the link. Edge taps near interactive children sometimes don't bubble as expected.
+**3. Random Lore uses full page reload**
+`LorePage.tsx` line 44 uses `window.location.href` instead of `navigate()`, dropping React state and the SW cache benefit. Swap to `useNavigate()`.
 
-### Fix plan
+**4. `useDeleteLoreContribution` doesn't toast on success**
+Other mutations toast; this one is silent (entry just disappears). Add a small `toast.success('Removed')` or rely on the optimistic removal — minor polish.
 
-**A. Decouple tap from drag using `onTap` + drag threshold**
-- Replace `onClick={handleTap}` with Framer Motion's `onTap` handler, which correctly distinguishes tap vs drag.
-- Add `dragMomentum={false}` and bump drag activation so accidental drags don't fire.
+**5. Confirm dialogs use native `confirm()`**
+Both `LoreDetailPage` (delete entry) and `LoreContributions` (delete contribution) use `window.confirm`. Consistent with rest of app? Acceptable, just noting.
 
-**B. Lift overlay state to a single source of truth**
-- In `MessageList.tsx`, track `openOverlayMessageId: string | null`.
-- Pass `isOverlayOpen` and `onToggleOverlay(msgId)` props to each `MessageBubble`. Bubble removes its local `showOverlay` state.
-- Result: opening one overlay automatically closes any other.
+### Plan: fix the two critical mobile issues + minor polish
 
-**C. Smart overlay positioning**
-- Detect available space: if bubble's top is within 56px of viewport top (or the chat header), render overlay **below** bubble (`-bottom-11`) instead of above.
-- Use a simple `useLayoutEffect` measurement when overlay opens, or a CSS-only approach: render overlay above, but add `style={{ top: 'auto', bottom: '-44px' }}` when bubble's `getBoundingClientRect().top < HEADER_OFFSET`.
+**File: `src/components/lore/LoreContributions.tsx`**
+- Make edit/delete buttons always visible on mobile, hover-reveal on desktop only.
+- Bump button padding to meet 44px touch target.
+- Add success toast on contribution delete.
 
-**D. Add `pointer-events-auto` and ensure `z-30` beats sticky header**
-- Header likely has `z-20`; raise overlay to `z-50` to guarantee visibility.
-
-### Files to edit
-
-- `src/components/chat/MessageBubble.tsx` — switch to `onTap`, remove local `showOverlay` state (accept from props), add adaptive positioning
-- `src/components/chat/MessageList.tsx` — add `openOverlayMessageId` state, pass handlers down
+**File: `src/pages/LorePage.tsx`**
+- Replace `window.location.href` in `onRandom` with `useNavigate()`.
 
 ### Out of scope
-
-- Don't change reaction pill positioning (already approved iMessage style)
-- Don't change swipe-to-reply behavior
-- No new dependencies
+- No schema changes (RLS already correct).
+- No changes to `QuickAddLoreSheet` (works correctly).
+- No changes to reactions UI.
 
