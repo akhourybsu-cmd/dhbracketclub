@@ -107,7 +107,7 @@ export default function RuneDelveResultsPage() {
           </div>
         )}
         <p className="text-3xl mb-1">{outcome.emoji}</p>
-        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">{outcome.label}</p>
+        <p className="rd-title text-[14px] font-extrabold uppercase tracking-[0.18em] text-foreground/90 mb-1">{outcome.label}</p>
         <p className="font-mono text-4xl font-extrabold tabular-nums mb-2" style={{ color: 'hsl(var(--gold))' }}>
           {run.score.toLocaleString()}
         </p>
