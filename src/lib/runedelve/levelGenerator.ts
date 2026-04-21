@@ -206,6 +206,16 @@ export function generateLevel(level: number): LevelDefinition {
       hp,
       maxHp: hp,
       damage,
+      // Roster metadata — drives combat-log voice + ability ticks.
+      archetypeId: t.id,
+      family: t.family,
+      role: t.role,
+      // Only attach abilities to non-elite/non-boss slot picks (boss/elite
+      // already have their own signature treatment via boss rules + stat boosts).
+      ability: !isElite && !isFinalBossSlot ? t.ability : undefined,
+      abilityCooldown: !isElite && !isFinalBossSlot && t.ability ? t.abilityCooldown : undefined,
+      abilityCooldownMax: !isElite && !isFinalBossSlot && t.ability ? t.abilityCooldown : undefined,
+      telegraphLabel: !isElite && !isFinalBossSlot ? t.telegraphLabel : undefined,
     });
   }
 
