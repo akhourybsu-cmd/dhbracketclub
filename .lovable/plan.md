@@ -1,70 +1,90 @@
 
 
-# Rune Delve — Fantasy Typography + Contrast Sweep
+# Rune Delve — Difficulty Rebalance (Data-Driven)
 
-A focused polish pass that (1) audits Rune Delve for any dark-on-dark text, (2) lifts low-contrast labels to fantasy-readable levels, and (3) introduces a dedicated **fantasy display typeface** for titles, chapter names, hero names, level cues, and HUD identity — so Rune Delve reads like a real fantasy game inside DH Club.
+## What the data shows
 
-## What you'll get
+I pulled every Rune Delve run from the database. Tiny sample (4 active players, 18 runs across L1–L8), but the signal is unmistakable:
 
-1. **A fantasy display font** (Cinzel — engraved Roman serif, perfect for arcane/dungeon titles) loaded alongside the existing Plus Jakarta Sans, scoped to Rune Delve only via a `.font-rd-display` utility and applied to display-level text. Body copy stays Plus Jakarta Sans for readability.
-2. **Audited text contrast** — every Rune Delve text class lifted to a minimum of `text-foreground/80` (≈WCAG AA on `--rd-stone`). No more `/60`, `/65`, `/70` for primary information; secondary metadata moves to `/75`+. The `--muted-foreground` override in `.rd-mode` bumped from 64% → 70% lightness for an extra pass.
-3. **Fixed "white-on-translucent" weak spots** — the Armory active class tab, the bonus-objective pill (`text-accent-foreground` white-on-translucent-teal which reads muddy), and the level-map "Next" pill all get explicit high-contrast pairings.
-4. **Boot screen + HUD typography upgrade** — the "Rune Delve" boot title, chapter name, hero name in HUD, and chapter pills all use the new display font for a cohesive fantasy identity.
+| Lvl | Attempts | Clears | Clear % | Avg turns used | Avg HP left | Notes |
+|----:|---------:|-------:|--------:|---------------:|------------:|-------|
+| 1 | 3 | 3 | **100%** | 10.3 | 90 | smooth |
+| 2 | 3 | 1 | **33%** | 11.0 | 87 | early dip — see below |
+| 3–7 | 12 | 12 | **100%** | 5.0–10.5 | 89–94 | comfortable |
+| **8** | **2** | **0** | **0%** | **12.0 (max)** | **18** | **hard wall** |
 
-## Where the fantasy font is applied
+**Level 8 is a cliff, not a curve.** Going from L7 → L8 the level generator jumps:
 
-| Surface | Element |
-|---|---|
-| Boot screen | "◆ Rune Delve ◆" eyebrow, chapter name title |
-| HUD | Hero name |
-| Home page | Chapter name title, "Forge your hero" header, hero name in snapshot card |
-| Level Map | Chapter pills, "Chapter N" label |
-| Hero page | Hero name, class title, cosmetic title |
-| Results page | "Victory" / "Defeat" headline, level cleared title |
-| Shop / Armory | Page titles, tier names |
-| Leaderboard | "Campaign Leaders" title, hero names in rows |
+- enemy count **2 → 3** (+50%)
+- total enemy HP **168 → 256** (+52%)
+- total enemy damage per turn **8 → 20** (+150%)
+- turn limit stays at **12**
 
-Body copy, stats, numeric readouts, button labels, helper text, tooltips, and form fields all stay in Plus Jakarta Sans — the fantasy font is reserved for display moments so readability never suffers.
+Both L8 attempts used all 12 turns, used their ability, hit chains of 7–12 — they played well and still only killed 1 of 3 enemies. Required DPS jumps from ~14 to ~21 HP/turn with no warning.
 
-## Contrast fixes (specific)
+**Twelve turns is fine through L7.** It is *not* fine for a 3-enemy / 256-HP encounter at L8.
 
-- **`.rd-mode` muted-foreground**: 150 14% 64% → 150 14% 70%
-- **Armory tab inactive state**: `text-foreground/85` → `text-foreground/95` + bump font weight to extrabold
-- **Bonus pill on Play page**: change `color: var(--accent-foreground)` (white-on-teal-translucent) to high-contrast `hsl(var(--accent))` text on darker bg
-- **Stat strip labels** (DMG/KILLS/CHAIN): `text-foreground/60` → `text-foreground/85`
-- **Level map locked levels**: lift `text-muted-foreground` against locked dark tile from current to brighter helper
-- **Relic card descriptions**: `text-muted-foreground` reads dim → use new lifted muted (auto-fixed by `.rd-mode` override)
-- **Shop tier-locked subtext** + **Hero page passive/ability text**: dim secondary text bumped via the muted lift
-- **Empty state text** in Armory ("No relics yet"): `text-foreground/70` → `text-foreground/90`
+The L2 dip is a separate, smaller issue: the slime (94 HP, 3 dmg) is a slog with no ability yet earned, so newer players time out.
 
-## Technical approach
+## What I'll change
 
-- **`index.html`**: extend the Google Fonts preload/stylesheet to include `Cinzel:wght@500;600;700` — single extra family, ~12KB woff2.
-- **`tailwind.config.ts`**: add `fontFamily.display: ['Cinzel', 'Plus Jakarta Sans', 'serif']` so we get a `font-display` utility (or use a `.font-rd-display` class to keep it scoped).
-- **`src/index.css`**: add a `.font-rd-display` utility (`font-family: 'Cinzel', serif; letter-spacing: 0.01em`) and bump `.rd-mode { --muted-foreground: 150 14% 70%; }`. Add a small helper class `.rd-title` that combines display font + tight tracking + subtle text-shadow for headline use.
-- **Page edits** — apply `font-rd-display` / `rd-title` to the specific headlines listed above; replace low-opacity foreground utilities with the lifted scale.
+### 1. Smooth the L8 cliff in the level generator (`src/lib/runedelve/levelGenerator.ts`)
+
+- **Enemy count ramp** — push the 3-enemy threshold later and gate it by chance, not just chapter:
+  - `level ≤ 8` → always **2**
+  - `level 9–15` → **2** (75%) or **3** (25%)
+  - `level 16–25` → 2 or 3 (50/50)
+  - `level 26–75` → 3
+  - `level 76+` → 3 or 4
+- **HP scaling** — soften early ramp from `+4%/level` to `+3%/level` for the first 25 levels, then resume 4%.
+- **Damage scaling** — soften from `+2.5%/level` to `+2%/level` for the first 25 levels.
+- **Turn budget** — keep 12 through L15 (currently L1–10), then taper to 11/10/9/8 the same way.
+- **Per-enemy DPS cap on early levels** — when generating L≤15, if the rolled template's damage scales above 7, swap to a tankier-but-softer alternate. Prevents a 3-Goblin spike like L6 hinted at.
+
+### 2. Backfill the already-stored levels (DB migration)
+
+Levels 1–8 are already persisted in `rune_delve_levels` with the old (harsh) configs. The formula change won't touch them. I'll write a migration that **regenerates** rows for levels 1–25 to match the new curve. Specifically:
+
+- For L1–8 already in the table, recompute `enemy_config`, `turn_limit`, `objective_target` using the new generator.
+- Only touches rows where `level_number ≤ 25` so existing player progress (`rune_delve_progress`) is untouched — players keep their unlocked levels and history.
+
+The migration is idempotent and uses the deterministic seed, so reruns produce identical results.
+
+### 3. Concrete L8 target after the change
+
+Same seed, same chapter, but:
+
+- 2 enemies (Shadow Imp + Skeleton), total HP ~150, total damage ~12/turn
+- 12 turn budget, ability available
+- Expected clear rate ~70–80% on first try
+
+Levels 9–15 stay tense but solvable; the "3-enemy" experience moves to L16+ where players have more relics, ability uses, and class progression to lean on.
+
+### 4. Tooling — log a "near-miss" signal so we can re-tune later
+
+Add a small note to `RuneDelveResultsPage` so failed runs that cleared ≥60% of total enemy HP show a "So close — try a different relic" hint. This is QoL, not balance, but it'll give us better player feedback for the next pass once more runs are in the DB.
+
+## What I'm NOT changing
+
+- No gameplay/combat math, no scoring formula, no class abilities, no relic effects.
+- No changes past L25 — the late-game curve has zero data; tuning it now would be guessing.
+- No changes to objectives (defeat_all stays the default through L14).
+- No HUD/UI/typography changes — this is a numbers pass.
 
 ## Files
 
 **Edited**
-- `index.html` — add Cinzel to font link
-- `tailwind.config.ts` — register `display` font family
-- `src/index.css` — add `.font-rd-display` + `.rd-title` utilities, bump muted-foreground inside `.rd-mode`
-- `src/components/runedelve/RuneDelveBoot.tsx` — title + eyebrow use display font
-- `src/components/runedelve/RuneDelveHUD.tsx` — hero name uses display font
-- `src/pages/RuneDelveHomePage.tsx` — chapter title, hero snapshot name, "Forge your hero" headline
-- `src/pages/RuneDelveLevelMapPage.tsx` — chapter pills + page header
-- `src/pages/RuneDelveHeroPage.tsx` — hero name, class title, cosmetic title; passive/ability contrast lift
-- `src/pages/RuneDelvePlayPage.tsx` — bonus-pill contrast fix, stat-strip label lift
-- `src/pages/RuneDelveResultsPage.tsx` — outcome headline, level title
-- `src/pages/RuneDelveShopPage.tsx` — page title, tier-locked banner contrast
-- `src/pages/RuneDelveArmoryPage.tsx` — page title, tab + empty-state contrast
-- `src/pages/RuneDelveLeaderboardPage.tsx` — section title, hero names
-- `src/components/runedelve/RelicCard.tsx` — relic name uses display font
+- `src/lib/runedelve/levelGenerator.ts` — softer enemy-count, HP, damage, and turn-limit curves for L1–25.
 
-## Out of scope
+**New**
+- `supabase/migrations/<ts>_rune_delve_rebalance_l1_25.sql` — regenerates `rune_delve_levels` rows 1–25 in place using the new formula.
 
-- No changes to gameplay, layout structure, or component composition.
-- No font swap on body copy, stats, buttons, or helper text — only display moments.
-- No changes outside `/rune-delve/*` — Cinzel is loaded globally (cheap) but only applied via the scoped utility.
+## How we'll know it worked
+
+After ship, re-run the same per-level query in 1–2 weeks. Healthy targets:
+
+- L1–10 clear rate **70–95%**
+- L11–25 clear rate **40–70%**
+- No level with **0% clear** across 3+ attempts
+- Avg turns used should sit at **70–85%** of the budget on cleared runs (currently 100% on L8 = no margin)
 
