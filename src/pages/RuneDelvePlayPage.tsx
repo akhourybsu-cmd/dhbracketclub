@@ -852,9 +852,14 @@ export default function RuneDelvePlayPage() {
         if (defeats.length > 0) {
           const { newlyDiscovered } = await recordDefeats.mutateAsync(defeats);
           if (newlyDiscovered.length > 0) {
-            const names = newlyDiscovered
-              .map(id => rosterById(id)?.name ?? 'Unknown')
-              .slice(0, 3);
+            const allNames = newlyDiscovered.map(id => rosterById(id)?.name ?? 'Unknown');
+            // Battle Chronicle: one discovery line per newly-logged foe so the
+            // post-run log mirrors what the toast announces.
+            pushLogs(allNames.map(name => ({
+              kind: 'info' as const,
+              text: `📖 Bestiary updated: ${name}`,
+            })));
+            const names = allNames.slice(0, 3);
             const more = newlyDiscovered.length - names.length;
             toast.success(
               newlyDiscovered.length === 1

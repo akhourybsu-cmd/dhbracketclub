@@ -59,13 +59,17 @@ export function EnemyDisplay({ enemies, flashId }: Props) {
               {/* Armor pip — visible damage-reduction indicator from shield_self. */}
               {!dead && (e.armor ?? 0) > 0 && (
                 <div
-                  className="absolute -bottom-1 -left-1 min-w-[16px] h-[16px] px-1 rounded-full bg-gold text-background text-[9px] font-extrabold flex items-center justify-center shadow-md"
+                  className="absolute -bottom-1 -left-1 min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-extrabold flex items-center justify-center shadow-md"
                   style={{ background: 'hsl(var(--gold))', color: 'hsl(var(--background))' }}
                   aria-label={`Armor ${e.armor}`}
                 >🛡{e.armor}</div>
               )}
             </div>
-            <div className="text-[9px] font-extrabold uppercase tracking-wider text-foreground/75 text-center max-w-[72px] truncate leading-tight">
+            {/* Two-line clamp keeps "Boss Ancient Drake" / "Cult Warden" readable on 411px screens. */}
+            <div
+              className="text-[9px] font-extrabold uppercase tracking-wider text-foreground/75 text-center max-w-[78px] leading-tight overflow-hidden"
+              style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', wordBreak: 'break-word' }}
+            >
               {e.name}
             </div>
             <div className="w-12 h-1.5 rounded-full bg-muted/60 overflow-hidden">
