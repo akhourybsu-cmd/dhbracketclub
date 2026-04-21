@@ -311,6 +311,54 @@ export default function RuneDelvePlayPage() {
       next.shieldTurns += chainMods.bonusShieldTurns;
       resolution.guardGained += chainMods.bonusShieldTurns;
     }
+    // Quickstep: first chain of run counts as +N length. Apply by adding the
+    // per-rune effect of the chain type (an extra "phantom" rune's worth) for
+    // every length bonus point. Also lifts the longest-chain stat for scoring.
+    if (chainMods.effectiveLengthBonus > 0) {
+      const bonusLen = chainMods.effectiveLengthBonus;
+      next.longestChain = Math.max(next.longestChain, chain.length + bonusLen);
+      if (type === 'red') {
+        // 8 dmg per rune base, scaled by warrior passive (matches applyChain).
+        const perRune = hero.class === 'warrior' ? Math.round(8 * 1.25) : 8;
+        const extra = perRune * bonusLen;
+        const target = next.enemies.find(e => e.hp > 0)
+          ?? next.enemies.find(e => resolution.enemyKills.includes(e.id));
+        if (target) {
+          const applied = Math.min(extra, Math.max(target.hp, 0));
+          if (applied > 0) {
+            target.hp -= applied;
+            resolution.damageDealt += applied;
+            next.totalDamage += applied;
+            if (target.hp <= 0 && !resolution.enemyKills.includes(target.id)) {
+              next.enemiesDefeated += 1;
+              resolution.enemyKills.push(target.id);
+            }
+          }
+        }
+      } else if (type === 'green') {
+        const perRune = hero.class === 'cleric' ? Math.round(6 * 1.5) : 6;
+        const extra = Math.min(perRune * bonusLen, next.maxHp - next.hp);
+        if (extra > 0) {
+          next.hp += extra;
+          resolution.hpHealed += extra;
+        }
+      } else if (type === 'blue') {
+        // Push the chain over the 5+ mana threshold if it wasn't already.
+        if (chain.length < 5 && chain.length + bonusLen >= 5 && next.mana < MAX_MANA) {
+          next.mana = Math.min(MAX_MANA, next.mana + 1);
+          resolution.manaGained += 1;
+        }
+      } else if (type === 'gold') {
+        // Gold scales shield turns by floor(length/3) — only push if it crosses a threshold.
+        const beforeT = Math.floor(chain.length / 3);
+        const afterT = Math.floor((chain.length + bonusLen) / 3);
+        const extraTurns = afterT - beforeT;
+        if (extraTurns > 0) {
+          next.shieldTurns += extraTurns;
+          resolution.guardGained += extraTurns;
+        }
+      }
+    }
     // Update per-run counters.
     setChainCountTotal(c => c + 1);
     if (type === 'red') setRedChainCount(redCountAfter);
