@@ -7,11 +7,13 @@ interface Props {
   relic: RelicDef | null;
   locked?: boolean;
   unlockHint?: string; // e.g. "Reach Lv 50"
+  /** Optional rank (1..5) for the equipped relic. */
+  rank?: number;
   onClick?: () => void;
   onClear?: () => void;
 }
 
-export function LoadoutSlot({ relic, locked, unlockHint, onClick, onClear }: Props) {
+export function LoadoutSlot({ relic, locked, unlockHint, rank, onClick, onClear }: Props) {
   if (locked) {
     return (
       <div className="rounded-xl border border-dashed border-border/70 p-3 flex flex-col items-center justify-center text-center min-h-[88px] opacity-80 bg-muted/15">
@@ -53,7 +55,15 @@ export function LoadoutSlot({ relic, locked, unlockHint, onClick, onClear }: Pro
           <X className="w-3 h-3" />
         </button>
       )}
-      <div className="text-2xl mb-0.5" aria-hidden>{relic.icon}</div>
+      <div className="relative">
+        <div className="text-2xl mb-0.5" aria-hidden>{relic.icon}</div>
+        {rank != null && rank > 1 && (
+          <span className="absolute -top-2 -right-3 min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-extrabold flex items-center justify-center tabular-nums shadow-sm"
+            style={{ background: 'hsl(var(--gold))', color: 'hsl(var(--background))' }}>
+            R{rank}
+          </span>
+        )}
+      </div>
       <p className="font-extrabold text-[12px] leading-tight truncate w-full px-1 text-foreground">{relic.name}</p>
       <p className="text-[10px] font-bold text-foreground/65 mt-0.5">{cat.label}</p>
     </div>

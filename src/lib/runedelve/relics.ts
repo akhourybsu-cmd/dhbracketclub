@@ -5,6 +5,10 @@
 // Balance philosophy: every relic is a *modifier*, not a stat multiplier.
 // Class identity (passive + ability) still drives playstyle. Relics solve
 // specific problems or favour a build — they never trivialise a chapter.
+//
+// ── Ranks (R1 base → R5 max) ───────────────────────────────────────────────
+// Owned relics can be upgraded with shards. Each rank applies a small bump
+// (≤10–15% of base). All damage/heal/shield outputs round to whole integers.
 
 import type { HeroClass } from './classConfig';
 
@@ -16,7 +20,7 @@ export interface RelicDef {
   name: string;
   category: RelicCategory;
   tier: RelicTier;
-  cost: number;       // Rune Shards
+  cost: number;       // Rune Shards (R1 unlock cost)
   icon: string;       // emoji
   description: string;
   flavor?: string;
@@ -86,4 +90,69 @@ export const CATEGORY_META: Record<RelicCategory, { label: string; emoji: string
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function relicAllowedForClass(_relic: RelicDef, _cls: HeroClass): boolean {
   return true;
+}
+
+// ─── Ranks ────────────────────────────────────────────────────────────────
+
+export const MAX_RANK = 5;
+
+/** Cost in shards to upgrade FROM (rank-1) TO `rank`. R1 is the unlock cost,
+ *  not a rank-up. Returns 0 if rank <= 1 or rank > MAX_RANK. */
+export function rankCost(baseCost: number, rank: number): number {
+  if (rank <= 1 || rank > MAX_RANK) return 0;
+  // rankCost(rank) = round(baseCost * 0.6 * 2^(rank-2))
+  return Math.round(baseCost * 0.6 * Math.pow(2, rank - 2));
+}
+
+export function totalRankCost(baseCost: number, throughRank: number): number {
+  let sum = 0;
+  for (let r = 2; r <= Math.min(MAX_RANK, throughRank); r++) sum += rankCost(baseCost, r);
+  return sum;
+}
+
+/** Per-rank effect values. Index 0 = R1 (base), index 4 = R5 (max).
+ *  Multipliers are decimals; flat values are integers. */
+export type RankTable = readonly [number, number, number, number, number];
+
+export const RANK_EFFECTS: Record<string, RankTable> = {
+  // Offense (multipliers — small +0.05 bumps)
+  ember_edge:        [1.50, 1.55, 1.60, 1.65, 1.70],
+  crimson_tide:      [1.75, 1.80, 1.85, 1.90, 1.95],
+  executioners_mark: [1.30, 1.34, 1.38, 1.42, 1.46],
+  desperate_surge:   [1.25, 1.29, 1.33, 1.37, 1.41],
+
+  // Mana (flat — integer breakpoints)
+  aether_spark:      [2,    2,    2,    3,    3   ],
+  sapphire_flow:     [1,    1,    1,    2,    2   ],
+  first_light:       [1,    1,    1,    1,    2   ], // free uses
+
+  // Survival
+  iron_resolve:      [1,    1,    2,    2,    2   ], // shield turns
+  verdant_heart:     [1.0,  1.1,  1.2,  1.3,  1.4 ], // heal multiplier on length
+  bloodbond:         [4,    5,    5,    6,    6   ], // HP heal on kill
+  last_stand:        [1,    1,    1,    1,    2   ], // uses per run
+  bulwark:           [1,    1,    1,    2,    2   ], // shield turns added on gold
+
+  // Board / tempo / utility
+  keysight:          [1,    1,    1,    2,    2   ], // sealed speedup turns
+  cleansing_touch:   [1,    1,    1,    1,    2   ], // free clears
+  quickstep:         [1,    1,    1,    2,    2   ], // length bonus on first chain
+  momentum:          [1.10, 1.12, 1.14, 1.16, 1.18],
+  foresight:         [1,    1,    1,    2,    2   ], // turns of early reveal
+  shrine_ward:       [0.90, 0.88, 0.86, 0.84, 0.82], // damage multiplier (lower = better)
+  wanderers_compass: [1.15, 1.18, 1.21, 1.24, 1.27],
+  cracked_crown:     [0.85, 0.83, 0.81, 0.79, 0.77], // boss soften (lower = better)
+};
+
+export function clampRank(rank: number | null | undefined): number {
+  if (!rank || rank < 1) return 1;
+  if (rank > MAX_RANK) return MAX_RANK;
+  return Math.floor(rank);
+}
+
+/** Resolve an effect value for a relic + rank. Falls back to R1 if missing. */
+export function effectValue(relicId: string, rank: number): number {
+  const table = RANK_EFFECTS[relicId];
+  if (!table) return 1;
+  return table[clampRank(rank) - 1];
 }

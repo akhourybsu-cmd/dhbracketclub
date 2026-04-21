@@ -1,20 +1,23 @@
-import { Link } from 'react-router-dom';
-import { ArrowLeft, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useRuneWallet, useSpendShards } from '@/hooks/useRuneShards';
-import { useRelicCollection, useUnlockRelic } from '@/hooks/useRelicCollection';
+import { useRelicCollection, useUnlockRelic, useUpgradeRelic } from '@/hooks/useRelicCollection';
 import { useMyProgress } from '@/hooks/useRuneDelveCampaign';
 import { useRuneDelveHero } from '@/hooks/useRuneDelveHero';
 import {
   RELIC_CATALOG,
   CATEGORY_META,
   tierUnlockedForChapter,
+  rankCost,
+  MAX_RANK,
   type RelicCategory,
   type RelicTier,
+  type RelicDef,
 } from '@/lib/runedelve/relics';
 import { chapterFor } from '@/lib/runedelve/levelGenerator';
 import { RelicCard } from '@/components/runedelve/RelicCard';
+import { RelicUpgradeSheet } from '@/components/runedelve/RelicUpgradeSheet';
 import { ShardBalance } from '@/components/runedelve/ShardBalance';
 import { cn } from '@/lib/utils';
 
@@ -28,12 +31,18 @@ export default function RuneDelveShopPage() {
   const { data: hero } = useRuneDelveHero();
   const spend = useSpendShards();
   const unlock = useUnlockRelic();
+  const upgrade = useUpgradeRelic();
 
   const [tier, setTier] = useState<RelicTier>(1);
   const [cat, setCat] = useState<RelicCategory | 'all'>('all');
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [upgradeRelic, setUpgradeRelic] = useState<RelicDef | null>(null);
 
-  const ownedSet = useMemo(() => new Set((owned ?? []).map(o => o.relic_id)), [owned]);
+  const ownedMap = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const o of owned ?? []) m.set(o.relic_id, o.rank ?? 1);
+    return m;
+  }, [owned]);
   const shards = wallet?.shards ?? 0;
   const currentChapter = chapterFor(progress?.highest_unlocked_level ?? 1);
 
@@ -49,7 +58,7 @@ export default function RuneDelveShopPage() {
   const buy = async (relicId: string) => {
     const r = RELIC_CATALOG.find(x => x.id === relicId);
     if (!r || pendingId) return;
-    if (ownedSet.has(relicId)) return;
+    if (ownedMap.has(relicId)) return;
     if (shards < r.cost) {
       toast.error(`Not enough Rune Shards (need ${r.cost - shards} more)`);
       return;
@@ -61,6 +70,36 @@ export default function RuneDelveShopPage() {
       toast.success(`✨ Unlocked ${r.name}`, { description: 'Equip it from the Armory' });
     } catch (e: any) {
       toast.error(e?.message ?? 'Could not unlock relic');
+    } finally {
+      setPendingId(null);
+    }
+  };
+
+  const handleCardClick = (r: RelicDef) => {
+    if (ownedMap.has(r.id)) {
+      setUpgradeRelic(r);
+    } else {
+      buy(r.id);
+    }
+  };
+
+  const confirmUpgrade = async () => {
+    if (!upgradeRelic) return;
+    const curRank = ownedMap.get(upgradeRelic.id) ?? 1;
+    if (curRank >= MAX_RANK) return;
+    const cost = rankCost(upgradeRelic.cost, curRank + 1);
+    if (shards < cost) {
+      toast.error(`Need ${cost - shards} more shards`);
+      return;
+    }
+    setPendingId(upgradeRelic.id);
+    try {
+      await spend.mutateAsync(cost);
+      await upgrade.mutateAsync({ relic_id: upgradeRelic.id, expected_rank: curRank });
+      toast.success(`⬆️ ${upgradeRelic.name} → R${curRank + 1}`);
+      setUpgradeRelic(null);
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Could not upgrade relic');
     } finally {
       setPendingId(null);
     }

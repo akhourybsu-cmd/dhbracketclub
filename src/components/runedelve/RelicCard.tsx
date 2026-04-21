@@ -1,30 +1,58 @@
-import { Lock, Check, Sparkles } from 'lucide-react';
+import { Lock, Check, Sparkles, ArrowUp } from 'lucide-react';
 import type { RelicDef } from '@/lib/runedelve/relics';
-import { CATEGORY_META } from '@/lib/runedelve/relics';
+import { CATEGORY_META, MAX_RANK, rankCost } from '@/lib/runedelve/relics';
 import { cn } from '@/lib/utils';
 
 interface Props {
   relic: RelicDef;
   state: 'locked-tier' | 'affordable' | 'unaffordable' | 'owned' | 'equipped';
   shards?: number;          // for buy state
+  /** When the relic is owned, current rank (1..MAX_RANK). */
+  rank?: number;
   onClick?: () => void;
   disabled?: boolean;
 }
 
 /** Mobile-first relic card. Full-width row, 56px icon, clear state. */
-export function RelicCard({ relic, state, shards, onClick, disabled }: Props) {
+export function RelicCard({ relic, state, shards, rank, onClick, disabled }: Props) {
   const cat = CATEGORY_META[relic.category];
   const tierColor =
     relic.tier === 1 ? 'hsl(var(--primary))' :
     relic.tier === 2 ? 'hsl(var(--accent))' :
     'hsl(var(--gold))';
 
+  const isOwnedLike = state === 'owned' || state === 'equipped';
+  const curRank = rank ?? 1;
+  const isMax = curRank >= MAX_RANK;
+  const upgradeCost = isOwnedLike && !isMax ? rankCost(relic.cost, curRank + 1) : 0;
+  const canAffordUpgrade = isOwnedLike && !isMax && shards != null && shards >= upgradeCost;
+
   const stateChip = (() => {
     switch (state) {
       case 'equipped':
-        return <span className="text-[9px] font-extrabold uppercase tracking-wider text-primary inline-flex items-center gap-0.5"><Check className="w-2.5 h-2.5" /> Equipped</span>;
-      case 'owned':
-        return <span className="text-[9px] font-extrabold uppercase tracking-wider text-muted-foreground">Owned</span>;
+      case 'owned': {
+        if (isMax) {
+          return (
+            <span className="inline-flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider"
+              style={{ color: 'hsl(var(--gold))' }}>
+              <Check className="w-2.5 h-2.5" /> Maxed
+            </span>
+          );
+        }
+        return (
+          <span className={cn(
+            'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold tabular-nums',
+            !canAffordUpgrade && 'opacity-60',
+          )}
+            style={{
+              background: canAffordUpgrade ? 'hsl(var(--gold) / 0.14)' : 'hsl(var(--muted) / 0.5)',
+              color: canAffordUpgrade ? 'hsl(var(--gold))' : undefined,
+              border: canAffordUpgrade ? '1px solid hsl(var(--gold) / 0.3)' : undefined,
+            }}>
+            <ArrowUp className="w-3 h-3" /> {upgradeCost}
+          </span>
+        );
+      }
       case 'affordable':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold tabular-nums"
@@ -59,7 +87,7 @@ export function RelicCard({ relic, state, shards, onClick, disabled }: Props) {
       )}
     >
       <div
-        className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0"
+        className="relative w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0"
         style={{
           background: `linear-gradient(135deg, ${tierColor.replace(')', ' / 0.18)')}, hsl(var(--card)))`,
           border: `1px solid ${tierColor.replace(')', ' / 0.3)')}`,
@@ -67,6 +95,12 @@ export function RelicCard({ relic, state, shards, onClick, disabled }: Props) {
         aria-hidden
       >
         {relic.icon}
+        {isOwnedLike && rank != null && rank > 1 && (
+          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-extrabold flex items-center justify-center tabular-nums shadow-sm"
+            style={{ background: 'hsl(var(--gold))', color: 'hsl(var(--background))' }}>
+            R{rank}
+          </span>
+        )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
@@ -77,6 +111,19 @@ export function RelicCard({ relic, state, shards, onClick, disabled }: Props) {
           </span>
         </div>
         <p className="text-[11px] text-muted-foreground leading-snug">{relic.description}</p>
+        {isOwnedLike && (
+          <div className="flex items-center gap-1 mt-1" aria-label={`Rank ${curRank} of ${MAX_RANK}`}>
+            {Array.from({ length: MAX_RANK }).map((_, i) => (
+              <span key={i}
+                className={cn('w-1.5 h-1.5 rounded-full',
+                  i < curRank ? '' : 'bg-muted/50',
+                )}
+                style={i < curRank ? { background: 'hsl(var(--gold))' } : undefined}
+                aria-hidden />
+            ))}
+            <span className="ml-1 text-[9px] font-extrabold tabular-nums text-foreground/70">R{curRank}/{MAX_RANK}</span>
+          </div>
+        )}
         <div className="flex items-center gap-1.5 mt-1.5">
           <span className="text-[9px] font-bold text-muted-foreground inline-flex items-center gap-0.5">
             <span aria-hidden>{cat.emoji}</span> {cat.label}
@@ -87,3 +134,4 @@ export function RelicCard({ relic, state, shards, onClick, disabled }: Props) {
     </button>
   );
 }
+
