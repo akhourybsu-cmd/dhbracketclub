@@ -225,9 +225,10 @@ export function useAbility(
   const targetableIds = new Set(targetable.map(e => e.id));
   if (cls === 'warrior') {
     // Cleave: 40 dmg to all targetable enemies (last_stand can shield the boss).
+    // Enemy armor (from shield_self) softens each cleave hit.
     for (const e of next.enemies) {
       if (e.hp > 0 && targetableIds.has(e.id)) {
-        const applied = Math.min(40, e.hp);
+        const applied = Math.min(applyArmorToDamage(e, 40), e.hp);
         e.hp -= applied;
         next.totalDamage += applied;
         if (e.hp <= 0) next.enemiesDefeated += 1;
@@ -237,7 +238,7 @@ export function useAbility(
     const t = targetable[0];
     if (t) {
       const live = next.enemies.find(e => e.id === t.id)!;
-      const applied = Math.min(80, live.hp);
+      const applied = Math.min(applyArmorToDamage(live, 80), live.hp);
       live.hp -= applied;
       next.totalDamage += applied;
       if (live.hp <= 0) next.enemiesDefeated += 1;
