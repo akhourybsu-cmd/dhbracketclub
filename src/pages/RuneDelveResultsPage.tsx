@@ -1,14 +1,18 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Trophy, Swords, Heart, Clock, Sparkles, ChevronRight, Star } from 'lucide-react';
+import { ArrowLeft, Trophy, Swords, Heart, Clock, Sparkles, ChevronRight, Star, Shield } from 'lucide-react';
 import { useLevel, useMyLevelRun, useLevelBestScores, useMyProgress } from '@/hooks/useRuneDelveCampaign';
 import { useRuneDelveHero } from '@/hooks/useRuneDelveHero';
+import { useRuneWallet } from '@/hooks/useRuneShards';
+import { useLoadout } from '@/hooks/useLoadout';
 import { Confetti } from '@/components/Confetti';
 import { ClassBadge } from '@/components/runedelve/ClassBadge';
+import { ShardBalance } from '@/components/runedelve/ShardBalance';
 import { getClass, levelFromXp, titleForLevel } from '@/lib/runedelve/classConfig';
 import { starsFor } from '@/lib/runedelve/levelGenerator';
 import { mechanicsForLevel, getMechanic, type MechanicId } from '@/lib/runedelve/mechanics';
 import { getBossRule, type BossRuleId } from '@/lib/runedelve/bossRules';
 import { secondaryLabel, type SecondaryObjective } from '@/lib/runedelve/layeredGoals';
+import { RELIC_BY_ID } from '@/lib/runedelve/relics';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -22,6 +26,8 @@ export default function RuneDelveResultsPage() {
   const { data: hero } = useRuneDelveHero();
   const { data: progress } = useMyProgress();
   const { data: topRuns } = useLevelBestScores(level?.id);
+  const { data: wallet } = useRuneWallet();
+  const { data: loadout } = useLoadout(hero?.class);
   const [showConfetti, setShowConfetti] = useState(false);
 
   useEffect(() => {
@@ -71,10 +77,21 @@ export default function RuneDelveResultsPage() {
   const nextLevel = levelNumber + 1;
   const nextUnlocked = (progress?.highest_unlocked_level ?? 1) >= nextLevel;
 
+  const equippedRelics = loadout
+    ? [loadout.slot_1, loadout.slot_2, loadout.slot_3]
+        .map(id => (id ? RELIC_BY_ID[id] : null))
+        .filter(Boolean)
+    : [];
+
   return (
     <div className="space-y-4 pb-8">
       <Confetti active={showConfetti} />
-      <Link to="/rune-delve" className="back-link"><ArrowLeft className="w-4 h-4" /> Home</Link>
+      <div className="flex items-center justify-between">
+        <Link to="/rune-delve" className="back-link"><ArrowLeft className="w-4 h-4" /> Home</Link>
+        <Link to="/rune-delve/shop" aria-label="Open shop">
+          <ShardBalance shards={wallet?.shards ?? 0} />
+        </Link>
+      </div>
 
       <div className="glass-card p-6 text-center" style={{ background: headerBg, borderColor: headerBorder }}>
         {hero && (
