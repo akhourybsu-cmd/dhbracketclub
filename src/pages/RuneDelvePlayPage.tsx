@@ -112,17 +112,27 @@ export default function RuneDelvePlayPage() {
   const [corruption, setCorruption] = useState<CorruptionState>(emptyCorruption);
   const [log, setLog] = useState<CombatLogEntry[]>([]);
 
+  // Per-run relic-effect counters (drive Ember Edge / Crimson Tide / Quickstep /
+  // First Light / Cleansing Touch / Shrine Ward turn-1 detection).
+  const [redChainCount, setRedChainCount] = useState(0);
+  const [chainCountTotal, setChainCountTotal] = useState(0);
+  const [abilityUsedCount, setAbilityUsedCount] = useState(0);
+  const [corruptCleansedCount, setCorruptCleansedCount] = useState(0);
+  // Snapshot the active relic loadout at run-start so toggling/upgrading
+  // relics mid-run can never reset the board state.
+  const [activeRelicsSnapshot, setActiveRelicsSnapshot] = useState<ActiveRelics | null>(null);
+
   // Append a single entry; trim to a small ring so memory stays tidy.
   const pushLog = (entry: Omit<CombatLogEntry, 'id'>) => {
     setLog(prev => {
-      const next = [...prev, { ...entry, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }];
+      const next = [...prev, { ...entry, id: nextLogId() }];
       return next.length > 30 ? next.slice(-30) : next;
     });
   };
   const pushLogs = (entries: Array<Omit<CombatLogEntry, 'id'>>) => {
     if (!entries.length) return;
     setLog(prev => {
-      const stamped = entries.map(e => ({ ...e, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }));
+      const stamped = entries.map(e => ({ ...e, id: nextLogId() }));
       const next = [...prev, ...stamped];
       return next.length > 30 ? next.slice(-30) : next;
     });
