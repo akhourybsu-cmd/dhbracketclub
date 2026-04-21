@@ -221,7 +221,14 @@ export function useLifetimeStats(userId: string | undefined) {
         .eq('round', 'final');
 
       const rows = (allStandings || []) as unknown as SeasonStanding[];
-      const championships = ((playoffWins || []) as unknown as PlayoffMatch[]).length;
+      // Championships = best-of-3 series clinches, NOT individual game wins.
+      // A user must win ≥2 final games in the same season to claim the title.
+      const finalGameWins = ((playoffWins || []) as unknown as PlayoffMatch[]);
+      const winsBySeason = new Map<string, number>();
+      for (const w of finalGameWins) {
+        winsBySeason.set(w.season_id, (winsBySeason.get(w.season_id) || 0) + 1);
+      }
+      const championships = Array.from(winsBySeason.values()).filter(n => n >= 2).length;
 
       if (rows.length === 0) {
         setStats(null);
