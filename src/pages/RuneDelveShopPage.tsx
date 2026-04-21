@@ -196,6 +196,16 @@ export default function RuneDelveShopPage() {
           )}
         </div>
       )}
+
+      <RelicUpgradeSheet
+        open={!!upgradeRelic}
+        relic={upgradeRelic}
+        currentRank={upgradeRelic ? (ownedMap.get(upgradeRelic.id) ?? 1) : 1}
+        shards={shards}
+        pending={!!pendingId}
+        onConfirm={confirmUpgrade}
+        onClose={() => setUpgradeRelic(null)}
+      />
     </div>
   );
 }
