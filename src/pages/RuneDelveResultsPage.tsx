@@ -139,6 +139,23 @@ export default function RuneDelveResultsPage() {
         </div>
       </div>
 
+      {showNearMiss && (
+        <div
+          className="glass-card p-3 flex items-start gap-2.5"
+          style={{ background: 'hsl(var(--gold) / 0.10)', borderColor: 'hsl(var(--gold) / 0.3)' }}
+        >
+          <Sparkles className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'hsl(var(--gold))' }} />
+          <div className="min-w-0">
+            <p className="text-[11px] font-extrabold" style={{ color: 'hsl(var(--gold))' }}>
+              So close — try a different relic
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              You burned through {Math.round(damageRatio * 100)}% of their HP. Swap a relic in the Armory for an edge.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-2">
         {stats.map(s => {
           const Icon = s.icon;
