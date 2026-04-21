@@ -36,6 +36,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Loader2, Sparkles, RefreshCw } from 'lucide-react';
+import runedelveEmblem from '@/assets/runedelve-emblem.png';
 
 /* ── Lockbox card (unchanged) ── */
 function LockboxCompeteCard() {
@@ -105,37 +106,92 @@ function LockboxCompeteCard() {
 function RuneDelveCompeteCard() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-      <div className="glass-card p-5 relative overflow-hidden" style={{
-        background: 'linear-gradient(160deg, hsl(var(--primary) / 0.14), hsl(var(--accent) / 0.06) 60%, transparent)',
-        borderLeft: '3px solid hsl(var(--primary))',
-      }}>
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{
-            background: 'linear-gradient(135deg, hsl(var(--primary) / 0.25), hsl(var(--primary) / 0.08))',
-          }}>
-            <Sparkles className="w-5 h-5" style={{ color: 'hsl(var(--primary))' }} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h2 className="font-extrabold text-[16px] tracking-tight">Rune Delve</h2>
-              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-primary/15 text-primary uppercase tracking-wider">Campaign</span>
+      <Link to="/rune-delve" className="block">
+        <div
+          className="relative overflow-hidden rounded-2xl btn-press"
+          style={{
+            background:
+              'radial-gradient(ellipse 120% 80% at 50% 0%, hsl(152 72% 24% / 0.55), transparent 60%),' +
+              'radial-gradient(ellipse 90% 60% at 100% 100%, hsl(152 72% 40% / 0.25), transparent 60%),' +
+              'linear-gradient(180deg, hsl(160 24% 8%), hsl(160 22% 5%))',
+            border: '1px solid hsl(152 50% 40% / 0.35)',
+            boxShadow:
+              '0 12px 40px hsl(152 72% 20% / 0.45), inset 0 1px 0 hsl(152 60% 60% / 0.18)',
+          }}
+        >
+          {/* Drifting magical glow */}
+          <div
+            aria-hidden
+            className="absolute -top-12 -right-10 w-44 h-44 rounded-full pointer-events-none"
+            style={{
+              background:
+                'radial-gradient(circle, hsl(152 80% 50% / 0.35), transparent 70%)',
+              filter: 'blur(8px)',
+            }}
+          />
+
+          <div className="relative z-10 p-5 flex items-center gap-4">
+            {/* Emblem hero visual */}
+            <div className="relative flex-shrink-0">
+              <div
+                aria-hidden
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background:
+                    'radial-gradient(circle, hsl(152 80% 50% / 0.5), transparent 65%)',
+                  filter: 'blur(10px)',
+                  transform: 'scale(1.15)',
+                }}
+              />
+              <img
+                src={runedelveEmblem}
+                alt="Rune Delve"
+                width={96}
+                height={96}
+                loading="lazy"
+                decoding="async"
+                className="relative w-[88px] h-[88px] object-contain drop-shadow-[0_4px_18px_hsl(152_80%_45%/0.5)]"
+              />
             </div>
-            <p className="text-[11px] text-muted-foreground/80">Match runes. Crush enemies. Descend the campaign.</p>
+
+            {/* Title + CTA */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span
+                  className="text-[9px] font-extrabold uppercase tracking-[0.22em]"
+                  style={{ color: 'hsl(152 70% 65%)' }}
+                >
+                  ◆ Campaign
+                </span>
+              </div>
+              <h2
+                className="font-extrabold text-[22px] leading-none tracking-tight mb-2.5"
+                style={{
+                  background:
+                    'linear-gradient(180deg, hsl(150 30% 98%), hsl(152 70% 70%))',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  textShadow: '0 0 18px hsl(152 80% 40% / 0.4)',
+                }}
+              >
+                Rune Delve
+              </h2>
+              <div
+                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider"
+                style={{
+                  background:
+                    'linear-gradient(135deg, hsl(152 72% 46%), hsl(152 70% 38%))',
+                  color: 'hsl(160 30% 6%)',
+                  boxShadow:
+                    '0 4px 14px hsl(152 80% 35% / 0.5), inset 0 1px 0 hsl(150 80% 80% / 0.5)',
+                }}
+              >
+                Enter <ChevronRight className="w-3.5 h-3.5" strokeWidth={3} />
+              </div>
+            </div>
           </div>
         </div>
-        <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
-          A 150-level shared campaign. Forge a hero, master five mechanics, and climb the leaderboard one level at a time.
-        </p>
-        <Link to="/rune-delve">
-          <button className="w-full h-11 rounded-xl text-[12px] font-extrabold flex items-center justify-center gap-2 btn-press" style={{
-            background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85))',
-            color: 'hsl(var(--primary-foreground))',
-            boxShadow: '0 6px 20px hsl(var(--primary) / 0.35)',
-          }}>
-            <Sparkles className="w-4 h-4" /> Continue Your Delve
-          </button>
-        </Link>
-      </div>
+      </Link>
     </motion.div>
   );
 }
