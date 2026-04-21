@@ -50,10 +50,10 @@ export default function RuneDelveHomePage() {
     return (
       <div className="space-y-5 pb-8">
         <div className="text-center space-y-2">
-          <h1 className="page-header-title flex items-center gap-2 justify-center">
+          <h1 className="rd-title page-header-title flex items-center gap-2 justify-center text-2xl">
             <Sparkles className="w-5 h-5 text-primary" /> Forge your hero
           </h1>
-          <p className="text-xs text-muted-foreground px-4">Name your champion and choose a class. Your hero persists across the entire campaign.</p>
+          <p className="text-xs text-foreground/80 px-4">Name your champion and choose a class. Your hero persists across the entire campaign.</p>
         </div>
 
         <div className="glass-card p-4 space-y-2">
