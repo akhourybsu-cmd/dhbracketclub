@@ -47,6 +47,15 @@ export default function RuneDelveResultsPage() {
   }
 
   const stars = starsFor(run.score, levelNumber, run.dungeon_cleared);
+
+  // Near-miss signal: failed runs that chewed through ≥60% of total enemy HP
+  // get a soft nudge to try a different relic. Pure QoL — no balance impact.
+  const totalEnemyHp = Array.isArray(level.enemy_config)
+    ? (level.enemy_config as Array<{ maxHp?: number; hp?: number }>)
+        .reduce((sum, e) => sum + (e.maxHp ?? e.hp ?? 0), 0)
+    : 0;
+  const damageRatio = totalEnemyHp > 0 ? run.total_damage / totalEnemyHp : 0;
+  const showNearMiss = !run.dungeon_cleared && damageRatio >= 0.6;
   const stats = [
     { label: 'Damage', value: run.total_damage, icon: Swords },
     { label: 'Defeated', value: run.enemies_defeated, icon: Trophy },
