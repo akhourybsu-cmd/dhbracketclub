@@ -830,8 +830,6 @@ function PlayoffPicture({ standings, matches, seasonId }: { standings: SeasonSta
                 )}
               </div>
             )}
-
-            <PlayoffFormatGuide />
           </>
         ) : (
           <div className="space-y-3">
