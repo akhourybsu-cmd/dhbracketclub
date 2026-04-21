@@ -8,6 +8,8 @@ import {
   filterTargetable,
   type BossRuleId,
 } from './bossRules';
+import { tickEnemyAbilities, applyArmorToDamage, type AbilityEffect } from './enemyAbilities';
+import type { CombatLogEntry } from '@/components/runedelve/CombatLog';
 
 export interface CombatState {
   hp: number;
@@ -85,7 +87,9 @@ export function applyChain(
     const target = targets[0];
     if (target) {
       const live = next.enemies.find(e => e.id === target.id)!;
-      const applied = Math.min(dmg, live.hp);
+      // Enemy armor (from shield_self ability) softens the hit before HP loss.
+      const afterArmor = applyArmorToDamage(live, dmg);
+      const applied = Math.min(afterArmor, live.hp);
       live.hp -= applied;
       resolution.damageDealt = applied;
       next.totalDamage += applied;
@@ -118,16 +122,30 @@ export function applyChain(
   return { next, resolution };
 }
 
-// After player chain, enemies act. Returns next state.
-// When `telegraphed` is true, intents tick first, then enemies whose intent
-// hit 0 deal a heavy strike (and reset). Otherwise behaves like classic damage.
+// After player chain, enemies act. Returns next state plus any ability logs
+// and side-effects (corrupt/seal/spawn) for the page layer to apply.
+//
+// When `telegraphed` is true (Band-2 mechanic), Band-2 intents tick first,
+// then enemies whose intent hit 0 deal a heavy strike (and reset). Otherwise
+// behaves like classic damage.
+//
+// Per-enemy ABILITIES (shield_self, heal_ally, summon_minion, corrupt_tile,
+// seal_tile, heavy_strike) tick on their own cooldown — independent of the
+// Band-2 telegraph system, and only resolve once the standard attack pass
+// has fired so the log reads in chronological order.
+//
 // `bossRule` (Band 5) can mutate per-enemy outgoing damage (enrager) and
 // trigger end-of-turn effects (regenerator).
 export function enemiesAttack(
   state: CombatState,
   telegraphed = false,
   bossRule: BossRuleId | null = null,
-): CombatState & { heavyFired?: boolean } {
+  summonsSoFar = 0,
+): CombatState & {
+  heavyFired?: boolean;
+  abilityLogs?: Array<Omit<CombatLogEntry, 'id'>>;
+  abilityEffects?: AbilityEffect[];
+} {
   const ticked = telegraphed ? tickIntents(state.enemies) : state.enemies;
   let next: CombatState = { ...state, enemies: ticked.map(e => ({ ...e })) };
   let heavyFired = false;
@@ -152,10 +170,33 @@ export function enemiesAttack(
     }
     next.hp = Math.max(0, next.hp - totalIncoming);
   }
+
+  // ── Ability tick ──────────────────────────────────────────────────────
+  // Run AFTER the standard attack so heavy_strike / heal_ally land on the
+  // post-damage state. Effects (corrupt/seal/spawn) bubble up to the page.
+  const abilityResult = tickEnemyAbilities(next.enemies, summonsSoFar);
+  next.enemies = abilityResult.enemies;
+  // heavy_strike fires `damage_hero` effects — apply them here so the engine
+  // remains the single source of truth for hero HP changes.
+  for (const eff of abilityResult.effects) {
+    if (eff.kind === 'damage_hero') {
+      // Heavy ability strikes ignore the standard guard scaling because the
+      // log already labels them as a "charged blast" — keeps numbers honest.
+      next.hp = Math.max(0, next.hp - eff.amount);
+    }
+  }
+
   next.turnsRemaining = Math.max(0, next.turnsRemaining - 1);
   // Boss-rule end-of-turn effects (e.g. regenerator).
   next = applyBossTurnEffects(next, bossRule);
-  return { ...next, heavyFired };
+  return {
+    ...next,
+    heavyFired,
+    abilityLogs: abilityResult.logs,
+    // Strip the damage_hero effects we already applied — only board effects
+    // and spawns need to leave the engine.
+    abilityEffects: abilityResult.effects.filter(e => e.kind !== 'damage_hero'),
+  };
 }
 
 // Always decrement the turn counter at the end of the player's action,
@@ -184,9 +225,10 @@ export function useAbility(
   const targetableIds = new Set(targetable.map(e => e.id));
   if (cls === 'warrior') {
     // Cleave: 40 dmg to all targetable enemies (last_stand can shield the boss).
+    // Enemy armor (from shield_self) softens each cleave hit.
     for (const e of next.enemies) {
       if (e.hp > 0 && targetableIds.has(e.id)) {
-        const applied = Math.min(40, e.hp);
+        const applied = Math.min(applyArmorToDamage(e, 40), e.hp);
         e.hp -= applied;
         next.totalDamage += applied;
         if (e.hp <= 0) next.enemiesDefeated += 1;
@@ -196,7 +238,7 @@ export function useAbility(
     const t = targetable[0];
     if (t) {
       const live = next.enemies.find(e => e.id === t.id)!;
-      const applied = Math.min(80, live.hp);
+      const applied = Math.min(applyArmorToDamage(live, 80), live.hp);
       live.hp -= applied;
       next.totalDamage += applied;
       if (live.hp <= 0) next.enemiesDefeated += 1;

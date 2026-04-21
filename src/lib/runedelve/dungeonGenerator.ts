@@ -15,6 +15,24 @@ export interface Enemy {
   intent?: number;
   /** Max charge — what intent resets to after firing. */
   intentMax?: number;
+  // ── Roster metadata (added in the enemy-system pass) ───────────────────
+  // All optional so legacy enemy_config rows keep working unchanged.
+  /** Archetype id from enemyRoster.ts — stable key for combat-log templates. */
+  archetypeId?: string;
+  /** Creature family (undead, beast, corrupted, cave, magical, cultist, elite, boss). */
+  family?: string;
+  /** Combat role (striker, tank, swarm, support, summoner, corrupter, caster, defender, controller). */
+  role?: string;
+  /** Optional special ability id from enemyAbilities.ts. Fires on its own cooldown. */
+  ability?: string;
+  /** Turns until ability fires next. Decrements with the enemy phase. */
+  abilityCooldown?: number;
+  /** Cooldown reset value after ability fires. */
+  abilityCooldownMax?: number;
+  /** Flat damage reduction granted by `shield_self`. Decays each turn. */
+  armor?: number;
+  /** Short label shown above the enemy when an ability is about to fire. */
+  telegraphLabel?: string;
 }
 
 export interface DungeonConfig {

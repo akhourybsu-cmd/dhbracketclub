@@ -4,6 +4,7 @@ import type { Enemy } from './dungeonGenerator';
 import { mechanicsForLevel, introMechanicForLevel, type MechanicId } from './mechanics';
 import { rollSecondaryObjective, type SecondaryObjective } from './layeredGoals';
 import { bossRuleForLevel, type BossRuleId } from './bossRules';
+import { rosterPoolForLevel, type RosterEntry } from './enemyRoster';
 
 export type ObjectiveType = 'defeat_all' | 'survive' | 'reach_score' | 'defeat_elite';
 
@@ -41,25 +42,11 @@ export interface LevelModifiers {
   [k: string]: unknown;
 }
 
+// Legacy template list — kept ONLY as a fallback safety net for any code path
+// that still references the old shape. New picks go through `rosterPoolForLevel`.
 const ENEMY_TEMPLATES: Array<{ name: string; emoji: string; hp: number; damage: number; tier: number }> = [
   { name: 'Cave Bat',       emoji: '🦇', hp: 45,  damage: 4, tier: 1 },
   { name: 'Goblin Scout',   emoji: '👹', hp: 60,  damage: 5, tier: 1 },
-  { name: 'Slime',          emoji: '🟢', hp: 90,  damage: 3, tier: 1 },
-  { name: 'Skeleton',       emoji: '💀', hp: 70,  damage: 6, tier: 2 },
-  { name: 'Shadow Imp',     emoji: '😈', hp: 55,  damage: 6, tier: 2 },
-  { name: 'Crystal Spider', emoji: '🕷️', hp: 75,  damage: 5, tier: 2 },
-  { name: 'Rune Wraith',    emoji: '👻', hp: 80,  damage: 7, tier: 3 },
-  { name: 'Stone Golem',    emoji: '🗿', hp: 130, damage: 8, tier: 3 },
-];
-
-// New chapter archetypes unlock as the campaign deepens.
-const CHAPTER_2_TEMPLATES = [
-  { name: 'Frost Revenant', emoji: '🧊', hp: 110, damage: 7, tier: 3 },
-  { name: 'Cursed Knight',  emoji: '⚔️', hp: 140, damage: 9, tier: 4 },
-];
-const CHAPTER_3_TEMPLATES = [
-  { name: 'Voidspawn',      emoji: '🌑', hp: 160, damage: 10, tier: 4 },
-  { name: 'Ancient Drake',  emoji: '🐉', hp: 220, damage: 12, tier: 5 },
 ];
 
 export function chapterFor(level: number): number {
@@ -130,34 +117,42 @@ function enemyCountFor(level: number, rng: () => number): number {
 // triple-Slime/Stone-Golem wall before the player has any relics.
 const EARLY_HP_CAP = 110;
 
-// HP/damage scaling — softer ramp through L25, then resume original curve.
-function scaleEnemy(base: { hp: number; damage: number }, level: number) {
-  const hpRate  = level <= 25 ? 0.03  : 0.04;      // +3%/lvl early, +4% later
-  const dmgRate = level <= 25 ? 0.02  : 0.025;     // +2%/lvl early, +2.5% later
+// (HP/damage scaling lives below — single RosterEntry-based implementation.)
+
+// Pick a roster archetype for this level. The roster's chapter/tier gating
+// already mirrors the prior pool-growth logic, so we just bias early levels
+// toward "soft" damage profiles to keep the L1-L15 ramp friendly.
+function pickTemplate(level: number, rng: () => number): RosterEntry {
+  let pool = rosterPoolForLevel(level);
+  // Never seed an ability-bearing enemy in Chapter 1 — keeps intro readable.
+  if (level <= 50) pool = pool.filter(e => !e.ability);
+  // Per-enemy DPS cap on early levels — prefer tankier-but-softer templates.
+  if (level <= 15) {
+    const softPool = pool.filter(e => e.baseDamage <= 6);
+    if (softPool.length && rng() < 0.7) pool = softPool;
+  }
+  // Hard fallback so the picker can never crash on an empty pool.
+  if (pool.length === 0) pool = rosterPoolForLevel(Math.max(1, level));
+  if (pool.length === 0) {
+    const fb = ENEMY_TEMPLATES[0];
+    return {
+      id: 'fallback', name: fb.name, family: 'cave', role: 'striker',
+      chapter: 1, tier: 1, emoji: fb.emoji, baseHp: fb.hp, baseDamage: fb.damage,
+    };
+  }
+  return pool[rngInt(rng, pool.length)];
+}
+
+// Per-archetype scaling — same curve as before but reads from RosterEntry.
+function scaleEnemy(base: RosterEntry, level: number) {
+  const hpRate  = level <= 25 ? 0.03  : 0.04;
+  const dmgRate = level <= 25 ? 0.02  : 0.025;
   const hpMul   = 1 + (level - 1) * hpRate;
   const dmgMul  = 1 + (level - 1) * dmgRate;
   return {
-    hp: Math.round(base.hp * hpMul),
-    damage: Math.max(base.damage, Math.round(base.damage * dmgMul)),
+    hp: Math.round(base.baseHp * hpMul),
+    damage: Math.max(base.baseDamage, Math.round(base.baseDamage * dmgMul)),
   };
-}
-
-function pickTemplate(level: number, rng: () => number) {
-  const chapter = chapterFor(level);
-  // Pool grows with chapters, mirroring the "new mechanic" milestones.
-  let pool = [...ENEMY_TEMPLATES];
-  if (chapter >= 2) pool = pool.concat(CHAPTER_2_TEMPLATES);
-  if (chapter >= 3) pool = pool.concat(CHAPTER_3_TEMPLATES);
-  // Bias early levels to lower-tier templates.
-  const maxTier = Math.min(5, 1 + Math.floor(level / 8));
-  pool = pool.filter(t => t.tier <= maxTier);
-  // Per-enemy DPS cap on early levels — avoid 3-Goblin-style spikes by
-  // preferring tankier-but-softer templates when a high-damage one rolls.
-  if (level <= 15) {
-    const softPool = pool.filter(t => t.damage <= 6);
-    if (softPool.length && rng() < 0.7) pool = softPool;
-  }
-  return pool[rngInt(rng, pool.length)];
 }
 
 // MVP objectives — gradually introduced.
@@ -211,6 +206,16 @@ export function generateLevel(level: number): LevelDefinition {
       hp,
       maxHp: hp,
       damage,
+      // Roster metadata — drives combat-log voice + ability ticks.
+      archetypeId: t.id,
+      family: t.family,
+      role: t.role,
+      // Only attach abilities to non-elite/non-boss slot picks (boss/elite
+      // already have their own signature treatment via boss rules + stat boosts).
+      ability: !isElite && !isFinalBossSlot ? t.ability : undefined,
+      abilityCooldown: !isElite && !isFinalBossSlot && t.ability ? t.abilityCooldown : undefined,
+      abilityCooldownMax: !isElite && !isFinalBossSlot && t.ability ? t.abilityCooldown : undefined,
+      telegraphLabel: !isElite && !isFinalBossSlot ? t.telegraphLabel : undefined,
     });
   }
 

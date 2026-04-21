@@ -48,6 +48,22 @@ export function EnemyDisplay({ enemies, flashId }: Props) {
                   {e.intent}
                 </motion.div>
               )}
+              {/* Ability telegraph — small ✦ badge when an ability is about to fire. */}
+              {!dead && e.ability && e.abilityCooldown != null && e.abilityCooldown <= 1 && (
+                <div
+                  className="absolute -bottom-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-primary text-primary-foreground text-[9px] font-extrabold flex items-center justify-center shadow-md ring-1 ring-primary/40"
+                  aria-label={e.telegraphLabel ?? 'Ability ready'}
+                  title={e.telegraphLabel ?? 'Ability ready'}
+                >✦</div>
+              )}
+              {/* Armor pip — visible damage-reduction indicator from shield_self. */}
+              {!dead && (e.armor ?? 0) > 0 && (
+                <div
+                  className="absolute -bottom-1 -left-1 min-w-[16px] h-[16px] px-1 rounded-full bg-gold text-background text-[9px] font-extrabold flex items-center justify-center shadow-md"
+                  style={{ background: 'hsl(var(--gold))', color: 'hsl(var(--background))' }}
+                  aria-label={`Armor ${e.armor}`}
+                >🛡{e.armor}</div>
+              )}
             </div>
             <div className="text-[9px] font-extrabold uppercase tracking-wider text-foreground/75 text-center max-w-[72px] truncate leading-tight">
               {e.name}

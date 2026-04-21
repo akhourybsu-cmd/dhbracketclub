@@ -180,6 +180,9 @@ export default function RuneDelvePlayPage() {
     setCorruption(buildInitialCorruption(level.generation_seed, corruptionActive, level.level_number, initialSeals));
     let enemies: Enemy[] = (level.enemy_config ?? []).map((e: any, i: number) => ({
       id: e.id ?? `e${i}`, name: e.name, emoji: e.emoji, hp: e.hp, maxHp: e.maxHp ?? e.hp, damage: e.damage,
+      archetypeId: e.archetypeId, family: e.family, role: e.role,
+      ability: e.ability, abilityCooldown: e.abilityCooldown, abilityCooldownMax: e.abilityCooldownMax ?? e.abilityCooldown,
+      telegraphLabel: e.telegraphLabel,
     }));
     if (telegraphActive) {
       enemies = applyInitialIntents(enemies, level.generation_seed, level.level_number);
@@ -482,7 +485,7 @@ export default function RuneDelvePlayPage() {
     const wardMult = shrineWardTurn1Mult(relics, isTurnOne);
     const crownMult = bossRule ? bossRuleSoften(relics) : 1;
     const incomingMult = wardMult * crownMult;
-    let afterEnemies: CombatState & { heavyFired?: boolean };
+    let afterEnemies: CombatState & { heavyFired?: boolean; abilityLogs?: Array<Omit<CombatLogEntry, 'id'>>; abilityEffects?: any[] };
     if (grantsBonusMove) {
       afterEnemies = next;
     } else if (enemiesAlive) {
@@ -490,9 +493,39 @@ export default function RuneDelvePlayPage() {
       if (incomingMult !== 1) {
         next.enemies.forEach(e => { e.damage = Math.max(0, Math.round(e.damage * incomingMult)); });
       }
-      afterEnemies = enemiesAttack(next, telegraphActive, bossRule);
+      // Count minions already on the board so summon_minion respects its cap.
+      const summonsSoFar = next.enemies.filter(e => e.archetypeId === 'bone_husk').length;
+      afterEnemies = enemiesAttack(next, telegraphActive, bossRule, summonsSoFar);
       // Restore damage on the post-attack array so future turns aren't permanently softened.
       afterEnemies.enemies = afterEnemies.enemies.map((e, i) => ({ ...e, damage: originalDamage[i] ?? e.damage }));
+      // Apply ability side-effects (corrupt/seal/spawn) to the page-level state.
+      const effects = afterEnemies.abilityEffects ?? [];
+      for (const eff of effects) {
+        if (eff.kind === 'spawn_minion') {
+          afterEnemies = { ...afterEnemies, enemies: [...afterEnemies.enemies, eff.enemy] };
+        } else if (eff.kind === 'corrupt_tile' && corruptionActive) {
+          // Drop one corrupted cell on a random non-sealed, non-corrupted square.
+          setCorruption(prev => {
+            const cells = new Set(prev.cells);
+            for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) {
+              const k = `${r}-${c}`;
+              if (!cells.has(k) && !seals.has(k)) { cells.add(k); return { cells, sources: prev.sources }; }
+            }
+            return prev;
+          });
+        } else if (eff.kind === 'seal_tile') {
+          setSeals(prev => {
+            const next = new Set(prev);
+            for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) {
+              const k = `${r}-${c}`;
+              if (!next.has(k)) { next.add(k); return next; }
+            }
+            return next;
+          });
+        }
+      }
+      // Push enemy ability logs (heavy_strike / shield_self / heal_ally / etc).
+      if (afterEnemies.abilityLogs?.length) turnLogs.push(...afterEnemies.abilityLogs);
     } else {
       afterEnemies = endTurn(next);
     }
@@ -501,13 +534,11 @@ export default function RuneDelvePlayPage() {
       toast.success(`✨ Bonus move! Chain x${chain.length}`, { duration: 1400 });
       turnLogs.push({ kind: 'info', text: `Chain x${chain.length} — bonus move! Enemies hesitate.` });
     } else if (tier.bonus && enemiesAlive) {
-      // 7+ chain that didn't get a bonus because one was already used this cycle.
       if (chain.length >= 8) toast.success(`💥 Massive chain x${chain.length}!`, { duration: 1300 });
       turnLogs.push({ kind: 'info', text: `Chain x${chain.length} — massive damage! (bonus already used this cycle)` });
     } else if (chain.length === 6 && enemiesAlive) {
       turnLogs.push({ kind: 'info', text: `Chain x6 — heavy strike!` });
     }
-    // Reset the per-cycle gate whenever the enemy phase actually fired.
     if (!grantsBonusMove && enemiesAlive) {
       setBonusUsedThisCycle(false);
     }
