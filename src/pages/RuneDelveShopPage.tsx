@@ -123,7 +123,7 @@ export default function RuneDelveShopPage() {
       </div>
 
       {/* Tier tabs */}
-      <div className="grid grid-cols-3 gap-1.5 sticky top-0 z-10 py-1 bg-background/85 backdrop-blur-sm">
+      <div className="grid grid-cols-3 gap-1.5 sticky top-0 z-10 py-1.5 bg-background/85 backdrop-blur-md">
         {TIERS.map(t => {
           const unlocked = tierUnlocked(t);
           const active = tier === t;
@@ -132,8 +132,10 @@ export default function RuneDelveShopPage() {
               key={t}
               onClick={() => setTier(t)}
               className={cn(
-                'h-10 rounded-lg text-[11px] font-extrabold btn-press flex items-center justify-center gap-1',
-                active ? 'bg-primary text-primary-foreground' : 'bg-muted/40',
+                'h-10 rounded-lg text-[11px] font-extrabold btn-press flex items-center justify-center gap-1 transition-all duration-200',
+                active
+                  ? 'bg-primary text-primary-foreground shadow-[0_4px_14px_hsl(var(--primary)/0.35)] scale-[1.02]'
+                  : 'bg-muted/40 hover:bg-muted/60',
                 !unlocked && 'opacity-60',
               )}
             >
