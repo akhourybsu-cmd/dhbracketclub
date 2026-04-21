@@ -55,12 +55,15 @@ export function initialCombat(enemies: Enemy[], turns: number): CombatState {
 }
 
 // Apply chain — return new state + resolution summary.
+// `rogueBonusThreshold` lets relics (Momentum) lower the chain length needed
+// to trigger the rogue's score-bonus stamp. Defaults to 5.
 export function applyChain(
   state: CombatState,
   type: RuneType,
   length: number,
   cls: HeroClass,
   bossRule: BossRuleId | null = null,
+  rogueBonusThreshold = 5,
 ): { next: CombatState; resolution: ChainResolution } {
   const next: CombatState = { ...state, enemies: state.enemies.map(e => ({ ...e })) };
   const resolution: ChainResolution = {
@@ -108,7 +111,7 @@ export function applyChain(
     resolution.guardGained = next.shieldTurns;
   }
 
-  if (cls === 'rogue' && length >= 5) {
+  if (cls === 'rogue' && length >= rogueBonusThreshold) {
     next.rogueBonusTriggered = true;
   }
 
