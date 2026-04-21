@@ -129,22 +129,40 @@ function scaleEnemy(base: { hp: number; damage: number }, level: number) {
   };
 }
 
-function pickTemplate(level: number, rng: () => number) {
-  const chapter = chapterFor(level);
-  // Pool grows with chapters, mirroring the "new mechanic" milestones.
-  let pool = [...ENEMY_TEMPLATES];
-  if (chapter >= 2) pool = pool.concat(CHAPTER_2_TEMPLATES);
-  if (chapter >= 3) pool = pool.concat(CHAPTER_3_TEMPLATES);
-  // Bias early levels to lower-tier templates.
-  const maxTier = Math.min(5, 1 + Math.floor(level / 8));
-  pool = pool.filter(t => t.tier <= maxTier);
-  // Per-enemy DPS cap on early levels — avoid 3-Goblin-style spikes by
-  // preferring tankier-but-softer templates when a high-damage one rolls.
+// Pick a roster archetype for this level. The roster's chapter/tier gating
+// already mirrors the prior pool-growth logic, so we just bias early levels
+// toward "soft" damage profiles to keep the L1-L15 ramp friendly.
+function pickTemplate(level: number, rng: () => number): RosterEntry {
+  let pool = rosterPoolForLevel(level);
+  // Never seed an ability-bearing enemy in Chapter 1 — keeps intro readable.
+  if (level <= 50) pool = pool.filter(e => !e.ability);
+  // Per-enemy DPS cap on early levels — prefer tankier-but-softer templates.
   if (level <= 15) {
-    const softPool = pool.filter(t => t.damage <= 6);
+    const softPool = pool.filter(e => e.baseDamage <= 6);
     if (softPool.length && rng() < 0.7) pool = softPool;
   }
+  // Hard fallback so the picker can never crash on an empty pool.
+  if (pool.length === 0) pool = rosterPoolForLevel(Math.max(1, level));
+  if (pool.length === 0) {
+    const fb = ENEMY_TEMPLATES[0];
+    return {
+      id: 'fallback', name: fb.name, family: 'cave', role: 'striker',
+      chapter: 1, tier: 1, emoji: fb.emoji, baseHp: fb.hp, baseDamage: fb.damage,
+    };
+  }
   return pool[rngInt(rng, pool.length)];
+}
+
+// Per-archetype scaling — same curve as before but reads from RosterEntry.
+function scaleEnemy(base: RosterEntry, level: number) {
+  const hpRate  = level <= 25 ? 0.03  : 0.04;
+  const dmgRate = level <= 25 ? 0.02  : 0.025;
+  const hpMul   = 1 + (level - 1) * hpRate;
+  const dmgMul  = 1 + (level - 1) * dmgRate;
+  return {
+    hp: Math.round(base.baseHp * hpMul),
+    damage: Math.max(base.baseDamage, Math.round(base.baseDamage * dmgMul)),
+  };
 }
 
 // MVP objectives — gradually introduced.
