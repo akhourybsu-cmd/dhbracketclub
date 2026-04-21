@@ -744,8 +744,8 @@ function PlayoffPicture({ standings, matches, seasonId }: { standings: SeasonSta
           <>
             <div className="grid grid-cols-3 gap-2">
               <div className="space-y-2">
-                <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/50 text-center">QF</p>
-                <MatchCard m={qfMatches[0]} placeholder={{ roundLabel: 'QF' }} />
+                <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/50 text-center">Play-In</p>
+                <MatchCard m={qfMatches[0]} placeholder={{ roundLabel: 'Play-In' }} />
               </div>
               <div className="space-y-2">
                 <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/50 text-center">Semis</p>
@@ -787,6 +787,8 @@ function PlayoffPicture({ standings, matches, seasonId }: { standings: SeasonSta
                 )}
               </div>
             )}
+
+            <PlayoffFormatGuide />
           </>
         ) : (
           <div className="space-y-3">
@@ -830,9 +832,16 @@ function PlayoffPicture({ standings, matches, seasonId }: { standings: SeasonSta
               <div />
             </div>
 
-            <p className="text-[9px] text-muted-foreground/50 text-center pt-1">
-              All 5 players qualify · #1, #2, #3 get first-round byes · Higher seed picks topics
-            </p>
+            {/* Bronze callout — 3rd place game */}
+            <div className="flex items-center justify-center gap-1.5 pt-2">
+              <Award className="w-3 h-3" style={{ color: 'hsl(var(--bronze))' }} />
+              <p className="text-[9px] font-bold" style={{ color: 'hsl(var(--bronze))' }}>
+                3rd Place · Bo1
+              </p>
+              <span className="text-[9px] text-muted-foreground/60">— SF losers face off</span>
+            </div>
+
+            <PlayoffFormatGuide />
           </div>
         )}
       </div>
