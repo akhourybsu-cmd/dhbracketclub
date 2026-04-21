@@ -1,78 +1,114 @@
 
 
-# Rune Delve — Bonus Move Rebalance
+# Rune Delve — Optimization & Cleanup Pass
 
-## Where we are now
+After combing the module, here's what I found and the cleanups I'd make. **No gameplay or balance changes** — this is purely dead-code removal, fixing promised-but-broken features, and small polish.
 
-```ts
-const BONUS_MOVE_THRESHOLD = 6;
-const grantsBonusMove = chain.length >= 6 && enemiesAlive;
-```
+## 1. Dead code (safe deletes)
 
-Every chain of 6+ grants a free turn — no retaliation, no corruption spread, no turn consumed. Your instinct is right: this overcorrects. A skilled player who finds 6-chains repeatedly can string together 3–4 free turns in a row and walk through bosses untouched.
+### A. Entire legacy daily-dungeon hook file — `src/hooks/useRuneDelve.ts` (185 lines)
 
-## Your two options, evaluated
+This file exports `useTodayDungeon`, `useMyTodayRun`, `useSubmitRun`, `useDailyLeaderboard`, `useRunHistory` — relics from the original "daily run" prototype before the campaign system. **Zero importers anywhere in the codebase.** Replaced long ago by `useRuneDelveCampaign.ts`. Delete the whole file.
 
-**Option A — "One bonus per round, only on 6/7/8+ chains"**
-Cap to **one bonus move per enemy turn cycle**. First 6+ chain in a turn cycle grants the free move; subsequent 6+ chains the same cycle do not.
-- **Pro**: Simple to reason about. Still rewarding when you find the chain. Hard ceiling on snowball.
-- **Con**: Slightly punishing for players who find back-to-back 6-chains by skill, not luck. The "one per cycle" framing is also a bit invisible — players won't know why their second big chain didn't grant a bonus unless we surface it.
+### B. Unused relic-effect helpers — `src/lib/runedelve/relicEffects.ts`
 
-**Option B — "Every 3 chains of 6+ grants 1 bonus"**
-Track a counter; every 3rd 6+ chain grants a bonus move.
-- **Pro**: Rewards consistency over the whole run.
-- **Con**: Feels disconnected from the moment ("why did *that* one grant a bonus?"). Counter-based mechanics in puzzle games tend to feel arbitrary unless the counter is always visible on screen — adding HUD complexity for a small payoff.
+Seven exported helpers that are never imported by the play loop:
+- `computeChainMods` + `ChainContext` + `ChainMods` types
+- `abilityFreeFirstUse`
+- `getTelegraphReadyEarly`
+- `getSealedTilesSpeedup`
+- `bossRuleSoften`
+- `shrineWardTurn1Mult`
+- `momentumScoreBonusMult`
 
-## My recommendation — a hybrid that's better than both
+Either delete them (option 1, quickest) **or** wire them up (option 2, fixes broken relics — see §2 below). I recommend option 2 because deleting them silently leaves the relics broken in the shop.
 
-**Raise the threshold AND cap to one per cycle, with a tier bonus.**
+## 2. Broken relics — silently doing nothing in combat
 
-| Chain length | Effect |
-|---|---|
-| 6 | +20% damage on this chain (no free turn) |
-| 7 | +30% damage **+ free turn** (max 1 per enemy cycle) |
-| 8+ | +40% damage **+ free turn** (max 1 per enemy cycle) |
+This is the most important finding. The shop sells these relics with descriptions, but `RuneDelvePlayPage.handleChain` never calls `computeChainMods` or any of the helpers above, so these relics **are paid for but have zero in-game effect**:
 
-### Why this works better than A or B alone
+| Relic | Promise | Status |
+|---|---|---|
+| Ember Edge | First red chain ×1.5 dmg | ❌ broken |
+| Crimson Tide | Every 5th red ×1.75 dmg | ❌ broken |
+| Executioner's Mark | +30% vs <25% HP | ❌ broken |
+| Desperate Surge | +25% red <30% HP | ❌ broken |
+| Sapphire Flow | +1 mana on 4+ blue | ❌ broken |
+| Verdant Heart | +1 HP/rune on green | ❌ broken |
+| Bulwark | +1 shield turn on gold | ❌ broken |
+| Quickstep | +1 effective length on first chain | ❌ broken |
+| First Light | First ability free | ❌ broken |
+| Momentum | 4+ chain ×1.10 score | ❌ broken |
+| Shrine Ward | Turn-1 dmg ×0.90 | ❌ broken |
+| Cracked Crown | Boss soften ×0.85 | ❌ broken |
+| Foresight | Telegraph 1 turn early | ❌ broken |
+| Keysight | Sealed unlock 1 turn faster | ❌ broken |
+| Cleansing Touch | First corrupt clear free | ❌ broken |
 
-1. **6-chains still feel rewarding** — you get a damage spike — but they no longer skip enemy turns. This is where Option A fairly punishes "lucky" 6-chains today.
-2. **7+ becomes the real "I broke the encounter" moment** — and it's appropriately rare on a 5×5 board. Telemetry from the analytics page will confirm but a 7+ chain typically requires deliberate setup, not RNG.
-3. **Cap of 1 per enemy cycle** prevents the snowball where one big chain begets another with no consequences. After you take your bonus turn, the next 7+ that cycle just hits hard — it doesn't *also* skip retaliation.
-4. **Reads naturally on screen** — "Chain ×7 — Bonus move!" already exists. We just suppress it on chain-6 and on the second 7+ in the same cycle, with a clear log line ("Massive chain — extra damage!").
+Working relics (already wired): Aether Spark, Iron Resolve, Last Stand, Bloodbond, Wanderer's Compass.
 
-### Expected impact on difficulty
+**Fix**: in `handleChain`, call `computeChainMods(activeRelics, ctx)` and apply the returned `bonusDamageMult` / `bonusManaFlat` / `bonusHealFlat` / `bonusShieldTurns` / `effectiveLengthBonus` to the resolution. In `handleAbility`, check `abilityFreeFirstUse` to skip mana cost on first cast. In the corruption section, check `cleansing_touch` (track a `corruptCleansedThisRun` count). Wire `shrineWardTurn1Mult` into the enemy attack damage on turn 1. Wire `bossRuleSoften` into `enemiesAttack` when a boss-rule-driven multiplier exists. Wire `momentumScoreBonusMult` into `finalize` before returning the breakdown. Wire `getTelegraphReadyEarly` in the initial-intent setup and `getSealedTilesSpeedup` into `buildInitialSeals`.
 
-Right now I'd estimate the bonus-move mechanic is worth ~15–25% of effective HP on hard levels (8/16/25). This change cuts that to ~6–10% — meaningful reward, no longer game-breaking. Late-game bosses go back to feeling like a real threshold rather than a victory lap.
+This restores 15 relics that players are spending shards on with no payoff.
 
-## Implementation
+## 3. Small correctness & polish
 
-Single file: `src/pages/RuneDelvePlayPage.tsx`.
+### a. `RuneBoard` chain-preview is class-blind
+`RUNE_PREVIEW.effect` shows e.g. "8 dmg per rune" — but a Warrior's red chain hits ×1.25, Mage blue gives 2 mana, Cleric green heals ×1.5, and chain-6+ now adds tier bonuses. Pass the active class + tier into the preview so the live "Attack · 32 dmg" string actually reflects what will happen. Quick fix: accept an optional `damagePerRune`/`healPerRune` override prop and compute it once on `RuneDelvePlayPage`.
 
-1. Replace the constant with a tier helper:
-   ```ts
-   const tierFor = (len: number) => len >= 8 ? { dmgMult: 1.4, bonus: true }
-                                  : len >= 7 ? { dmgMult: 1.3, bonus: true }
-                                  : len >= 6 ? { dmgMult: 1.2, bonus: false }
-                                  : { dmgMult: 1, bonus: false };
-   ```
-2. Add per-cycle state: `const [bonusUsedThisCycle, setBonusUsedThisCycle] = useState(false);`. Set `true` when a bonus move triggers; reset to `false` whenever the enemy phase actually runs.
-3. `grantsBonusMove = tier.bonus && !bonusUsedThisCycle && enemiesAlive`.
-4. When `tier.dmgMult > 1` and the chain is red, scale `resolution.damageDealt` (and the enemy HP delta) by `tier.dmgMult` — or pipe it through the existing `applyChain` path via a `chainDamageMult` arg if cleaner. Round to whole HP.
-5. Log lines:
-   - `tier.bonus && grantsBonusMove`: "Chain x{n} — bonus move!" (existing)
-   - `tier.bonus && !grantsBonusMove`: "Chain x{n} — massive damage! (bonus already used this cycle)"
-   - `len === 6`: "Chain x6 — heavy strike!"
-6. Toast only on bonus moves and on 8+ chains, to avoid noise.
+### b. `handleChain` is a 200-line monolith
+Extract three pure helpers (still in the same file is fine):
+- `applyTierMultiplier(next, resolution, type, tier)` — the chain-6/7/8 damage scaling block (lines 199–221).
+- `buildTurnLogs(...)` — the long log-building section (lines 224–250 + 322–330).
+- `applyCorruptionToChain(...)` — corruption block (262–276).
 
-## What I'm NOT changing
+Cuts the function to ~80 lines and makes the bonus-move flow obvious.
 
-- No relic, class, scoring, or DB changes.
-- No HUD additions — all feedback flows through the existing turn log + toasts.
-- Bonus-move corruption-hold and seal-tick behavior stay identical when a bonus *does* fire.
+### c. `useLevel` runs a 2nd fetch on every cache miss
+After failing `insert` (RLS denial for non-admins), it always `select`s again before falling back to a transient row. For the common case (non-admin player on a not-yet-seeded level), this is two extra round-trips per visit. Skip the second select unless the insert error is a unique-violation race (`code === '23505'`). Trims one round-trip from every transient-level page load.
+
+### d. `pushLog` ID generation
+`Date.now() + Math.random()` per entry inside a setState updater triggers a fresh `Math.random()` per call. Use a module-level `let logSeq = 0; logSeq++` counter instead — slightly faster and produces stable, sortable IDs.
+
+### e. `RuneDelvePlayPage` `useEffect` deps
+The board-init effect (line 130–148) lists `activeRelics` in its deps — but `activeRelics` is rebuilt on every `loadout`/`ownedRelics` change via `useMemo`, so toggling a relic mid-mount **resets the entire board mid-run**. Replace with `activeRelics` snapshot at run start — pull starting mana/shield once on first level/hero pair, not every time the relic ranks update.
+
+### f. `as any` casts on every Supabase call
+`(supabase as any).from(...)` appears 20+ times across `useRuneDelveCampaign.ts`, `useRuneDelve.ts` (deleted), `useRuneShards.ts`, `useRelicCollection.ts`, `useRuneDelveHero.ts`, `useRuneDelveClassProgress.ts`. The generated `types.ts` does include all `rune_delve_*` tables now — drop the casts so we get type-safety on column names. (One-line change per call.)
+
+## 4. What I'm NOT changing
+
+- No DB migrations.
+- No combat balance, scoring, or class changes.
+- No relic catalog changes (no new relics, no rebalanced numbers — only making existing relics actually fire).
+- No UI redesigns.
+- No changes outside `src/{pages,hooks,lib,components}/runedelve*` and `src/hooks/useRuneDelve*.ts`.
+
+## Files
+
+**Delete**
+- `src/hooks/useRuneDelve.ts` (entire legacy file)
+
+**Edit**
+- `src/lib/runedelve/relicEffects.ts` — keep all helpers (now wired); minor tidy.
+- `src/pages/RuneDelvePlayPage.tsx` — wire up `computeChainMods`, `abilityFreeFirstUse`, `shrineWardTurn1Mult`, `cleansing_touch`, `momentumScoreBonusMult`; extract three helpers; fix `useEffect` dep on `activeRelics`; tidy `pushLog`.
+- `src/components/runedelve/RuneBoard.tsx` — accept class-aware preview values (optional props).
+- `src/hooks/useRuneDelveCampaign.ts` — drop `(supabase as any)` casts; trim the redundant re-select in `useLevel`.
+- `src/hooks/useRuneShards.ts`, `useRelicCollection.ts`, `useRuneDelveHero.ts`, `useRuneDelveClassProgress.ts`, `useLoadout.ts` — drop `(supabase as any)` casts.
+
+## Expected impact
+
+- **15 relics start working** that previously did nothing in combat — the single biggest player-facing win.
+- ~250 fewer LOC overall.
+- Cleaner build: type-safe Supabase queries, no dead exports cluttering autocomplete.
+- Mid-run relic toggles no longer reset the board.
+- Slightly faster transient-level page loads (one fewer Postgrest round-trip).
 
 ## How we'll know it worked
 
-- Hard-level (15+) clear rates trend down to a healthier band — we can verify in the analytics hub.
-- 7+ chains feel like a genuine "moment", not a routine occurrence.
-- No more reports of "I cleared boss without taking a hit by chaining 6s back-to-back".
+- Equip Ember Edge: the first red chain of a run visibly hits harder than subsequent reds; the combat log shows the boosted number.
+- Equip Verdant Heart: a green chain of length 5 heals `5 + round(1.0×5) = 10` HP at R1, `5 + round(1.4×5) = 12` HP at R5.
+- Equip First Light: first ability cast a run does not consume mana.
+- Equip Foresight: telegraphed enemies show their intent one turn earlier in the EnemyDisplay.
+- TypeScript build passes with the `as any` casts removed.
 
