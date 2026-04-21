@@ -676,7 +676,6 @@ function PlayoffPicture({ standings, matches, seasonId }: { standings: SeasonSta
             Playoff Picture
           </h3>
           <p className="text-[11px] text-muted-foreground/70 text-center py-3">Complete all 12 regular-season drafts to unlock playoffs.</p>
-          <PlayoffFormatGuide />
         </div>
       </motion.div>
     );
