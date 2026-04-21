@@ -26,6 +26,7 @@ import {
   shrineWardTurn1Mult,
   bossRuleSoften,
   momentumScoreBonusMult,
+  compassShardBonus,
   getTelegraphReadyEarly,
   getSealedTilesSpeedup,
   type ActiveRelics,
