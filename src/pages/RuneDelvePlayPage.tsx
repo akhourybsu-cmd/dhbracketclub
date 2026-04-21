@@ -577,7 +577,8 @@ export default function RuneDelvePlayPage() {
     if (submitting || !level || !hero) return;
     setSubmitting(true);
     const turnsUsed = level.turn_limit - final.turnsRemaining;
-    const breakdown = calculateScore({
+    const relicsForFinal = activeRelicsSnapshot ?? activeRelics;
+    const rawBreakdown = calculateScore({
       totalDamage: final.totalDamage,
       enemiesDefeated: final.enemiesDefeated,
       hpRemaining: final.hp,
@@ -589,6 +590,11 @@ export default function RuneDelvePlayPage() {
         ? secondaryMet(secondaryObjective, final, level.turn_limit)
         : false,
     });
+    // Momentum: scale final score when longest chain >= 4.
+    const momentumMult = momentumScoreBonusMult(relicsForFinal, final.longestChain);
+    const breakdown = momentumMult > 1
+      ? { ...rawBreakdown, total: Math.round(rawBreakdown.total * momentumMult) }
+      : rawBreakdown;
     const xp = xpForRun(breakdown.total, cleared);
     const reason: 'cleared' | 'defeated' | 'timeout' = cleared ? 'cleared' : final.hp <= 0 ? 'defeated' : 'timeout';
     const isNewBest = !existingRun || breakdown.total > (existingRun.score ?? 0);
