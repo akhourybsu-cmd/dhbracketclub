@@ -413,11 +413,23 @@ export default function RuneDelvePlayPage() {
     Math.max(1, level.turn_limit - combat.turnsRemaining + (status.over ? 0 : 1)),
   );
 
+  const equippedCount = [loadout?.slot_1, loadout?.slot_2, loadout?.slot_3].filter(Boolean).length;
+
   return (
     <div className="space-y-4 pb-8 relative">
       <div className="flex items-center justify-between">
         <Link to="/rune-delve" className="back-link"><ArrowLeft className="w-4 h-4" /> Exit</Link>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {equippedCount > 0 && (
+            <Link
+              to="/rune-delve/armory"
+              aria-label={`${equippedCount} relics equipped`}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-extrabold tabular-nums btn-press"
+              style={{ background: 'hsl(var(--primary) / 0.14)', color: 'hsl(var(--primary))' }}
+            >
+              🛡️ {equippedCount}
+            </Link>
+          )}
           <div className="text-[11px] font-bold text-muted-foreground tabular-nums">
             Lv {level.level_number} · Turn {turnDisplay}/{level.turn_limit}
           </div>
