@@ -36,14 +36,14 @@ export default function RuneDelveLevelMapPage() {
         borderColor: 'hsl(var(--primary) / 0.2)',
       }}>
         <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-          <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-primary/15 text-primary tracking-wider">CHAPTER {chapter}</span>
-          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L{start}–{start + 49}</span>
+          <span className="font-rd-display px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-primary/20 text-primary tracking-[0.18em]">CHAPTER {chapter}</span>
+          <span className="text-[10px] font-extrabold text-foreground/75 uppercase tracking-wider">L{start}–{start + 49}</span>
         </div>
-        <h1 className="text-lg font-extrabold tracking-tight leading-tight">{meta.name}</h1>
-        <p className="text-[11px] text-muted-foreground mb-2.5">{meta.subtitle}</p>
+        <h1 className="rd-title text-xl tracking-wide leading-tight text-foreground">{meta.name}</h1>
+        <p className="text-[12px] text-foreground/75 mb-2.5 italic">{meta.subtitle}</p>
         <div className="flex items-center justify-between text-[10px] mb-1">
-          <span className="font-bold text-muted-foreground uppercase tracking-wider">Progress</span>
-          <span className="font-mono font-bold tabular-nums">{completedInChapter}/50</span>
+          <span className="font-extrabold text-foreground/75 uppercase tracking-wider">Progress</span>
+          <span className="font-mono font-extrabold tabular-nums text-foreground">{completedInChapter}/50</span>
         </div>
         <div className="h-1.5 rounded-full bg-muted/50 overflow-hidden">
           <div className="h-full bg-primary transition-all" style={{ width: `${chapterPct}%` }} />
