@@ -84,10 +84,10 @@ export default function RuneDelveArmoryPage() {
       </div>
 
       <div className="text-center space-y-1">
-        <h1 className="page-header-title flex items-center justify-center gap-2">
+        <h1 className="rd-title page-header-title flex items-center justify-center gap-2 text-2xl">
           <Sparkles className="w-5 h-5 text-primary" /> Armory
         </h1>
-        <p className="text-[12px] font-semibold text-foreground/70">Equip relics per class. Tap an owned relic to equip or unequip.</p>
+        <p className="text-[12px] font-semibold text-foreground/80">Equip relics per class. Tap an owned relic to equip or unequip.</p>
       </div>
 
       {/* Class tabs — per-class loadouts */}
@@ -103,8 +103,8 @@ export default function RuneDelveArmoryPage() {
               className={cn(
                 'h-14 rounded-lg flex flex-col items-center justify-center gap-0.5 btn-press text-[11px] font-extrabold transition-colors',
                 isActive
-                  ? 'bg-primary/20 border border-primary/50 text-primary-foreground shadow-[0_0_0_1px_hsl(var(--primary)/0.3)]'
-                  : 'bg-muted/30 border border-border/40 text-foreground/85',
+                  ? 'bg-primary/25 border border-primary/60 text-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.3)]'
+                  : 'bg-muted/30 border border-border/40 text-foreground/95',
               )}
             >
               <ClassBadge cls={c.id} size="sm" />
