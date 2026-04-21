@@ -33,6 +33,7 @@ export default function RuneDelveShopPage() {
   const spend = useSpendShards();
   const unlock = useUnlockRelic();
   const upgrade = useUpgradeRelic();
+  const sfx = useSoundEffect();
 
   const [tier, setTier] = useState<RelicTier>(1);
   const [cat, setCat] = useState<RelicCategory | 'all'>('all');
