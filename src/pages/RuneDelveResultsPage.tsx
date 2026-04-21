@@ -1,5 +1,5 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Trophy, Swords, Heart, Clock, Sparkles, ChevronRight, Star, Shield } from 'lucide-react';
+import { ArrowLeft, Trophy, Swords, Heart, Clock, Sparkles, ChevronRight, Star, Shield, Loader2, RefreshCw } from 'lucide-react';
 import { useLevel, useMyLevelRun, useLevelBestScores, useMyProgress } from '@/hooks/useRuneDelveCampaign';
 import { useRuneDelveHero } from '@/hooks/useRuneDelveHero';
 import { useRuneWallet } from '@/hooks/useRuneShards';
@@ -14,6 +14,7 @@ import { getBossRule, type BossRuleId } from '@/lib/runedelve/bossRules';
 import { secondaryLabel, type SecondaryObjective } from '@/lib/runedelve/layeredGoals';
 import { RELIC_BY_ID } from '@/lib/runedelve/relics';
 import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 
 export default function RuneDelveResultsPage() {
