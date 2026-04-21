@@ -423,11 +423,27 @@ export default function RuneDelvePlayPage() {
 
     // enemiesAttack already runs applyBossTurnEffects internally — do NOT call it again here.
     // On a bonus-move chain, we skip the enemy phase entirely (no turn consumed, no retaliation).
-    let afterEnemies = grantsBonusMove
-      ? next
-      : enemiesAlive
-        ? enemiesAttack(next, telegraphActive, bossRule)
-        : endTurn(next);
+    // Shrine Ward (turn 1) and Cracked Crown (boss-rule levels) reduce incoming
+    // damage by scaling each enemy's `damage` field in-place before the call,
+    // then restoring it after — mirrors the enrager pattern in combatEngine.
+    const isTurnOne = combat.turnsRemaining === level.turn_limit;
+    const wardMult = shrineWardTurn1Mult(relics, isTurnOne);
+    const crownMult = bossRule ? bossRuleSoften(relics) : 1;
+    const incomingMult = wardMult * crownMult;
+    let afterEnemies: CombatState & { heavyFired?: boolean };
+    if (grantsBonusMove) {
+      afterEnemies = next;
+    } else if (enemiesAlive) {
+      const originalDamage = next.enemies.map(e => e.damage);
+      if (incomingMult !== 1) {
+        next.enemies.forEach(e => { e.damage = Math.max(0, Math.round(e.damage * incomingMult)); });
+      }
+      afterEnemies = enemiesAttack(next, telegraphActive, bossRule);
+      // Restore damage on the post-attack array so future turns aren't permanently softened.
+      afterEnemies.enemies = afterEnemies.enemies.map((e, i) => ({ ...e, damage: originalDamage[i] ?? e.damage }));
+    } else {
+      afterEnemies = endTurn(next);
+    }
     if (grantsBonusMove) {
       setBonusUsedThisCycle(true);
       toast.success(`✨ Bonus move! Chain x${chain.length}`, { duration: 1400 });
@@ -512,6 +528,11 @@ export default function RuneDelvePlayPage() {
   };
 
   const handleAbility = () => {
+    const relics = activeRelicsSnapshot ?? activeRelics;
+    // First Light: first N ability casts skip the mana cost. We restore the
+    // mana after useAbility() consumes it so the cast still resolves normally.
+    const isFreeCast = abilityFreeFirstUse(relics, abilityUsedCount);
+    const manaBefore = combat.mana;
     const { next, ok } = useAbility(combat, hero.class, bossRule);
     if (!ok) {
       toast.info('Ability not ready — fill mana orbs first.');
@@ -536,19 +557,28 @@ export default function RuneDelvePlayPage() {
     turnLogs.push({ kind: 'info', text: 'Free action — your turn continues.' });
     toast.success('✨ Ability — free action!', { duration: 1200 });
 
+    // First Light: refund the mana that useAbility() just spent.
+    const finalNext: CombatState = isFreeCast ? { ...next, mana: manaBefore } : next;
+    if (isFreeCast) {
+      turnLogs.push({ kind: 'info', text: '🌅 First Light — mana refunded' });
+      toast.success('🌅 First Light — free!', { duration: 1100 });
+    }
+    setAbilityUsedCount(c => c + 1);
+
     // Abilities are now FREE actions: no enemy retaliation, no turn consumed,
     // no corruption spread. Player keeps their turn to chain again.
-    setCombat(next);
+    setCombat(finalNext);
     pushLogs(turnLogs);
-    const status = checkObjective(next, level.turn_limit, objType, level.objective_target, secondaryObjective);
-    if (status.over) void finalize(next, status.cleared);
+    const status = checkObjective(finalNext, level.turn_limit, objType, level.objective_target, secondaryObjective);
+    if (status.over) void finalize(finalNext, status.cleared);
   };
 
   async function finalize(final: CombatState, cleared: boolean) {
     if (submitting || !level || !hero) return;
     setSubmitting(true);
     const turnsUsed = level.turn_limit - final.turnsRemaining;
-    const breakdown = calculateScore({
+    const relicsForFinal = activeRelicsSnapshot ?? activeRelics;
+    const rawBreakdown = calculateScore({
       totalDamage: final.totalDamage,
       enemiesDefeated: final.enemiesDefeated,
       hpRemaining: final.hp,
@@ -560,6 +590,11 @@ export default function RuneDelvePlayPage() {
         ? secondaryMet(secondaryObjective, final, level.turn_limit)
         : false,
     });
+    // Momentum: scale final score when longest chain >= 4.
+    const momentumMult = momentumScoreBonusMult(relicsForFinal, final.longestChain);
+    const breakdown = momentumMult > 1
+      ? { ...rawBreakdown, total: Math.round(rawBreakdown.total * momentumMult) }
+      : rawBreakdown;
     const xp = xpForRun(breakdown.total, cleared);
     const reason: 'cleared' | 'defeated' | 'timeout' = cleared ? 'cleared' : final.hp <= 0 ? 'defeated' : 'timeout';
     const isNewBest = !existingRun || breakdown.total > (existingRun.score ?? 0);
@@ -810,6 +845,26 @@ export default function RuneDelvePlayPage() {
         seals={seals}
         corruptedCells={corruption.cells}
         corruptionSources={corruption.sources}
+        effectOverride={{
+          // Class-aware previews. Tier bonus shows when chain hits 6+.
+          red: (n) => {
+            const base = n * 8;
+            const cls = hero.class === 'warrior' ? Math.round(base * 1.25) : base;
+            const tier = n >= 8 ? 1.4 : n >= 7 ? 1.3 : n >= 6 ? 1.2 : 1;
+            const total = Math.round(cls * tier);
+            return tier > 1 ? `${total} dmg ⚡` : `${total} dmg`;
+          },
+          blue: (n) => {
+            let mana = hero.class === 'mage' ? 2 : 1;
+            if (n >= 5) mana += 1;
+            return `+${mana} orb${mana > 1 ? 's' : ''}`;
+          },
+          green: (n) => {
+            const base = n * 6;
+            const heal = hero.class === 'cleric' ? Math.round(base * 1.5) : base;
+            return `+${heal} HP`;
+          },
+        }}
       />
 
       {/* Compact single-line combat stats strip — keeps the board above the fold. */}
