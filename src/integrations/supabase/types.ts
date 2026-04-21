@@ -3099,6 +3099,7 @@ export type Database = {
           acquired_at: string
           acquired_at_level: number
           id: string
+          rank: number
           relic_id: string
           user_id: string
         }
@@ -3106,6 +3107,7 @@ export type Database = {
           acquired_at?: string
           acquired_at_level?: number
           id?: string
+          rank?: number
           relic_id: string
           user_id: string
         }
@@ -3113,6 +3115,7 @@ export type Database = {
           acquired_at?: string
           acquired_at_level?: number
           id?: string
+          rank?: number
           relic_id?: string
           user_id?: string
         }
