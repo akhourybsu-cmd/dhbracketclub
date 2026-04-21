@@ -845,6 +845,26 @@ export default function RuneDelvePlayPage() {
         seals={seals}
         corruptedCells={corruption.cells}
         corruptionSources={corruption.sources}
+        effectOverride={{
+          // Class-aware previews. Tier bonus shows when chain hits 6+.
+          red: (n) => {
+            const base = n * 8;
+            const cls = hero.class === 'warrior' ? Math.round(base * 1.25) : base;
+            const tier = n >= 8 ? 1.4 : n >= 7 ? 1.3 : n >= 6 ? 1.2 : 1;
+            const total = Math.round(cls * tier);
+            return tier > 1 ? `${total} dmg ⚡` : `${total} dmg`;
+          },
+          blue: (n) => {
+            let mana = hero.class === 'mage' ? 2 : 1;
+            if (n >= 5) mana += 1;
+            return `+${mana} orb${mana > 1 ? 's' : ''}`;
+          },
+          green: (n) => {
+            const base = n * 6;
+            const heal = hero.class === 'cleric' ? Math.round(base * 1.5) : base;
+            return `+${heal} HP`;
+          },
+        }}
       />
 
       {/* Compact single-line combat stats strip — keeps the board above the fold. */}
