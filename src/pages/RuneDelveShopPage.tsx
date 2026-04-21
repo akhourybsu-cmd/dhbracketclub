@@ -73,10 +73,10 @@ export default function RuneDelveShopPage() {
       </div>
 
       <div className="text-center space-y-1">
-        <h1 className="page-header-title flex items-center justify-center gap-2">
+        <h1 className="rd-title page-header-title flex items-center justify-center gap-2 text-2xl">
           <Sparkles className="w-5 h-5 text-primary" /> Relic Shop
         </h1>
-        <p className="text-[11px] text-muted-foreground">Spend Rune Shards to permanently unlock relics. Equip them in the Armory.</p>
+        <p className="text-[12px] font-semibold text-foreground/80">Spend Rune Shards to permanently unlock relics. Equip them in the Armory.</p>
       </div>
 
       {/* Tier tabs */}
