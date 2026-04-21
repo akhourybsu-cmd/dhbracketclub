@@ -66,6 +66,7 @@ const RuneDelveHeroPage = lazy(() => import("./pages/RuneDelveHeroPage"));
 const RuneDelveHistoryPage = lazy(() => import("./pages/RuneDelveHistoryPage"));
 const RuneDelveShopPage = lazy(() => import("./pages/RuneDelveShopPage"));
 const RuneDelveArmoryPage = lazy(() => import("./pages/RuneDelveArmoryPage"));
+const RuneDelveBestiaryPage = lazy(() => import("./pages/RuneDelveBestiaryPage"));
 import { RuneDelveLayout } from "./components/runedelve/RuneDelveLayout";
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -190,6 +191,7 @@ function AnimatedRoutes() {
         <Route path="/rune-delve/history" element={<ProtectedPage><RuneDelveLayout><RuneDelveHistoryPage /></RuneDelveLayout></ProtectedPage>} />
         <Route path="/rune-delve/shop" element={<ProtectedPage><RuneDelveLayout><RuneDelveShopPage /></RuneDelveLayout></ProtectedPage>} />
         <Route path="/rune-delve/armory" element={<ProtectedPage><RuneDelveLayout><RuneDelveArmoryPage /></RuneDelveLayout></ProtectedPage>} />
+        <Route path="/rune-delve/bestiary" element={<ProtectedPage><RuneDelveLayout><RuneDelveBestiaryPage /></RuneDelveLayout></ProtectedPage>} />
         <Route path="/rune-delve/analytics" element={<ProtectedPage><RuneDelveAnalyticsPage /></ProtectedPage>} />
 
         <Route path="/profile" element={<ProtectedPage><ProfilePage /></ProtectedPage>} />

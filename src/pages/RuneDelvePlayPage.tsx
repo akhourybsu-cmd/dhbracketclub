@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft, HelpCircle, Trophy, Skull, Hourglass } from 'lucide-react';
@@ -13,6 +13,8 @@ import { calculateScore, xpForRun } from '@/lib/runedelve/scoring';
 import { levelFromXp, newTitleUnlocked, titleForLevel } from '@/lib/runedelve/classConfig';
 import { useLoadout } from '@/hooks/useLoadout';
 import { useEarnShards, useFailureRow, useBumpFailure, useResetFailure, useRuneWallet, useUnlockSlot } from '@/hooks/useRuneShards';
+import { useRecordDefeats } from '@/hooks/useBestiary';
+import { rosterById } from '@/lib/runedelve/enemyRoster';
 import { useRelicCollection, rankMapFromOwned } from '@/hooks/useRelicCollection';
 import {
   buildActive,
@@ -93,6 +95,7 @@ export default function RuneDelvePlayPage() {
   const { data: wallet } = useRuneWallet();
   const { data: failureRow } = useFailureRow(level?.level_number ?? null);
   const earnShards = useEarnShards();
+  const recordDefeats = useRecordDefeats();
   const bumpFailure = useBumpFailure();
   const resetFailure = useResetFailure();
   const unlockSlot = useUnlockSlot();
@@ -113,6 +116,15 @@ export default function RuneDelvePlayPage() {
   const [bonusUsedThisCycle, setBonusUsedThisCycle] = useState(false);
   const [corruption, setCorruption] = useState<CorruptionState>(emptyCorruption);
   const [log, setLog] = useState<CombatLogEntry[]>([]);
+
+  // Per-run defeat ledger keyed by archetypeId. Submitted to the Bestiary on
+  // run-end. Using a ref keeps writes O(1) and avoids extra renders.
+  const defeatedArchetypesRef = useRef<Map<string, number>>(new Map());
+  const recordKill = (archetypeId: string | undefined) => {
+    if (!archetypeId) return;
+    const m = defeatedArchetypesRef.current;
+    m.set(archetypeId, (m.get(archetypeId) ?? 0) + 1);
+  };
 
   // Per-run relic-effect counters (drive Ember Edge / Crimson Tide / Quickstep /
   // First Light / Cleansing Touch / Shrine Ward turn-1 detection).
@@ -207,6 +219,7 @@ export default function RuneDelvePlayPage() {
     setAbilityUsedCount(0);
     setCorruptCleansedCount(0);
     setBonusUsedThisCycle(false);
+    defeatedArchetypesRef.current = new Map();
     setLog([{ id: nextLogId(), kind: 'info', text: `You enter Level ${level.level_number}. The runes hum.` }]);
     // NOTE: `activeRelics` intentionally OMITTED from deps — see comment above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -418,6 +431,7 @@ export default function RuneDelvePlayPage() {
     }
     for (const killId of resolution.enemyKills) {
       const killed = combat.enemies.find(e => e.id === killId);
+      recordKill(killed?.archetypeId);
       turnLogs.push({ kind: 'kill', text: `${killed?.name ?? 'A foe'} was vanquished!` });
     }
 
@@ -631,6 +645,14 @@ export default function RuneDelvePlayPage() {
     const dealt = next.totalDamage - combat.totalDamage;
     const killed = next.enemiesDefeated - combat.enemiesDefeated;
     const healed = Math.max(0, next.hp - combat.hp);
+    // Track which archetypes died from this ability for the Bestiary.
+    if (killed > 0) {
+      const newlyDeadIds = next.enemies
+        .filter(e => e.hp <= 0 && combat.enemies.find(o => o.id === e.id && o.hp > 0))
+        .map(e => e.archetypeId)
+        .filter((id): id is string => !!id);
+      newlyDeadIds.forEach(recordKill);
+    }
     turnLogs.push({
       kind: 'ability',
       text: ABILITY_LABEL[hero.class] ?? 'Ability unleashed',
@@ -821,6 +843,28 @@ export default function RuneDelvePlayPage() {
           toast.success('🔓 3rd Relic Slot Unlocked!', { duration: 4500 });
         }
       } catch { /* shards are best-effort */ }
+
+      // ── Bestiary: record defeats from this run ─────────────────────────
+      try {
+        const defeats = Array.from(defeatedArchetypesRef.current.entries()).map(
+          ([archetypeId, count]) => ({ archetypeId, count, levelNumber: level.level_number }),
+        );
+        if (defeats.length > 0) {
+          const { newlyDiscovered } = await recordDefeats.mutateAsync(defeats);
+          if (newlyDiscovered.length > 0) {
+            const names = newlyDiscovered
+              .map(id => rosterById(id)?.name ?? 'Unknown')
+              .slice(0, 3);
+            const more = newlyDiscovered.length - names.length;
+            toast.success(
+              newlyDiscovered.length === 1
+                ? `📖 Bestiary: ${names[0]} discovered!`
+                : `📖 Bestiary: ${names.join(', ')}${more > 0 ? ` +${more} more` : ''}`,
+              { duration: 4000 },
+            );
+          }
+        }
+      } catch { /* bestiary write is best-effort */ }
 
       setTimeout(() => navigate(`/rune-delve/results/${level.level_number}`), 2500);
     } catch (e: any) {
