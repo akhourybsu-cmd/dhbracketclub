@@ -70,7 +70,7 @@ export function RelicCard({ relic, state, shards, onClick, disabled }: Props) {
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-          <span className="font-extrabold text-[13px] truncate">{relic.name}</span>
+          <span className="font-rd-display font-extrabold text-[14px] truncate tracking-wide">{relic.name}</span>
           <span className="text-[8px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded"
             style={{ background: `${tierColor.replace(')', ' / 0.15)')}`, color: tierColor }}>
             T{relic.tier}
