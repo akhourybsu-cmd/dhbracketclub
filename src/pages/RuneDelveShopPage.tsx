@@ -1,20 +1,23 @@
-import { Link } from 'react-router-dom';
-import { ArrowLeft, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useRuneWallet, useSpendShards } from '@/hooks/useRuneShards';
-import { useRelicCollection, useUnlockRelic } from '@/hooks/useRelicCollection';
+import { useRelicCollection, useUnlockRelic, useUpgradeRelic } from '@/hooks/useRelicCollection';
 import { useMyProgress } from '@/hooks/useRuneDelveCampaign';
 import { useRuneDelveHero } from '@/hooks/useRuneDelveHero';
 import {
   RELIC_CATALOG,
   CATEGORY_META,
   tierUnlockedForChapter,
+  rankCost,
+  MAX_RANK,
   type RelicCategory,
   type RelicTier,
+  type RelicDef,
 } from '@/lib/runedelve/relics';
 import { chapterFor } from '@/lib/runedelve/levelGenerator';
 import { RelicCard } from '@/components/runedelve/RelicCard';
+import { RelicUpgradeSheet } from '@/components/runedelve/RelicUpgradeSheet';
 import { ShardBalance } from '@/components/runedelve/ShardBalance';
 import { cn } from '@/lib/utils';
 
