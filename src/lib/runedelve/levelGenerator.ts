@@ -186,20 +186,25 @@ export function generateLevel(level: number): LevelDefinition {
   for (let i = 0; i < enemyCount; i++) {
     const t = pickTemplate(level, rng);
     let { hp, damage } = scaleEnemy(t, level);
-    // Elite levels: last enemy is a beefier boss.
+    // Early-game HP cap: avoid triple-tank rolls (Slime/Stone Golem) before
+    // relics exist. Bosses/elites bypass this so milestones still feel weighty.
     const isElite = objective.type === 'defeat_elite' && i === enemyCount - 1;
+    const isFinalBossSlot = isBossLevel && i === enemyCount - 1;
+    if (level <= 18 && !isElite && !isFinalBossSlot) {
+      hp = Math.min(hp, EARLY_HP_CAP);
+    }
     if (isElite) {
       hp = Math.round(hp * 1.6);
       damage = Math.round(damage * 1.2);
     }
     // Boss-rule levels: meaningfully beef up the final enemy so the rule lands.
-    if (isBossLevel && i === enemyCount - 1) {
+    if (isFinalBossSlot) {
       hp = Math.round(hp * 1.8);
       damage = Math.round(damage * 1.15);
     }
     enemies.push({
       id: `e${i}`,
-      name: isBossLevel && i === enemyCount - 1
+      name: isFinalBossSlot
         ? `Boss ${t.name}`
         : isElite ? `Elite ${t.name}` : t.name,
       emoji: t.emoji,
