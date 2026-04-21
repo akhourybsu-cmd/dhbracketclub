@@ -134,17 +134,17 @@ export default function RuneDelveHeroPage() {
 
       {/* ── Active class — passive + ability ─────────────────────────── */}
       <div className="glass-card p-4">
-        <h3 className="font-bold text-[13px] mb-2">Active class · {cls.name}</h3>
-        <p className="text-[11px] text-muted-foreground mb-1"><span className="font-bold text-foreground">Passive:</span> {cls.passive}</p>
-        <p className="text-[11px] text-muted-foreground"><span className="font-bold text-foreground">Ability:</span> {cls.abilityName} — {cls.abilityDesc}</p>
+        <h3 className="font-rd-display font-extrabold text-[14px] mb-2 tracking-wide">Active class · {cls.name}</h3>
+        <p className="text-[12px] text-foreground/85 mb-1"><span className="font-extrabold text-foreground">Passive:</span> {cls.passive}</p>
+        <p className="text-[12px] text-foreground/85"><span className="font-extrabold text-foreground">Ability:</span> {cls.abilityName} — {cls.abilityDesc}</p>
       </div>
 
       {/* ── Per-class progression ladder ─────────────────────────────── */}
       <div className="glass-card p-4 space-y-2">
-        <h3 className="font-bold text-[13px] flex items-center gap-1.5">
+        <h3 className="font-rd-display font-extrabold text-[14px] flex items-center gap-1.5 tracking-wide">
           <Sparkles className="w-3.5 h-3.5 text-primary" /> Class Progression
         </h3>
-        <p className="text-[10px] text-muted-foreground">
+        <p className="text-[11px] text-foreground/75">
           Each class keeps its own level and titles. Switching loads that class's saved progress — nothing is wiped.
         </p>
         <div className="space-y-2 mt-1">
