@@ -423,11 +423,27 @@ export default function RuneDelvePlayPage() {
 
     // enemiesAttack already runs applyBossTurnEffects internally — do NOT call it again here.
     // On a bonus-move chain, we skip the enemy phase entirely (no turn consumed, no retaliation).
-    let afterEnemies = grantsBonusMove
-      ? next
-      : enemiesAlive
-        ? enemiesAttack(next, telegraphActive, bossRule)
-        : endTurn(next);
+    // Shrine Ward (turn 1) and Cracked Crown (boss-rule levels) reduce incoming
+    // damage by scaling each enemy's `damage` field in-place before the call,
+    // then restoring it after — mirrors the enrager pattern in combatEngine.
+    const isTurnOne = combat.turnsRemaining === level.turn_limit;
+    const wardMult = shrineWardTurn1Mult(relics, isTurnOne);
+    const crownMult = bossRule ? bossRuleSoften(relics) : 1;
+    const incomingMult = wardMult * crownMult;
+    let afterEnemies: CombatState & { heavyFired?: boolean };
+    if (grantsBonusMove) {
+      afterEnemies = next;
+    } else if (enemiesAlive) {
+      const originalDamage = next.enemies.map(e => e.damage);
+      if (incomingMult !== 1) {
+        next.enemies.forEach(e => { e.damage = Math.max(0, Math.round(e.damage * incomingMult)); });
+      }
+      afterEnemies = enemiesAttack(next, telegraphActive, bossRule);
+      // Restore damage on the post-attack array so future turns aren't permanently softened.
+      afterEnemies.enemies = afterEnemies.enemies.map((e, i) => ({ ...e, damage: originalDamage[i] ?? e.damage }));
+    } else {
+      afterEnemies = endTurn(next);
+    }
     if (grantsBonusMove) {
       setBonusUsedThisCycle(true);
       toast.success(`✨ Bonus move! Chain x${chain.length}`, { duration: 1400 });
