@@ -641,6 +641,7 @@ function PlayoffPicture({ standings, matches, seasonId }: { standings: SeasonSta
   const qfMatches = matches.filter(m => m.round === 'qf').sort((a, b) => a.match_number - b.match_number);
   const sfMatches = matches.filter(m => m.round === 'sf').sort((a, b) => a.match_number - b.match_number);
   const finalMatches = matches.filter(m => m.round === 'final').sort((a, b) => a.match_number - b.match_number);
+  const thirdPlaceMatch = matches.find(m => m.round === 'third_place');
 
   // Series state for finals best-of-3
   const finalWinCount: Record<string, number> = {};
