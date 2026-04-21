@@ -92,7 +92,7 @@ export function RuneDelveHUD() {
         onOpenChange={setExitOpen}
         onConfirm={() => {
           setExitOpen(false);
-          navigate('/compete');
+          navigate('/rune-delve');
         }}
       />
     </>
