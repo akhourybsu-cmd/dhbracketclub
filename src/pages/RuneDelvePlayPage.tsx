@@ -95,6 +95,7 @@ export default function RuneDelvePlayPage() {
   const { data: wallet } = useRuneWallet();
   const { data: failureRow } = useFailureRow(level?.level_number ?? null);
   const earnShards = useEarnShards();
+  const recordDefeats = useRecordDefeats();
   const bumpFailure = useBumpFailure();
   const resetFailure = useResetFailure();
   const unlockSlot = useUnlockSlot();
