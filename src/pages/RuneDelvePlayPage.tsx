@@ -312,7 +312,8 @@ export default function RuneDelvePlayPage() {
     }
 
     // Spread corruption AFTER the chain resolves (player's turn ended).
-    if (corruptionActive && nextCorruption.sources.size) {
+    // On a bonus-move chain the turn does NOT end, so corruption holds too.
+    if (corruptionActive && nextCorruption.sources.size && !grantsBonusMove) {
       nextCorruption = spreadCorruption(nextCorruption, rngTick, level.generation_seed, seals);
     }
     setCorruption(nextCorruption);
