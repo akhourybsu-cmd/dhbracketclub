@@ -11,6 +11,11 @@ import { isValidChain, resolveBoard, type Cell } from '@/lib/runedelve/boardEngi
 import { applyChain, enemiesAttack, endTurn, initialCombat, isRunOver, useAbility, type CombatState } from '@/lib/runedelve/combatEngine';
 import { calculateScore, xpForRun } from '@/lib/runedelve/scoring';
 import { levelFromXp, newTitleUnlocked, titleForLevel } from '@/lib/runedelve/classConfig';
+import { useLoadout } from '@/hooks/useLoadout';
+import { useEarnShards, useFailureRow, useBumpFailure, useResetFailure, useRuneWallet, useUnlockSlot } from '@/hooks/useRuneShards';
+import { buildActive, getStartingMana, getStartingShieldTurns, has, onEnemyKilled, tryLastStand } from '@/lib/runedelve/relicEffects';
+import { computeClearShards, computeFailureShards, slotsForClassLevels } from '@/lib/runedelve/shardEconomy';
+
 import { objectiveLabel, type ObjectiveType } from '@/lib/runedelve/levelGenerator';
 import {
   mechanicsForLevel,
@@ -52,6 +57,13 @@ export default function RuneDelvePlayPage() {
   const advance = useAdvanceProgress();
   const updateHero = useUpdateHero();
   const updateClass = useUpdateClassProgress();
+  const { data: loadout } = useLoadout(hero?.class);
+  const { data: wallet } = useRuneWallet();
+  const { data: failureRow } = useFailureRow(level?.level_number ?? null);
+  const earnShards = useEarnShards();
+  const bumpFailure = useBumpFailure();
+  const resetFailure = useResetFailure();
+  const unlockSlot = useUnlockSlot();
 
   const [grid, setGrid] = useState<RuneType[][] | null>(null);
   const [combat, setCombat] = useState<CombatState | null>(null);
@@ -61,8 +73,12 @@ export default function RuneDelvePlayPage() {
   const [flashId, setFlashId] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [introMechanic, setIntroMechanic] = useState<MechanicId | null>(null);
-  const [endState, setEndState] = useState<null | { cleared: boolean; reason: 'cleared' | 'defeated' | 'timeout'; score: number; isNewBest: boolean }>(null);
+  const [endState, setEndState] = useState<null | { cleared: boolean; reason: 'cleared' | 'defeated' | 'timeout'; score: number; isNewBest: boolean; shards: number }>(null);
+  const [lastStandUsed, setLastStandUsed] = useState(false);
   const [corruption, setCorruption] = useState<CorruptionState>(emptyCorruption);
+
+  // Active relic loadout for this run.
+  const activeRelics = useMemo(() => buildActive([loadout?.slot_1, loadout?.slot_2, loadout?.slot_3]), [loadout]);
 
   // Resolve mechanics for this level. Prefer the persisted row, fall back
   // to the deterministic helper so legacy/transient rows still work.
@@ -89,8 +105,13 @@ export default function RuneDelvePlayPage() {
       id: e.id ?? `e${i}`, name: e.name, emoji: e.emoji, hp: e.hp, maxHp: e.maxHp ?? e.hp, damage: e.damage,
     }));
     if (telegraphActive) enemies = applyInitialIntents(enemies, level.generation_seed, level.level_number);
-    setCombat(initialCombat(enemies, level.turn_limit));
-  }, [level, hero, sealedTilesActive, telegraphActive, corruptionActive]);
+    // Apply pre-run relic effects: starting mana + starting shield.
+    const initial = initialCombat(enemies, level.turn_limit);
+    initial.mana = Math.min(3, initial.mana + getStartingMana(activeRelics));
+    initial.shieldTurns = Math.max(initial.shieldTurns, getStartingShieldTurns(activeRelics));
+    setCombat(initial);
+    setLastStandUsed(false);
+  }, [level, hero, sealedTilesActive, telegraphActive, corruptionActive, activeRelics]);
 
   // One-time intro modal for any brand-new mechanic taught at this level.
   useEffect(() => {
@@ -161,10 +182,28 @@ export default function RuneDelvePlayPage() {
     }
 
     // enemiesAttack already runs applyBossTurnEffects internally — do NOT call it again here.
-    const afterEnemies = next.enemies.some(e => e.hp > 0)
+    let afterEnemies = next.enemies.some(e => e.hp > 0)
       ? enemiesAttack(next, telegraphActive, bossRule)
       : endTurn(next);
     if ((afterEnemies as any).heavyFired) toast.error('⚡ Heavy strike!', { duration: 1200 });
+
+    // Relic: Last Stand — survive lethal at 1 HP, once per run.
+    if (afterEnemies.hp <= 0 && !lastStandUsed) {
+      const ls = tryLastStand(activeRelics, afterEnemies.hp, false);
+      if (ls.saved) {
+        afterEnemies = { ...afterEnemies, hp: ls.hp };
+        setLastStandUsed(true);
+        toast.success('💔 Last Stand! Survived at 1 HP', { duration: 1800 });
+      }
+    }
+
+    // Relic: Bloodbond — heal 4 HP per kill this turn.
+    if (resolution.enemyKills.length && has(activeRelics, 'bloodbond')) {
+      let healed = afterEnemies;
+      for (let i = 0; i < resolution.enemyKills.length; i++) healed = onEnemyKilled(activeRelics, healed);
+      afterEnemies = { ...afterEnemies, hp: healed.hp };
+    }
+
     const newGrid = resolveBoard(grid, chain, refillRng, seals);
 
     // Break any seals adjacent to the matched cells.
@@ -231,7 +270,40 @@ export default function RuneDelvePlayPage() {
     const xp = xpForRun(breakdown.total, cleared);
     const reason: 'cleared' | 'defeated' | 'timeout' = cleared ? 'cleared' : final.hp <= 0 ? 'defeated' : 'timeout';
     const isNewBest = !existingRun || breakdown.total > (existingRun.score ?? 0);
-    setEndState({ cleared, reason, score: breakdown.total, isNewBest });
+
+    // ── Rune Shards reward ────────────────────────────────────────────────
+    const compassEquipped = has(activeRelics, 'wanderers_compass');
+    const isFirstClear = cleared && (!existingRun || !existingRun.dungeon_cleared);
+    const bossClear = cleared && level.level_number % 25 === 0;
+    const totalEnemies = (level.enemy_config?.length ?? final.enemies.length) || 1;
+    let shardsAwarded = 0;
+    try {
+      if (cleared) {
+        const breakdownShards = computeClearShards({
+          levelNumber: level.level_number,
+          isFirstClear,
+          bossClear,
+          chapterCleared: false,
+          compassEquipped,
+        });
+        shardsAwarded = breakdownShards.total;
+      } else {
+        const nextFailureCount = (failureRow?.failure_count ?? 0) + 1;
+        const breakdownShards = computeFailureShards({
+          levelNumber: level.level_number,
+          failureCount: nextFailureCount,
+          enemiesKilled: final.enemiesDefeated,
+          totalEnemies,
+          turnsUsed,
+          turnLimit: level.turn_limit,
+          bossPhaseReached: 0,
+          bossHasRule: !!bossRule,
+          compassEquipped,
+        });
+        shardsAwarded = breakdownShards.total;
+      }
+    } catch { shardsAwarded = 0; }
+    setEndState({ cleared, reason, score: breakdown.total, isNewBest, shards: shardsAwarded });
     try {
       // Don't submit transient levels (admin hasn't seeded them yet).
       if (!level.id.startsWith('transient-')) {
@@ -304,6 +376,29 @@ export default function RuneDelvePlayPage() {
           });
         }
       }
+
+      // ── Award Rune Shards & track failure curve ─────────────────────────
+      try {
+        if (shardsAwarded > 0) await earnShards.mutateAsync(shardsAwarded);
+        if (cleared) {
+          await resetFailure.mutateAsync(level.level_number);
+        } else {
+          await bumpFailure.mutateAsync(level.level_number);
+        }
+        // Auto-unlock 3rd slot when ANY class hits L50.
+        const tracks = classTracks ?? [];
+        const maxClassLevel = Math.max(
+          hero.level,
+          ...tracks.map(t => t.level),
+          isNewBest ? 1 : 0,
+        );
+        const desired = slotsForClassLevels(maxClassLevel);
+        if ((wallet?.slots_unlocked ?? 2) < desired) {
+          await unlockSlot.mutateAsync(desired);
+          toast.success('🔓 3rd Relic Slot Unlocked!', { duration: 4500 });
+        }
+      } catch { /* shards are best-effort */ }
+
       setTimeout(() => navigate(`/rune-delve/results/${level.level_number}`), 2500);
     } catch (e: any) {
       toast.error(e?.message ?? 'Could not save run');
@@ -458,6 +553,12 @@ export default function RuneDelvePlayPage() {
               <p className="text-3xl font-extrabold font-mono tabular-nums" style={{ color: 'hsl(var(--gold))' }}>
                 {endState.score.toLocaleString()}
               </p>
+              {endState.shards > 0 && (
+                <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold"
+                  style={{ background: 'hsl(var(--primary) / 0.15)', color: 'hsl(var(--primary))' }}>
+                  💠 +{endState.shards} Rune Shards
+                </div>
+              )}
             </div>
             <button
               onClick={() => navigate(`/rune-delve/results/${level.level_number}`)}

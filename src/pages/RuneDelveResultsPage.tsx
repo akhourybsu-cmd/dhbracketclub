@@ -107,6 +107,12 @@ export default function RuneDelveResultsPage() {
             ))}
           </div>
         )}
+        <div className="mt-3 flex items-center justify-center gap-2 text-[11px] font-extrabold">
+          <Link to="/rune-delve/shop" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors hover:opacity-90"
+            style={{ background: 'hsl(var(--primary) / 0.14)', color: 'hsl(var(--primary))' }}>
+            💠 Spend shards in the Shop
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
