@@ -96,8 +96,8 @@ export default function RuneDelveResultsPage() {
           <div className="space-y-1 mb-2">
             <div className="flex items-center justify-center gap-2">
               <ClassBadge cls={hero.class} size="sm" />
-              <p className="text-[12px] font-extrabold truncate max-w-[200px]">{hero.hero_name}</p>
-              <span className="text-[10px] font-bold text-muted-foreground">Lv {levelFromXp(hero.xp).level} {getClass(hero.class).name}</span>
+              <p className="font-rd-display text-[13px] font-extrabold truncate max-w-[200px] tracking-wide">{hero.hero_name}</p>
+              <span className="text-[10px] font-extrabold text-foreground/75">Lv {levelFromXp(hero.xp).level} {getClass(hero.class).name}</span>
             </div>
             {(hero.cosmetic_title ?? titleForLevel(levelFromXp(hero.xp).level, hero.class)) && (
               <p className="text-[10px] font-extrabold text-primary">
