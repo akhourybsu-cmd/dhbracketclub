@@ -67,6 +67,7 @@ export default function RuneDelvePlayPage() {
   const updateHero = useUpdateHero();
   const updateClass = useUpdateClassProgress();
   const { data: loadout } = useLoadout(hero?.class);
+  const { data: ownedRelics } = useRelicCollection();
   const { data: wallet } = useRuneWallet();
   const { data: failureRow } = useFailureRow(level?.level_number ?? null);
   const earnShards = useEarnShards();
@@ -103,8 +104,11 @@ export default function RuneDelvePlayPage() {
     });
   };
 
-  // Active relic loadout for this run.
-  const activeRelics = useMemo(() => buildActive([loadout?.slot_1, loadout?.slot_2, loadout?.slot_3]), [loadout]);
+  // Active relic loadout for this run (rank-aware).
+  const activeRelics = useMemo(() => {
+    const ranks = rankMapFromOwned(ownedRelics);
+    return buildActive([loadout?.slot_1, loadout?.slot_2, loadout?.slot_3], ranks);
+  }, [loadout, ownedRelics]);
 
   // Resolve mechanics for this level. Prefer the persisted row, fall back
   // to the deterministic helper so legacy/transient rows still work.
