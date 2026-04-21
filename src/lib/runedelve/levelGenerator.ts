@@ -117,17 +117,7 @@ function enemyCountFor(level: number, rng: () => number): number {
 // triple-Slime/Stone-Golem wall before the player has any relics.
 const EARLY_HP_CAP = 110;
 
-// HP/damage scaling — softer ramp through L25, then resume original curve.
-function scaleEnemy(base: { hp: number; damage: number }, level: number) {
-  const hpRate  = level <= 25 ? 0.03  : 0.04;      // +3%/lvl early, +4% later
-  const dmgRate = level <= 25 ? 0.02  : 0.025;     // +2%/lvl early, +2.5% later
-  const hpMul   = 1 + (level - 1) * hpRate;
-  const dmgMul  = 1 + (level - 1) * dmgRate;
-  return {
-    hp: Math.round(base.hp * hpMul),
-    damage: Math.max(base.damage, Math.round(base.damage * dmgMul)),
-  };
-}
+// (HP/damage scaling lives below — single RosterEntry-based implementation.)
 
 // Pick a roster archetype for this level. The roster's chapter/tier gating
 // already mirrors the prior pool-growth logic, so we just bias early levels
