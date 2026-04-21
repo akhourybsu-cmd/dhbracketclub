@@ -117,8 +117,8 @@ export default function RuneDelveArmoryPage() {
       {/* Active class loadout */}
       <div className="glass-card p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="font-extrabold text-[14px] text-foreground">{getClass(cls).name} loadout</h3>
-          <span className="text-[11px] font-extrabold tabular-nums text-foreground/75">{equipped.filter((s, i) => s && i < slotsUnlocked).length}/{slotsUnlocked} slots</span>
+          <h3 className="font-rd-display font-extrabold text-[15px] text-foreground tracking-wide">{getClass(cls).name} loadout</h3>
+          <span className="text-[11px] font-extrabold tabular-nums text-foreground/85">{equipped.filter((s, i) => s && i < slotsUnlocked).length}/{slotsUnlocked} slots</span>
         </div>
         <div className="grid grid-cols-3 gap-2">
           {[0, 1, 2].map(i => {
@@ -136,7 +136,7 @@ export default function RuneDelveArmoryPage() {
           })}
         </div>
         {slotsUnlocked < 3 && (
-          <p className="text-[11px] font-semibold text-foreground/65 text-center italic">
+          <p className="text-[11px] font-semibold text-foreground/80 text-center italic">
             Reach class level 50 in any class to unlock the 3rd relic slot.
           </p>
         )}
@@ -144,15 +144,15 @@ export default function RuneDelveArmoryPage() {
 
       {/* Owned relics */}
       <div className="space-y-2">
-        <h3 className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-foreground/75 px-1">
+        <h3 className="font-rd-display text-[12px] font-extrabold uppercase tracking-[0.18em] text-foreground/90 px-1">
           Your relics ({ownedRelics.length})
         </h3>
         {ownedRelics.length === 0 ? (
           <Link to="/rune-delve/shop" className="block">
             <div className="glass-card p-5 text-center btn-press">
               <ShoppingBag className="w-6 h-6 mx-auto mb-2 text-primary" />
-              <p className="text-[14px] font-extrabold mb-1 text-foreground">No relics yet</p>
-              <p className="text-[12px] font-semibold text-foreground/70 mb-2">Visit the Shop to spend Rune Shards on your first relic.</p>
+              <p className="rd-title text-[15px] font-extrabold mb-1 text-foreground">No relics yet</p>
+              <p className="text-[12px] font-semibold text-foreground/90 mb-2">Visit the Shop to spend Rune Shards on your first relic.</p>
               <span className="text-[12px] font-extrabold text-primary">Go to Shop →</span>
             </div>
           </Link>
