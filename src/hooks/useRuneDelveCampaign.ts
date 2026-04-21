@@ -68,14 +68,17 @@ export function useLevel(levelNumber: number | undefined) {
         qc.invalidateQueries({ queryKey: ['rune-delve-levels-batch'] });
         return inserted as RuneDelveLevel;
       }
-      // Race or RLS denial — try fetch once more, otherwise return a transient
-      // level shaped like a DB row so the UI can render and the user can play.
-      const { data: again } = await supabase
-        .from('rune_delve_levels')
-        .select('*')
-        .eq('level_number', levelNumber)
-        .maybeSingle();
-      if (again) return again as RuneDelveLevel;
+      // Only re-fetch on a unique-violation race (someone else just seeded it).
+      // Other errors (RLS denial for non-admins) skip straight to the transient
+      // fallback so we don't pay an extra round-trip on every level page load.
+      if (error?.code === '23505') {
+        const { data: again } = await supabase
+          .from('rune_delve_levels')
+          .select('*')
+          .eq('level_number', levelNumber)
+          .maybeSingle();
+        if (again) return again as RuneDelveLevel;
+      }
       return {
         id: `transient-${def.level_number}`,
         level_number: def.level_number,
