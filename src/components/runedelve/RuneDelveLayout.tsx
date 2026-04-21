@@ -1,19 +1,32 @@
 import { ReactNode } from 'react';
+import { RuneDelveHUD } from './RuneDelveHUD';
+import { RuneDelveBoot } from './RuneDelveBoot';
 
 /**
- * Scopes the Rune Delve "fantasy mode" skin.
- * The visual treatment is defined in index.css under `.rd-mode`.
- * Two faint, decorative arcane motes are added in opposite corners
- * to suggest a magical atmosphere — purely decorative, pointer-events-none.
+ * Full-screen game shell for Rune Delve. Applies the `.rd-mode` skin to the
+ * entire viewport, mounts the in-game HUD, and plays the one-time boot
+ * overlay on first entry into the module.
+ *
+ * The DH Club bottom nav and sidebar are hidden by AppLayout while any
+ * `/rune-delve/*` route is active, so this shell owns the full viewport.
  */
 export function RuneDelveLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="rd-mode relative overflow-hidden">
-      {/* Decorative ambient motes — non-interactive. Pinned to corners so they
-          never overlap interactive UI on narrow phones. */}
-      <span className="rd-mote" aria-hidden style={{ top: '4px', left: '6px' }} />
-      <span className="rd-mote rd-mote-2" aria-hidden style={{ top: '10px', right: '6px' }} />
-      {children}
+    <div className="rd-mode rd-shell relative min-h-[100dvh]">
+      {/* Decorative ambient motes — non-interactive. */}
+      <span className="rd-mote" aria-hidden style={{ top: '60px', left: '6px' }} />
+      <span className="rd-mote rd-mote-2" aria-hidden style={{ top: '70px', right: '6px' }} />
+
+      <RuneDelveHUD />
+
+      <main
+        className="max-w-[640px] mx-auto px-4 sm:px-5 py-4 sm:py-5"
+        style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
+      >
+        {children}
+      </main>
+
+      <RuneDelveBoot />
     </div>
   );
 }

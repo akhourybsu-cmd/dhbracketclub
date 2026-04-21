@@ -41,7 +41,6 @@ export default function RuneDelveResultsPage() {
   if (!run || !level) {
     return (
       <div className="space-y-4">
-        <Link to="/rune-delve" className="back-link"><ArrowLeft className="w-4 h-4" /> Back</Link>
         <div className="glass-card p-6 text-center text-xs text-muted-foreground">No run yet for this level. Enter the dungeon!</div>
       </div>
     );
@@ -87,7 +86,6 @@ export default function RuneDelveResultsPage() {
     <div className="space-y-4 pb-8">
       <Confetti active={showConfetti} />
       <div className="flex items-center justify-between">
-        <Link to="/rune-delve" className="back-link"><ArrowLeft className="w-4 h-4" /> Home</Link>
         <Link to="/rune-delve/shop" aria-label="Open shop">
           <ShardBalance shards={wallet?.shards ?? 0} />
         </Link>

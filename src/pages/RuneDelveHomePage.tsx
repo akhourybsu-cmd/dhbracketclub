@@ -49,7 +49,6 @@ export default function RuneDelveHomePage() {
     const canBegin = !!picking && trimmed.length >= 2 && !ensureHero.isPending;
     return (
       <div className="space-y-5 pb-8">
-        <Link to="/compete" className="back-link">← Back to Compete</Link>
         <div className="text-center space-y-2">
           <h1 className="page-header-title flex items-center gap-2 justify-center">
             <Sparkles className="w-5 h-5 text-primary" /> Forge your hero
@@ -118,7 +117,6 @@ export default function RuneDelveHomePage() {
   if (heroLoading || !hero || !progress) {
     return (
       <div className="space-y-3">
-        <Link to="/compete" className="back-link">← Back to Compete</Link>
         <div className="h-32 rounded-2xl skeleton-shimmer" />
         <div className="h-24 rounded-2xl skeleton-shimmer" />
       </div>
@@ -150,11 +148,6 @@ export default function RuneDelveHomePage() {
 
   return (
     <div className="space-y-4 pb-8">
-      <div className="flex items-center justify-between">
-        <Link to="/compete" className="back-link">← Back to Compete</Link>
-        <ShardBalance shards={wallet?.shards ?? 0} />
-      </div>
-
       {/* Continue banner */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
         <div className="glass-card p-5 relative overflow-hidden" style={{

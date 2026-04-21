@@ -80,7 +80,6 @@ export default function RuneDelveArmoryPage() {
   return (
     <div className="space-y-4 pb-8">
       <div className="flex items-center justify-between">
-        <Link to="/rune-delve" className="back-link"><ArrowLeft className="w-4 h-4" /> Back</Link>
         <ShardBalance shards={wallet?.shards ?? 0} />
       </div>
 

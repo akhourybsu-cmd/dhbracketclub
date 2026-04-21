@@ -913,9 +913,19 @@
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 60% 35% at 80% 8%, hsl(var(--rd-arcane) / 0.10), transparent 60%),
-    radial-gradient(ellipse 55% 30% at 12% 6%, hsl(var(--rd-ember) / 0.07), transparent 60%),
-    radial-gradient(ellipse 90% 60% at 50% 110%, hsl(var(--rd-stone) / 0.6), transparent 70%);
+    radial-gradient(ellipse 70% 40% at 80% 6%, hsl(var(--rd-arcane) / 0.18), transparent 60%),
+    radial-gradient(ellipse 60% 35% at 12% 4%, hsl(var(--rd-ember) / 0.12), transparent 60%),
+    radial-gradient(ellipse 100% 70% at 50% 115%, hsl(var(--rd-rune-blue) / 0.10), transparent 70%),
+    linear-gradient(180deg, hsl(var(--rd-stone)), hsl(230 14% 6%));
+}
+
+/* Full-bleed game shell — overrides the standard app page surface so the
+   Rune Delve mode feels distinct from the rest of DH Club. */
+.rd-shell {
+  background:
+    radial-gradient(ellipse 80% 30% at 50% 0%, hsl(var(--rd-arcane) / 0.08), transparent 60%),
+    hsl(var(--rd-stone));
+  color: hsl(var(--foreground));
 }
 
 /* Ornate divider — twin lines + diamond, evokes engraved metal */
