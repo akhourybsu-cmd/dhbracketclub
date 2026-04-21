@@ -901,17 +901,41 @@
   --rd-rune-gold: 45 92% 56%;
   --rd-stone: 230 12% 10%;
   --rd-stone-edge: 230 16% 16%;
-  /* Lift muted text contrast inside the fantasy palette — the dark stone
-     surface eats grays, so default 46% lightness reads as faded. Bump to
-     ~70% so secondary labels stay clearly readable on a phone (WCAG AA on
-     --rd-stone). */
-  --muted-foreground: 150 14% 72%;
+  /* Brilliant-white text override — Rune Delve sits on near-black stone
+     backdrops, so we promote ALL foreground tokens to high-luminance white.
+     This cascades to every text-foreground/* and text-muted-foreground in
+     the module, eliminating dark-on-dark and muddy-gray pairings. */
+  --foreground: 0 0% 100%;
+  --card-foreground: 0 0% 100%;
+  --popover-foreground: 0 0% 100%;
+  --muted-foreground: 0 0% 88%;
   position: relative;
 }
 
-/* Strong default body color — never let small fantasy text fall to muddy gray. */
+/* Brilliant-white default body color across Rune Delve. */
 .rd-mode {
-  color: hsl(150 14% 94%);
+  color: hsl(0 0% 100%);
+}
+
+/* Belt-and-suspenders: any low-opacity foreground utility used in Rune Delve
+   gets a floor so titles and info text always read crisp on dark stone.
+   Keeps the visual hierarchy (lower opacity = quieter) without ever falling
+   below readable contrast. */
+.rd-mode [class*="text-foreground/5"],
+.rd-mode [class*="text-foreground/6"] {
+  color: hsl(0 0% 82%) !important;
+}
+.rd-mode [class*="text-foreground/7"] {
+  color: hsl(0 0% 88%) !important;
+}
+.rd-mode [class*="text-foreground/8"] {
+  color: hsl(0 0% 94%) !important;
+}
+.rd-mode [class*="text-foreground/9"] {
+  color: hsl(0 0% 98%) !important;
+}
+.rd-mode .text-muted-foreground {
+  color: hsl(0 0% 88%);
 }
 
 /* ── Fantasy display font, scoped to Rune Delve display moments ───
