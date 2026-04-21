@@ -110,6 +110,16 @@ maybeHardReset().then((reset) => {
   // Fire one immediate version probe at boot so cold launches detect
   // a new build instantly (instead of waiting for the 30s interval).
   void fetchRemoteBuildId();
+  // Eagerly nudge any already-installed service worker (including legacy
+  // Workbox SWs that cache Supabase REST responses) to revalidate its script.
+  // This accelerates the self-destruct path so users heal within one session
+  // instead of needing to manually clear their cache.
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker
+      .getRegistrations()
+      .then((regs) => regs.forEach((r) => r.update().catch(() => false)))
+      .catch(() => false);
+  }
   createRoot(document.getElementById("root")!).render(<App />);
   registerPushSW();
 });

@@ -162,21 +162,60 @@ export function useMyProgress() {
 }
 
 // All runs for a given level by current user (latest best-score upserted).
-export function useMyLevelRun(levelId: string | undefined) {
+// Self-healing: always revalidates on mount/focus, and if the play page just
+// submitted a run for this level (sessionStorage signal) we briefly poll until
+// the row appears — this eliminates the post-submit race that left users
+// staring at "No run yet" until they cleared their cache.
+export function useMyLevelRun(levelId: string | undefined, levelNumber?: number) {
   const { user } = useAuth();
   return useQuery({
     queryKey: ['rune-delve-level-run', levelId, user?.id],
     enabled: !!user && !!levelId && !levelId.startsWith('transient-'),
-    staleTime: 30_000,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       if (!user || !levelId) return null;
-      const { data } = await (supabase as any)
-        .from('rune_delve_runs')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('level_id', levelId)
-        .maybeSingle();
-      return data ?? null;
+      const fetchOnce = async () => {
+        const { data } = await (supabase as any)
+          .from('rune_delve_runs')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('level_id', levelId)
+          .maybeSingle();
+        return data ?? null;
+      };
+      let row = await fetchOnce();
+      if (row) return row;
+
+      // If the play page just submitted, give the write a few short retries
+      // to land before we report "no run yet".
+      let justSubmitted = false;
+      try {
+        if (typeof levelNumber === 'number' && typeof sessionStorage !== 'undefined') {
+          const key = `rd-just-submitted-${levelNumber}`;
+          const ts = sessionStorage.getItem(key);
+          if (ts && Date.now() - parseInt(ts, 10) < 15_000) {
+            justSubmitted = true;
+          }
+        }
+      } catch { /* sessionStorage may be unavailable */ }
+
+      if (!justSubmitted) return null;
+
+      for (let i = 0; i < 4; i++) {
+        await new Promise(r => setTimeout(r, 400));
+        row = await fetchOnce();
+        if (row) {
+          try {
+            if (typeof levelNumber === 'number') {
+              sessionStorage.removeItem(`rd-just-submitted-${levelNumber}`);
+            }
+          } catch { /* noop */ }
+          return row;
+        }
+      }
+      return null;
     },
   });
 }

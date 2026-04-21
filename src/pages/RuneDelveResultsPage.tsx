@@ -1,5 +1,5 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Trophy, Swords, Heart, Clock, Sparkles, ChevronRight, Star, Shield } from 'lucide-react';
+import { ArrowLeft, Trophy, Swords, Heart, Clock, Sparkles, ChevronRight, Star, Shield, Loader2, RefreshCw } from 'lucide-react';
 import { useLevel, useMyLevelRun, useLevelBestScores, useMyProgress } from '@/hooks/useRuneDelveCampaign';
 import { useRuneDelveHero } from '@/hooks/useRuneDelveHero';
 import { useRuneWallet } from '@/hooks/useRuneShards';
@@ -14,21 +14,36 @@ import { getBossRule, type BossRuleId } from '@/lib/runedelve/bossRules';
 import { secondaryLabel, type SecondaryObjective } from '@/lib/runedelve/layeredGoals';
 import { RELIC_BY_ID } from '@/lib/runedelve/relics';
 import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 
 export default function RuneDelveResultsPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { levelNumber: levelParam } = useParams<{ levelNumber: string }>();
   const levelNumber = Math.max(1, parseInt(levelParam ?? '1', 10) || 1);
 
   const { data: level } = useLevel(levelNumber);
-  const { data: run } = useMyLevelRun(level?.id);
+  const { data: run, isLoading: runLoading, isFetching: runFetching, refetch: refetchRun } = useMyLevelRun(level?.id, levelNumber);
   const { data: hero } = useRuneDelveHero();
   const { data: progress } = useMyProgress();
   const { data: topRuns } = useLevelBestScores(level?.id);
   const { data: wallet } = useRuneWallet();
   const { data: loadout } = useLoadout(hero?.class);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [graceElapsed, setGraceElapsed] = useState(false);
+
+  // Belt-and-suspenders: nuke any stale cached `null` for this level on mount,
+  // and reset the short "loading grace" window so the empty state never flashes
+  // before the post-submit retry has a chance to land.
+  useEffect(() => {
+    if (!level?.id || level.id.startsWith('transient-')) return;
+    queryClient.invalidateQueries({ queryKey: ['rune-delve-level-run', level.id] });
+    queryClient.invalidateQueries({ queryKey: ['rune-delve-progress'] });
+    setGraceElapsed(false);
+    const t = setTimeout(() => setGraceElapsed(true), 1800);
+    return () => clearTimeout(t);
+  }, [level?.id, queryClient]);
 
   useEffect(() => {
     if (run?.dungeon_cleared) {
@@ -39,9 +54,52 @@ export default function RuneDelveResultsPage() {
   }, [run?.dungeon_cleared]);
 
   if (!run || !level) {
+    const showSpinner = !graceElapsed || runLoading || runFetching;
     return (
-      <div className="space-y-4">
-        <div className="glass-card p-6 text-center text-xs text-muted-foreground">No run yet for this level. Enter the dungeon!</div>
+      <div className="space-y-4 pb-8">
+        <div className="glass-card p-8 flex flex-col items-center text-center gap-3">
+          {showSpinner ? (
+            <>
+              <Loader2 className="w-6 h-6 text-primary animate-spin" />
+              <p className="text-xs text-muted-foreground font-medium">Loading your run…</p>
+            </>
+          ) : (
+            <>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'hsl(var(--muted) / 0.4)' }}>
+                <RefreshCw className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-extrabold">Hmm — we couldn't find that run yet</p>
+                <p className="text-[11px] text-muted-foreground max-w-[260px]">
+                  Sometimes the save takes an extra moment to land. Tap refresh, or head back to the level map.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 w-full max-w-xs pt-1">
+                <button
+                  onClick={() => {
+                    setGraceElapsed(false);
+                    queryClient.invalidateQueries({ queryKey: ['rune-delve-level-run'] });
+                    refetchRun();
+                    setTimeout(() => setGraceElapsed(true), 1800);
+                  }}
+                  className="h-10 rounded-xl text-xs font-bold btn-press flex items-center justify-center gap-1.5"
+                  style={{
+                    background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)))',
+                    color: 'white',
+                  }}
+                >
+                  <RefreshCw className="w-3.5 h-3.5" /> Refresh
+                </button>
+                <Link
+                  to="/rune-delve/levels"
+                  className="h-10 rounded-xl bg-muted/40 flex items-center justify-center text-xs font-bold btn-press gap-1.5"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" /> Level Map
+                </Link>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     );
   }
