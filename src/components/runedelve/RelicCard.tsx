@@ -1,12 +1,14 @@
-import { Lock, Check, Sparkles } from 'lucide-react';
+import { Lock, Check, Sparkles, ArrowUp } from 'lucide-react';
 import type { RelicDef } from '@/lib/runedelve/relics';
-import { CATEGORY_META } from '@/lib/runedelve/relics';
+import { CATEGORY_META, MAX_RANK, rankCost } from '@/lib/runedelve/relics';
 import { cn } from '@/lib/utils';
 
 interface Props {
   relic: RelicDef;
   state: 'locked-tier' | 'affordable' | 'unaffordable' | 'owned' | 'equipped';
   shards?: number;          // for buy state
+  /** When the relic is owned, current rank (1..MAX_RANK). */
+  rank?: number;
   onClick?: () => void;
   disabled?: boolean;
 }
