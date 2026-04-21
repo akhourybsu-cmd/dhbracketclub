@@ -155,12 +155,12 @@ export default function RuneDelveHomePage() {
           borderColor: 'hsl(var(--primary) / 0.2)',
         }}>
           <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-primary/15 text-primary tracking-wider">CHAPTER {chapter}</span>
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L{chapterStart}–{chapterEnd}</span>
+            <span className="font-rd-display px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-primary/20 text-primary tracking-[0.18em]">CHAPTER {chapter}</span>
+            <span className="text-[10px] font-extrabold text-foreground/70 uppercase tracking-wider">L{chapterStart}–{chapterEnd}</span>
           </div>
-          <h2 className="text-xl font-extrabold tracking-tight leading-tight">{chapMeta.name}</h2>
-          <p className="text-[11px] text-muted-foreground mb-1">{chapMeta.subtitle}</p>
-          <p className="text-[11px] font-bold text-primary/90 mb-3">Welcome back, {hero.hero_name}</p>
+          <h2 className="rd-title text-2xl tracking-wide leading-tight text-foreground">{chapMeta.name}</h2>
+          <p className="text-[12px] text-foreground/75 mb-1 italic">{chapMeta.subtitle}</p>
+          <p className="text-[11px] font-extrabold text-primary mb-3">Welcome back, <span className="font-rd-display">{hero.hero_name}</span></p>
 
           <div className="space-y-2 mb-3">
             <div className="flex items-center justify-between text-[11px]">
