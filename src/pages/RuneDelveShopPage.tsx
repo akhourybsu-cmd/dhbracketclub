@@ -178,23 +178,28 @@ export default function RuneDelveShopPage() {
 
       {/* Relic list */}
       {tierUnlocked(tier) && (
-        <div className="space-y-2.5">
-          {visible.map(r => {
+        <div className="space-y-2.5" key={`${tier}-${cat}`}>
+          {visible.map((r, idx) => {
             const ownedAlready = ownedMap.has(r.id);
             const rank = ownedMap.get(r.id);
             const state = ownedAlready
               ? 'owned'
               : shards >= r.cost ? 'affordable' : 'unaffordable';
             return (
-              <RelicCard
+              <div
                 key={r.id}
-                relic={r}
-                state={state as any}
-                shards={shards}
-                rank={rank}
-                onClick={() => handleCardClick(r)}
-                disabled={pendingId === r.id}
-              />
+                className="animate-fade-in"
+                style={{ animationDelay: `${Math.min(idx * 35, 280)}ms`, animationFillMode: 'backwards' }}
+              >
+                <RelicCard
+                  relic={r}
+                  state={state as any}
+                  shards={shards}
+                  rank={rank}
+                  onClick={() => handleCardClick(r)}
+                  disabled={pendingId === r.id}
+                />
+              </div>
             );
           })}
           {visible.length === 0 && (
