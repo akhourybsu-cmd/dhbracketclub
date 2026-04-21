@@ -15,7 +15,7 @@ import { useLoadout } from '@/hooks/useLoadout';
 import { useEarnShards, useFailureRow, useBumpFailure, useResetFailure, useRuneWallet, useUnlockSlot } from '@/hooks/useRuneShards';
 import { buildActive, getStartingMana, getStartingShieldTurns, has, onEnemyKilled, tryLastStand } from '@/lib/runedelve/relicEffects';
 import { computeClearShards, computeFailureShards, slotsForClassLevels } from '@/lib/runedelve/shardEconomy';
-import { getBossRule as _getBossRuleEcon } from '@/lib/runedelve/bossRules';
+
 import { objectiveLabel, type ObjectiveType } from '@/lib/runedelve/levelGenerator';
 import {
   mechanicsForLevel,
