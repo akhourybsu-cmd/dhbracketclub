@@ -41,7 +41,15 @@ import { HeroStatusBar } from '@/components/runedelve/HeroStatusBar';
 import { HowToPlaySheet } from '@/components/runedelve/HowToPlaySheet';
 import { MechanicIntroSheet } from '@/components/runedelve/MechanicIntroSheet';
 import { MechanicBanner } from '@/components/runedelve/MechanicBanner';
+import { CombatLog, type CombatLogEntry } from '@/components/runedelve/CombatLog';
 import { format } from 'date-fns';
+
+const RUNE_LABEL: Record<RuneType, string> = {
+  red: 'Crimson',
+  blue: 'Azure',
+  green: 'Verdant',
+  gold: 'Radiant',
+};
 
 export default function RuneDelvePlayPage() {
   const navigate = useNavigate();
@@ -76,6 +84,23 @@ export default function RuneDelvePlayPage() {
   const [endState, setEndState] = useState<null | { cleared: boolean; reason: 'cleared' | 'defeated' | 'timeout'; score: number; isNewBest: boolean; shards: number }>(null);
   const [lastStandUsed, setLastStandUsed] = useState(false);
   const [corruption, setCorruption] = useState<CorruptionState>(emptyCorruption);
+  const [log, setLog] = useState<CombatLogEntry[]>([]);
+
+  // Append a single entry; trim to a small ring so memory stays tidy.
+  const pushLog = (entry: Omit<CombatLogEntry, 'id'>) => {
+    setLog(prev => {
+      const next = [...prev, { ...entry, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }];
+      return next.length > 30 ? next.slice(-30) : next;
+    });
+  };
+  const pushLogs = (entries: Array<Omit<CombatLogEntry, 'id'>>) => {
+    if (!entries.length) return;
+    setLog(prev => {
+      const stamped = entries.map(e => ({ ...e, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }));
+      const next = [...prev, ...stamped];
+      return next.length > 30 ? next.slice(-30) : next;
+    });
+  };
 
   // Active relic loadout for this run.
   const activeRelics = useMemo(() => buildActive([loadout?.slot_1, loadout?.slot_2, loadout?.slot_3]), [loadout]);
