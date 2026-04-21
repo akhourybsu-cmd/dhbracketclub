@@ -87,7 +87,7 @@ export default function RuneDelveArmoryPage() {
         <h1 className="page-header-title flex items-center justify-center gap-2">
           <Sparkles className="w-5 h-5 text-primary" /> Armory
         </h1>
-        <p className="text-[11px] text-muted-foreground">Equip relics per class. Tap an owned relic to equip or unequip.</p>
+        <p className="text-[12px] font-semibold text-foreground/70">Equip relics per class. Tap an owned relic to equip or unequip.</p>
       </div>
 
       {/* Class tabs — per-class loadouts */}
@@ -101,8 +101,10 @@ export default function RuneDelveArmoryPage() {
               key={c.id}
               onClick={() => setActiveClass(c.id)}
               className={cn(
-                'h-14 rounded-lg flex flex-col items-center justify-center gap-0.5 btn-press text-[10px] font-extrabold',
-                isActive ? 'bg-primary/15 border border-primary/40' : 'bg-muted/30 border border-transparent',
+                'h-14 rounded-lg flex flex-col items-center justify-center gap-0.5 btn-press text-[11px] font-extrabold transition-colors',
+                isActive
+                  ? 'bg-primary/20 border border-primary/50 text-primary-foreground shadow-[0_0_0_1px_hsl(var(--primary)/0.3)]'
+                  : 'bg-muted/30 border border-border/40 text-foreground/85',
               )}
             >
               <ClassBadge cls={c.id} size="sm" />
@@ -115,8 +117,8 @@ export default function RuneDelveArmoryPage() {
       {/* Active class loadout */}
       <div className="glass-card p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-[13px]">{getClass(cls).name} loadout</h3>
-          <span className="text-[10px] text-muted-foreground font-bold">{equipped.filter((s, i) => s && i < slotsUnlocked).length}/{slotsUnlocked} slots</span>
+          <h3 className="font-extrabold text-[14px] text-foreground">{getClass(cls).name} loadout</h3>
+          <span className="text-[11px] font-extrabold tabular-nums text-foreground/75">{equipped.filter((s, i) => s && i < slotsUnlocked).length}/{slotsUnlocked} slots</span>
         </div>
         <div className="grid grid-cols-3 gap-2">
           {[0, 1, 2].map(i => {
@@ -134,7 +136,7 @@ export default function RuneDelveArmoryPage() {
           })}
         </div>
         {slotsUnlocked < 3 && (
-          <p className="text-[10px] text-muted-foreground text-center italic">
+          <p className="text-[11px] font-semibold text-foreground/65 text-center italic">
             Reach class level 50 in any class to unlock the 3rd relic slot.
           </p>
         )}
@@ -142,16 +144,16 @@ export default function RuneDelveArmoryPage() {
 
       {/* Owned relics */}
       <div className="space-y-2">
-        <h3 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+        <h3 className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-foreground/75 px-1">
           Your relics ({ownedRelics.length})
         </h3>
         {ownedRelics.length === 0 ? (
           <Link to="/rune-delve/shop" className="block">
             <div className="glass-card p-5 text-center btn-press">
               <ShoppingBag className="w-6 h-6 mx-auto mb-2 text-primary" />
-              <p className="text-[13px] font-extrabold mb-1">No relics yet</p>
-              <p className="text-[11px] text-muted-foreground mb-2">Visit the Shop to spend Rune Shards on your first relic.</p>
-              <span className="text-[11px] font-bold text-primary">Go to Shop →</span>
+              <p className="text-[14px] font-extrabold mb-1 text-foreground">No relics yet</p>
+              <p className="text-[12px] font-semibold text-foreground/70 mb-2">Visit the Shop to spend Rune Shards on your first relic.</p>
+              <span className="text-[12px] font-extrabold text-primary">Go to Shop →</span>
             </div>
           </Link>
         ) : (

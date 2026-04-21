@@ -14,9 +14,9 @@ interface Props {
 export function LoadoutSlot({ relic, locked, unlockHint, onClick, onClear }: Props) {
   if (locked) {
     return (
-      <div className="rounded-xl border border-dashed border-border/60 p-3 flex flex-col items-center justify-center text-center min-h-[88px] opacity-60">
-        <Lock className="w-4 h-4 text-muted-foreground mb-1" />
-        <p className="text-[10px] font-bold text-muted-foreground">{unlockHint ?? 'Locked'}</p>
+      <div className="rounded-xl border border-dashed border-border/70 p-3 flex flex-col items-center justify-center text-center min-h-[88px] opacity-80 bg-muted/15">
+        <Lock className="w-4 h-4 text-foreground/60 mb-1" />
+        <p className="text-[11px] font-extrabold text-foreground/75">{unlockHint ?? 'Locked'}</p>
       </div>
     );
   }
@@ -24,10 +24,10 @@ export function LoadoutSlot({ relic, locked, unlockHint, onClick, onClear }: Pro
     return (
       <button
         onClick={onClick}
-        className="w-full rounded-xl border border-dashed border-border/60 p-3 flex flex-col items-center justify-center text-center min-h-[88px] btn-press hover:border-primary/40 transition-colors"
+        className="w-full rounded-xl border border-dashed border-border/70 p-3 flex flex-col items-center justify-center text-center min-h-[88px] btn-press hover:border-primary/40 transition-colors bg-muted/10"
       >
-        <Plus className="w-4 h-4 text-muted-foreground mb-1" />
-        <p className="text-[10px] font-bold text-muted-foreground">Empty slot</p>
+        <Plus className="w-4 h-4 text-foreground/60 mb-1" />
+        <p className="text-[11px] font-extrabold text-foreground/75">Empty slot</p>
       </button>
     );
   }
@@ -54,8 +54,8 @@ export function LoadoutSlot({ relic, locked, unlockHint, onClick, onClear }: Pro
         </button>
       )}
       <div className="text-2xl mb-0.5" aria-hidden>{relic.icon}</div>
-      <p className="font-extrabold text-[11px] leading-tight truncate w-full px-1">{relic.name}</p>
-      <p className="text-[9px] text-muted-foreground mt-0.5">{cat.label}</p>
+      <p className="font-extrabold text-[12px] leading-tight truncate w-full px-1 text-foreground">{relic.name}</p>
+      <p className="text-[10px] font-bold text-foreground/65 mt-0.5">{cat.label}</p>
     </div>
   );
 }

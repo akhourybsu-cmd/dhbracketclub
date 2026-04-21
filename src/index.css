@@ -901,7 +901,16 @@
   --rd-rune-gold: 45 92% 56%;
   --rd-stone: 230 12% 10%;
   --rd-stone-edge: 230 16% 16%;
+  /* Lift muted text contrast inside the fantasy palette — the dark stone
+     surface eats grays, so default 46% lightness reads as faded. Bump to
+     ~64% so secondary labels stay readable on a phone. */
+  --muted-foreground: 150 14% 64%;
   position: relative;
+}
+
+/* Strong default body color — never let small fantasy text fall to muddy gray. */
+.rd-mode {
+  color: hsl(150 14% 92%);
 }
 
 /* Subtle dungeon backdrop — torchlit vignette + arcane sigil glow.
