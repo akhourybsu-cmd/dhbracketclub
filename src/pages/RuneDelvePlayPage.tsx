@@ -85,6 +85,9 @@ export default function RuneDelvePlayPage() {
   const [introMechanic, setIntroMechanic] = useState<MechanicId | null>(null);
   const [endState, setEndState] = useState<null | { cleared: boolean; reason: 'cleared' | 'defeated' | 'timeout'; score: number; isNewBest: boolean; shards: number }>(null);
   const [lastStandUsed, setLastStandUsed] = useState(false);
+  // Bonus-move rebalance: only one free turn per enemy cycle. Resets whenever
+  // the enemy phase actually runs (i.e. a non-bonus chain or ability resolves).
+  const [bonusUsedThisCycle, setBonusUsedThisCycle] = useState(false);
   const [corruption, setCorruption] = useState<CorruptionState>(emptyCorruption);
   const [log, setLog] = useState<CombatLogEntry[]>([]);
 
