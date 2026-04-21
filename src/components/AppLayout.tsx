@@ -232,8 +232,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <p className="text-[9px] text-muted-foreground/60 font-semibold tracking-wide">DH — For fun, not funds.</p>
         </div>
       </aside>
+      )}
 
-      {/* Mobile Bottom Nav */}
+      {/* Mobile Bottom Nav — hidden inside Rune Delve game shell */}
+      {!isRuneDelve && (
       <nav className={cn(
         "lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 border-t border-border/25 transition-all duration-200",
         isChatRoute && isKeyboardOpen && "translate-y-full opacity-0 pointer-events-none"
@@ -293,6 +295,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           })}
         </div>
       </nav>
+      )}
     </div>
   );
 }
