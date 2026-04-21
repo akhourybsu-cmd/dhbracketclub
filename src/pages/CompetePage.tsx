@@ -610,7 +610,7 @@ function TopicPickerDialog({
    PLAYOFF FORMAT GUIDE — clear-cut rules card shown inside
    the Playoff Picture so members always see how it works.
    ══════════════════════════════════════════════════════════ */
-function PlayoffFormatGuide() {
+function PlayoffFormatGuide({ embedded = false }: { embedded?: boolean }) {
   const rules: { icon: React.ReactNode; label: string; body: string }[] = [
     { icon: <Users className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />, label: 'Field',
       body: 'Top 5 in Season Points qualify. #1, #2, #3 get a first-round bye.' },
