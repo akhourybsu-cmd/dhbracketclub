@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, Activity, RefreshCw, Trophy, Bookmark, Bell, ChevronRight, Loader2 } from 'lucide-react';
+import { Shield, Activity, RefreshCw, Trophy, Bookmark, Bell, ChevronRight, Loader2, Swords } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
@@ -256,6 +256,7 @@ export default function AdminHub() {
   const competitions: Tool[] = [
     { icon: Trophy, label: "NFL Pick'em Admin", description: 'Seasons, weeks, games, scoring', to: '/pickem/admin', iconColor: 'gold' },
     { icon: Bookmark, label: 'Drafts Hub', description: 'Manage drafts & league seasons', to: '/drafts', iconColor: 'accent' },
+    { icon: Swords, label: 'Rune Delve Analytics', description: 'Per-level stats, cliffs, AI handoff', to: '/rune-delve/analytics', iconColor: 'primary' },
   ];
 
   const diagnostics: Tool[] = [
