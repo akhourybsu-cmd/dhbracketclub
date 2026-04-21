@@ -938,6 +938,28 @@
   color: hsl(0 0% 88%);
 }
 
+/* Inverse rule — when a Rune Delve element sits on a LIGHT background
+   (white, cream, near-white surfaces), force its text to dark stone for
+   readable contrast. Covers utility classes and their direct children. */
+.rd-mode .bg-white,
+.rd-mode .bg-foreground,
+.rd-mode .bg-primary-foreground,
+.rd-mode .bg-secondary-foreground,
+.rd-mode .bg-card-foreground,
+.rd-mode [class*="bg-white/9"],
+.rd-mode [class*="bg-white/8"] {
+  color: hsl(230 16% 10%) !important;
+}
+.rd-mode .bg-white *,
+.rd-mode .bg-foreground *,
+.rd-mode .bg-primary-foreground *,
+.rd-mode .bg-secondary-foreground *,
+.rd-mode .bg-card-foreground *,
+.rd-mode [class*="bg-white/9"] *,
+.rd-mode [class*="bg-white/8"] * {
+  color: hsl(230 16% 10%);
+}
+
 /* ── Fantasy display font, scoped to Rune Delve display moments ───
    Uses Cinzel (engraved Roman serif) for headlines, hero names,
    chapter pills, boot title, etc. Body copy stays Plus Jakarta Sans. */
