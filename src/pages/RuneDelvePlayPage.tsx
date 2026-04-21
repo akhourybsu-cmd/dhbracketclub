@@ -416,29 +416,29 @@ export default function RuneDelvePlayPage() {
 
   return (
     <div className="space-y-4 pb-8 relative">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           {equippedCount > 0 && (
             <Link
               to="/rune-delve/armory"
               aria-label={`${equippedCount} relics equipped`}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-extrabold tabular-nums btn-press"
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-extrabold tabular-nums btn-press shrink-0"
               style={{ background: 'hsl(var(--primary) / 0.14)', color: 'hsl(var(--primary))' }}
             >
               🛡️ {equippedCount}
             </Link>
           )}
-          <div className="text-[11px] font-bold text-muted-foreground tabular-nums">
+          <div className="text-[11px] font-bold text-muted-foreground tabular-nums truncate">
             Lv {level.level_number} · Turn {turnDisplay}/{level.turn_limit}
           </div>
-          <button
-            onClick={() => setHelpOpen(true)}
-            aria-label="How to play"
-            className="w-11 h-11 -mr-2 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary btn-press"
-          >
-            <HelpCircle className="w-4 h-4" />
-          </button>
         </div>
+        <button
+          onClick={() => setHelpOpen(true)}
+          aria-label="How to play"
+          className="w-11 h-11 -mr-2 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary btn-press shrink-0"
+        >
+          <HelpCircle className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Active mechanics strip — only when this level uses any mechanic */}
