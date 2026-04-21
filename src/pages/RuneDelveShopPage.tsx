@@ -1,6 +1,7 @@
 import { Sparkles } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
+import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { useRuneWallet, useSpendShards } from '@/hooks/useRuneShards';
 import { useRelicCollection, useUnlockRelic, useUpgradeRelic } from '@/hooks/useRelicCollection';
 import { useMyProgress } from '@/hooks/useRuneDelveCampaign';
@@ -32,6 +33,7 @@ export default function RuneDelveShopPage() {
   const spend = useSpendShards();
   const unlock = useUnlockRelic();
   const upgrade = useUpgradeRelic();
+  const sfx = useSoundEffect();
 
   const [tier, setTier] = useState<RelicTier>(1);
   const [cat, setCat] = useState<RelicCategory | 'all'>('all');
@@ -67,6 +69,7 @@ export default function RuneDelveShopPage() {
     try {
       await spend.mutateAsync(r.cost);
       await unlock.mutateAsync({ relic_id: relicId, level: hero?.level ?? 1 });
+      sfx.play('achievement');
       toast.success(`✨ Unlocked ${r.name}`, { description: 'Equip it from the Armory' });
     } catch (e: any) {
       toast.error(e?.message ?? 'Could not unlock relic');
@@ -96,6 +99,7 @@ export default function RuneDelveShopPage() {
     try {
       await spend.mutateAsync(cost);
       await upgrade.mutateAsync({ relic_id: upgradeRelic.id, expected_rank: curRank });
+      sfx.play('success');
       toast.success(`⬆️ ${upgradeRelic.name} → R${curRank + 1}`);
       setUpgradeRelic(null);
     } catch (e: any) {
@@ -119,7 +123,7 @@ export default function RuneDelveShopPage() {
       </div>
 
       {/* Tier tabs */}
-      <div className="grid grid-cols-3 gap-1.5 sticky top-0 z-10 py-1 bg-background/85 backdrop-blur-sm">
+      <div className="grid grid-cols-3 gap-1.5 sticky top-0 z-10 py-1.5 bg-background/85 backdrop-blur-md">
         {TIERS.map(t => {
           const unlocked = tierUnlocked(t);
           const active = tier === t;
@@ -128,8 +132,10 @@ export default function RuneDelveShopPage() {
               key={t}
               onClick={() => setTier(t)}
               className={cn(
-                'h-10 rounded-lg text-[11px] font-extrabold btn-press flex items-center justify-center gap-1',
-                active ? 'bg-primary text-primary-foreground' : 'bg-muted/40',
+                'h-10 rounded-lg text-[11px] font-extrabold btn-press flex items-center justify-center gap-1 transition-all duration-200',
+                active
+                  ? 'bg-primary text-primary-foreground shadow-[0_4px_14px_hsl(var(--primary)/0.35)] scale-[1.02]'
+                  : 'bg-muted/40 hover:bg-muted/60',
                 !unlocked && 'opacity-60',
               )}
             >
@@ -172,23 +178,28 @@ export default function RuneDelveShopPage() {
 
       {/* Relic list */}
       {tierUnlocked(tier) && (
-        <div className="space-y-2.5">
-          {visible.map(r => {
+        <div className="space-y-2.5" key={`${tier}-${cat}`}>
+          {visible.map((r, idx) => {
             const ownedAlready = ownedMap.has(r.id);
             const rank = ownedMap.get(r.id);
             const state = ownedAlready
               ? 'owned'
               : shards >= r.cost ? 'affordable' : 'unaffordable';
             return (
-              <RelicCard
+              <div
                 key={r.id}
-                relic={r}
-                state={state as any}
-                shards={shards}
-                rank={rank}
-                onClick={() => handleCardClick(r)}
-                disabled={pendingId === r.id}
-              />
+                className="animate-fade-in"
+                style={{ animationDelay: `${Math.min(idx * 35, 280)}ms`, animationFillMode: 'backwards' }}
+              >
+                <RelicCard
+                  relic={r}
+                  state={state as any}
+                  shards={shards}
+                  rank={rank}
+                  onClick={() => handleCardClick(r)}
+                  disabled={pendingId === r.id}
+                />
+              </div>
             );
           })}
           {visible.length === 0 && (

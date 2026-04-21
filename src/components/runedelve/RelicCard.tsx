@@ -41,13 +41,14 @@ export function RelicCard({ relic, state, shards, rank, onClick, disabled }: Pro
         }
         return (
           <span className={cn(
-            'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold tabular-nums',
+            'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold tabular-nums transition-all',
             !canAffordUpgrade && 'opacity-60',
+            canAffordUpgrade && 'shadow-[0_0_12px_hsl(var(--gold)/0.3)]',
           )}
             style={{
-              background: canAffordUpgrade ? 'hsl(var(--gold) / 0.14)' : 'hsl(var(--muted) / 0.5)',
+              background: canAffordUpgrade ? 'hsl(var(--gold) / 0.16)' : 'hsl(var(--muted) / 0.5)',
               color: canAffordUpgrade ? 'hsl(var(--gold))' : undefined,
-              border: canAffordUpgrade ? '1px solid hsl(var(--gold) / 0.3)' : undefined,
+              border: canAffordUpgrade ? '1px solid hsl(var(--gold) / 0.4)' : undefined,
             }}>
             <ArrowUp className="w-3 h-3" /> {upgradeCost}
           </span>
@@ -55,8 +56,8 @@ export function RelicCard({ relic, state, shards, rank, onClick, disabled }: Pro
       }
       case 'affordable':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold tabular-nums"
-            style={{ background: 'hsl(var(--gold) / 0.14)', color: 'hsl(var(--gold))', border: '1px solid hsl(var(--gold) / 0.3)' }}>
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold tabular-nums shadow-[0_0_10px_hsl(var(--gold)/0.25)]"
+            style={{ background: 'hsl(var(--gold) / 0.16)', color: 'hsl(var(--gold))', border: '1px solid hsl(var(--gold) / 0.4)' }}>
             <Sparkles className="w-3 h-3" /> {relic.cost}
           </span>
         );
@@ -78,16 +79,20 @@ export function RelicCard({ relic, state, shards, rank, onClick, disabled }: Pro
       onClick={onClick}
       disabled={disabled || state === 'locked-tier'}
       className={cn(
-        'w-full text-left rounded-xl p-3 border flex items-start gap-3 btn-press min-w-0 transition-all',
-        state === 'equipped' && 'bg-primary/10 border-primary/40',
-        state === 'owned' && 'bg-muted/20 border-border/40',
-        state === 'affordable' && 'bg-card border-border/60 hover:border-gold/40',
+        'group w-full text-left rounded-xl p-3 border flex items-start gap-3 btn-press min-w-0 transition-all duration-200',
+        'active:scale-[0.985] disabled:active:scale-100',
+        state === 'equipped' && 'bg-primary/10 border-primary/40 shadow-[0_0_0_1px_hsl(var(--primary)/0.15)]',
+        state === 'owned' && 'bg-muted/20 border-border/50 hover:border-gold/40 hover:bg-muted/30',
+        state === 'affordable' && 'bg-card border-border/60 hover:border-gold/50 hover:shadow-[0_0_20px_hsl(var(--gold)/0.08)]',
         state === 'unaffordable' && 'bg-card border-border/40 opacity-75',
         state === 'locked-tier' && 'bg-muted/10 border-border/30 opacity-55',
       )}
     >
       <div
-        className="relative w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0"
+        className={cn(
+          'relative w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 transition-transform duration-200',
+          'group-hover:scale-105 group-active:scale-95',
+        )}
         style={{
           background: `linear-gradient(135deg, ${tierColor.replace(')', ' / 0.18)')}, hsl(var(--card)))`,
           border: `1px solid ${tierColor.replace(')', ' / 0.3)')}`,
@@ -96,10 +101,17 @@ export function RelicCard({ relic, state, shards, rank, onClick, disabled }: Pro
       >
         {relic.icon}
         {isOwnedLike && rank != null && rank > 1 && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-extrabold flex items-center justify-center tabular-nums shadow-sm"
-            style={{ background: 'hsl(var(--gold))', color: 'hsl(var(--background))' }}>
+          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-extrabold flex items-center justify-center tabular-nums shadow-md animate-scale-in"
+            style={{ background: 'hsl(var(--gold))', color: 'hsl(var(--background))', boxShadow: '0 2px 8px hsl(var(--gold) / 0.5)' }}>
             R{rank}
           </span>
+        )}
+        {canAffordUpgrade && (
+          <span
+            className="absolute inset-0 rounded-xl pointer-events-none animate-pulse"
+            style={{ boxShadow: '0 0 0 2px hsl(var(--gold) / 0.35)' }}
+            aria-hidden
+          />
         )}
       </div>
       <div className="flex-1 min-w-0">
@@ -112,15 +124,25 @@ export function RelicCard({ relic, state, shards, rank, onClick, disabled }: Pro
         </div>
         <p className="text-[11px] text-muted-foreground leading-snug">{relic.description}</p>
         {isOwnedLike && (
-          <div className="flex items-center gap-1 mt-1" aria-label={`Rank ${curRank} of ${MAX_RANK}`}>
-            {Array.from({ length: MAX_RANK }).map((_, i) => (
-              <span key={i}
-                className={cn('w-1.5 h-1.5 rounded-full',
-                  i < curRank ? '' : 'bg-muted/50',
-                )}
-                style={i < curRank ? { background: 'hsl(var(--gold))' } : undefined}
-                aria-hidden />
-            ))}
+          <div className="flex items-center gap-1 mt-1.5" aria-label={`Rank ${curRank} of ${MAX_RANK}`}>
+            {Array.from({ length: MAX_RANK }).map((_, i) => {
+              const filled = i < curRank;
+              return (
+                <span
+                  key={i}
+                  className={cn(
+                    'h-1.5 rounded-full transition-all duration-300',
+                    filled ? 'w-3' : 'w-1.5 bg-muted/50',
+                  )}
+                  style={
+                    filled
+                      ? { background: 'hsl(var(--gold))', boxShadow: '0 0 6px hsl(var(--gold) / 0.45)' }
+                      : undefined
+                  }
+                  aria-hidden
+                />
+              );
+            })}
             <span className="ml-1 text-[9px] font-extrabold tabular-nums text-foreground/70">R{curRank}/{MAX_RANK}</span>
           </div>
         )}
@@ -134,4 +156,3 @@ export function RelicCard({ relic, state, shards, rank, onClick, disabled }: Pro
     </button>
   );
 }
-
