@@ -377,13 +377,28 @@ export default function RuneDelvePlayPage() {
     }
 
     // Apply corruption: HP cost for matching corrupted cells, then strip them.
+    // Cleansing Touch: first N corrupt-source clears each run cost no HP.
     let nextCorruption = corruption;
     if (corruptionActive && corruption.cells.size) {
       const r = resolveChainAgainstCorruption(corruption, chain);
-      if (r.hpCost > 0) {
-        next.hp = Math.max(0, next.hp - r.hpCost);
-        toast.error(`☠️ -${r.hpCost} HP from corruption`, { duration: 1100 });
-        turnLogs.push({ kind: 'corruption', text: 'Corrupted runes burned you', amount: r.hpCost });
+      let hpCost = r.hpCost;
+      if (r.sourcesCleared > 0 && has(relics, 'cleansing_touch')) {
+        // effectValue returns max free clears (1..2). We've already consumed
+        // `corruptCleansedCount` of them.
+        const freeRemaining = Math.max(
+          0,
+          (relics.ranks.get('cleansing_touch') ?? 1) >= 5 ? 2 - corruptCleansedCount : 1 - corruptCleansedCount,
+        );
+        if (freeRemaining > 0 && hpCost > 0) {
+          hpCost = 0;
+          turnLogs.push({ kind: 'info', text: '✨ Cleansing Touch — corruption cost waived' });
+        }
+        setCorruptCleansedCount(c => c + r.sourcesCleared);
+      }
+      if (hpCost > 0) {
+        next.hp = Math.max(0, next.hp - hpCost);
+        toast.error(`☠️ -${hpCost} HP from corruption`, { duration: 1100 });
+        turnLogs.push({ kind: 'corruption', text: 'Corrupted runes burned you', amount: hpCost });
       }
       if (r.sourcesCleared > 0) {
         toast.success(r.sourcesCleared > 1 ? `Sources cleansed!` : `Source cleansed!`, { duration: 1200 });
