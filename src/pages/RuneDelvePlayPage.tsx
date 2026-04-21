@@ -117,6 +117,15 @@ export default function RuneDelvePlayPage() {
   const [corruption, setCorruption] = useState<CorruptionState>(emptyCorruption);
   const [log, setLog] = useState<CombatLogEntry[]>([]);
 
+  // Per-run defeat ledger keyed by archetypeId. Submitted to the Bestiary on
+  // run-end. Using a ref keeps writes O(1) and avoids extra renders.
+  const defeatedArchetypesRef = useRef<Map<string, number>>(new Map());
+  const recordKill = (archetypeId: string | undefined) => {
+    if (!archetypeId) return;
+    const m = defeatedArchetypesRef.current;
+    m.set(archetypeId, (m.get(archetypeId) ?? 0) + 1);
+  };
+
   // Per-run relic-effect counters (drive Ember Edge / Crimson Tide / Quickstep /
   // First Light / Cleansing Touch / Shrine Ward turn-1 detection).
   const [redChainCount, setRedChainCount] = useState(0);
