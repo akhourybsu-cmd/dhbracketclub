@@ -649,7 +649,8 @@ export default function RuneDelvePlayPage() {
     const isNewBest = !existingRun || breakdown.total > (existingRun.score ?? 0);
 
     // ── Rune Shards reward ────────────────────────────────────────────────
-    const compassEquipped = has(activeRelics, 'wanderers_compass');
+    const compassEquipped = has(relicsForFinal, 'wanderers_compass');
+    const compassMultiplier = compassShardBonus(relicsForFinal);
     const isFirstClear = cleared && (!existingRun || !existingRun.dungeon_cleared);
     const bossClear = cleared && level.level_number % 25 === 0;
     const totalEnemies = (level.enemy_config?.length ?? final.enemies.length) || 1;
@@ -662,6 +663,7 @@ export default function RuneDelvePlayPage() {
           bossClear,
           chapterCleared: false,
           compassEquipped,
+          compassMultiplier,
         });
         shardsAwarded = breakdownShards.total;
       } else {
@@ -676,6 +678,7 @@ export default function RuneDelvePlayPage() {
           bossPhaseReached: 0,
           bossHasRule: !!bossRule,
           compassEquipped,
+          compassMultiplier,
         });
         shardsAwarded = breakdownShards.total;
       }
