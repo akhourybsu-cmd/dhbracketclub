@@ -901,13 +901,21 @@
   --rd-rune-gold: 45 92% 56%;
   --rd-stone: 230 12% 10%;
   --rd-stone-edge: 230 16% 16%;
-  /* Brilliant-white text override — Rune Delve sits on near-black stone
-     backdrops, so we promote ALL foreground tokens to high-luminance white.
-     This cascades to every text-foreground/* and text-muted-foreground in
-     the module, eliminating dark-on-dark and muddy-gray pairings. */
+  /* Force the dark fantasy palette regardless of app light/dark theme —
+     Rune Delve is always a torchlit dungeon. This keeps every bg-card,
+     bg-background, bg-muted, bg-popover surface dark stone, so the
+     brilliant-white text below always has correct contrast. */
+  --background: 230 12% 7%;
+  --card: 230 12% 10%;
+  --popover: 230 14% 11%;
+  --muted: 230 10% 16%;
+  --border: 230 14% 22%;
+  --input: 230 14% 22%;
+  --secondary: 230 12% 14%;
   --foreground: 0 0% 100%;
   --card-foreground: 0 0% 100%;
   --popover-foreground: 0 0% 100%;
+  --secondary-foreground: 0 0% 100%;
   --muted-foreground: 0 0% 88%;
   position: relative;
 }
