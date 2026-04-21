@@ -1,60 +1,138 @@
 
 
-# Rune Delve — Stale Results Page Fix
+# Rune Delve — Relic Upgrade System
 
-## The bug
+## What we're adding
 
-After clearing a level, some players land on `/rune-delve/results/:level` and see **"No run yet for this level. Enter the dungeon!"** instead of their score. One affected user fixed it by clearing their browser cache — confirming it's a stale-data issue, not a missing write.
+Right now, every relic is a one-and-done unlock. Once you've bought all the relics you can afford in your tier, Rune Shards have nowhere meaningful to go. I'll add a **5-rank upgrade ladder** for every relic, so shards keep mattering long after the catalog is full — but with deliberately gentle scaling so nothing snowballs.
 
-## What's actually happening
+## The upgrade curve
 
-Three overlapping causes, in order of likelihood:
+Each relic has 5 ranks: **R1 (base, on unlock) → R5 (max)**. Every rank adds a small, fixed bump to that relic's effect. The bump is always **≤10–15%** of the base, and damage/heal/shield numbers are always **rounded to whole integers** (per your rule).
 
-1. **Stale React Query cache** — `useMyLevelRun` has `staleTime: 30_000` and an `enabled` flag that flips off while `level.id` is `transient-*` and back on once the canonical row appears. When the gate flips on, React Query returns the previously cached `null` (from when the query was disabled or returned early) and only refetches in the background — so the page renders the empty state for a beat, and on slow networks gets *stuck* there if the user backgrounds the tab before the refetch lands.
-2. **Mount-before-write race** — `RuneDelvePlayPage` waits 2.5 s after submitting the run, then navigates to results. If the results page mounts and queries `rune_delve_runs` before the insert/upsert is fully committed (or before the invalidation broadcast reaches it across a route change), it sees nothing.
-3. **Legacy Workbox service worker** — players still on an old install have a SW that intercepts and caches `/rest/v1/rune_delve_runs` GETs. The "self-destruct" SW is in place, but until it activates the user keeps seeing the cached empty response. This is why a manual cache-clear fixes it.
+### Rank cost (shards)
 
-## The fix
+Cost scales with the original relic price + a tier multiplier. Whole numbers, easy to read:
 
-### 1. Make `useMyLevelRun` self-healing in `src/hooks/useRuneDelveCampaign.ts`
+| Rank | Tier 1 base 100 | Tier 2 base 300 | Tier 3 base 650 |
+|------|---------------|---------------|---------------|
+| R2 | 60 | 180 | 400 |
+| R3 | 120 | 360 | 800 |
+| R4 | 240 | 720 | 1600 |
+| R5 | 480 | 1440 | 3200 |
+| **Total to max** | **900** | **2700** | **6000** |
 
-- Drop `staleTime` to `0` for this query so route re-entries always revalidate.
-- Add `refetchOnMount: 'always'` and `refetchOnWindowFocus: true`.
-- Add a small **bounded retry** inside the queryFn: if the run isn't found yet AND we know the user just finished a run on this level (signaled via `sessionStorage`), wait 400 ms and re-query up to 3 times before returning `null`. This eliminates the post-submit race without spinning forever.
+Formula: `rankCost(rank) = round(baseCost × 0.6 × 2^(rank-2))`. Doubles each rank — keeps the late ranks aspirational without making R2/R3 feel out of reach.
 
-### 2. Signal "just submitted" from the play page
+### Per-rank effect bumps
 
-In `src/pages/RuneDelvePlayPage.tsx`, right after `useSubmitLevelRun` resolves, write `sessionStorage.setItem('rd-just-submitted-' + level.level_number, Date.now())`. The results page reads + clears this key on mount and uses it to enable the bounded retry above. Self-cleaning, no global state.
+Each rank applies a small additive bump on top of base. Examples (all rounded to whole numbers at apply-time):
 
-### 3. Force a fresh fetch when results page mounts
+| Relic | Base (R1) | R2 | R3 | R4 | R5 |
+|---|---|---|---|---|---|
+| Ember Edge (first red ×1.5 dmg) | ×1.50 | ×1.55 | ×1.60 | ×1.65 | ×1.70 |
+| Verdant Heart (+1 HP per green rune) | +1.0 → heal=len | +1.1×len | +1.2×len | +1.3×len | +1.4×len (rounded) |
+| Aether Spark (start mana +2) | +2 | +2 | +2 | +3 | +3 (capped) |
+| Iron Resolve (start shield 1 turn) | 1 | 1 | 2 | 2 | 2 |
+| Bloodbond (heal 4 on kill) | 4 | 5 | 5 | 6 | 6 |
+| Crimson Tide (every 5th red ×1.75) | ×1.75 | ×1.80 | ×1.85 | ×1.90 | ×1.95 |
+| Sapphire Flow (+1 mana on 4+ chains) | +1 | +1 | +1 | +2 | +2 |
+| Last Stand (survive at 1 HP) | 1 use | 1 | 1 | 1 | **2 uses** |
+| First Light (1st ability free) | 1 free | 1 | 1 | 1 | **2 free** |
+| Executioner's Mark (+30% vs <25% HP) | ×1.30 | ×1.34 | ×1.38 | ×1.42 | ×1.46 |
+| Desperate Surge (+25% red <30% HP) | ×1.25 | ×1.29 | ×1.33 | ×1.37 | ×1.41 |
+| Wanderer's Compass (+15% shards) | ×1.15 | ×1.18 | ×1.21 | ×1.24 | ×1.27 |
+| Quickstep (+1 effective length first chain) | +1 | +1 | +1 | +2 | +2 |
+| Bulwark (+1 shield turn on gold) | +1 | +1 | +1 | +2 | +2 |
+| Momentum (4+ chains: +10% score) | ×1.10 | ×1.12 | ×1.14 | ×1.16 | ×1.18 |
+| Foresight (telegraph 1 turn early) | 1 turn | 1 | 1 | 2 | 2 |
+| Keysight (sealed unlock 1 turn faster) | 1 | 1 | 1 | 2 | 2 |
+| Shrine Ward (turn-1 dmg ×0.90) | ×0.90 | ×0.88 | ×0.86 | ×0.84 | ×0.82 |
+| Cleansing Touch (1st corrupt clear free) | 1 | 1 | 1 | 1 | 2 |
+| Cracked Crown (boss soften ×0.85) | ×0.85 | ×0.83 | ×0.81 | ×0.79 | ×0.77 |
 
-In `src/pages/RuneDelveResultsPage.tsx`, on mount, call `queryClient.invalidateQueries({ queryKey: ['rune-delve-level-run', level?.id] })` and `['rune-delve-progress']` once `level?.id` is known. Belt-and-suspenders against any cached `null` from a prior visit.
+**Why these numbers**: Multiplier relics get **+0.04–0.05 per rank** (tiny decimal bumps, exactly as you asked). Flat-integer relics (heal, shield turns, mana, free uses) gain a +1 every **2–3 ranks** so they only "tick up" at meaningful breakpoints — no rounding weirdness. Going from a fully-equipped R1 loadout to a fully-equipped R5 loadout is roughly **+18–25% effective power**, not 2×.
 
-### 4. Friendlier empty state with a manual recovery action
+## How it appears in the UI
 
-Replace the bare "No run yet" text with:
-- A subtle spinner for the first ~1.5 s after mount (covers the normal race).
-- After that, a card showing **"Hmm — we couldn't find that run yet"** with two buttons: **"Refresh"** (re-invalidates the query) and **"Back to Level Map"**. So even in the worst case the user is never stuck — one tap recovers.
+### Shop page (`RuneDelveShopPage.tsx`)
 
-### 5. Bypass any legacy SW HTTP cache for Supabase reads
+Owned relics now show a **rank bar (●●●○○ R3/5)** under the description and a **"Upgrade · 240 ✦"** chip in the corner. Tapping an owned relic opens an upgrade sheet showing the next-rank delta ("Damage ×1.55 → ×1.60") and confirms the spend. Locked tiers and the buy flow are unchanged.
 
-The Supabase JS client lets us pass custom fetch headers globally via the `global.fetch` option, but we can't change `src/integrations/supabase/client.ts`. Instead, add the cache-bust at call-site in the two hot paths — `useMyLevelRun` and `useMyProgress` — by appending a no-op query param via `.select('*, _t:now()')` won't work; instead use the lower-level approach of adding a `Cache-Control: no-cache` header isn't possible per-query either. **Simpler, correct fix:** force-update the SW probe in `src/main.tsx` to also call `navigator.serviceWorker.getRegistration().then(r => r?.update())` once on app boot — this nudges any legacy Workbox SW into the self-destruct phase faster. Players on the old install will heal within one session instead of needing to clear cache.
+### Armory & loadout
+
+`LoadoutSlot` and `RelicCard` already render the relic — I'll add a small `R3` chip on the icon corner so players see their invested ranks at a glance during loadout selection.
+
+### In-run
+
+No HUD changes. The bumps just flow through `relicEffects.ts` automatically.
+
+## Technical implementation
+
+### Database
+
+New column on existing table — no new tables needed:
+
+```sql
+ALTER TABLE public.rune_delve_relic_unlocks
+  ADD COLUMN rank smallint NOT NULL DEFAULT 1
+  CHECK (rank BETWEEN 1 AND 5);
+```
+
+Existing unlocks default to R1, so nothing breaks for current players.
+
+### `src/lib/runedelve/relics.ts`
+
+- Add `MAX_RANK = 5` constant.
+- Add `rankCost(baseCost, rank)` helper → returns whole-shard cost for the given target rank.
+- Add `rankEffectTable` mapping every relic id to its 5 effect values (multipliers as decimals, integers as ints). Single source of truth for both UI display and `relicEffects.ts`.
+
+### `src/lib/runedelve/relicEffects.ts`
+
+- `ActiveRelics` becomes `{ ranks: Map<string, number> }` instead of a Set. Add `rankOf(a, id)` helper.
+- Every `getXxx` and `computeChainMods` reads its multiplier/integer from the rank table. **All damage/heal/shield outputs wrapped in `Math.round()`** so the on-screen number is always a whole integer (per your spec).
+- Backwards-compat: `has()` stays (returns `rank >= 1`).
+
+### `src/hooks/useRelicCollection.ts` & `useRuneShards.ts`
+
+- `OwnedRelic` adds `rank: number`.
+- New `useUpgradeRelic({ relic_id, target_rank, cost })` mutation: spends shards + bumps `rank` in a single round-trip (read-modify-write, RLS-scoped).
+- `buildActive([slot1, slot2, slot3], owned)` now resolves each slot to its current rank from the collection.
+
+### `src/pages/RuneDelveShopPage.tsx`
+
+- For owned relics, swap the disabled state for an "Upgrade" CTA when `rank < 5`, otherwise show "Maxed".
+- New `<RelicUpgradeSheet>` component (mobile sheet, 44px tap targets, shows current → next stat with the delta highlighted).
+
+### `RelicCard.tsx` & `LoadoutSlot.tsx`
+
+- Add an optional `rank` prop. When set and >1, render a tiny gold `R{rank}` chip on the icon corner.
+
+## What I'm NOT changing
+
+- No new relics, no removals, no rebalancing of base R1 values.
+- No changes to shard earn rates, the failure-reward system, or slot unlocks.
+- No changes to combat engine, scoring, classes, or level generation.
+- No changes outside Rune Delve.
 
 ## Files
 
-**Edited**
-- `src/hooks/useRuneDelveCampaign.ts` — `useMyLevelRun` revalidation + bounded retry; touch-up to `useMyProgress` invalidation timing.
-- `src/pages/RuneDelvePlayPage.tsx` — write `sessionStorage` signal post-submit.
-- `src/pages/RuneDelveResultsPage.tsx` — mount-time invalidation, spinner, recovery UI.
-- `src/main.tsx` — eager `registration.update()` on boot to flush legacy SWs faster.
+**New**
+- `supabase/migrations/<ts>_rune_delve_relic_ranks.sql` — adds `rank` column.
+- `src/components/runedelve/RelicUpgradeSheet.tsx` — bottom sheet for confirming upgrades.
 
-**Not changed**
-- No DB migrations, no RLS changes, no gameplay or scoring changes.
-- No changes to other Rune Delve pages or components.
+**Edited**
+- `src/lib/runedelve/relics.ts` — `MAX_RANK`, `rankCost`, `rankEffectTable`.
+- `src/lib/runedelve/relicEffects.ts` — rank-aware effect resolution, integer rounding everywhere.
+- `src/hooks/useRelicCollection.ts` — `rank` field, `useUpgradeRelic` mutation, rank-aware `buildActive`.
+- `src/pages/RuneDelveShopPage.tsx` — Upgrade CTA, rank chip on owned cards.
+- `src/components/runedelve/RelicCard.tsx` — optional rank chip overlay.
+- `src/components/runedelve/LoadoutSlot.tsx` — rank chip on equipped relics.
+- `src/pages/RuneDelvePlayPage.tsx` — pass owned-collection ranks into `buildActive`.
 
 ## How we'll know it worked
 
-- Affected user retries level: results page renders the actual score within < 500 ms, no cache clear needed.
-- Re-entering a previously-played level's results page from the level map shows fresh data, not a stale `null`.
-- Legacy-SW users heal within one app launch (the self-destruct SW activates immediately).
+- Owned relics show a rank bar; pressing Upgrade spends the right amount and bumps the rank.
+- Effect numbers in combat reflect the upgraded value (e.g. Verdant Heart at R3 healing `round(1.2 × chainLen)` HP).
+- Clear rates on hard levels (8, 16, 25) creep up gradually as veteran players invest, but no single rank doubles a relic's output.
 
