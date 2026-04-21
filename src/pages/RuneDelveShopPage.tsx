@@ -122,6 +122,31 @@ export default function RuneDelveShopPage() {
         <p className="text-[12px] font-semibold text-foreground/80">Spend Rune Shards to permanently unlock relics. Equip them in the Armory.</p>
       </div>
 
+      {/* How-to-upgrade hint — only shown once the player owns at least one relic */}
+      {(owned?.length ?? 0) > 0 && (
+        <div
+          className="rounded-xl border p-3 flex items-start gap-2.5"
+          style={{
+            background: 'linear-gradient(135deg, hsl(var(--gold) / 0.08), hsl(var(--card)))',
+            borderColor: 'hsl(var(--gold) / 0.35)',
+          }}
+        >
+          <span
+            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-[14px]"
+            style={{ background: 'hsl(var(--gold) / 0.18)', color: 'hsl(var(--gold))' }}
+            aria-hidden
+          >
+            ⬆️
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="text-[12px] font-extrabold text-foreground leading-tight">Tap an owned relic to upgrade it</p>
+            <p className="text-[11px] text-foreground/75 leading-snug mt-0.5">
+              Each rank boosts its effect, up to R{MAX_RANK}. Look for the gold <span className="font-bold" style={{ color: 'hsl(var(--gold))' }}>⬆ cost</span> badge on cards you can afford to upgrade now.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Tier tabs */}
       <div className="grid grid-cols-3 gap-1.5 sticky top-0 z-10 py-1.5 bg-background/85 backdrop-blur-md">
         {TIERS.map(t => {

@@ -169,6 +169,28 @@ export default function RuneDelveArmoryPage() {
                 />
               );
             })}
+            {/* Upgrade discoverability — Armory only equips; ranks are bought in the Shop. */}
+            <Link
+              to="/rune-delve/shop"
+              className="mt-1 flex items-center gap-2.5 rounded-xl border p-3 btn-press"
+              style={{
+                background: 'linear-gradient(135deg, hsl(var(--gold) / 0.08), hsl(var(--card)))',
+                borderColor: 'hsl(var(--gold) / 0.35)',
+              }}
+            >
+              <span
+                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-[15px]"
+                style={{ background: 'hsl(var(--gold) / 0.18)', color: 'hsl(var(--gold))' }}
+                aria-hidden
+              >
+                ⬆️
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[12px] font-extrabold text-foreground leading-tight">Want stronger relics?</p>
+                <p className="text-[11px] text-foreground/75 leading-snug">Upgrade ranks in the Shop — tap any owned relic there.</p>
+              </div>
+              <span className="text-[11px] font-extrabold" style={{ color: 'hsl(var(--gold))' }}>Shop →</span>
+            </Link>
           </div>
         )}
       </div>
