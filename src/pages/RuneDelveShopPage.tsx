@@ -174,7 +174,8 @@ export default function RuneDelveShopPage() {
       {tierUnlocked(tier) && (
         <div className="space-y-2.5">
           {visible.map(r => {
-            const ownedAlready = ownedSet.has(r.id);
+            const ownedAlready = ownedMap.has(r.id);
+            const rank = ownedMap.get(r.id);
             const state = ownedAlready
               ? 'owned'
               : shards >= r.cost ? 'affordable' : 'unaffordable';
@@ -184,8 +185,9 @@ export default function RuneDelveShopPage() {
                 relic={r}
                 state={state as any}
                 shards={shards}
-                onClick={() => !ownedAlready && buy(r.id)}
-                disabled={ownedAlready || pendingId === r.id}
+                rank={rank}
+                onClick={() => handleCardClick(r)}
+                disabled={pendingId === r.id}
               />
             );
           })}
