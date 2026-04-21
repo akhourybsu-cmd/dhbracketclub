@@ -25,6 +25,7 @@ const BracketDetailPage = lazy(() => import("./pages/BracketDetailPage"));
 const BracketComparePage = lazy(() => import("./pages/BracketComparePage"));
 const LeaderboardPage = lazy(() => import("./pages/LeaderboardPage"));
 const AdminToolsPage = lazy(() => import("./pages/AdminToolsPage"));
+const RuneDelveAnalyticsPage = lazy(() => import("./pages/RuneDelveAnalyticsPage"));
 const GameCenterPage = lazy(() => import("./pages/GameCenterPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
@@ -189,6 +190,7 @@ function AnimatedRoutes() {
         <Route path="/rune-delve/history" element={<ProtectedPage><RuneDelveLayout><RuneDelveHistoryPage /></RuneDelveLayout></ProtectedPage>} />
         <Route path="/rune-delve/shop" element={<ProtectedPage><RuneDelveLayout><RuneDelveShopPage /></RuneDelveLayout></ProtectedPage>} />
         <Route path="/rune-delve/armory" element={<ProtectedPage><RuneDelveLayout><RuneDelveArmoryPage /></RuneDelveLayout></ProtectedPage>} />
+        <Route path="/rune-delve/analytics" element={<ProtectedPage><RuneDelveAnalyticsPage /></ProtectedPage>} />
 
         <Route path="/profile" element={<ProtectedPage><ProfilePage /></ProtectedPage>} />
         <Route path="*" element={<Suspense fallback={<PageFallback />}><NotFound /></Suspense>} />
