@@ -61,7 +61,7 @@ export function useLevel(levelNumber: number | undefined) {
           objective_type: def.objective_type,
           objective_target: def.objective_target,
           modifiers: def.modifiers,
-        })
+        } as any)
         .select()
         .maybeSingle();
       if (inserted) {
