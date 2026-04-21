@@ -106,26 +106,31 @@ function seedFor(level: number): number {
 }
 
 // Tighten move budget as the campaign deepens — but keep it humane.
+// Rebalance (data-driven): keep 12 turns through L15 so the L8 cliff softens.
 function turnLimitFor(level: number): number {
-  if (level <= 10) return 12;
-  if (level <= 25) return 11;
-  if (level <= 50) return 10;
+  if (level <= 15) return 12;
+  if (level <= 30) return 11;
+  if (level <= 60) return 10;
   if (level <= 100) return 9;
   return 8;
 }
 
-// Enemy count grows from 2 → 4, capped at 4 to keep mobile UX clean.
+// Enemy count ramp — Rebalance: push the 3-enemy threshold from L≤25 down
+// to L≤8 always-2, then chance-gated until L25, full 3 from L26+.
 function enemyCountFor(level: number, rng: () => number): number {
-  if (level <= 5) return 2;
-  if (level <= 25) return 2 + rngInt(rng, 2);     // 2-3
-  if (level <= 75) return 3;                       // 3
+  if (level <= 8) return 2;
+  if (level <= 15) return rng() < 0.75 ? 2 : 3;    // 75/25 split
+  if (level <= 25) return rng() < 0.5 ? 2 : 3;     // 50/50 split
+  if (level <= 75) return 3;
   return 3 + rngInt(rng, 2);                       // 3-4
 }
 
-// HP/damage scaling — gentle ramp, exponential past chapter 2.
+// HP/damage scaling — softer ramp through L25, then resume original curve.
 function scaleEnemy(base: { hp: number; damage: number }, level: number) {
-  const hpMul   = 1 + (level - 1) * 0.04;          // ~+4% per level
-  const dmgMul  = 1 + (level - 1) * 0.025;         // ~+2.5% per level
+  const hpRate  = level <= 25 ? 0.03  : 0.04;      // +3%/lvl early, +4% later
+  const dmgRate = level <= 25 ? 0.02  : 0.025;     // +2%/lvl early, +2.5% later
+  const hpMul   = 1 + (level - 1) * hpRate;
+  const dmgMul  = 1 + (level - 1) * dmgRate;
   return {
     hp: Math.round(base.hp * hpMul),
     damage: Math.max(base.damage, Math.round(base.damage * dmgMul)),
@@ -141,6 +146,12 @@ function pickTemplate(level: number, rng: () => number) {
   // Bias early levels to lower-tier templates.
   const maxTier = Math.min(5, 1 + Math.floor(level / 8));
   pool = pool.filter(t => t.tier <= maxTier);
+  // Per-enemy DPS cap on early levels — avoid 3-Goblin-style spikes by
+  // preferring tankier-but-softer templates when a high-damage one rolls.
+  if (level <= 15) {
+    const softPool = pool.filter(t => t.damage <= 6);
+    if (softPool.length && rng() < 0.7) pool = softPool;
+  }
   return pool[rngInt(rng, pool.length)];
 }
 
