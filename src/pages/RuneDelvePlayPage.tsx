@@ -105,8 +105,13 @@ export default function RuneDelvePlayPage() {
       id: e.id ?? `e${i}`, name: e.name, emoji: e.emoji, hp: e.hp, maxHp: e.maxHp ?? e.hp, damage: e.damage,
     }));
     if (telegraphActive) enemies = applyInitialIntents(enemies, level.generation_seed, level.level_number);
-    setCombat(initialCombat(enemies, level.turn_limit));
-  }, [level, hero, sealedTilesActive, telegraphActive, corruptionActive]);
+    // Apply pre-run relic effects: starting mana + starting shield.
+    const initial = initialCombat(enemies, level.turn_limit);
+    initial.mana = Math.min(3, initial.mana + getStartingMana(activeRelics));
+    initial.shieldTurns = Math.max(initial.shieldTurns, getStartingShieldTurns(activeRelics));
+    setCombat(initial);
+    setLastStandUsed(false);
+  }, [level, hero, sealedTilesActive, telegraphActive, corruptionActive, activeRelics]);
 
   // One-time intro modal for any brand-new mechanic taught at this level.
   useEffect(() => {
