@@ -182,6 +182,34 @@ export default function RuneDelvePlayPage() {
     const { next, resolution } = applyChain(combat, type, chain.length, hero.class, bossRule);
     if (resolution.enemyKills.length) setFlashId(resolution.enemyKills[0]);
 
+    // Build the per-turn log batch as we go so the order matches the events.
+    const turnLogs: Array<Omit<CombatLogEntry, 'id'>> = [];
+    const runeLabel = RUNE_LABEL[type] ?? type;
+
+    // Chain summary line — always logged.
+    if (type === 'red' && resolution.damageDealt > 0) {
+      const target = combat.enemies.find(e => resolution.enemyKills[0] ? e.id === resolution.enemyKills[0] : e.hp > 0);
+      const targetName = target?.name ?? 'the foe';
+      turnLogs.push({
+        kind: 'damage',
+        text: `${runeLabel} chain x${chain.length} struck ${targetName}`,
+        amount: resolution.damageDealt,
+      });
+    } else if (type === 'green' && resolution.hpHealed > 0) {
+      turnLogs.push({ kind: 'heal', text: `${runeLabel} chain x${chain.length} mended your wounds`, amount: resolution.hpHealed });
+    } else if (type === 'blue' && resolution.manaGained > 0) {
+      turnLogs.push({ kind: 'mana', text: `${runeLabel} chain x${chain.length} channeled mana`, amount: resolution.manaGained });
+    } else if (type === 'gold') {
+      turnLogs.push({ kind: 'shield', text: `${runeLabel} chain x${chain.length} raised your guard`, amount: resolution.guardGained });
+    } else {
+      // Red chain that hit a shielded boss → no damage applied.
+      turnLogs.push({ kind: 'info', text: `${runeLabel} chain x${chain.length} fizzled` });
+    }
+    for (const killId of resolution.enemyKills) {
+      const killed = combat.enemies.find(e => e.id === killId);
+      turnLogs.push({ kind: 'kill', text: `${killed?.name ?? 'A foe'} was vanquished!` });
+    }
+
     // Last Stand feedback: red chain landed but the boss is shielded → 0 dmg.
     if (
       bossRule === 'last_stand' &&
@@ -199,18 +227,43 @@ export default function RuneDelvePlayPage() {
       if (r.hpCost > 0) {
         next.hp = Math.max(0, next.hp - r.hpCost);
         toast.error(`☠️ -${r.hpCost} HP from corruption`, { duration: 1100 });
+        turnLogs.push({ kind: 'corruption', text: 'Corrupted runes burned you', amount: r.hpCost });
       }
       if (r.sourcesCleared > 0) {
         toast.success(r.sourcesCleared > 1 ? `Sources cleansed!` : `Source cleansed!`, { duration: 1200 });
+        turnLogs.push({ kind: 'info', text: r.sourcesCleared > 1 ? 'Corruption sources cleansed' : 'Corruption source cleansed' });
       }
       nextCorruption = r.next;
     }
+
+    // Capture pre-attack HP + shield to derive damage taken / mitigated.
+    const hpBefore = next.hp;
+    const hadShield = next.shieldTurns > 0;
+    const rawIncoming = next.enemies.reduce(
+      (s, e) => s + (e.hp > 0 ? Math.round(e.damage) : 0),
+      0,
+    );
 
     // enemiesAttack already runs applyBossTurnEffects internally — do NOT call it again here.
     let afterEnemies = next.enemies.some(e => e.hp > 0)
       ? enemiesAttack(next, telegraphActive, bossRule)
       : endTurn(next);
-    if ((afterEnemies as any).heavyFired) toast.error('⚡ Heavy strike!', { duration: 1200 });
+    if ((afterEnemies as any).heavyFired) {
+      toast.error('⚡ Heavy strike!', { duration: 1200 });
+      turnLogs.push({ kind: 'heavy', text: 'A telegraphed heavy strike landed!' });
+    }
+
+    // Damage taken / mitigated lines.
+    const hpLost = Math.max(0, hpBefore - afterEnemies.hp);
+    if (hpLost > 0) {
+      turnLogs.push({ kind: 'taken', text: 'Enemies retaliated', amount: hpLost });
+    } else if (next.enemies.some(e => e.hp > 0) && rawIncoming > 0) {
+      turnLogs.push({ kind: 'info', text: 'You weathered the assault' });
+    }
+    if (hadShield && rawIncoming > hpLost) {
+      const mitigated = rawIncoming - hpLost;
+      if (mitigated > 0) turnLogs.push({ kind: 'mitigated', text: 'Your guard absorbed the blow', amount: mitigated });
+    }
 
     // Relic: Last Stand — survive lethal at 1 HP, once per run.
     if (afterEnemies.hp <= 0 && !lastStandUsed) {
@@ -219,14 +272,18 @@ export default function RuneDelvePlayPage() {
         afterEnemies = { ...afterEnemies, hp: ls.hp };
         setLastStandUsed(true);
         toast.success('💔 Last Stand! Survived at 1 HP', { duration: 1800 });
+        turnLogs.push({ kind: 'laststand', text: 'Last Stand! You survived at 1 HP' });
       }
     }
 
     // Relic: Bloodbond — heal 4 HP per kill this turn.
     if (resolution.enemyKills.length && has(activeRelics, 'bloodbond')) {
+      const beforeHeal = afterEnemies.hp;
       let healed = afterEnemies;
       for (let i = 0; i < resolution.enemyKills.length; i++) healed = onEnemyKilled(activeRelics, healed);
       afterEnemies = { ...afterEnemies, hp: healed.hp };
+      const gained = afterEnemies.hp - beforeHeal;
+      if (gained > 0) turnLogs.push({ kind: 'heal', text: 'Bloodbond drew vigor from the slain', amount: gained });
     }
 
     const newGrid = resolveBoard(grid, chain, refillRng, seals);
@@ -238,6 +295,7 @@ export default function RuneDelvePlayPage() {
         const nextSeals = new Set(seals);
         broken.forEach(k => nextSeals.delete(k));
         setSeals(nextSeals);
+        turnLogs.push({ kind: 'info', text: broken.length > 1 ? `${broken.length} seals shattered` : 'A seal shattered' });
       }
     }
 
@@ -250,6 +308,7 @@ export default function RuneDelvePlayPage() {
     setRngTick(t => t + 1);
     setGrid(newGrid);
     setCombat(afterEnemies);
+    pushLogs(turnLogs);
 
     const status = checkObjective(afterEnemies, level.turn_limit, objType, level.objective_target, secondaryObjective);
     if (status.over) void finalize(afterEnemies, status.cleared);
