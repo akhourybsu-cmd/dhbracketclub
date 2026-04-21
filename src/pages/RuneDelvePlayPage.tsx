@@ -187,7 +187,38 @@ export default function RuneDelvePlayPage() {
   const handleChain = (chain: Cell[]) => {
     if (!isValidChain(grid, chain, seals)) return;
     const type = grid[chain[0].r][chain[0].c];
+    // Tiered chain bonus: 6=heavy strike (no free turn), 7=+30% & free turn,
+    // 8+=+40% & free turn. Only ONE free turn per enemy cycle.
+    const tierFor = (len: number) =>
+      len >= 8 ? { dmgMult: 1.4, bonus: true as const }
+      : len >= 7 ? { dmgMult: 1.3, bonus: true as const }
+      : len >= 6 ? { dmgMult: 1.2, bonus: false as const }
+      : { dmgMult: 1, bonus: false as const };
+    const tier = tierFor(chain.length);
     const { next, resolution } = applyChain(combat, type, chain.length, hero.class, bossRule);
+    // Scale red-chain damage by the tier multiplier; route the extra HP into
+    // the same target that applyChain already hit. Round to whole HP.
+    if (tier.dmgMult > 1 && type === 'red' && resolution.damageDealt > 0) {
+      const baseDmg = resolution.damageDealt;
+      const boostedDmg = Math.round(baseDmg * tier.dmgMult);
+      const extra = boostedDmg - baseDmg;
+      if (extra > 0) {
+        const target = next.enemies.find(e => e.hp > 0 && e.hp < e.maxHp)
+          ?? next.enemies.find(e => resolution.enemyKills.includes(e.id));
+        if (target) {
+          const applied = Math.min(extra, Math.max(target.hp, 0));
+          if (applied > 0) {
+            target.hp -= applied;
+            resolution.damageDealt += applied;
+            next.totalDamage += applied;
+            if (target.hp <= 0 && !resolution.enemyKills.includes(target.id)) {
+              next.enemiesDefeated += 1;
+              resolution.enemyKills.push(target.id);
+            }
+          }
+        }
+      }
+    }
     if (resolution.enemyKills.length) setFlashId(resolution.enemyKills[0]);
 
     // Build the per-turn log batch as we go so the order matches the events.
