@@ -641,6 +641,7 @@ function PlayoffPicture({ standings, matches, seasonId }: { standings: SeasonSta
   const qfMatches = matches.filter(m => m.round === 'qf').sort((a, b) => a.match_number - b.match_number);
   const sfMatches = matches.filter(m => m.round === 'sf').sort((a, b) => a.match_number - b.match_number);
   const finalMatches = matches.filter(m => m.round === 'final').sort((a, b) => a.match_number - b.match_number);
+  const thirdPlaceMatch = matches.find(m => m.round === 'third_place');
 
   // Series state for finals best-of-3
   const finalWinCount: Record<string, number> = {};
@@ -740,32 +741,53 @@ function PlayoffPicture({ standings, matches, seasonId }: { standings: SeasonSta
         )}
 
         {matches.length > 0 ? (
-          <div className="grid grid-cols-3 gap-2">
-            <div className="space-y-2">
-              <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/50 text-center">QF</p>
-              <MatchCard m={qfMatches[0]} placeholder={{ roundLabel: 'QF' }} />
-            </div>
-            <div className="space-y-2">
-              <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/50 text-center">Semis</p>
-              <MatchCard m={sfMatches[0]} placeholder={{ roundLabel: 'SF 1' }} />
-              <MatchCard m={sfMatches[1]} placeholder={{ roundLabel: 'SF 2' }} />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-center gap-1">
-                <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/50 text-center">Final · Bo3</p>
+          <>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-2">
+                <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/50 text-center">QF</p>
+                <MatchCard m={qfMatches[0]} placeholder={{ roundLabel: 'QF' }} />
               </div>
-              {seriesScore && finalMatches.length > 0 && !champion && (
-                <p className="text-[8px] font-bold text-center text-gold">Series {seriesScore}</p>
-              )}
-              {finalMatches.length === 0 ? (
-                <MatchCard placeholder={{ roundLabel: 'Final' }} />
-              ) : (
-                finalMatches.map(fm => (
-                  <MatchCard key={fm.id} m={fm} gameLabel={`Game ${fm.match_number}`} />
-                ))
-              )}
+              <div className="space-y-2">
+                <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/50 text-center">Semis</p>
+                <MatchCard m={sfMatches[0]} placeholder={{ roundLabel: 'SF 1' }} />
+                <MatchCard m={sfMatches[1]} placeholder={{ roundLabel: 'SF 2' }} />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-center gap-1">
+                  <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/50 text-center">Final · Bo3</p>
+                </div>
+                {seriesScore && finalMatches.length > 0 && !champion && (
+                  <p className="text-[8px] font-bold text-center text-gold">Series {seriesScore}</p>
+                )}
+                {finalMatches.length === 0 ? (
+                  <MatchCard placeholder={{ roundLabel: 'Final' }} />
+                ) : (
+                  finalMatches.map(fm => (
+                    <MatchCard key={fm.id} m={fm} gameLabel={`Game ${fm.match_number}`} />
+                  ))
+                )}
+              </div>
             </div>
-          </div>
+
+            {/* Third-place game appears only after both Semis are complete */}
+            {sfMatches.length === 2 && sfMatches.every(m => m.status === 'complete') && (
+              <div className="mt-3 pt-3 border-t border-border/15">
+                <div className="flex items-center justify-center gap-1.5 mb-2">
+                  <Award className="w-3 h-3" style={{ color: 'hsl(var(--bronze))' }} />
+                  <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/70 text-center">3rd Place · Bo1</p>
+                </div>
+                {thirdPlaceMatch ? (
+                  <div className="max-w-[200px] mx-auto">
+                    <MatchCard m={thirdPlaceMatch} gameLabel="3rd Place" />
+                  </div>
+                ) : (
+                  <div className="max-w-[200px] mx-auto">
+                    <MatchCard placeholder={{ roundLabel: '3rd Place' }} />
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         ) : (
           <div className="space-y-3">
             <div className="grid grid-cols-3 gap-2 mb-3">

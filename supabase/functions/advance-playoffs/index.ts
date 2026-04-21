@@ -151,6 +151,7 @@ Deno.serve(async (req) => {
     const qfMatches = matches.filter((m: any) => m.round === "qf");
     const sfMatches = matches.filter((m: any) => m.round === "sf");
     const finalMatches = matches.filter((m: any) => m.round === "final").sort((a: any, b: any) => a.match_number - b.match_number);
+    const thirdPlaceMatches = matches.filter((m: any) => m.round === "third_place");
 
     const qfDone = qfMatches.length > 0 && qfMatches.every((m: any) => m.status === "complete");
     const sfDone = sfMatches.length === 2 && sfMatches.every((m: any) => m.status === "complete");
@@ -184,7 +185,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ─── PHASE 4: GENERATE FINALS GAME 1 ───
+    // ─── PHASE 4: GENERATE FINALS GAME 1 + THIRD PLACE GAME ───
     if (sfDone && finalMatches.length === 0) {
       const sf1 = sfMatches.find((m: any) => m.match_number === 1);
       const sf2 = sfMatches.find((m: any) => m.match_number === 2);
@@ -200,6 +201,25 @@ Deno.serve(async (req) => {
           status: "awaiting_topic",
         });
         log.push("created Final G1 (awaiting topic)");
+      }
+
+      // Also generate the 3rd-place game (Bo1) — losers of SF1 and SF2.
+      if (sf1?.winner_user_id && sf2?.winner_user_id && thirdPlaceMatches.length === 0) {
+        const sf1Loser = sf1.winner_user_id === sf1.user_a ? sf1.user_b : sf1.user_a;
+        const sf1LoserSeed = sf1Loser === sf1.user_a ? sf1.seed_a : sf1.seed_b;
+        const sf2Loser = sf2.winner_user_id === sf2.user_a ? sf2.user_b : sf2.user_a;
+        const sf2LoserSeed = sf2Loser === sf2.user_a ? sf2.seed_a : sf2.seed_b;
+        if (sf1Loser && sf2Loser) {
+          const tpHigherSeed = sf1LoserSeed <= sf2LoserSeed ? sf1Loser : sf2Loser;
+          await supabase.from("draft_playoff_matches").insert({
+            season_id: seasonId, round: "third_place", match_number: 1,
+            seed_a: sf1LoserSeed, seed_b: sf2LoserSeed,
+            user_a: sf1Loser, user_b: sf2Loser,
+            topic_picker_user_id: tpHigherSeed,
+            status: "awaiting_topic",
+          });
+          log.push("created Third Place game (awaiting topic)");
+        }
       }
     }
 
