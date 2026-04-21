@@ -881,8 +881,6 @@ function PlayoffPicture({ standings, matches, seasonId }: { standings: SeasonSta
               </p>
               <span className="text-[9px] text-muted-foreground/60">— SF losers face off</span>
             </div>
-
-            <PlayoffFormatGuide />
           </div>
         )}
       </div>
