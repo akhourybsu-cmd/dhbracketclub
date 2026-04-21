@@ -157,26 +157,55 @@ export default function RuneDelvePlayPage() {
   const secondaryObjective = ((level?.modifiers as any)?.secondary_objective ?? null) as SecondaryObjective | null;
   const bossRule = ((level?.modifiers as any)?.boss_rule ?? null) as BossRuleId | null;
 
-  // Build deterministic state.
+  // Build deterministic state. Snapshots `activeRelics` once at run-start so
+  // mid-run relic toggles or rank changes can never reset the board.
   useEffect(() => {
     if (!level || !hero) return;
+    const relics = activeRelics; // snapshot
     const rng = mulberry32(level.generation_seed);
     setGrid(generateBoard(rng));
-    const seals = buildInitialSeals(level.generation_seed, sealedTilesActive);
-    setSeals(seals);
-    setCorruption(buildInitialCorruption(level.generation_seed, corruptionActive, level.level_number, seals));
+    let initialSeals = buildInitialSeals(level.generation_seed, sealedTilesActive);
+    // Keysight: pre-shatter the requested number of seals at run start so
+    // the player effectively gets a head-start clearing them.
+    const keysightTurns = getSealedTilesSpeedup(relics);
+    if (keysightTurns > 0 && initialSeals.size > 0) {
+      const keys = Array.from(initialSeals).slice(0, keysightTurns);
+      const next = new Set(initialSeals);
+      keys.forEach(k => next.delete(k));
+      initialSeals = next;
+    }
+    setSeals(initialSeals);
+    setCorruption(buildInitialCorruption(level.generation_seed, corruptionActive, level.level_number, initialSeals));
     let enemies: Enemy[] = (level.enemy_config ?? []).map((e: any, i: number) => ({
       id: e.id ?? `e${i}`, name: e.name, emoji: e.emoji, hp: e.hp, maxHp: e.maxHp ?? e.hp, damage: e.damage,
     }));
-    if (telegraphActive) enemies = applyInitialIntents(enemies, level.generation_seed, level.level_number);
+    if (telegraphActive) {
+      enemies = applyInitialIntents(enemies, level.generation_seed, level.level_number);
+      // Foresight: reveal telegraphed intents N turns earlier by ticking
+      // each enemy's intent down at run start.
+      const earlyTurns = getTelegraphReadyEarly(relics);
+      if (earlyTurns > 0) {
+        enemies = enemies.map(e => (
+          e.intent != null ? { ...e, intent: Math.max(1, e.intent - earlyTurns) } : e
+        ));
+      }
+    }
     // Apply pre-run relic effects: starting mana + starting shield.
     const initial = initialCombat(enemies, level.turn_limit);
-    initial.mana = Math.min(3, initial.mana + getStartingMana(activeRelics));
-    initial.shieldTurns = Math.max(initial.shieldTurns, getStartingShieldTurns(activeRelics));
+    initial.mana = Math.min(MAX_MANA, initial.mana + getStartingMana(relics));
+    initial.shieldTurns = Math.max(initial.shieldTurns, getStartingShieldTurns(relics));
     setCombat(initial);
+    setActiveRelicsSnapshot(relics);
     setLastStandUsed(false);
-    setLog([{ id: `boot-${Date.now()}`, kind: 'info', text: `You enter Level ${level.level_number}. The runes hum.` }]);
-  }, [level, hero, sealedTilesActive, telegraphActive, corruptionActive, activeRelics]);
+    setRedChainCount(0);
+    setChainCountTotal(0);
+    setAbilityUsedCount(0);
+    setCorruptCleansedCount(0);
+    setBonusUsedThisCycle(false);
+    setLog([{ id: nextLogId(), kind: 'info', text: `You enter Level ${level.level_number}. The runes hum.` }]);
+    // NOTE: `activeRelics` intentionally OMITTED from deps — see comment above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [level, hero, sealedTilesActive, telegraphActive, corruptionActive]);
 
   // One-time intro modal for any brand-new mechanic taught at this level.
   useEffect(() => {
