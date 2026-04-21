@@ -69,6 +69,7 @@ export default function RuneDelveShopPage() {
     try {
       await spend.mutateAsync(r.cost);
       await unlock.mutateAsync({ relic_id: relicId, level: hero?.level ?? 1 });
+      sfx.play('achievement');
       toast.success(`✨ Unlocked ${r.name}`, { description: 'Equip it from the Armory' });
     } catch (e: any) {
       toast.error(e?.message ?? 'Could not unlock relic');
