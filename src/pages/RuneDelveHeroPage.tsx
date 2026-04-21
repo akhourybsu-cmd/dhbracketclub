@@ -203,10 +203,10 @@ export default function RuneDelveHeroPage() {
 
       {/* ── Title ladder for active class ────────────────────────────── */}
       <div className="glass-card p-4">
-        <h3 className="font-bold text-[13px] mb-1 flex items-center gap-1.5">
+        <h3 className="font-rd-display font-extrabold text-[14px] mb-1 flex items-center gap-1.5 tracking-wide">
           <Sparkles className="w-3.5 h-3.5 text-primary" /> {cls.name} Titles
         </h3>
-        <p className="text-[10px] text-muted-foreground mb-3">Cosmetic prestige earned at milestone hero levels.</p>
+        <p className="text-[11px] text-foreground/75 mb-3">Cosmetic prestige earned at milestone hero levels.</p>
         <div className="space-y-1">
           {ladder.map(({ level, title: t }) => {
             const unlocked = activeLevel >= level;
