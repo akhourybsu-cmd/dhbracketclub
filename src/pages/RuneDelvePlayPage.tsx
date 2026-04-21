@@ -416,6 +416,15 @@ export default function RuneDelvePlayPage() {
     try {
       // Don't submit transient levels (admin hasn't seeded them yet).
       if (!level.id.startsWith('transient-')) {
+        // Signal to the results page that a run was just submitted, so
+        // useMyLevelRun knows to briefly retry instead of showing the
+        // "No run yet" empty state if Postgrest hasn't caught up.
+        try {
+          sessionStorage.setItem(
+            `rd-just-submitted-${level.level_number}`,
+            String(Date.now()),
+          );
+        } catch { /* sessionStorage may be unavailable */ }
         await submit.mutateAsync({
           level_id: level.id,
           level_number: level.level_number,
