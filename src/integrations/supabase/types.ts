@@ -2833,6 +2833,42 @@ export type Database = {
           },
         ]
       }
+      rune_delve_bestiary: {
+        Row: {
+          archetype_id: string
+          created_at: string
+          defeat_count: number
+          first_defeated_at: string
+          highest_level_defeated: number
+          id: string
+          last_defeated_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archetype_id: string
+          created_at?: string
+          defeat_count?: number
+          first_defeated_at?: string
+          highest_level_defeated?: number
+          id?: string
+          last_defeated_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archetype_id?: string
+          created_at?: string
+          defeat_count?: number
+          first_defeated_at?: string
+          highest_level_defeated?: number
+          id?: string
+          last_defeated_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       rune_delve_class_progress: {
         Row: {
           class: string
