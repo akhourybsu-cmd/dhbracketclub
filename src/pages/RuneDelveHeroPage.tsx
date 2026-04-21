@@ -91,14 +91,14 @@ export default function RuneDelveHeroPage() {
             className="form-input text-center w-full mb-2 px-3"
           />
         ) : (
-          <h2 className="text-xl font-extrabold tracking-tight break-words">{hero.hero_name}</h2>
+          <h2 className="rd-title text-2xl tracking-wide break-words text-foreground">{hero.hero_name}</h2>
         )}
         {title && (
-          <p className="text-[12px] font-extrabold mt-1 break-words" style={{ color: 'hsl(var(--primary))' }}>
+          <p className="font-rd-display text-[13px] font-extrabold mt-1 break-words tracking-wide" style={{ color: 'hsl(var(--primary))' }}>
             ✦ {title}
           </p>
         )}
-        <p className="text-[10px] font-bold text-muted-foreground mt-0.5 uppercase tracking-wider">
+        <p className="text-[10px] font-extrabold text-foreground/75 mt-0.5 uppercase tracking-wider">
           Active · {cls.name} · Lv {activeLevel}
         </p>
 
@@ -106,7 +106,7 @@ export default function RuneDelveHeroPage() {
           <div className="h-2 rounded-full bg-muted/50 overflow-hidden">
             <div className="h-full bg-primary" style={{ width: `${xpPct}%` }} />
           </div>
-          <p className="text-[10px] font-mono text-muted-foreground mt-1 tabular-nums">{lvl.intoLevel} / {lvl.needed} XP · this class</p>
+          <p className="text-[10px] font-mono text-foreground/75 mt-1 tabular-nums font-bold">{lvl.intoLevel} / {lvl.needed} XP · this class</p>
         </div>
 
         <div className="grid grid-cols-3 gap-2 mt-4">
@@ -134,17 +134,17 @@ export default function RuneDelveHeroPage() {
 
       {/* ── Active class — passive + ability ─────────────────────────── */}
       <div className="glass-card p-4">
-        <h3 className="font-bold text-[13px] mb-2">Active class · {cls.name}</h3>
-        <p className="text-[11px] text-muted-foreground mb-1"><span className="font-bold text-foreground">Passive:</span> {cls.passive}</p>
-        <p className="text-[11px] text-muted-foreground"><span className="font-bold text-foreground">Ability:</span> {cls.abilityName} — {cls.abilityDesc}</p>
+        <h3 className="font-rd-display font-extrabold text-[14px] mb-2 tracking-wide">Active class · {cls.name}</h3>
+        <p className="text-[12px] text-foreground/85 mb-1"><span className="font-extrabold text-foreground">Passive:</span> {cls.passive}</p>
+        <p className="text-[12px] text-foreground/85"><span className="font-extrabold text-foreground">Ability:</span> {cls.abilityName} — {cls.abilityDesc}</p>
       </div>
 
       {/* ── Per-class progression ladder ─────────────────────────────── */}
       <div className="glass-card p-4 space-y-2">
-        <h3 className="font-bold text-[13px] flex items-center gap-1.5">
+        <h3 className="font-rd-display font-extrabold text-[14px] flex items-center gap-1.5 tracking-wide">
           <Sparkles className="w-3.5 h-3.5 text-primary" /> Class Progression
         </h3>
-        <p className="text-[10px] text-muted-foreground">
+        <p className="text-[11px] text-foreground/75">
           Each class keeps its own level and titles. Switching loads that class's saved progress — nothing is wiped.
         </p>
         <div className="space-y-2 mt-1">
@@ -203,10 +203,10 @@ export default function RuneDelveHeroPage() {
 
       {/* ── Title ladder for active class ────────────────────────────── */}
       <div className="glass-card p-4">
-        <h3 className="font-bold text-[13px] mb-1 flex items-center gap-1.5">
+        <h3 className="font-rd-display font-extrabold text-[14px] mb-1 flex items-center gap-1.5 tracking-wide">
           <Sparkles className="w-3.5 h-3.5 text-primary" /> {cls.name} Titles
         </h3>
-        <p className="text-[10px] text-muted-foreground mb-3">Cosmetic prestige earned at milestone hero levels.</p>
+        <p className="text-[11px] text-foreground/75 mb-3">Cosmetic prestige earned at milestone hero levels.</p>
         <div className="space-y-1">
           {ladder.map(({ level, title: t }) => {
             const unlocked = activeLevel >= level;

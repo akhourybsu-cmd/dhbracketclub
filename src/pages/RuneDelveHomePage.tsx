@@ -50,10 +50,10 @@ export default function RuneDelveHomePage() {
     return (
       <div className="space-y-5 pb-8">
         <div className="text-center space-y-2">
-          <h1 className="page-header-title flex items-center gap-2 justify-center">
+          <h1 className="rd-title page-header-title flex items-center gap-2 justify-center text-2xl">
             <Sparkles className="w-5 h-5 text-primary" /> Forge your hero
           </h1>
-          <p className="text-xs text-muted-foreground px-4">Name your champion and choose a class. Your hero persists across the entire campaign.</p>
+          <p className="text-xs text-foreground/80 px-4">Name your champion and choose a class. Your hero persists across the entire campaign.</p>
         </div>
 
         <div className="glass-card p-4 space-y-2">
@@ -155,12 +155,12 @@ export default function RuneDelveHomePage() {
           borderColor: 'hsl(var(--primary) / 0.2)',
         }}>
           <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-primary/15 text-primary tracking-wider">CHAPTER {chapter}</span>
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L{chapterStart}–{chapterEnd}</span>
+            <span className="font-rd-display px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-primary/20 text-primary tracking-[0.18em]">CHAPTER {chapter}</span>
+            <span className="text-[10px] font-extrabold text-foreground/70 uppercase tracking-wider">L{chapterStart}–{chapterEnd}</span>
           </div>
-          <h2 className="text-xl font-extrabold tracking-tight leading-tight">{chapMeta.name}</h2>
-          <p className="text-[11px] text-muted-foreground mb-1">{chapMeta.subtitle}</p>
-          <p className="text-[11px] font-bold text-primary/90 mb-3">Welcome back, {hero.hero_name}</p>
+          <h2 className="rd-title text-2xl tracking-wide leading-tight text-foreground">{chapMeta.name}</h2>
+          <p className="text-[12px] text-foreground/75 mb-1 italic">{chapMeta.subtitle}</p>
+          <p className="text-[11px] font-extrabold text-primary mb-3">Welcome back, <span className="font-rd-display">{hero.hero_name}</span></p>
 
           <div className="space-y-2 mb-3">
             <div className="flex items-center justify-between text-[11px]">
@@ -197,28 +197,28 @@ export default function RuneDelveHomePage() {
         <div className="glass-card p-4 flex items-center gap-3 btn-press">
           <ClassBadge cls={hero.class} size="lg" />
           <div className="flex-1 min-w-0">
-            <p className="font-extrabold text-[14px] truncate">{hero.hero_name}</p>
+            <p className="font-rd-display font-extrabold text-[15px] truncate tracking-wide">{hero.hero_name}</p>
             {activeTitle && (
-              <p className="text-[10px] font-bold text-primary truncate">
+              <p className="text-[10px] font-extrabold text-primary truncate">
                 ✦ {activeTitle}
               </p>
             )}
-            <p className="text-[10px] text-muted-foreground font-bold mt-0.5">{cls.name} · Lv {activeLevel}</p>
+            <p className="text-[10px] text-foreground/75 font-extrabold mt-0.5">{cls.name} · Lv {activeLevel}</p>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-[10px] font-bold text-muted-foreground">Lv {activeLevel}</span>
+              <span className="text-[10px] font-extrabold text-foreground/75">Lv {activeLevel}</span>
               <div className="flex-1 h-1.5 rounded-full bg-muted/50 overflow-hidden">
                 <div className="h-full bg-primary" style={{ width: `${xpPct}%` }} />
               </div>
-              <span className="text-[10px] font-mono text-muted-foreground tabular-nums">{lvl.intoLevel}/{lvl.needed}</span>
+              <span className="text-[10px] font-mono text-foreground/70 tabular-nums">{lvl.intoLevel}/{lvl.needed}</span>
             </div>
             <div className="flex items-center gap-3 mt-1.5">
-              <span className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground">
+              <span className="flex items-center gap-1 text-[10px] font-extrabold text-foreground/80">
                 <Flame className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} /> {hero.current_streak}-day streak
               </span>
-              <span className="text-[10px] text-muted-foreground">· {progress.total_levels_cleared} cleared</span>
+              <span className="text-[10px] text-foreground/70">· {progress.total_levels_cleared} cleared</span>
             </div>
           </div>
-          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          <ChevronRight className="w-4 h-4 text-foreground/60" />
         </div>
       </Link>
 
@@ -226,27 +226,27 @@ export default function RuneDelveHomePage() {
       <Link to="/rune-delve/leaderboard" className="block">
         <div className="glass-card p-4 btn-press">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="font-bold text-[13px] flex items-center gap-1.5"><Trophy className="w-3.5 h-3.5 text-gold" /> Campaign Leaders</h3>
-            {myRank && <span className="text-[10px] text-muted-foreground">You: #{myRank}</span>}
+            <h3 className="font-rd-display font-extrabold text-[14px] flex items-center gap-1.5 tracking-wide"><Trophy className="w-3.5 h-3.5 text-gold" /> Campaign Leaders</h3>
+            {myRank && <span className="text-[10px] font-extrabold text-foreground/75">You: #{myRank}</span>}
           </div>
           {ahead && (
-            <div className="mb-2 px-2.5 py-1.5 rounded-lg bg-accent/10 border border-accent/25 flex items-center justify-between gap-2">
-              <span className="text-[11px] font-bold text-accent truncate">
+            <div className="mb-2 px-2.5 py-1.5 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-between gap-2">
+              <span className="text-[11px] font-extrabold text-accent truncate">
                 {aheadGap === 1 ? '1 level' : `${aheadGap} levels`} behind {ahead.hero?.hero_name ?? ahead.profile.display_name ?? 'a rival'}
               </span>
               <ChevronRight className="w-3.5 h-3.5 text-accent shrink-0" />
             </div>
           )}
           {top3.length === 0 ? (
-            <p className="text-[11px] text-center text-muted-foreground py-2">Be the first to delve.</p>
+            <p className="text-[11px] text-center text-foreground/75 py-2">Be the first to delve.</p>
           ) : (
             <div className="space-y-1.5">
               {top3.map((r) => (
                 <div key={r.id} className="flex items-center gap-2.5 text-[12px]">
-                  <span className="w-5 font-mono font-bold text-muted-foreground">#{r.rank}</span>
+                  <span className="w-5 font-mono font-extrabold text-foreground/75">#{r.rank}</span>
                   {r.hero?.class && <ClassBadge cls={r.hero.class as HeroClass} size="sm" />}
-                  <span className="flex-1 truncate font-semibold">{r.hero?.hero_name ?? r.profile.display_name}</span>
-                  <span className="font-mono font-bold tabular-nums" style={{ color: 'hsl(var(--gold))' }}>L{r.highest_completed_level}</span>
+                  <span className="font-rd-display flex-1 truncate font-extrabold tracking-wide">{r.hero?.hero_name ?? r.profile.display_name}</span>
+                  <span className="font-mono font-extrabold tabular-nums" style={{ color: 'hsl(var(--gold))' }}>L{r.highest_completed_level}</span>
                 </div>
               ))}
             </div>

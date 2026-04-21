@@ -73,10 +73,10 @@ export default function RuneDelveShopPage() {
       </div>
 
       <div className="text-center space-y-1">
-        <h1 className="page-header-title flex items-center justify-center gap-2">
+        <h1 className="rd-title page-header-title flex items-center justify-center gap-2 text-2xl">
           <Sparkles className="w-5 h-5 text-primary" /> Relic Shop
         </h1>
-        <p className="text-[11px] text-muted-foreground">Spend Rune Shards to permanently unlock relics. Equip them in the Armory.</p>
+        <p className="text-[12px] font-semibold text-foreground/80">Spend Rune Shards to permanently unlock relics. Equip them in the Armory.</p>
       </div>
 
       {/* Tier tabs */}
@@ -124,8 +124,8 @@ export default function RuneDelveShopPage() {
       {/* Tier-locked banner */}
       {!tierUnlocked(tier) && (
         <div className="glass-card p-4 text-center">
-          <p className="text-[12px] font-extrabold mb-1">Tier {tier} sealed</p>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="rd-title text-[14px] font-extrabold mb-1 text-foreground">Tier {tier} sealed</p>
+          <p className="text-[12px] font-semibold text-foreground/80">
             Reach Chapter {tier} to unlock these relics. You're in Chapter {currentChapter}.
           </p>
         </div>

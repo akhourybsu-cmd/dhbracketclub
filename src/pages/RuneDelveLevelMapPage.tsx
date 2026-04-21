@@ -36,14 +36,14 @@ export default function RuneDelveLevelMapPage() {
         borderColor: 'hsl(var(--primary) / 0.2)',
       }}>
         <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-          <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-primary/15 text-primary tracking-wider">CHAPTER {chapter}</span>
-          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">L{start}–{start + 49}</span>
+          <span className="font-rd-display px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-primary/20 text-primary tracking-[0.18em]">CHAPTER {chapter}</span>
+          <span className="text-[10px] font-extrabold text-foreground/75 uppercase tracking-wider">L{start}–{start + 49}</span>
         </div>
-        <h1 className="text-lg font-extrabold tracking-tight leading-tight">{meta.name}</h1>
-        <p className="text-[11px] text-muted-foreground mb-2.5">{meta.subtitle}</p>
+        <h1 className="rd-title text-xl tracking-wide leading-tight text-foreground">{meta.name}</h1>
+        <p className="text-[12px] text-foreground/75 mb-2.5 italic">{meta.subtitle}</p>
         <div className="flex items-center justify-between text-[10px] mb-1">
-          <span className="font-bold text-muted-foreground uppercase tracking-wider">Progress</span>
-          <span className="font-mono font-bold tabular-nums">{completedInChapter}/50</span>
+          <span className="font-extrabold text-foreground/75 uppercase tracking-wider">Progress</span>
+          <span className="font-mono font-extrabold tabular-nums text-foreground">{completedInChapter}/50</span>
         </div>
         <div className="h-1.5 rounded-full bg-muted/50 overflow-hidden">
           <div className="h-full bg-primary transition-all" style={{ width: `${chapterPct}%` }} />
@@ -60,22 +60,22 @@ export default function RuneDelveLevelMapPage() {
               key={ch}
               onClick={() => setChapter(ch)}
               className={cn(
-                'shrink-0 px-3.5 h-9 rounded-xl text-[11px] font-extrabold flex items-center gap-1.5 btn-press border',
+                'font-rd-display shrink-0 px-3.5 h-9 rounded-xl text-[12px] font-extrabold flex items-center gap-1.5 btn-press border tracking-wide',
                 isCurrent
-                  ? 'bg-primary/15 text-primary border-primary/40'
-                  : 'bg-muted/30 text-foreground border-border/40',
+                  ? 'bg-primary/20 text-primary border-primary/50'
+                  : 'bg-muted/30 text-foreground/95 border-border/40',
               )}
             >
-              {!reached && <Lock className="w-3 h-3 opacity-60" />}
+              {!reached && <Lock className="w-3 h-3 opacity-70" />}
               Ch {ch}
-              <span className="text-[9px] text-muted-foreground font-bold">L{(ch - 1) * 50 + 1}</span>
+              <span className="text-[9px] text-foreground/65 font-bold">L{(ch - 1) * 50 + 1}</span>
             </button>
           );
         })}
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-3 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+      <div className="flex items-center justify-center gap-3 text-[9px] font-extrabold uppercase tracking-wider text-foreground/75">
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-primary" /> Next</span>
         <span className="flex items-center gap-1"><Check className="w-2.5 h-2.5" style={{ color: 'hsl(var(--success))' }} /> Cleared</span>
         <span className="flex items-center gap-1"><Crown className="w-2.5 h-2.5" style={{ color: 'hsl(var(--gold))' }} /> Milestone</span>

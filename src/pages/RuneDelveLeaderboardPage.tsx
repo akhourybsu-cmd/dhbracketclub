@@ -13,8 +13,8 @@ export default function RuneDelveLeaderboardPage() {
   return (
     <div className="space-y-4 pb-8">
       <div className="space-y-1">
-        <h1 className="page-header-title">Campaign Leaders</h1>
-        <p className="text-[11px] text-muted-foreground">Ranked by highest level cleared, then total levels cleared.</p>
+        <h1 className="rd-title page-header-title text-2xl">Campaign Leaders</h1>
+        <p className="text-[12px] text-foreground/80">Ranked by highest level cleared, then total levels cleared.</p>
       </div>
 
       {isLoading ? (
@@ -34,12 +34,12 @@ export default function RuneDelveLeaderboardPage() {
                   <span className="w-6 font-mono font-extrabold text-sm tabular-nums text-muted-foreground">#{r.rank}</span>
                   {r.hero?.class && <ClassBadge cls={r.hero.class as HeroClass} size="sm" />}
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-bold truncate">
+                    <p className="font-rd-display text-[14px] font-extrabold truncate tracking-wide">
                       {heroName ?? r.profile.display_name}
-                      {isMe && <span className="text-[10px] text-primary ml-1">(you)</span>}
+                      {isMe && <span className="text-[10px] text-primary ml-1 font-sans">(you)</span>}
                     </p>
-                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground truncate">
-                      {lvl ? <span className="font-bold">Lv {lvl}</span> : null}
+                    <div className="flex items-center gap-1.5 text-[10px] text-foreground/75 truncate">
+                      {lvl ? <span className="font-extrabold">Lv {lvl}</span> : null}
                       {title ? <><span>·</span><span className="text-primary/80 font-bold truncate">{title}</span></> : null}
                       <span>·</span>
                       <span>{r.total_levels_cleared} cleared</span>

@@ -470,10 +470,10 @@ export default function RuneDelvePlayPage() {
             style={{ borderColor: met ? 'hsl(var(--primary) / 0.45)' : undefined }}
           >
             <span className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center gap-1"
-              style={{ background: 'hsl(var(--accent) / 0.18)', color: 'hsl(var(--accent-foreground, var(--foreground)))' }}>
+              style={{ background: 'hsl(var(--accent) / 0.22)', color: 'hsl(var(--accent))', border: '1px solid hsl(var(--accent) / 0.35)' }}>
               <Target className="w-3 h-3" /> Bonus
             </span>
-            <span className="text-[12px] font-bold flex-1 truncate">{secondaryLabel(secondaryObjective)}</span>
+            <span className="text-[12px] font-extrabold flex-1 truncate text-foreground/95">{secondaryLabel(secondaryObjective)}</span>
             <span className={`text-[10px] font-extrabold tabular-nums ${met ? 'text-primary' : 'text-muted-foreground'}`}>
               {met ? '✓ Met' : secondaryShort(secondaryObjective)}
             </span>
@@ -518,17 +518,17 @@ export default function RuneDelvePlayPage() {
         }}
       >
         <div className="flex items-center gap-1.5">
-          <span className="text-[9px] font-extrabold uppercase tracking-wider text-foreground/60">DMG</span>
+          <span className="text-[9px] font-extrabold uppercase tracking-wider text-foreground/80">DMG</span>
           <span className="text-[12px] font-extrabold tabular-nums text-foreground">{combat.totalDamage}</span>
         </div>
-        <span className="h-3 w-px bg-foreground/15" />
+        <span className="h-3 w-px bg-foreground/25" />
         <div className="flex items-center gap-1.5">
-          <span className="text-[9px] font-extrabold uppercase tracking-wider text-foreground/60">KILLS</span>
+          <span className="text-[9px] font-extrabold uppercase tracking-wider text-foreground/80">KILLS</span>
           <span className="text-[12px] font-extrabold tabular-nums text-foreground">{combat.enemiesDefeated}</span>
         </div>
-        <span className="h-3 w-px bg-foreground/15" />
+        <span className="h-3 w-px bg-foreground/25" />
         <div className="flex items-center gap-1.5">
-          <span className="text-[9px] font-extrabold uppercase tracking-wider text-foreground/60">CHAIN</span>
+          <span className="text-[9px] font-extrabold uppercase tracking-wider text-foreground/80">CHAIN</span>
           <span className="text-[12px] font-extrabold tabular-nums text-foreground">{combat.longestChain}</span>
         </div>
       </div>

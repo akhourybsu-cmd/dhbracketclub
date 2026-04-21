@@ -96,8 +96,8 @@ export default function RuneDelveResultsPage() {
           <div className="space-y-1 mb-2">
             <div className="flex items-center justify-center gap-2">
               <ClassBadge cls={hero.class} size="sm" />
-              <p className="text-[12px] font-extrabold truncate max-w-[200px]">{hero.hero_name}</p>
-              <span className="text-[10px] font-bold text-muted-foreground">Lv {levelFromXp(hero.xp).level} {getClass(hero.class).name}</span>
+              <p className="font-rd-display text-[13px] font-extrabold truncate max-w-[200px] tracking-wide">{hero.hero_name}</p>
+              <span className="text-[10px] font-extrabold text-foreground/75">Lv {levelFromXp(hero.xp).level} {getClass(hero.class).name}</span>
             </div>
             {(hero.cosmetic_title ?? titleForLevel(levelFromXp(hero.xp).level, hero.class)) && (
               <p className="text-[10px] font-extrabold text-primary">
@@ -107,7 +107,7 @@ export default function RuneDelveResultsPage() {
           </div>
         )}
         <p className="text-3xl mb-1">{outcome.emoji}</p>
-        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">{outcome.label}</p>
+        <p className="rd-title text-[14px] font-extrabold uppercase tracking-[0.18em] text-foreground/90 mb-1">{outcome.label}</p>
         <p className="font-mono text-4xl font-extrabold tabular-nums mb-2" style={{ color: 'hsl(var(--gold))' }}>
           {run.score.toLocaleString()}
         </p>
