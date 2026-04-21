@@ -528,6 +528,11 @@ export default function RuneDelvePlayPage() {
   };
 
   const handleAbility = () => {
+    const relics = activeRelicsSnapshot ?? activeRelics;
+    // First Light: first N ability casts skip the mana cost. We restore the
+    // mana after useAbility() consumes it so the cast still resolves normally.
+    const isFreeCast = abilityFreeFirstUse(relics, abilityUsedCount);
+    const manaBefore = combat.mana;
     const { next, ok } = useAbility(combat, hero.class, bossRule);
     if (!ok) {
       toast.info('Ability not ready — fill mana orbs first.');
@@ -552,12 +557,20 @@ export default function RuneDelvePlayPage() {
     turnLogs.push({ kind: 'info', text: 'Free action — your turn continues.' });
     toast.success('✨ Ability — free action!', { duration: 1200 });
 
+    // First Light: refund the mana that useAbility() just spent.
+    const finalNext: CombatState = isFreeCast ? { ...next, mana: manaBefore } : next;
+    if (isFreeCast) {
+      turnLogs.push({ kind: 'info', text: '🌅 First Light — mana refunded' });
+      toast.success('🌅 First Light — free!', { duration: 1100 });
+    }
+    setAbilityUsedCount(c => c + 1);
+
     // Abilities are now FREE actions: no enemy retaliation, no turn consumed,
     // no corruption spread. Player keeps their turn to chain again.
-    setCombat(next);
+    setCombat(finalNext);
     pushLogs(turnLogs);
-    const status = checkObjective(next, level.turn_limit, objType, level.objective_target, secondaryObjective);
-    if (status.over) void finalize(next, status.cleared);
+    const status = checkObjective(finalNext, level.turn_limit, objType, level.objective_target, secondaryObjective);
+    if (status.over) void finalize(finalNext, status.cleared);
   };
 
   async function finalize(final: CombatState, cleared: boolean) {
