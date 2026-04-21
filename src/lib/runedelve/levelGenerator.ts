@@ -115,15 +115,20 @@ function turnLimitFor(level: number): number {
   return 8;
 }
 
-// Enemy count ramp — Rebalance: push the 3-enemy threshold from L≤25 down
-// to L≤8 always-2, then chance-gated until L25, full 3 from L26+.
+// Enemy count ramp — Rebalance v2: smooth the L14 cliff. Playtest showed
+// the 25% chance of 3 enemies at L14 paired with tanky Slime rolls created
+// a 2.5× HP spike vs L13. We now keep 2 enemies through L15, then ramp.
 function enemyCountFor(level: number, rng: () => number): number {
-  if (level <= 8) return 2;
-  if (level <= 15) return rng() < 0.75 ? 2 : 3;    // 75/25 split
-  if (level <= 25) return rng() < 0.5 ? 2 : 3;     // 50/50 split
+  if (level <= 15) return 2;                       // tutorial-friendly Chapter 1 opener
+  if (level <= 22) return rng() < 0.6 ? 2 : 3;     // 60/40 split — gentle introduction
+  if (level <= 30) return rng() < 0.35 ? 2 : 3;    // 35/65 — mostly 3
   if (level <= 75) return 3;
   return 3 + rngInt(rng, 2);                       // 3-4
 }
+
+// Per-template HP cap on early levels — keep the L14-15 area from rolling a
+// triple-Slime/Stone-Golem wall before the player has any relics.
+const EARLY_HP_CAP = 110;
 
 // HP/damage scaling — softer ramp through L25, then resume original curve.
 function scaleEnemy(base: { hp: number; damage: number }, level: number) {
