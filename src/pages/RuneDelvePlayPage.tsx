@@ -68,6 +68,11 @@ const RUNE_LABEL: Record<RuneType, string> = {
   gold: 'Radiant',
 };
 
+// Module-level monotonic counter for log entry IDs. Stable, sortable, and
+// avoids a Math.random() inside every setState updater.
+let logSeq = 0;
+const nextLogId = () => `l-${++logSeq}`;
+
 export default function RuneDelvePlayPage() {
   const navigate = useNavigate();
   const { levelNumber: levelParam } = useParams<{ levelNumber: string }>();
