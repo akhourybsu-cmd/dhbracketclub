@@ -1,62 +1,68 @@
 
 
-## Rune Delve — Final wiring & gap-closure pass
+# Rune Delve — Full-Screen Game Shell
 
-The five bands and intro UI are wired. This pass closes the **integration gaps** that remain before calling the campaign progression complete: a few real bugs, a couple of fairness/clarity gaps, and the final mobile polish item.
+Transform Rune Delve from a regular page inside the Compete tab into an immersive, full-screen mobile game mode — with a polished entry transition, hidden app chrome, dedicated in-game HUD, and an explicit exit flow.
 
-### Gaps found (from a full audit of the wired code)
+## What you'll get
 
-**1. Bug — chapter switcher is gated on the OLD progress model**
-`RuneDelveLevelMapPage` only lets the player switch to chapter 2/3 if `chapterFor(highest_unlocked_level) >= ch`. After the destructive reset, every player is back at level 1, so the chapter buttons for Ch 2/3 are locked even when peeking. Players who haven't unlocked them should still be able to **preview** later chapters (consistent with how the level cards show "🔒"). Fix: always allow switching; keep the lock pip on individual level cards.
+1. **A "Launch Game" entry transition** when tapping Rune Delve from Compete — a short fantasy-themed loading screen (logo, arcane glow, animated rune progress bar, chapter subtitle) before the game shell appears.
+2. **Hidden bottom nav + sidebar nav** while inside Rune Delve, so the phone screen feels like a contained game.
+3. **A dedicated in-game HUD** at the top of every Rune Delve screen: hero name + class crest, current chapter, Rune Shards balance, and a back/exit control.
+4. **A stronger fantasy palette** scoped only to Rune Delve (deeper obsidian background, jewel-tone accents, subtle arcane vignette already present in `.rd-mode`, now extended to the full viewport).
+5. **An explicit exit flow** — a back arrow in the HUD that returns the player to `/compete` and restores the normal app chrome. During an active run, exit shows a small "Leave run? Progress this turn will be lost" confirmation; everywhere else exit is one tap.
 
-**2. Bug — boss-rule end-of-turn effect runs twice per turn**
-In `RuneDelvePlayPage.handleChain` and `handleAbility`, `enemiesAttack(...)` already calls `applyBossTurnEffects` internally; the page then calls `applyBossTurnEffects(afterEnemies, bossRule)` again. On Regenerator levels the boss heals **16 HP/turn instead of 8** — roughly the entire intended challenge, doubled. Fix: drop the redundant call from both handlers.
+## Screens touched
 
-**3. Bug — `MechanicIntroSheet` opens for mechanic combos too**
-`introMechanicForLevel` only returns the mechanic on band-opener levels (26, 51, 76, 101, 126), which is correct. But it's evaluated against `level.modifiers.intro_mechanic` first, which the generator **always sets to the band intro id** for any level inside the band — so the modal can re-open on later levels. Cross-checking, the field is `null` from `introMechanicForLevel(n)` for non-opener levels — verified safe. **No fix needed**, but worth a comment so it doesn't regress.
+All Rune Delve routes (`/rune-delve`, `/levels`, `/play/:n`, `/results/:n`, `/hero`, `/history`, `/leaderboard`, `/shop`, `/armory`) get the same shell treatment so the experience is cohesive — no screen feels like a generic app panel.
 
-**4. Fairness — Layered Goals are required for clear but give no score reward**
-`secondaryMet` gates the clear, but `calculateScore` ignores it entirely. A player who hits a much harder dual-objective level scores the same as one with a single objective. Fix: add a small `+250` bonus to `calculateScore` when a `secondaryMet === true` flag is passed in, and thread the flag through `finalize()`.
+## Technical approach
 
-**5. Clarity — Boss-rule "Last Stand" silently does nothing in the UI**
-When a chain targets the immune final enemy, `applyChain` finds an empty `targetable[]` and the chain just deals 0 damage with no feedback. Players think it's broken. Fix: when a red chain resolves to 0 damage on a Last-Stand level with the boss alive, fire a one-shot toast: "🛡️ Boss is shielded — defeat the others first."
+- **`AppLayout.tsx`**: detect `location.pathname.startsWith('/rune-delve')`. When true, hide mobile bottom nav and desktop sidebar, render children edge-to-edge (no `max-w-[640px]` wrapper, no bottom padding for nav).
+- **`RuneDelveLayout.tsx`** (existing wrapper): extend to render the full-screen shell — a sticky `RuneDelveHUD` at the top (back button, hero+class crest, chapter pill, shard balance) and a full-bleed scroll container with safe-area padding. Already applies `.rd-mode` skin; we'll deepen the background to a stronger dungeon vignette scoped only here.
+- **New `RuneDelveBoot.tsx`**: a one-time boot/loading overlay shown when the user first enters `/rune-delve/*` from outside. Plays for ~1.2s with logo, animated rune progress bar (0→100%), chapter name flavor text. Tracked via a `sessionStorage` flag so it doesn't replay between in-game route changes — only on a real entry from outside Rune Delve.
+- **New `RuneDelveHUD.tsx`**: compact 48px-tall sticky bar with back arrow (left), hero name + class emoji + chapter pill (center), `ShardBalance` pill (right). On the active play screen (`/play/:n`), the HUD compresses further and the back button triggers an exit-confirmation sheet.
+- **Page cleanup**: remove the per-page "← Back to Compete" links from `RuneDelveHomePage` and other Rune Delve pages (the HUD owns navigation now). Remove the in-page `ShardBalance` from the Home header (HUD owns it).
+- **Palette deepening**: extend `.rd-mode` in `index.css` with a stronger full-viewport background (deeper obsidian + faint arcane sigil radial), and a `.rd-shell` class for the full-bleed game container.
+- **Exit confirmation**: small `AlertDialog` triggered only when leaving from `/play/:n` mid-run. Other screens exit immediately.
+- **State preservation**: no changes to data — React Query cache + Supabase persistence already handle this. Re-entering Rune Delve lands on `/rune-delve` (campaign home), which already shows the "Continue · Level N" CTA.
 
-**6. Clarity — Level Map doesn't surface secondary goal or boss rule**
-The map shows the mechanic icon and a "NEW" pip but never hints "this level has a bonus goal" or "this is a boss-rule level." Fix: add a tiny corner glyph (🎯 for `secondary_objective`, 👑 for `boss_rule`) below the mechanic chip on the level card.
+## Entry / exit flow
 
-**7. Polish — Results page recap title is too generic on failed runs**
-The "This level featured" recap renders identically on a clear and a defeat. On defeats, change the heading to "What you faced" (subtle teaching cue).
+```text
+Compete tab
+   │ tap Rune Delve
+   ▼
+[Boot overlay: 1.2s — logo, rune progress bar, "Chapter N · Subtitle"]
+   │ (sessionStorage flag set)
+   ▼
+Rune Delve shell — bottom nav HIDDEN, HUD visible
+   │ navigate freely between /rune-delve/* (no boot replay)
+   │ tap ← in HUD
+   ▼
+(if /play/:n mid-run → confirm sheet)
+   ▼
+/compete — bottom nav + sidebar RESTORED
+```
 
-**8. Cleanup — comment-and-test guard for the modifier shape**
-Several files cast `level.modifiers as any`. Add a typed `LevelModifiers` shape exported from `levelGenerator.ts` and use it in the play and results pages to prevent drift if a 6th mechanic is added.
+## Files
 
-### Files to edit
+**New**
+- `src/components/runedelve/RuneDelveHUD.tsx` — sticky in-game header
+- `src/components/runedelve/RuneDelveBoot.tsx` — entry loading overlay
+- `src/components/runedelve/ExitRunDialog.tsx` — mid-run exit confirmation
 
-| File | Change |
-|---|---|
-| `src/pages/RuneDelveLevelMapPage.tsx` | (a) Remove the `reachable` gate on chapter switch buttons (still show a small lock pip for preview-only chapters). (b) Render a 👑 glyph for boss-rule levels and 🎯 glyph for secondary-objective levels at the bottom-right of the card. |
-| `src/pages/RuneDelvePlayPage.tsx` | (a) Remove the duplicate `applyBossTurnEffects` calls in `handleChain` and `handleAbility`. (b) Detect "Last Stand shielded chain" and toast it. (c) Pass `secondaryMet(...)` into `finalize()` and through to `calculateScore`. |
-| `src/lib/runedelve/scoring.ts` | Add an optional `secondaryBonus: boolean` input → `+250` line item in `ScoreBreakdown`. |
-| `src/pages/RuneDelveResultsPage.tsx` | Switch recap title to "What you faced" on non-cleared runs. Render the `secondaryBonus` line if present. |
-| `src/lib/runedelve/levelGenerator.ts` | Export a `LevelModifiers` interface and use it in the `LevelDefinition.modifiers` field. |
-| `src/components/runedelve/MechanicIntroSheet.tsx` | Add a tiny inline comment that the modal is intro-only (band openers) — doc only. |
+**Edited**
+- `src/components/AppLayout.tsx` — hide chrome + remove page padding for `/rune-delve/*`
+- `src/components/runedelve/RuneDelveLayout.tsx` — mount HUD + Boot, full-bleed container
+- `src/index.css` — deepen `.rd-mode` background, add `.rd-shell` full-bleed utility
+- `src/pages/RuneDelveHomePage.tsx` — remove redundant back link + shard pill (HUD owns them)
+- `src/pages/RuneDelvePlayPage.tsx` — wire exit confirmation when leaving mid-run
+- Light cleanup of redundant back links in `RuneDelveLevelMapPage`, `RuneDelveHeroPage`, `RuneDelveResultsPage`, `RuneDelveLeaderboardPage`, `RuneDelveHistoryPage`, `RuneDelveShopPage`, `RuneDelveArmoryPage`
 
-### Out of scope (verified working)
+## Out of scope
 
-- Schema, RLS, and seeding — `rune_delve_levels.modifiers` is JSONB and accepts the new keys; the destructive reset migration is in place.
-- Mechanic registry, combine-rule gating (3-level intro phase + every-3rd-level layering after).
-- Sealed Tiles, Telegraphed Attacks, Corrupted Tiles core engines & visuals.
-- Boss-rule combat hooks for `last_stand`, `regenerator`, `enrager`.
-- Layered-goal evaluator + secondary-goal pill UI on the play page.
-- Results-page mechanic recap (chips + bonus-goal line).
-
-### Manual testing checklist
-
-1. Open the Level Map at level 1 → tap "Ch 2" → preview opens, levels are visibly locked.
-2. Play level 130 (Regenerator boss) → boss heals **8 HP/turn**, not 16.
-3. Play level 130 again → on Last Stand turn, hit boss with red chain → toast appears, no silent 0-damage.
-4. Play level 103 (Layered Goals) → satisfy both objectives → results show "Bonus Goal +250" line.
-5. Play level 103 and miss the secondary → primary still fails the run with an explanatory recap.
-6. On the Level Map, level 103 shows 🎯 corner glyph; level 130/140/150 each show 👑.
-7. Lose a run → results recap header reads "What you faced".
+- No changes to gameplay, combat, scoring, relics, hero/class progression, or campaign data.
+- No changes to other DH Club modules — the chrome-hiding is scoped strictly to `/rune-delve/*`.
+- Boot overlay stays under 1.5s — no fake long loading.
 
