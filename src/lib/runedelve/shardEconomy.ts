@@ -8,7 +8,10 @@ export interface ClearShardArgs {
   isFirstClear: boolean;
   bossClear: boolean;       // L25/50/75/100/125/150
   chapterCleared: boolean;  // first time finishing a chapter
-  compassEquipped: boolean; // Wanderer's Compass relic
+  compassEquipped: boolean; // Wanderer's Compass relic equipped
+  /** Wanderer's Compass rank-aware multiplier (1.15 R1 → 1.27 R5). When
+   *  omitted but `compassEquipped`, defaults to 1.15. */
+  compassMultiplier?: number;
 }
 
 export interface FailShardArgs {
@@ -21,6 +24,7 @@ export interface FailShardArgs {
   bossPhaseReached: number; // 0..3
   bossHasRule: boolean;
   compassEquipped: boolean;
+  compassMultiplier?: number;
 }
 
 export interface ShardBreakdown {
