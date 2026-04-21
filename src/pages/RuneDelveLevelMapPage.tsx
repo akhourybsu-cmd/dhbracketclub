@@ -29,7 +29,6 @@ export default function RuneDelveLevelMapPage() {
 
   return (
     <div className="space-y-4 pb-8">
-      <Link to="/rune-delve" className="back-link"><ArrowLeft className="w-4 h-4" /> Back</Link>
 
       {/* Chapter header — flavor + progress */}
       <div className="glass-card p-4" style={{

@@ -45,7 +45,6 @@ export default function RuneDelveHistoryPage() {
 
   return (
     <div className="space-y-4 pb-8">
-      <Link to="/rune-delve" className="back-link"><ArrowLeft className="w-4 h-4" /> Back</Link>
       <div className="space-y-1">
         <h1 className="page-header-title">Level History</h1>
         <p className="text-[11px] text-muted-foreground">Your best score on each level you've cleared.</p>

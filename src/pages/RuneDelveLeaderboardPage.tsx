@@ -12,7 +12,6 @@ export default function RuneDelveLeaderboardPage() {
 
   return (
     <div className="space-y-4 pb-8">
-      <Link to="/rune-delve" className="back-link"><ArrowLeft className="w-4 h-4" /> Back</Link>
       <div className="space-y-1">
         <h1 className="page-header-title">Campaign Leaders</h1>
         <p className="text-[11px] text-muted-foreground">Ranked by highest level cleared, then total levels cleared.</p>
