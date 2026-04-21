@@ -57,6 +57,13 @@ export default function RuneDelvePlayPage() {
   const advance = useAdvanceProgress();
   const updateHero = useUpdateHero();
   const updateClass = useUpdateClassProgress();
+  const { data: loadout } = useLoadout(hero?.class);
+  const { data: wallet } = useRuneWallet();
+  const { data: failureRow } = useFailureRow(level?.level_number ?? null);
+  const earnShards = useEarnShards();
+  const bumpFailure = useBumpFailure();
+  const resetFailure = useResetFailure();
+  const unlockSlot = useUnlockSlot();
 
   const [grid, setGrid] = useState<RuneType[][] | null>(null);
   const [combat, setCombat] = useState<CombatState | null>(null);
@@ -66,8 +73,12 @@ export default function RuneDelvePlayPage() {
   const [flashId, setFlashId] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [introMechanic, setIntroMechanic] = useState<MechanicId | null>(null);
-  const [endState, setEndState] = useState<null | { cleared: boolean; reason: 'cleared' | 'defeated' | 'timeout'; score: number; isNewBest: boolean }>(null);
+  const [endState, setEndState] = useState<null | { cleared: boolean; reason: 'cleared' | 'defeated' | 'timeout'; score: number; isNewBest: boolean; shards: number }>(null);
+  const [lastStandUsed, setLastStandUsed] = useState(false);
   const [corruption, setCorruption] = useState<CorruptionState>(emptyCorruption);
+
+  // Active relic loadout for this run.
+  const activeRelics = useMemo(() => buildActive([loadout?.slot_1, loadout?.slot_2, loadout?.slot_3]), [loadout]);
 
   // Resolve mechanics for this level. Prefer the persisted row, fall back
   // to the deterministic helper so legacy/transient rows still work.
