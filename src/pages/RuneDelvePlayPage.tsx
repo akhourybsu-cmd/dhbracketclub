@@ -270,7 +270,40 @@ export default function RuneDelvePlayPage() {
     const xp = xpForRun(breakdown.total, cleared);
     const reason: 'cleared' | 'defeated' | 'timeout' = cleared ? 'cleared' : final.hp <= 0 ? 'defeated' : 'timeout';
     const isNewBest = !existingRun || breakdown.total > (existingRun.score ?? 0);
-    setEndState({ cleared, reason, score: breakdown.total, isNewBest });
+
+    // ── Rune Shards reward ────────────────────────────────────────────────
+    const compassEquipped = has(activeRelics, 'wanderers_compass');
+    const isFirstClear = cleared && (!existingRun || !existingRun.dungeon_cleared);
+    const bossClear = cleared && level.level_number % 25 === 0;
+    const totalEnemies = (level.enemy_config?.length ?? final.enemies.length) || 1;
+    let shardsAwarded = 0;
+    try {
+      if (cleared) {
+        const breakdownShards = computeClearShards({
+          levelNumber: level.level_number,
+          isFirstClear,
+          bossClear,
+          chapterCleared: false,
+          compassEquipped,
+        });
+        shardsAwarded = breakdownShards.total;
+      } else {
+        const nextFailureCount = (failureRow?.failure_count ?? 0) + 1;
+        const breakdownShards = computeFailureShards({
+          levelNumber: level.level_number,
+          failureCount: nextFailureCount,
+          enemiesKilled: final.enemiesDefeated,
+          totalEnemies,
+          turnsUsed,
+          turnLimit: level.turn_limit,
+          bossPhaseReached: 0,
+          bossHasRule: !!bossRule,
+          compassEquipped,
+        });
+        shardsAwarded = breakdownShards.total;
+      }
+    } catch { shardsAwarded = 0; }
+    setEndState({ cleared, reason, score: breakdown.total, isNewBest, shards: shardsAwarded });
     try {
       // Don't submit transient levels (admin hasn't seeded them yet).
       if (!level.id.startsWith('transient-')) {
