@@ -132,7 +132,6 @@ export default function RuneDelvePlayPage() {
   if (progress && levelNumber > progress.highest_unlocked_level) {
     return (
       <div className="space-y-4">
-        <Link to="/rune-delve" className="back-link"><ArrowLeft className="w-4 h-4" /> Back</Link>
         <div className="glass-card p-6 text-center space-y-2">
           <p className="text-2xl">🔒</p>
           <h2 className="font-extrabold text-base">Level Locked</h2>
@@ -418,7 +417,6 @@ export default function RuneDelvePlayPage() {
   return (
     <div className="space-y-4 pb-8 relative">
       <div className="flex items-center justify-between">
-        <Link to="/rune-delve" className="back-link"><ArrowLeft className="w-4 h-4" /> Exit</Link>
         <div className="flex items-center gap-2">
           {equippedCount > 0 && (
             <Link
