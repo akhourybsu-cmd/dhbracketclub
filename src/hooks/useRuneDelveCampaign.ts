@@ -36,7 +36,7 @@ export function useLevel(levelNumber: number | undefined) {
     staleTime: Infinity,
     queryFn: async (): Promise<RuneDelveLevel> => {
       if (!levelNumber) throw new Error('No level number');
-      const { data: existing } = await (supabase as any)
+      const { data: existing } = await supabase
         .from('rune_delve_levels')
         .select('*')
         .eq('level_number', levelNumber)
@@ -48,7 +48,7 @@ export function useLevel(levelNumber: number | undefined) {
       // re-fetch (someone else, or a future admin, will seed it). Until then,
       // we still return a transient level so play can continue.
       const def: LevelDefinition = generateLevel(levelNumber);
-      const { data: inserted, error } = await (supabase as any)
+      const { data: inserted, error } = await supabase
         .from('rune_delve_levels')
         .insert({
           level_number: def.level_number,
@@ -70,7 +70,7 @@ export function useLevel(levelNumber: number | undefined) {
       }
       // Race or RLS denial — try fetch once more, otherwise return a transient
       // level shaped like a DB row so the UI can render and the user can play.
-      const { data: again } = await (supabase as any)
+      const { data: again } = await supabase
         .from('rune_delve_levels')
         .select('*')
         .eq('level_number', levelNumber)
@@ -102,7 +102,7 @@ export function useLevelWindow(start: number, count: number) {
     staleTime: 60_000,
     queryFn: async (): Promise<RuneDelveLevel[]> => {
       const numbers = Array.from({ length: count }, (_, i) => start + i).filter(n => n >= 1);
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from('rune_delve_levels')
         .select('*')
         .in('level_number', numbers);
@@ -144,13 +144,13 @@ export function useMyProgress() {
     staleTime: 30_000,
     queryFn: async (): Promise<RuneDelveProgress | null> => {
       if (!user) return null;
-      const { data: existing } = await (supabase as any)
+      const { data: existing } = await supabase
         .from('rune_delve_progress')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
       if (existing) return existing as RuneDelveProgress;
-      const { data: created } = await (supabase as any)
+      const { data: created } = await supabase
         .from('rune_delve_progress')
         .insert({ user_id: user.id })
         .select()
@@ -177,7 +177,7 @@ export function useMyLevelRun(levelId: string | undefined, levelNumber?: number)
     queryFn: async () => {
       if (!user || !levelId) return null;
       const fetchOnce = async () => {
-        const { data } = await (supabase as any)
+        const { data } = await supabase
           .from('rune_delve_runs')
           .select('*')
           .eq('user_id', user.id)
@@ -242,7 +242,7 @@ export function useSubmitLevelRun() {
       if (!user) throw new Error('Not authenticated');
 
       // Read existing best — upsert manually to keep best-score semantics.
-      const { data: existing } = await (supabase as any)
+      const { data: existing } = await supabase
         .from('rune_delve_runs')
         .select('id, score')
         .eq('user_id', user.id)
@@ -251,7 +251,7 @@ export function useSubmitLevelRun() {
 
       if (existing && existing.score >= params.score) {
         // Keep the existing best, but update meta fields for the latest attempt.
-        const { data } = await (supabase as any)
+        const { data } = await supabase
           .from('rune_delve_runs')
           .update({
             // intentionally only persist non-score meta to preserve best-of behavior
@@ -263,7 +263,7 @@ export function useSubmitLevelRun() {
         return data;
       }
       if (existing) {
-        const { data } = await (supabase as any)
+        const { data } = await supabase
           .from('rune_delve_runs')
           .update({
             score: params.score,
@@ -283,7 +283,7 @@ export function useSubmitLevelRun() {
           .single();
         return data;
       }
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('rune_delve_runs')
         .insert({
           user_id: user.id,
@@ -311,7 +311,7 @@ export function useAdvanceProgress() {
   return useMutation({
     mutationFn: async (clearedLevel: number) => {
       if (!user) throw new Error('Not authenticated');
-      const { data: existing } = await (supabase as any)
+      const { data: existing } = await supabase
         .from('rune_delve_progress')
         .select('*')
         .eq('user_id', user.id)
@@ -335,7 +335,7 @@ export function useAdvanceProgress() {
         current_chapter: chapterFor(newUnlocked),
       };
       if (existing) {
-        const { data } = await (supabase as any)
+        const { data } = await supabase
           .from('rune_delve_progress')
           .update(payload)
           .eq('user_id', user.id)
@@ -343,7 +343,7 @@ export function useAdvanceProgress() {
           .single();
         return data;
       }
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from('rune_delve_progress')
         .insert({ user_id: user.id, ...payload })
         .select()
@@ -363,7 +363,7 @@ export function useCampaignLeaderboard() {
     queryKey: ['rune-delve-progress-leaderboard'],
     staleTime: 30_000,
     queryFn: async () => {
-      const { data: rows } = await (supabase as any)
+      const { data: rows } = await supabase
         .from('rune_delve_progress')
         .select('*')
         .order('highest_completed_level', { ascending: false })
@@ -376,7 +376,7 @@ export function useCampaignLeaderboard() {
       if (userIds.length) {
         const [{ data: pdata }, { data: hdata }] = await Promise.all([
           supabase.from('profiles').select('id, display_name, avatar_url').in('id', userIds),
-          (supabase as any).from('rune_delve_heroes').select('user_id, class, level, hero_name, cosmetic_title, current_streak').in('user_id', userIds),
+          supabase.from('rune_delve_heroes').select('user_id, class, level, hero_name, cosmetic_title, current_streak').in('user_id', userIds),
         ]);
         profiles = Object.fromEntries((pdata ?? []).map((p: any) => [p.id, p]));
         heroes = Object.fromEntries((hdata ?? []).map((h: any) => [h.user_id, h]));
@@ -399,7 +399,7 @@ export function useLevelBestScores(levelId: string | undefined) {
     staleTime: 30_000,
     queryFn: async () => {
       if (!levelId) return [];
-      const { data: runs } = await (supabase as any)
+      const { data: runs } = await supabase
         .from('rune_delve_runs')
         .select('*')
         .eq('level_id', levelId)
@@ -409,7 +409,7 @@ export function useLevelBestScores(levelId: string | undefined) {
       const userIds = Array.from(new Set(list.map((r: any) => r.user_id))) as string[];
       let heroes: Record<string, { hero_name: string; class: string }> = {};
       if (userIds.length) {
-        const { data: hdata } = await (supabase as any)
+        const { data: hdata } = await supabase
           .from('rune_delve_heroes').select('user_id, hero_name, class').in('user_id', userIds);
         heroes = Object.fromEntries((hdata ?? []).map((h: any) => [h.user_id, h]));
       }

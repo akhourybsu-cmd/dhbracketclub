@@ -28,7 +28,7 @@ export function useAllClassProgress() {
     staleTime: 30_000,
     queryFn: async (): Promise<ClassProgress[]> => {
       if (!user) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('rune_delve_class_progress')
         .select('*')
         .eq('user_id', user.id);
@@ -45,14 +45,14 @@ export function useEnsureClassProgress() {
   return useMutation({
     mutationFn: async (cls: HeroClass): Promise<ClassProgress> => {
       if (!user) throw new Error('Not authenticated');
-      const { data: existing } = await (supabase as any)
+      const { data: existing } = await supabase
         .from('rune_delve_class_progress')
         .select('*')
         .eq('user_id', user.id)
         .eq('class', cls)
         .maybeSingle();
       if (existing) return existing as ClassProgress;
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('rune_delve_class_progress')
         .insert({
           user_id: user.id,
@@ -81,7 +81,7 @@ export function useUpdateClassProgress() {
       if (!user) throw new Error('Not authenticated');
       // Upsert keeps this safe if a class row hasn't been created yet (e.g.
       // legacy hero whose backfill missed an edge case).
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('rune_delve_class_progress')
         .upsert(
           { user_id: user.id, class: params.cls, ...params.patch },

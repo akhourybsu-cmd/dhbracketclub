@@ -24,7 +24,7 @@ export function useLoadout(cls: HeroClass | undefined) {
     staleTime: 30_000,
     queryFn: async (): Promise<Loadout> => {
       if (!user || !cls) return empty('warrior', '');
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from('rune_delve_loadouts')
         .select('*')
         .eq('user_id', user.id)
@@ -43,7 +43,7 @@ export function useAllLoadouts() {
     staleTime: 30_000,
     queryFn: async (): Promise<Loadout[]> => {
       if (!user) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('rune_delve_loadouts')
         .select('*')
         .eq('user_id', user.id);
@@ -64,7 +64,7 @@ export function useUpdateLoadout() {
       if (new Set(slots).size !== slots.length) {
         throw new Error('Each relic can only be equipped once.');
       }
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('rune_delve_loadouts')
         .upsert({
           user_id: user.id,

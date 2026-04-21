@@ -26,7 +26,7 @@ export function useRuneDelveHero() {
     staleTime: 60_000,
     queryFn: async (): Promise<RuneDelveHero | null> => {
       if (!user) return null;
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('rune_delve_heroes')
         .select('*')
         .eq('user_id', user.id)
@@ -48,7 +48,7 @@ export function useEnsureHero() {
         hero_name: params.hero_name ?? 'Adventurer',
         class: params.cls ?? 'warrior',
       };
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('rune_delve_heroes')
         .upsert(payload, { onConflict: 'user_id' })
         .select()
@@ -68,7 +68,7 @@ export function useUpdateHero() {
   return useMutation({
     mutationFn: async (patch: Partial<RuneDelveHero>) => {
       if (!user) throw new Error('Not authenticated');
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('rune_delve_heroes')
         .update(patch)
         .eq('user_id', user.id)
