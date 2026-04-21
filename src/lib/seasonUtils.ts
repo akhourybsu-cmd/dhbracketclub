@@ -22,14 +22,24 @@ export function getOrdinalSuffix(n: number): string {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
-/** Get label for a draft by its sequential number within the season */
+/** Get label for a draft by its sequential number within the season.
+ *  Playoff structure: QF (Play-In) → Semis (×2) → Finals (Bo3) + 3rd Place (Bo1) */
 export function getDraftLabel(draftNumber: number, totalRegularDrafts: number): string {
   if (draftNumber <= totalRegularDrafts) return `Draft ${draftNumber}`;
-  // Playoff drafts
   const playoffRound = draftNumber - totalRegularDrafts;
   if (playoffRound === 1) return 'Play-In Round';
-  if (playoffRound === 2) return 'Semifinals';
+  if (playoffRound === 2 || playoffRound === 3) return 'Semifinals';
   return 'Championship';
+}
+
+/** Short label for a playoff round id (used by bracket and match cards). */
+export function getPlayoffRoundLabel(round: 'qf' | 'sf' | 'final' | 'third_place'): string {
+  switch (round) {
+    case 'qf': return 'Play-In';
+    case 'sf': return 'Semifinals';
+    case 'final': return 'Championship';
+    case 'third_place': return '3rd Place';
+  }
 }
 
 /** Legacy: kept for backward compatibility */
