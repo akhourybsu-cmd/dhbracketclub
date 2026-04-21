@@ -87,7 +87,9 @@ export function applyChain(
     const target = targets[0];
     if (target) {
       const live = next.enemies.find(e => e.id === target.id)!;
-      const applied = Math.min(dmg, live.hp);
+      // Enemy armor (from shield_self ability) softens the hit before HP loss.
+      const afterArmor = applyArmorToDamage(live, dmg);
+      const applied = Math.min(afterArmor, live.hp);
       live.hp -= applied;
       resolution.damageDealt = applied;
       next.totalDamage += applied;
