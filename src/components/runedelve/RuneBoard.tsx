@@ -185,7 +185,9 @@ export function RuneBoard({ grid, disabled, onChainComplete, seals, corruptedCel
           <span>{RUNE_PREVIEW[chainType].label}</span>
           <span className="text-muted-foreground">·</span>
           <span className={cn(chain.length >= 3 ? 'text-primary' : 'text-muted-foreground')}>
-            {chain.length >= 3 ? RUNE_PREVIEW[chainType].effect(chain.length) : `${chain.length}/3`}
+            {chain.length >= 3
+              ? (effectOverride?.[chainType] ?? RUNE_PREVIEW[chainType].effect)(chain.length)
+              : `${chain.length}/3`}
           </span>
         </div>
       )}
