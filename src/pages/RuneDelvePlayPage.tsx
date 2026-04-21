@@ -376,6 +376,29 @@ export default function RuneDelvePlayPage() {
           });
         }
       }
+
+      // ── Award Rune Shards & track failure curve ─────────────────────────
+      try {
+        if (shardsAwarded > 0) await earnShards.mutateAsync(shardsAwarded);
+        if (cleared) {
+          await resetFailure.mutateAsync(level.level_number);
+        } else {
+          await bumpFailure.mutateAsync(level.level_number);
+        }
+        // Auto-unlock 3rd slot when ANY class hits L50.
+        const tracks = classTracks ?? [];
+        const maxClassLevel = Math.max(
+          hero.level,
+          ...tracks.map(t => t.level),
+          isNewBest ? 1 : 0,
+        );
+        const desired = slotsForClassLevels(maxClassLevel);
+        if ((wallet?.slots_unlocked ?? 2) < desired) {
+          await unlockSlot.mutateAsync(desired);
+          toast.success('🔓 3rd Relic Slot Unlocked!', { duration: 4500 });
+        }
+      } catch { /* shards are best-effort */ }
+
       setTimeout(() => navigate(`/rune-delve/results/${level.level_number}`), 2500);
     } catch (e: any) {
       toast.error(e?.message ?? 'Could not save run');
