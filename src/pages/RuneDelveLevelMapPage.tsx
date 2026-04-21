@@ -60,22 +60,22 @@ export default function RuneDelveLevelMapPage() {
               key={ch}
               onClick={() => setChapter(ch)}
               className={cn(
-                'shrink-0 px-3.5 h-9 rounded-xl text-[11px] font-extrabold flex items-center gap-1.5 btn-press border',
+                'font-rd-display shrink-0 px-3.5 h-9 rounded-xl text-[12px] font-extrabold flex items-center gap-1.5 btn-press border tracking-wide',
                 isCurrent
-                  ? 'bg-primary/15 text-primary border-primary/40'
-                  : 'bg-muted/30 text-foreground border-border/40',
+                  ? 'bg-primary/20 text-primary border-primary/50'
+                  : 'bg-muted/30 text-foreground/95 border-border/40',
               )}
             >
-              {!reached && <Lock className="w-3 h-3 opacity-60" />}
+              {!reached && <Lock className="w-3 h-3 opacity-70" />}
               Ch {ch}
-              <span className="text-[9px] text-muted-foreground font-bold">L{(ch - 1) * 50 + 1}</span>
+              <span className="text-[9px] text-foreground/65 font-bold">L{(ch - 1) * 50 + 1}</span>
             </button>
           );
         })}
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-3 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+      <div className="flex items-center justify-center gap-3 text-[9px] font-extrabold uppercase tracking-wider text-foreground/75">
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-primary" /> Next</span>
         <span className="flex items-center gap-1"><Check className="w-2.5 h-2.5" style={{ color: 'hsl(var(--success))' }} /> Cleared</span>
         <span className="flex items-center gap-1"><Crown className="w-2.5 h-2.5" style={{ color: 'hsl(var(--gold))' }} /> Milestone</span>
