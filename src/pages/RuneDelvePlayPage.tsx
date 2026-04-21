@@ -553,6 +553,12 @@ export default function RuneDelvePlayPage() {
               <p className="text-3xl font-extrabold font-mono tabular-nums" style={{ color: 'hsl(var(--gold))' }}>
                 {endState.score.toLocaleString()}
               </p>
+              {endState.shards > 0 && (
+                <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold"
+                  style={{ background: 'hsl(var(--primary) / 0.15)', color: 'hsl(var(--primary))' }}>
+                  💠 +{endState.shards} Rune Shards
+                </div>
+              )}
             </div>
             <button
               onClick={() => navigate(`/rune-delve/results/${level.level_number}`)}
