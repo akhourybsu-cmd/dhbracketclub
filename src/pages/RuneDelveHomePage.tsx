@@ -226,27 +226,27 @@ export default function RuneDelveHomePage() {
       <Link to="/rune-delve/leaderboard" className="block">
         <div className="glass-card p-4 btn-press">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="font-bold text-[13px] flex items-center gap-1.5"><Trophy className="w-3.5 h-3.5 text-gold" /> Campaign Leaders</h3>
-            {myRank && <span className="text-[10px] text-muted-foreground">You: #{myRank}</span>}
+            <h3 className="font-rd-display font-extrabold text-[14px] flex items-center gap-1.5 tracking-wide"><Trophy className="w-3.5 h-3.5 text-gold" /> Campaign Leaders</h3>
+            {myRank && <span className="text-[10px] font-extrabold text-foreground/75">You: #{myRank}</span>}
           </div>
           {ahead && (
-            <div className="mb-2 px-2.5 py-1.5 rounded-lg bg-accent/10 border border-accent/25 flex items-center justify-between gap-2">
-              <span className="text-[11px] font-bold text-accent truncate">
+            <div className="mb-2 px-2.5 py-1.5 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-between gap-2">
+              <span className="text-[11px] font-extrabold text-accent truncate">
                 {aheadGap === 1 ? '1 level' : `${aheadGap} levels`} behind {ahead.hero?.hero_name ?? ahead.profile.display_name ?? 'a rival'}
               </span>
               <ChevronRight className="w-3.5 h-3.5 text-accent shrink-0" />
             </div>
           )}
           {top3.length === 0 ? (
-            <p className="text-[11px] text-center text-muted-foreground py-2">Be the first to delve.</p>
+            <p className="text-[11px] text-center text-foreground/75 py-2">Be the first to delve.</p>
           ) : (
             <div className="space-y-1.5">
               {top3.map((r) => (
                 <div key={r.id} className="flex items-center gap-2.5 text-[12px]">
-                  <span className="w-5 font-mono font-bold text-muted-foreground">#{r.rank}</span>
+                  <span className="w-5 font-mono font-extrabold text-foreground/75">#{r.rank}</span>
                   {r.hero?.class && <ClassBadge cls={r.hero.class as HeroClass} size="sm" />}
-                  <span className="flex-1 truncate font-semibold">{r.hero?.hero_name ?? r.profile.display_name}</span>
-                  <span className="font-mono font-bold tabular-nums" style={{ color: 'hsl(var(--gold))' }}>L{r.highest_completed_level}</span>
+                  <span className="font-rd-display flex-1 truncate font-extrabold tracking-wide">{r.hero?.hero_name ?? r.profile.display_name}</span>
+                  <span className="font-mono font-extrabold tabular-nums" style={{ color: 'hsl(var(--gold))' }}>L{r.highest_completed_level}</span>
                 </div>
               ))}
             </div>
