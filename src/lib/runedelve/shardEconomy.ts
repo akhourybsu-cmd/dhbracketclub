@@ -42,7 +42,7 @@ export function computeClearShards(args: ClearShardArgs): ShardBreakdown {
   const bonuses: { label: string; amount: number }[] = [];
   if (args.bossClear) bonuses.push({ label: 'Boss bonus', amount: 50 });
   if (args.chapterCleared) bonuses.push({ label: 'Chapter complete', amount: 200 });
-  const multiplier = args.compassEquipped ? 1.15 : 1;
+  const multiplier = args.compassEquipped ? (args.compassMultiplier ?? 1.15) : 1;
   const subtotal = base + bonuses.reduce((s, b) => s + b.amount, 0);
   const total = Math.max(1, Math.round(subtotal * multiplier));
   return { base, bonuses, multiplier, total };
@@ -72,7 +72,7 @@ export function computeFailureShards(args: FailShardArgs): ShardBreakdown {
   const base = Math.max(1, Math.round(baseClearVal * 0.2 * progress));
 
   const dimMult = failureMultiplier(args.failureCount);
-  const compassMult = args.compassEquipped ? 1.15 : 1;
+  const compassMult = args.compassEquipped ? (args.compassMultiplier ?? 1.15) : 1;
   const multiplier = dimMult * compassMult;
 
   const bonuses: { label: string; amount: number }[] = [];
