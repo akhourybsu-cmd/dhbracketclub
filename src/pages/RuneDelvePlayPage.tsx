@@ -219,6 +219,7 @@ export default function RuneDelvePlayPage() {
     setAbilityUsedCount(0);
     setCorruptCleansedCount(0);
     setBonusUsedThisCycle(false);
+    defeatedArchetypesRef.current = new Map();
     setLog([{ id: nextLogId(), kind: 'info', text: `You enter Level ${level.level_number}. The runes hum.` }]);
     // NOTE: `activeRelics` intentionally OMITTED from deps — see comment above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
