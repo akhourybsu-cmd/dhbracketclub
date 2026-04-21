@@ -236,6 +236,11 @@ export default function RuneDelvePlayPage() {
       nextCorruption = r.next;
     }
 
+    // Bonus move: chains of 6+ runes grant a free action — skip the enemy phase
+    // for this turn so the player gets to chain again before retaliation.
+    const BONUS_MOVE_THRESHOLD = 6;
+    const grantsBonusMove = chain.length >= BONUS_MOVE_THRESHOLD && next.enemies.some(e => e.hp > 0);
+
     // Capture pre-attack HP + shield to derive damage taken / mitigated.
     const hpBefore = next.hp;
     const hadShield = next.shieldTurns > 0;
@@ -245,9 +250,16 @@ export default function RuneDelvePlayPage() {
     );
 
     // enemiesAttack already runs applyBossTurnEffects internally — do NOT call it again here.
-    let afterEnemies = next.enemies.some(e => e.hp > 0)
-      ? enemiesAttack(next, telegraphActive, bossRule)
-      : endTurn(next);
+    // On a bonus-move chain, we skip the enemy phase entirely (no turn consumed, no retaliation).
+    let afterEnemies = grantsBonusMove
+      ? next
+      : next.enemies.some(e => e.hp > 0)
+        ? enemiesAttack(next, telegraphActive, bossRule)
+        : endTurn(next);
+    if (grantsBonusMove) {
+      toast.success(`✨ Bonus move! Chain x${chain.length}`, { duration: 1400 });
+      turnLogs.push({ kind: 'info', text: `Chain x${chain.length} — bonus move! Enemies hesitate.` });
+    }
     if ((afterEnemies as any).heavyFired) {
       toast.error('⚡ Heavy strike!', { duration: 1200 });
       turnLogs.push({ kind: 'heavy', text: 'A telegraphed heavy strike landed!' });
