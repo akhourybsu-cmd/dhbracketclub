@@ -42,25 +42,11 @@ export interface LevelModifiers {
   [k: string]: unknown;
 }
 
+// Legacy template list — kept ONLY as a fallback safety net for any code path
+// that still references the old shape. New picks go through `rosterPoolForLevel`.
 const ENEMY_TEMPLATES: Array<{ name: string; emoji: string; hp: number; damage: number; tier: number }> = [
   { name: 'Cave Bat',       emoji: '🦇', hp: 45,  damage: 4, tier: 1 },
   { name: 'Goblin Scout',   emoji: '👹', hp: 60,  damage: 5, tier: 1 },
-  { name: 'Slime',          emoji: '🟢', hp: 90,  damage: 3, tier: 1 },
-  { name: 'Skeleton',       emoji: '💀', hp: 70,  damage: 6, tier: 2 },
-  { name: 'Shadow Imp',     emoji: '😈', hp: 55,  damage: 6, tier: 2 },
-  { name: 'Crystal Spider', emoji: '🕷️', hp: 75,  damage: 5, tier: 2 },
-  { name: 'Rune Wraith',    emoji: '👻', hp: 80,  damage: 7, tier: 3 },
-  { name: 'Stone Golem',    emoji: '🗿', hp: 130, damage: 8, tier: 3 },
-];
-
-// New chapter archetypes unlock as the campaign deepens.
-const CHAPTER_2_TEMPLATES = [
-  { name: 'Frost Revenant', emoji: '🧊', hp: 110, damage: 7, tier: 3 },
-  { name: 'Cursed Knight',  emoji: '⚔️', hp: 140, damage: 9, tier: 4 },
-];
-const CHAPTER_3_TEMPLATES = [
-  { name: 'Voidspawn',      emoji: '🌑', hp: 160, damage: 10, tier: 4 },
-  { name: 'Ancient Drake',  emoji: '🐉', hp: 220, damage: 12, tier: 5 },
 ];
 
 export function chapterFor(level: number): number {
