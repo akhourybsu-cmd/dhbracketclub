@@ -651,6 +651,9 @@ export default function RuneDelvePlayPage() {
         </div>
       </div>
 
+      {/* Animated battle chronicle — turn-by-turn flavor feed. */}
+      <CombatLog entries={log} />
+
       <HowToPlaySheet open={helpOpen} onOpenChange={setHelpOpen} heroClass={hero.class} />
 
       {/* One-time intro for a brand-new mechanic taught at this level. */}
