@@ -8,6 +8,8 @@ import {
   filterTargetable,
   type BossRuleId,
 } from './bossRules';
+import { tickEnemyAbilities, applyArmorToDamage, type AbilityEffect } from './enemyAbilities';
+import type { CombatLogEntry } from '@/components/runedelve/CombatLog';
 
 export interface CombatState {
   hp: number;
