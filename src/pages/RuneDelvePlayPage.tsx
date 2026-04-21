@@ -11,6 +11,11 @@ import { isValidChain, resolveBoard, type Cell } from '@/lib/runedelve/boardEngi
 import { applyChain, enemiesAttack, endTurn, initialCombat, isRunOver, useAbility, type CombatState } from '@/lib/runedelve/combatEngine';
 import { calculateScore, xpForRun } from '@/lib/runedelve/scoring';
 import { levelFromXp, newTitleUnlocked, titleForLevel } from '@/lib/runedelve/classConfig';
+import { useLoadout } from '@/hooks/useLoadout';
+import { useEarnShards, useFailureRow, useBumpFailure, useResetFailure, useRuneWallet, useUnlockSlot } from '@/hooks/useRuneShards';
+import { buildActive, getStartingMana, getStartingShieldTurns, has, onEnemyKilled, tryLastStand } from '@/lib/runedelve/relicEffects';
+import { computeClearShards, computeFailureShards, slotsForClassLevels } from '@/lib/runedelve/shardEconomy';
+import { getBossRule as _getBossRuleEcon } from '@/lib/runedelve/bossRules';
 import { objectiveLabel, type ObjectiveType } from '@/lib/runedelve/levelGenerator';
 import {
   mechanicsForLevel,
