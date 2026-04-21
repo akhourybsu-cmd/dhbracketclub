@@ -14,7 +14,23 @@ import { levelFromXp, newTitleUnlocked, titleForLevel } from '@/lib/runedelve/cl
 import { useLoadout } from '@/hooks/useLoadout';
 import { useEarnShards, useFailureRow, useBumpFailure, useResetFailure, useRuneWallet, useUnlockSlot } from '@/hooks/useRuneShards';
 import { useRelicCollection, rankMapFromOwned } from '@/hooks/useRelicCollection';
-import { buildActive, getStartingMana, getStartingShieldTurns, has, onEnemyKilled, tryLastStand } from '@/lib/runedelve/relicEffects';
+import {
+  buildActive,
+  getStartingMana,
+  getStartingShieldTurns,
+  has,
+  onEnemyKilled,
+  tryLastStand,
+  computeChainMods,
+  abilityFreeFirstUse,
+  shrineWardTurn1Mult,
+  bossRuleSoften,
+  momentumScoreBonusMult,
+  getTelegraphReadyEarly,
+  getSealedTilesSpeedup,
+  type ActiveRelics,
+} from '@/lib/runedelve/relicEffects';
+import { MAX_MANA } from '@/lib/runedelve/combatEngine';
 import { computeClearShards, computeFailureShards, slotsForClassLevels } from '@/lib/runedelve/shardEconomy';
 
 import { objectiveLabel, type ObjectiveType } from '@/lib/runedelve/levelGenerator';
@@ -51,6 +67,11 @@ const RUNE_LABEL: Record<RuneType, string> = {
   green: 'Verdant',
   gold: 'Radiant',
 };
+
+// Module-level monotonic counter for log entry IDs. Stable, sortable, and
+// avoids a Math.random() inside every setState updater.
+let logSeq = 0;
+const nextLogId = () => `l-${++logSeq}`;
 
 export default function RuneDelvePlayPage() {
   const navigate = useNavigate();
@@ -91,17 +112,27 @@ export default function RuneDelvePlayPage() {
   const [corruption, setCorruption] = useState<CorruptionState>(emptyCorruption);
   const [log, setLog] = useState<CombatLogEntry[]>([]);
 
+  // Per-run relic-effect counters (drive Ember Edge / Crimson Tide / Quickstep /
+  // First Light / Cleansing Touch / Shrine Ward turn-1 detection).
+  const [redChainCount, setRedChainCount] = useState(0);
+  const [chainCountTotal, setChainCountTotal] = useState(0);
+  const [abilityUsedCount, setAbilityUsedCount] = useState(0);
+  const [corruptCleansedCount, setCorruptCleansedCount] = useState(0);
+  // Snapshot the active relic loadout at run-start so toggling/upgrading
+  // relics mid-run can never reset the board state.
+  const [activeRelicsSnapshot, setActiveRelicsSnapshot] = useState<ActiveRelics | null>(null);
+
   // Append a single entry; trim to a small ring so memory stays tidy.
   const pushLog = (entry: Omit<CombatLogEntry, 'id'>) => {
     setLog(prev => {
-      const next = [...prev, { ...entry, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }];
+      const next = [...prev, { ...entry, id: nextLogId() }];
       return next.length > 30 ? next.slice(-30) : next;
     });
   };
   const pushLogs = (entries: Array<Omit<CombatLogEntry, 'id'>>) => {
     if (!entries.length) return;
     setLog(prev => {
-      const stamped = entries.map(e => ({ ...e, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }));
+      const stamped = entries.map(e => ({ ...e, id: nextLogId() }));
       const next = [...prev, ...stamped];
       return next.length > 30 ? next.slice(-30) : next;
     });
@@ -126,26 +157,55 @@ export default function RuneDelvePlayPage() {
   const secondaryObjective = ((level?.modifiers as any)?.secondary_objective ?? null) as SecondaryObjective | null;
   const bossRule = ((level?.modifiers as any)?.boss_rule ?? null) as BossRuleId | null;
 
-  // Build deterministic state.
+  // Build deterministic state. Snapshots `activeRelics` once at run-start so
+  // mid-run relic toggles or rank changes can never reset the board.
   useEffect(() => {
     if (!level || !hero) return;
+    const relics = activeRelics; // snapshot
     const rng = mulberry32(level.generation_seed);
     setGrid(generateBoard(rng));
-    const seals = buildInitialSeals(level.generation_seed, sealedTilesActive);
-    setSeals(seals);
-    setCorruption(buildInitialCorruption(level.generation_seed, corruptionActive, level.level_number, seals));
+    let initialSeals = buildInitialSeals(level.generation_seed, sealedTilesActive);
+    // Keysight: pre-shatter the requested number of seals at run start so
+    // the player effectively gets a head-start clearing them.
+    const keysightTurns = getSealedTilesSpeedup(relics);
+    if (keysightTurns > 0 && initialSeals.size > 0) {
+      const keys = Array.from(initialSeals).slice(0, keysightTurns);
+      const next = new Set(initialSeals);
+      keys.forEach(k => next.delete(k));
+      initialSeals = next;
+    }
+    setSeals(initialSeals);
+    setCorruption(buildInitialCorruption(level.generation_seed, corruptionActive, level.level_number, initialSeals));
     let enemies: Enemy[] = (level.enemy_config ?? []).map((e: any, i: number) => ({
       id: e.id ?? `e${i}`, name: e.name, emoji: e.emoji, hp: e.hp, maxHp: e.maxHp ?? e.hp, damage: e.damage,
     }));
-    if (telegraphActive) enemies = applyInitialIntents(enemies, level.generation_seed, level.level_number);
+    if (telegraphActive) {
+      enemies = applyInitialIntents(enemies, level.generation_seed, level.level_number);
+      // Foresight: reveal telegraphed intents N turns earlier by ticking
+      // each enemy's intent down at run start.
+      const earlyTurns = getTelegraphReadyEarly(relics);
+      if (earlyTurns > 0) {
+        enemies = enemies.map(e => (
+          e.intent != null ? { ...e, intent: Math.max(1, e.intent - earlyTurns) } : e
+        ));
+      }
+    }
     // Apply pre-run relic effects: starting mana + starting shield.
     const initial = initialCombat(enemies, level.turn_limit);
-    initial.mana = Math.min(3, initial.mana + getStartingMana(activeRelics));
-    initial.shieldTurns = Math.max(initial.shieldTurns, getStartingShieldTurns(activeRelics));
+    initial.mana = Math.min(MAX_MANA, initial.mana + getStartingMana(relics));
+    initial.shieldTurns = Math.max(initial.shieldTurns, getStartingShieldTurns(relics));
     setCombat(initial);
+    setActiveRelicsSnapshot(relics);
     setLastStandUsed(false);
-    setLog([{ id: `boot-${Date.now()}`, kind: 'info', text: `You enter Level ${level.level_number}. The runes hum.` }]);
-  }, [level, hero, sealedTilesActive, telegraphActive, corruptionActive, activeRelics]);
+    setRedChainCount(0);
+    setChainCountTotal(0);
+    setAbilityUsedCount(0);
+    setCorruptCleansedCount(0);
+    setBonusUsedThisCycle(false);
+    setLog([{ id: nextLogId(), kind: 'info', text: `You enter Level ${level.level_number}. The runes hum.` }]);
+    // NOTE: `activeRelics` intentionally OMITTED from deps — see comment above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [level, hero, sealedTilesActive, telegraphActive, corruptionActive]);
 
   // One-time intro modal for any brand-new mechanic taught at this level.
   useEffect(() => {
@@ -195,7 +255,64 @@ export default function RuneDelvePlayPage() {
       : len >= 6 ? { dmgMult: 1.2, bonus: false as const }
       : { dmgMult: 1, bonus: false as const };
     const tier = tierFor(chain.length);
+    // Snapshot relics for this run (falls back to live for first chain).
+    const relics = activeRelicsSnapshot ?? activeRelics;
+    // Per-chain counters BEFORE applying — drives Ember Edge / Crimson Tide / Quickstep.
+    const isFirstChainOfRun = chainCountTotal === 0;
+    const redCountAfter = type === 'red' ? redChainCount + 1 : redChainCount;
+    // Compute relic chain mods (Ember Edge, Crimson Tide, Executioner's Mark,
+    // Desperate Surge, Sapphire Flow, Verdant Heart, Bulwark, Quickstep).
+    const targetEnemyForCtx = combat.enemies.find(e => e.hp > 0);
+    const enemyHpRatio = targetEnemyForCtx ? targetEnemyForCtx.hp / Math.max(1, targetEnemyForCtx.maxHp) : 1;
+    const chainMods = computeChainMods(relics, {
+      chainType: type,
+      length: chain.length,
+      redChainCountSoFar: type === 'red' ? redCountAfter : 0,
+      isFirstChainOfRun,
+      hpRatio: combat.hp / Math.max(1, combat.maxHp),
+      enemyHpRatioBeforeHit: enemyHpRatio,
+    });
     const { next, resolution } = applyChain(combat, type, chain.length, hero.class, bossRule);
+    // Apply relic damage multiplier for red chains (composes with tier mult).
+    if (type === 'red' && chainMods.bonusDamageMult > 1 && resolution.damageDealt > 0) {
+      const baseDmg = resolution.damageDealt;
+      const boostedDmg = Math.round(baseDmg * chainMods.bonusDamageMult);
+      const extra = boostedDmg - baseDmg;
+      if (extra > 0) {
+        const target = next.enemies.find(e => e.hp > 0) ?? next.enemies.find(e => resolution.enemyKills.includes(e.id));
+        if (target) {
+          const applied = Math.min(extra, Math.max(target.hp, 0));
+          if (applied > 0) {
+            target.hp -= applied;
+            resolution.damageDealt += applied;
+            next.totalDamage += applied;
+            if (target.hp <= 0 && !resolution.enemyKills.includes(target.id)) {
+              next.enemiesDefeated += 1;
+              resolution.enemyKills.push(target.id);
+            }
+          }
+        }
+      }
+    }
+    // Mana / heal / shield bonuses.
+    if (chainMods.bonusManaFlat > 0) {
+      next.mana = Math.min(MAX_MANA, next.mana + chainMods.bonusManaFlat);
+      resolution.manaGained += chainMods.bonusManaFlat;
+    }
+    if (chainMods.bonusHealFlat > 0) {
+      const heal = Math.min(chainMods.bonusHealFlat, next.maxHp - next.hp);
+      if (heal > 0) {
+        next.hp += heal;
+        resolution.hpHealed += heal;
+      }
+    }
+    if (chainMods.bonusShieldTurns > 0) {
+      next.shieldTurns += chainMods.bonusShieldTurns;
+      resolution.guardGained += chainMods.bonusShieldTurns;
+    }
+    // Update per-run counters.
+    setChainCountTotal(c => c + 1);
+    if (type === 'red') setRedChainCount(redCountAfter);
     // Scale red-chain damage by the tier multiplier; route the extra HP into
     // the same target that applyChain already hit. Round to whole HP.
     if (tier.dmgMult > 1 && type === 'red' && resolution.damageDealt > 0) {
@@ -260,13 +377,28 @@ export default function RuneDelvePlayPage() {
     }
 
     // Apply corruption: HP cost for matching corrupted cells, then strip them.
+    // Cleansing Touch: first N corrupt-source clears each run cost no HP.
     let nextCorruption = corruption;
     if (corruptionActive && corruption.cells.size) {
       const r = resolveChainAgainstCorruption(corruption, chain);
-      if (r.hpCost > 0) {
-        next.hp = Math.max(0, next.hp - r.hpCost);
-        toast.error(`☠️ -${r.hpCost} HP from corruption`, { duration: 1100 });
-        turnLogs.push({ kind: 'corruption', text: 'Corrupted runes burned you', amount: r.hpCost });
+      let hpCost = r.hpCost;
+      if (r.sourcesCleared > 0 && has(relics, 'cleansing_touch')) {
+        // effectValue returns max free clears (1..2). We've already consumed
+        // `corruptCleansedCount` of them.
+        const freeRemaining = Math.max(
+          0,
+          (relics.ranks.get('cleansing_touch') ?? 1) >= 5 ? 2 - corruptCleansedCount : 1 - corruptCleansedCount,
+        );
+        if (freeRemaining > 0 && hpCost > 0) {
+          hpCost = 0;
+          turnLogs.push({ kind: 'info', text: '✨ Cleansing Touch — corruption cost waived' });
+        }
+        setCorruptCleansedCount(c => c + r.sourcesCleared);
+      }
+      if (hpCost > 0) {
+        next.hp = Math.max(0, next.hp - hpCost);
+        toast.error(`☠️ -${hpCost} HP from corruption`, { duration: 1100 });
+        turnLogs.push({ kind: 'corruption', text: 'Corrupted runes burned you', amount: hpCost });
       }
       if (r.sourcesCleared > 0) {
         toast.success(r.sourcesCleared > 1 ? `Sources cleansed!` : `Source cleansed!`, { duration: 1200 });

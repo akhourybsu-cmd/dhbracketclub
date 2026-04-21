@@ -17,7 +17,7 @@ export function useRuneWallet() {
     staleTime: 30_000,
     queryFn: async (): Promise<RuneWallet | null> => {
       if (!user) return null;
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('rune_delve_wallet')
         .select('*')
         .eq('user_id', user.id)
@@ -25,7 +25,7 @@ export function useRuneWallet() {
       if (error && error.code !== 'PGRST116') throw error;
       if (data) return data as RuneWallet;
       // Lazy create with defaults.
-      const { data: created, error: insErr } = await (supabase as any)
+      const { data: created, error: insErr } = await supabase
         .from('rune_delve_wallet')
         .insert({ user_id: user.id, shards: 0, lifetime_shards_earned: 0, slots_unlocked: 2 })
         .select()
@@ -44,13 +44,13 @@ export function useEarnShards() {
       if (!user) throw new Error('Not authenticated');
       if (amount <= 0) throw new Error('Amount must be positive');
       // Read-modify-write — RLS already scopes to this user.
-      const { data: current } = await (supabase as any)
+      const { data: current } = await supabase
         .from('rune_delve_wallet')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
       const start: RuneWallet = current ?? { user_id: user.id, shards: 0, lifetime_shards_earned: 0, slots_unlocked: 2 };
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('rune_delve_wallet')
         .upsert({
           user_id: user.id,
@@ -75,13 +75,13 @@ export function useSpendShards() {
   return useMutation({
     mutationFn: async (amount: number): Promise<RuneWallet> => {
       if (!user) throw new Error('Not authenticated');
-      const { data: current } = await (supabase as any)
+      const { data: current } = await supabase
         .from('rune_delve_wallet')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
       if (!current || current.shards < amount) throw new Error('Not enough Rune Shards');
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('rune_delve_wallet')
         .update({ shards: current.shards - amount })
         .eq('user_id', user.id)
@@ -102,7 +102,7 @@ export function useUnlockSlot() {
   return useMutation({
     mutationFn: async (newSlotCount: number): Promise<RuneWallet> => {
       if (!user) throw new Error('Not authenticated');
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('rune_delve_wallet')
         .update({ slots_unlocked: newSlotCount })
         .eq('user_id', user.id)
@@ -132,7 +132,7 @@ export function useFailureRow(levelNumber: number | null) {
     staleTime: 0,
     queryFn: async (): Promise<FailureRow | null> => {
       if (!user || levelNumber == null) return null;
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from('rune_delve_failure_rewards')
         .select('level_number, failure_count, last_awarded_at')
         .eq('user_id', user.id)
@@ -149,14 +149,14 @@ export function useBumpFailure() {
   return useMutation({
     mutationFn: async (levelNumber: number): Promise<number> => {
       if (!user) throw new Error('Not authenticated');
-      const { data: existing } = await (supabase as any)
+      const { data: existing } = await supabase
         .from('rune_delve_failure_rewards')
         .select('*')
         .eq('user_id', user.id)
         .eq('level_number', levelNumber)
         .maybeSingle();
       const next = (existing?.failure_count ?? 0) + 1;
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('rune_delve_failure_rewards')
         .upsert({
           user_id: user.id,
@@ -180,7 +180,7 @@ export function useResetFailure() {
     mutationFn: async (levelNumber: number) => {
       if (!user) throw new Error('Not authenticated');
       // Just zero it — don't delete, so we keep timestamps for analytics later.
-      await (supabase as any)
+      await supabase
         .from('rune_delve_failure_rewards')
         .upsert({
           user_id: user.id,

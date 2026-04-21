@@ -19,7 +19,7 @@ export function useRelicCollection() {
     staleTime: 30_000,
     queryFn: async (): Promise<OwnedRelic[]> => {
       if (!user) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('rune_delve_relic_unlocks')
         .select('id, relic_id, acquired_at, acquired_at_level, rank')
         .eq('user_id', user.id)
@@ -39,7 +39,7 @@ export function useUnlockRelic() {
   return useMutation({
     mutationFn: async (params: { relic_id: string; level: number }) => {
       if (!user) throw new Error('Not authenticated');
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('rune_delve_relic_unlocks')
         .insert({
           user_id: user.id,
@@ -68,7 +68,7 @@ export function useUpgradeRelic() {
   return useMutation({
     mutationFn: async (params: { relic_id: string; expected_rank: number }) => {
       if (!user) throw new Error('Not authenticated');
-      const { data: current, error: readErr } = await (supabase as any)
+      const { data: current, error: readErr } = await supabase
         .from('rune_delve_relic_unlocks')
         .select('id, rank')
         .eq('user_id', user.id)
@@ -82,7 +82,7 @@ export function useUpgradeRelic() {
       }
       if (currentRank >= MAX_RANK) throw new Error('Already at max rank');
       const nextRank = currentRank + 1;
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('rune_delve_relic_unlocks')
         .update({ rank: nextRank })
         .eq('id', current.id)
