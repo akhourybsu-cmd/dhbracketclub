@@ -125,6 +125,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }, []);
 
   const isChatRoute = location.pathname.startsWith('/chat');
+  const isRuneDelve = location.pathname.startsWith('/rune-delve');
 
   const isNavActive = (path: string) => {
     if (path === '/brackets') {
@@ -150,10 +151,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
     <div className="min-h-[100dvh] bg-background flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
       {/* Main Content */}
       <main className={cn(
-        "flex-1 lg:pb-0 lg:pl-64 overflow-x-hidden min-w-0",
-        isChatRoute ? "pb-0 overflow-hidden" : "pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))]"
+        "flex-1 overflow-x-hidden min-w-0",
+        isRuneDelve ? "pb-0" : "lg:pb-0 lg:pl-64",
+        isChatRoute ? "pb-0 overflow-hidden" : !isRuneDelve && "pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))]"
       )}>
-        {location.pathname === '/chat' ? (
+        {location.pathname === '/chat' || isRuneDelve ? (
           children
         ) : (
           <div className="max-w-[640px] mx-auto px-4 sm:px-5 py-5 sm:py-6 lg:py-8 min-w-0">
@@ -162,7 +164,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
         )}
       </main>
 
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar — hidden inside Rune Delve game shell */}
+      {!isRuneDelve && (
       <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 flex-col z-40 bg-sidebar-background border-r border-border/50" style={{
         backdropFilter: 'blur(24px) saturate(180%)',
         boxShadow: 'inset -1px 0 0 hsl(var(--foreground) / 0.02)',
