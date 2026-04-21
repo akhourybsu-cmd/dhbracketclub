@@ -4,6 +4,7 @@ import type { Enemy } from './dungeonGenerator';
 import { mechanicsForLevel, introMechanicForLevel, type MechanicId } from './mechanics';
 import { rollSecondaryObjective, type SecondaryObjective } from './layeredGoals';
 import { bossRuleForLevel, type BossRuleId } from './bossRules';
+import { rosterPoolForLevel, type RosterEntry } from './enemyRoster';
 
 export type ObjectiveType = 'defeat_all' | 'survive' | 'reach_score' | 'defeat_elite';
 
