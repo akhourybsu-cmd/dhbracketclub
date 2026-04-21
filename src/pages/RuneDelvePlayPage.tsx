@@ -41,7 +41,15 @@ import { HeroStatusBar } from '@/components/runedelve/HeroStatusBar';
 import { HowToPlaySheet } from '@/components/runedelve/HowToPlaySheet';
 import { MechanicIntroSheet } from '@/components/runedelve/MechanicIntroSheet';
 import { MechanicBanner } from '@/components/runedelve/MechanicBanner';
+import { CombatLog, type CombatLogEntry } from '@/components/runedelve/CombatLog';
 import { format } from 'date-fns';
+
+const RUNE_LABEL: Record<RuneType, string> = {
+  red: 'Crimson',
+  blue: 'Azure',
+  green: 'Verdant',
+  gold: 'Radiant',
+};
 
 export default function RuneDelvePlayPage() {
   const navigate = useNavigate();
@@ -76,6 +84,23 @@ export default function RuneDelvePlayPage() {
   const [endState, setEndState] = useState<null | { cleared: boolean; reason: 'cleared' | 'defeated' | 'timeout'; score: number; isNewBest: boolean; shards: number }>(null);
   const [lastStandUsed, setLastStandUsed] = useState(false);
   const [corruption, setCorruption] = useState<CorruptionState>(emptyCorruption);
+  const [log, setLog] = useState<CombatLogEntry[]>([]);
+
+  // Append a single entry; trim to a small ring so memory stays tidy.
+  const pushLog = (entry: Omit<CombatLogEntry, 'id'>) => {
+    setLog(prev => {
+      const next = [...prev, { ...entry, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }];
+      return next.length > 30 ? next.slice(-30) : next;
+    });
+  };
+  const pushLogs = (entries: Array<Omit<CombatLogEntry, 'id'>>) => {
+    if (!entries.length) return;
+    setLog(prev => {
+      const stamped = entries.map(e => ({ ...e, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }));
+      const next = [...prev, ...stamped];
+      return next.length > 30 ? next.slice(-30) : next;
+    });
+  };
 
   // Active relic loadout for this run.
   const activeRelics = useMemo(() => buildActive([loadout?.slot_1, loadout?.slot_2, loadout?.slot_3]), [loadout]);
@@ -111,6 +136,7 @@ export default function RuneDelvePlayPage() {
     initial.shieldTurns = Math.max(initial.shieldTurns, getStartingShieldTurns(activeRelics));
     setCombat(initial);
     setLastStandUsed(false);
+    setLog([{ id: `boot-${Date.now()}`, kind: 'info', text: `You enter Level ${level.level_number}. The runes hum.` }]);
   }, [level, hero, sealedTilesActive, telegraphActive, corruptionActive, activeRelics]);
 
   // One-time intro modal for any brand-new mechanic taught at this level.
@@ -156,6 +182,34 @@ export default function RuneDelvePlayPage() {
     const { next, resolution } = applyChain(combat, type, chain.length, hero.class, bossRule);
     if (resolution.enemyKills.length) setFlashId(resolution.enemyKills[0]);
 
+    // Build the per-turn log batch as we go so the order matches the events.
+    const turnLogs: Array<Omit<CombatLogEntry, 'id'>> = [];
+    const runeLabel = RUNE_LABEL[type] ?? type;
+
+    // Chain summary line — always logged.
+    if (type === 'red' && resolution.damageDealt > 0) {
+      const target = combat.enemies.find(e => resolution.enemyKills[0] ? e.id === resolution.enemyKills[0] : e.hp > 0);
+      const targetName = target?.name ?? 'the foe';
+      turnLogs.push({
+        kind: 'damage',
+        text: `${runeLabel} chain x${chain.length} struck ${targetName}`,
+        amount: resolution.damageDealt,
+      });
+    } else if (type === 'green' && resolution.hpHealed > 0) {
+      turnLogs.push({ kind: 'heal', text: `${runeLabel} chain x${chain.length} mended your wounds`, amount: resolution.hpHealed });
+    } else if (type === 'blue' && resolution.manaGained > 0) {
+      turnLogs.push({ kind: 'mana', text: `${runeLabel} chain x${chain.length} channeled mana`, amount: resolution.manaGained });
+    } else if (type === 'gold') {
+      turnLogs.push({ kind: 'shield', text: `${runeLabel} chain x${chain.length} raised your guard`, amount: resolution.guardGained });
+    } else {
+      // Red chain that hit a shielded boss → no damage applied.
+      turnLogs.push({ kind: 'info', text: `${runeLabel} chain x${chain.length} fizzled` });
+    }
+    for (const killId of resolution.enemyKills) {
+      const killed = combat.enemies.find(e => e.id === killId);
+      turnLogs.push({ kind: 'kill', text: `${killed?.name ?? 'A foe'} was vanquished!` });
+    }
+
     // Last Stand feedback: red chain landed but the boss is shielded → 0 dmg.
     if (
       bossRule === 'last_stand' &&
@@ -173,18 +227,43 @@ export default function RuneDelvePlayPage() {
       if (r.hpCost > 0) {
         next.hp = Math.max(0, next.hp - r.hpCost);
         toast.error(`☠️ -${r.hpCost} HP from corruption`, { duration: 1100 });
+        turnLogs.push({ kind: 'corruption', text: 'Corrupted runes burned you', amount: r.hpCost });
       }
       if (r.sourcesCleared > 0) {
         toast.success(r.sourcesCleared > 1 ? `Sources cleansed!` : `Source cleansed!`, { duration: 1200 });
+        turnLogs.push({ kind: 'info', text: r.sourcesCleared > 1 ? 'Corruption sources cleansed' : 'Corruption source cleansed' });
       }
       nextCorruption = r.next;
     }
+
+    // Capture pre-attack HP + shield to derive damage taken / mitigated.
+    const hpBefore = next.hp;
+    const hadShield = next.shieldTurns > 0;
+    const rawIncoming = next.enemies.reduce(
+      (s, e) => s + (e.hp > 0 ? Math.round(e.damage) : 0),
+      0,
+    );
 
     // enemiesAttack already runs applyBossTurnEffects internally — do NOT call it again here.
     let afterEnemies = next.enemies.some(e => e.hp > 0)
       ? enemiesAttack(next, telegraphActive, bossRule)
       : endTurn(next);
-    if ((afterEnemies as any).heavyFired) toast.error('⚡ Heavy strike!', { duration: 1200 });
+    if ((afterEnemies as any).heavyFired) {
+      toast.error('⚡ Heavy strike!', { duration: 1200 });
+      turnLogs.push({ kind: 'heavy', text: 'A telegraphed heavy strike landed!' });
+    }
+
+    // Damage taken / mitigated lines.
+    const hpLost = Math.max(0, hpBefore - afterEnemies.hp);
+    if (hpLost > 0) {
+      turnLogs.push({ kind: 'taken', text: 'Enemies retaliated', amount: hpLost });
+    } else if (next.enemies.some(e => e.hp > 0) && rawIncoming > 0) {
+      turnLogs.push({ kind: 'info', text: 'You weathered the assault' });
+    }
+    if (hadShield && rawIncoming > hpLost) {
+      const mitigated = rawIncoming - hpLost;
+      if (mitigated > 0) turnLogs.push({ kind: 'mitigated', text: 'Your guard absorbed the blow', amount: mitigated });
+    }
 
     // Relic: Last Stand — survive lethal at 1 HP, once per run.
     if (afterEnemies.hp <= 0 && !lastStandUsed) {
@@ -193,14 +272,18 @@ export default function RuneDelvePlayPage() {
         afterEnemies = { ...afterEnemies, hp: ls.hp };
         setLastStandUsed(true);
         toast.success('💔 Last Stand! Survived at 1 HP', { duration: 1800 });
+        turnLogs.push({ kind: 'laststand', text: 'Last Stand! You survived at 1 HP' });
       }
     }
 
     // Relic: Bloodbond — heal 4 HP per kill this turn.
     if (resolution.enemyKills.length && has(activeRelics, 'bloodbond')) {
+      const beforeHeal = afterEnemies.hp;
       let healed = afterEnemies;
       for (let i = 0; i < resolution.enemyKills.length; i++) healed = onEnemyKilled(activeRelics, healed);
       afterEnemies = { ...afterEnemies, hp: healed.hp };
+      const gained = afterEnemies.hp - beforeHeal;
+      if (gained > 0) turnLogs.push({ kind: 'heal', text: 'Bloodbond drew vigor from the slain', amount: gained });
     }
 
     const newGrid = resolveBoard(grid, chain, refillRng, seals);
@@ -212,6 +295,7 @@ export default function RuneDelvePlayPage() {
         const nextSeals = new Set(seals);
         broken.forEach(k => nextSeals.delete(k));
         setSeals(nextSeals);
+        turnLogs.push({ kind: 'info', text: broken.length > 1 ? `${broken.length} seals shattered` : 'A seal shattered' });
       }
     }
 
@@ -224,6 +308,7 @@ export default function RuneDelvePlayPage() {
     setRngTick(t => t + 1);
     setGrid(newGrid);
     setCombat(afterEnemies);
+    pushLogs(turnLogs);
 
     const status = checkObjective(afterEnemies, level.turn_limit, objType, level.objective_target, secondaryObjective);
     if (status.over) void finalize(afterEnemies, status.cleared);
@@ -235,17 +320,50 @@ export default function RuneDelvePlayPage() {
       toast.info('Ability not ready — fill mana orbs first.');
       return;
     }
+    const turnLogs: Array<Omit<CombatLogEntry, 'id'>> = [];
+    const ABILITY_LABEL: Record<string, string> = {
+      warrior: 'Cleave swept the battlefield',
+      mage: 'Arcane bolt crashed home',
+      rogue: 'Shadowstep — next strike doubled',
+      cleric: 'Sanctuary mended you',
+    };
+    const dealt = next.totalDamage - combat.totalDamage;
+    const killed = next.enemiesDefeated - combat.enemiesDefeated;
+    const healed = Math.max(0, next.hp - combat.hp);
+    turnLogs.push({
+      kind: 'ability',
+      text: ABILITY_LABEL[hero.class] ?? 'Ability unleashed',
+      amount: dealt > 0 ? dealt : healed > 0 ? healed : undefined,
+    });
+    if (killed > 0) turnLogs.push({ kind: 'kill', text: killed > 1 ? `${killed} foes vanquished!` : 'A foe was vanquished!' });
+
+    // Capture pre-attack HP to derive damage taken from the enemy phase.
+    const hpBefore = next.hp;
+    const hadShield = next.shieldTurns > 0;
+    const rawIncoming = next.enemies.reduce((s, e) => s + (e.hp > 0 ? Math.round(e.damage) : 0), 0);
+
     // enemiesAttack already runs applyBossTurnEffects internally.
     const after = next.enemies.some(e => e.hp > 0)
       ? enemiesAttack(next, telegraphActive, bossRule)
       : endTurn(next);
-    if ((after as any).heavyFired) toast.error('⚡ Heavy strike!', { duration: 1200 });
+    if ((after as any).heavyFired) {
+      toast.error('⚡ Heavy strike!', { duration: 1200 });
+      turnLogs.push({ kind: 'heavy', text: 'A telegraphed heavy strike landed!' });
+    }
+    const hpLost = Math.max(0, hpBefore - after.hp);
+    if (hpLost > 0) turnLogs.push({ kind: 'taken', text: 'Enemies retaliated', amount: hpLost });
+    if (hadShield && rawIncoming > hpLost) {
+      const mitigated = rawIncoming - hpLost;
+      if (mitigated > 0) turnLogs.push({ kind: 'mitigated', text: 'Your guard absorbed the blow', amount: mitigated });
+    }
+
     // Ability still consumes a turn — corruption advances.
     if (corruptionActive && corruption.sources.size) {
       setCorruption(spreadCorruption(corruption, rngTick, level.generation_seed, seals));
       setRngTick(t => t + 1);
     }
     setCombat(after);
+    pushLogs(turnLogs);
     const status = checkObjective(after, level.turn_limit, objType, level.objective_target, secondaryObjective);
     if (status.over) void finalize(after, status.cleared);
   };
@@ -532,6 +650,9 @@ export default function RuneDelvePlayPage() {
           <span className="text-[12px] font-extrabold tabular-nums text-foreground">{combat.longestChain}</span>
         </div>
       </div>
+
+      {/* Animated battle chronicle — turn-by-turn flavor feed. */}
+      <CombatLog entries={log} />
 
       <HowToPlaySheet open={helpOpen} onOpenChange={setHelpOpen} heroClass={hero.class} />
 
