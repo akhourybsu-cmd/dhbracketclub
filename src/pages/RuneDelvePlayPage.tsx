@@ -14,7 +14,23 @@ import { levelFromXp, newTitleUnlocked, titleForLevel } from '@/lib/runedelve/cl
 import { useLoadout } from '@/hooks/useLoadout';
 import { useEarnShards, useFailureRow, useBumpFailure, useResetFailure, useRuneWallet, useUnlockSlot } from '@/hooks/useRuneShards';
 import { useRelicCollection, rankMapFromOwned } from '@/hooks/useRelicCollection';
-import { buildActive, getStartingMana, getStartingShieldTurns, has, onEnemyKilled, tryLastStand } from '@/lib/runedelve/relicEffects';
+import {
+  buildActive,
+  getStartingMana,
+  getStartingShieldTurns,
+  has,
+  onEnemyKilled,
+  tryLastStand,
+  computeChainMods,
+  abilityFreeFirstUse,
+  shrineWardTurn1Mult,
+  bossRuleSoften,
+  momentumScoreBonusMult,
+  getTelegraphReadyEarly,
+  getSealedTilesSpeedup,
+  type ActiveRelics,
+} from '@/lib/runedelve/relicEffects';
+import { MAX_MANA } from '@/lib/runedelve/combatEngine';
 import { computeClearShards, computeFailureShards, slotsForClassLevels } from '@/lib/runedelve/shardEconomy';
 
 import { objectiveLabel, type ObjectiveType } from '@/lib/runedelve/levelGenerator';
