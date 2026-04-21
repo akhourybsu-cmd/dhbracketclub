@@ -1,6 +1,7 @@
 import { Sparkles } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
+import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { useRuneWallet, useSpendShards } from '@/hooks/useRuneShards';
 import { useRelicCollection, useUnlockRelic, useUpgradeRelic } from '@/hooks/useRelicCollection';
 import { useMyProgress } from '@/hooks/useRuneDelveCampaign';
