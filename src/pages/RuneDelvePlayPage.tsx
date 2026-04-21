@@ -105,7 +105,8 @@ export default function RuneDelvePlayPage() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [introMechanic, setIntroMechanic] = useState<MechanicId | null>(null);
   const [endState, setEndState] = useState<null | { cleared: boolean; reason: 'cleared' | 'defeated' | 'timeout'; score: number; isNewBest: boolean; shards: number }>(null);
-  const [lastStandUsed, setLastStandUsed] = useState(false);
+  // Counter (not boolean) — Last Stand at R5 grants 2 saves per run.
+  const [lastStandUsed, setLastStandUsed] = useState(0);
   // Bonus-move rebalance: only one free turn per enemy cycle. Resets whenever
   // the enemy phase actually runs (i.e. a non-bonus chain or ability resolves).
   const [bonusUsedThisCycle, setBonusUsedThisCycle] = useState(false);
@@ -196,7 +197,7 @@ export default function RuneDelvePlayPage() {
     initial.shieldTurns = Math.max(initial.shieldTurns, getStartingShieldTurns(relics));
     setCombat(initial);
     setActiveRelicsSnapshot(relics);
-    setLastStandUsed(false);
+    setLastStandUsed(0);
     setRedChainCount(0);
     setChainCountTotal(0);
     setAbilityUsedCount(0);
@@ -477,22 +478,22 @@ export default function RuneDelvePlayPage() {
       if (mitigated > 0) turnLogs.push({ kind: 'mitigated', text: 'Your guard absorbed the blow', amount: mitigated });
     }
 
-    // Relic: Last Stand — survive lethal at 1 HP, once per run.
-    if (afterEnemies.hp <= 0 && !lastStandUsed) {
-      const ls = tryLastStand(activeRelics, afterEnemies.hp, false);
+    // Relic: Last Stand — survive lethal at 1 HP. R1–R4: 1 use; R5: 2 uses.
+    if (afterEnemies.hp <= 0) {
+      const ls = tryLastStand(relics, afterEnemies.hp, lastStandUsed);
       if (ls.saved) {
         afterEnemies = { ...afterEnemies, hp: ls.hp };
-        setLastStandUsed(true);
+        setLastStandUsed(c => c + 1);
         toast.success('💔 Last Stand! Survived at 1 HP', { duration: 1800 });
         turnLogs.push({ kind: 'laststand', text: 'Last Stand! You survived at 1 HP' });
       }
     }
 
-    // Relic: Bloodbond — heal 4 HP per kill this turn.
-    if (resolution.enemyKills.length && has(activeRelics, 'bloodbond')) {
+    // Relic: Bloodbond — heal per kill this turn (rank-aware: 4–6 HP).
+    if (resolution.enemyKills.length && has(relics, 'bloodbond')) {
       const beforeHeal = afterEnemies.hp;
       let healed = afterEnemies;
-      for (let i = 0; i < resolution.enemyKills.length; i++) healed = onEnemyKilled(activeRelics, healed);
+      for (let i = 0; i < resolution.enemyKills.length; i++) healed = onEnemyKilled(relics, healed);
       afterEnemies = { ...afterEnemies, hp: healed.hp };
       const gained = afterEnemies.hp - beforeHeal;
       if (gained > 0) turnLogs.push({ kind: 'heal', text: 'Bloodbond drew vigor from the slain', amount: gained });
