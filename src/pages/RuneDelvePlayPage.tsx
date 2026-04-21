@@ -415,27 +415,44 @@ export default function RuneDelvePlayPage() {
   const equippedCount = [loadout?.slot_1, loadout?.slot_2, loadout?.slot_3].filter(Boolean).length;
 
   return (
-    <div className="space-y-4 pb-8 relative">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          {equippedCount > 0 && (
-            <Link
-              to="/rune-delve/armory"
-              aria-label={`${equippedCount} relics equipped`}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-extrabold tabular-nums btn-press shrink-0"
-              style={{ background: 'hsl(var(--primary) / 0.14)', color: 'hsl(var(--primary))' }}
-            >
-              🛡️ {equippedCount}
-            </Link>
+    <div className="space-y-2 pb-2 relative">
+      {/* Compact combined HUD: turn counter + objective on a single row */}
+      <div
+        className="rd-carved rounded-xl px-3 py-2 flex items-center gap-2"
+        style={{ borderRadius: '0.75rem' }}
+      >
+        <span className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-primary px-1.5 py-0.5 rounded bg-primary/20 shrink-0">
+          L{level.level_number}
+        </span>
+        <span className="text-[11px] font-extrabold tabular-nums text-foreground/95 shrink-0">
+          T{turnDisplay}/{level.turn_limit}
+        </span>
+        <span className="h-3 w-px bg-foreground/15 shrink-0" />
+        <span className="text-[11px] font-bold flex-1 min-w-0 truncate text-foreground/95">
+          {objectiveLabel(objType)}
+          {objType === 'reach_score' && (
+            <span className="text-foreground/60"> · {level.objective_target.toLocaleString()}</span>
           )}
-          <div className="text-[11px] font-bold text-muted-foreground tabular-nums truncate">
-            Lv {level.level_number} · Turn {turnDisplay}/{level.turn_limit}
-          </div>
-        </div>
+        </span>
+        {existingRun && (
+          <span className="text-[10px] font-mono font-extrabold tabular-nums text-foreground/70 shrink-0">
+            ★{existingRun.score.toLocaleString()}
+          </span>
+        )}
+        {equippedCount > 0 && (
+          <Link
+            to="/rune-delve/armory"
+            aria-label={`${equippedCount} relics equipped`}
+            className="inline-flex items-center gap-0.5 px-1.5 h-6 rounded-full text-[10px] font-extrabold tabular-nums btn-press shrink-0"
+            style={{ background: 'hsl(var(--primary) / 0.18)', color: 'hsl(var(--primary))' }}
+          >
+            🛡️{equippedCount}
+          </Link>
+        )}
         <button
           onClick={() => setHelpOpen(true)}
           aria-label="How to play"
-          className="w-11 h-11 -mr-2 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary btn-press shrink-0"
+          className="w-7 h-7 -mr-1 rounded-full flex items-center justify-center text-foreground/70 hover:text-primary btn-press shrink-0"
         >
           <HelpCircle className="w-4 h-4" />
         </button>
@@ -443,16 +460,6 @@ export default function RuneDelvePlayPage() {
 
       {/* Active mechanics strip — only when this level uses any mechanic */}
       {activeMechanics.length > 0 && <MechanicBanner mechanics={activeMechanics} />}
-
-      {/* Objective banner */}
-      <div className="glass-card px-3 py-2 flex items-center gap-2">
-        <span className="text-[9px] font-extrabold uppercase tracking-wider text-primary px-2 py-0.5 rounded-md bg-primary/15">Goal</span>
-        <span className="text-[12px] font-bold flex-1 truncate">
-          {objectiveLabel(objType)}
-          {objType === 'reach_score' && <span className="text-muted-foreground"> · {level.objective_target.toLocaleString()}</span>}
-        </span>
-        {existingRun && <span className="text-[10px] font-mono font-bold tabular-nums text-muted-foreground">Best {existingRun.score.toLocaleString()}</span>}
-      </div>
 
       {/* Layered Goals — secondary objective pill (Band 4). */}
       {secondaryObjective && (() => {
@@ -502,18 +509,27 @@ export default function RuneDelvePlayPage() {
         corruptionSources={corruption.sources}
       />
 
-      <div className="grid grid-cols-3 gap-2">
-        <div className="glass-card p-2 text-center">
-          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Damage</p>
-          <p className="text-sm font-extrabold tabular-nums">{combat.totalDamage}</p>
+      {/* Compact single-line combat stats strip — keeps the board above the fold. */}
+      <div
+        className="flex items-center justify-around gap-2 px-3 py-1.5 rounded-lg"
+        style={{
+          background: 'hsl(var(--rd-stone-edge) / 0.6)',
+          border: '1px solid hsl(var(--gold) / 0.12)',
+        }}
+      >
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] font-extrabold uppercase tracking-wider text-foreground/60">DMG</span>
+          <span className="text-[12px] font-extrabold tabular-nums text-foreground">{combat.totalDamage}</span>
         </div>
-        <div className="glass-card p-2 text-center">
-          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Defeated</p>
-          <p className="text-sm font-extrabold tabular-nums">{combat.enemiesDefeated}</p>
+        <span className="h-3 w-px bg-foreground/15" />
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] font-extrabold uppercase tracking-wider text-foreground/60">KILLS</span>
+          <span className="text-[12px] font-extrabold tabular-nums text-foreground">{combat.enemiesDefeated}</span>
         </div>
-        <div className="glass-card p-2 text-center">
-          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Best Chain</p>
-          <p className="text-sm font-extrabold tabular-nums">{combat.longestChain}</p>
+        <span className="h-3 w-px bg-foreground/15" />
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] font-extrabold uppercase tracking-wider text-foreground/60">CHAIN</span>
+          <span className="text-[12px] font-extrabold tabular-nums text-foreground">{combat.longestChain}</span>
         </div>
       </div>
 
