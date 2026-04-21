@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft, HelpCircle, Trophy, Skull, Hourglass } from 'lucide-react';
@@ -13,6 +13,8 @@ import { calculateScore, xpForRun } from '@/lib/runedelve/scoring';
 import { levelFromXp, newTitleUnlocked, titleForLevel } from '@/lib/runedelve/classConfig';
 import { useLoadout } from '@/hooks/useLoadout';
 import { useEarnShards, useFailureRow, useBumpFailure, useResetFailure, useRuneWallet, useUnlockSlot } from '@/hooks/useRuneShards';
+import { useRecordDefeats } from '@/hooks/useBestiary';
+import { rosterById } from '@/lib/runedelve/enemyRoster';
 import { useRelicCollection, rankMapFromOwned } from '@/hooks/useRelicCollection';
 import {
   buildActive,
