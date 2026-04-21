@@ -255,7 +255,64 @@ export default function RuneDelvePlayPage() {
       : len >= 6 ? { dmgMult: 1.2, bonus: false as const }
       : { dmgMult: 1, bonus: false as const };
     const tier = tierFor(chain.length);
+    // Snapshot relics for this run (falls back to live for first chain).
+    const relics = activeRelicsSnapshot ?? activeRelics;
+    // Per-chain counters BEFORE applying — drives Ember Edge / Crimson Tide / Quickstep.
+    const isFirstChainOfRun = chainCountTotal === 0;
+    const redCountAfter = type === 'red' ? redChainCount + 1 : redChainCount;
+    // Compute relic chain mods (Ember Edge, Crimson Tide, Executioner's Mark,
+    // Desperate Surge, Sapphire Flow, Verdant Heart, Bulwark, Quickstep).
+    const targetEnemyForCtx = combat.enemies.find(e => e.hp > 0);
+    const enemyHpRatio = targetEnemyForCtx ? targetEnemyForCtx.hp / Math.max(1, targetEnemyForCtx.maxHp) : 1;
+    const chainMods = computeChainMods(relics, {
+      chainType: type,
+      length: chain.length,
+      redChainCountSoFar: type === 'red' ? redCountAfter : 0,
+      isFirstChainOfRun,
+      hpRatio: combat.hp / Math.max(1, combat.maxHp),
+      enemyHpRatioBeforeHit: enemyHpRatio,
+    });
     const { next, resolution } = applyChain(combat, type, chain.length, hero.class, bossRule);
+    // Apply relic damage multiplier for red chains (composes with tier mult).
+    if (type === 'red' && chainMods.bonusDamageMult > 1 && resolution.damageDealt > 0) {
+      const baseDmg = resolution.damageDealt;
+      const boostedDmg = Math.round(baseDmg * chainMods.bonusDamageMult);
+      const extra = boostedDmg - baseDmg;
+      if (extra > 0) {
+        const target = next.enemies.find(e => e.hp > 0) ?? next.enemies.find(e => resolution.enemyKills.includes(e.id));
+        if (target) {
+          const applied = Math.min(extra, Math.max(target.hp, 0));
+          if (applied > 0) {
+            target.hp -= applied;
+            resolution.damageDealt += applied;
+            next.totalDamage += applied;
+            if (target.hp <= 0 && !resolution.enemyKills.includes(target.id)) {
+              next.enemiesDefeated += 1;
+              resolution.enemyKills.push(target.id);
+            }
+          }
+        }
+      }
+    }
+    // Mana / heal / shield bonuses.
+    if (chainMods.bonusManaFlat > 0) {
+      next.mana = Math.min(MAX_MANA, next.mana + chainMods.bonusManaFlat);
+      resolution.manaGained += chainMods.bonusManaFlat;
+    }
+    if (chainMods.bonusHealFlat > 0) {
+      const heal = Math.min(chainMods.bonusHealFlat, next.maxHp - next.hp);
+      if (heal > 0) {
+        next.hp += heal;
+        resolution.hpHealed += heal;
+      }
+    }
+    if (chainMods.bonusShieldTurns > 0) {
+      next.shieldTurns += chainMods.bonusShieldTurns;
+      resolution.guardGained += chainMods.bonusShieldTurns;
+    }
+    // Update per-run counters.
+    setChainCountTotal(c => c + 1);
+    if (type === 'red') setRedChainCount(redCountAfter);
     // Scale red-chain damage by the tier multiplier; route the extra HP into
     // the same target that applyChain already hit. Round to whole HP.
     if (tier.dmgMult > 1 && type === 'red' && resolution.damageDealt > 0) {
