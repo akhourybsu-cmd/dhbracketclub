@@ -124,8 +124,8 @@ export default function RuneDelveShopPage() {
       {/* Tier-locked banner */}
       {!tierUnlocked(tier) && (
         <div className="glass-card p-4 text-center">
-          <p className="text-[12px] font-extrabold mb-1">Tier {tier} sealed</p>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="rd-title text-[14px] font-extrabold mb-1 text-foreground">Tier {tier} sealed</p>
+          <p className="text-[12px] font-semibold text-foreground/80">
             Reach Chapter {tier} to unlock these relics. You're in Chapter {currentChapter}.
           </p>
         </div>
