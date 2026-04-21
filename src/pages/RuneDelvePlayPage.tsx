@@ -85,6 +85,9 @@ export default function RuneDelvePlayPage() {
   const [introMechanic, setIntroMechanic] = useState<MechanicId | null>(null);
   const [endState, setEndState] = useState<null | { cleared: boolean; reason: 'cleared' | 'defeated' | 'timeout'; score: number; isNewBest: boolean; shards: number }>(null);
   const [lastStandUsed, setLastStandUsed] = useState(false);
+  // Bonus-move rebalance: only one free turn per enemy cycle. Resets whenever
+  // the enemy phase actually runs (i.e. a non-bonus chain or ability resolves).
+  const [bonusUsedThisCycle, setBonusUsedThisCycle] = useState(false);
   const [corruption, setCorruption] = useState<CorruptionState>(emptyCorruption);
   const [log, setLog] = useState<CombatLogEntry[]>([]);
 
@@ -184,7 +187,38 @@ export default function RuneDelvePlayPage() {
   const handleChain = (chain: Cell[]) => {
     if (!isValidChain(grid, chain, seals)) return;
     const type = grid[chain[0].r][chain[0].c];
+    // Tiered chain bonus: 6=heavy strike (no free turn), 7=+30% & free turn,
+    // 8+=+40% & free turn. Only ONE free turn per enemy cycle.
+    const tierFor = (len: number) =>
+      len >= 8 ? { dmgMult: 1.4, bonus: true as const }
+      : len >= 7 ? { dmgMult: 1.3, bonus: true as const }
+      : len >= 6 ? { dmgMult: 1.2, bonus: false as const }
+      : { dmgMult: 1, bonus: false as const };
+    const tier = tierFor(chain.length);
     const { next, resolution } = applyChain(combat, type, chain.length, hero.class, bossRule);
+    // Scale red-chain damage by the tier multiplier; route the extra HP into
+    // the same target that applyChain already hit. Round to whole HP.
+    if (tier.dmgMult > 1 && type === 'red' && resolution.damageDealt > 0) {
+      const baseDmg = resolution.damageDealt;
+      const boostedDmg = Math.round(baseDmg * tier.dmgMult);
+      const extra = boostedDmg - baseDmg;
+      if (extra > 0) {
+        const target = next.enemies.find(e => e.hp > 0 && e.hp < e.maxHp)
+          ?? next.enemies.find(e => resolution.enemyKills.includes(e.id));
+        if (target) {
+          const applied = Math.min(extra, Math.max(target.hp, 0));
+          if (applied > 0) {
+            target.hp -= applied;
+            resolution.damageDealt += applied;
+            next.totalDamage += applied;
+            if (target.hp <= 0 && !resolution.enemyKills.includes(target.id)) {
+              next.enemiesDefeated += 1;
+              resolution.enemyKills.push(target.id);
+            }
+          }
+        }
+      }
+    }
     if (resolution.enemyKills.length) setFlashId(resolution.enemyKills[0]);
 
     // Build the per-turn log batch as we go so the order matches the events.
@@ -241,10 +275,11 @@ export default function RuneDelvePlayPage() {
       nextCorruption = r.next;
     }
 
-    // Bonus move: chains of 6+ runes grant a free action — skip the enemy phase
-    // for this turn so the player gets to chain again before retaliation.
-    const BONUS_MOVE_THRESHOLD = 6;
-    const grantsBonusMove = chain.length >= BONUS_MOVE_THRESHOLD && next.enemies.some(e => e.hp > 0);
+    // Bonus move (rebalanced): only chains of 7+ grant a free action, AND only
+    // once per enemy cycle. Chain-6 still gets a damage bump (handled above)
+    // but the enemy phase still runs.
+    const enemiesAlive = next.enemies.some(e => e.hp > 0);
+    const grantsBonusMove = tier.bonus && !bonusUsedThisCycle && enemiesAlive;
 
     // Capture pre-attack HP + shield to derive damage taken / mitigated.
     const hpBefore = next.hp;
@@ -258,13 +293,25 @@ export default function RuneDelvePlayPage() {
     // On a bonus-move chain, we skip the enemy phase entirely (no turn consumed, no retaliation).
     let afterEnemies = grantsBonusMove
       ? next
-      : next.enemies.some(e => e.hp > 0)
+      : enemiesAlive
         ? enemiesAttack(next, telegraphActive, bossRule)
         : endTurn(next);
     if (grantsBonusMove) {
+      setBonusUsedThisCycle(true);
       toast.success(`✨ Bonus move! Chain x${chain.length}`, { duration: 1400 });
       turnLogs.push({ kind: 'info', text: `Chain x${chain.length} — bonus move! Enemies hesitate.` });
+    } else if (tier.bonus && enemiesAlive) {
+      // 7+ chain that didn't get a bonus because one was already used this cycle.
+      if (chain.length >= 8) toast.success(`💥 Massive chain x${chain.length}!`, { duration: 1300 });
+      turnLogs.push({ kind: 'info', text: `Chain x${chain.length} — massive damage! (bonus already used this cycle)` });
+    } else if (chain.length === 6 && enemiesAlive) {
+      turnLogs.push({ kind: 'info', text: `Chain x6 — heavy strike!` });
     }
+    // Reset the per-cycle gate whenever the enemy phase actually fired.
+    if (!grantsBonusMove && enemiesAlive) {
+      setBonusUsedThisCycle(false);
+    }
+
     if ((afterEnemies as any).heavyFired) {
       toast.error('⚡ Heavy strike!', { duration: 1200 });
       turnLogs.push({ kind: 'heavy', text: 'A telegraphed heavy strike landed!' });
