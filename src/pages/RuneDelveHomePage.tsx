@@ -197,28 +197,28 @@ export default function RuneDelveHomePage() {
         <div className="glass-card p-4 flex items-center gap-3 btn-press">
           <ClassBadge cls={hero.class} size="lg" />
           <div className="flex-1 min-w-0">
-            <p className="font-extrabold text-[14px] truncate">{hero.hero_name}</p>
+            <p className="font-rd-display font-extrabold text-[15px] truncate tracking-wide">{hero.hero_name}</p>
             {activeTitle && (
-              <p className="text-[10px] font-bold text-primary truncate">
+              <p className="text-[10px] font-extrabold text-primary truncate">
                 ✦ {activeTitle}
               </p>
             )}
-            <p className="text-[10px] text-muted-foreground font-bold mt-0.5">{cls.name} · Lv {activeLevel}</p>
+            <p className="text-[10px] text-foreground/75 font-extrabold mt-0.5">{cls.name} · Lv {activeLevel}</p>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-[10px] font-bold text-muted-foreground">Lv {activeLevel}</span>
+              <span className="text-[10px] font-extrabold text-foreground/75">Lv {activeLevel}</span>
               <div className="flex-1 h-1.5 rounded-full bg-muted/50 overflow-hidden">
                 <div className="h-full bg-primary" style={{ width: `${xpPct}%` }} />
               </div>
-              <span className="text-[10px] font-mono text-muted-foreground tabular-nums">{lvl.intoLevel}/{lvl.needed}</span>
+              <span className="text-[10px] font-mono text-foreground/70 tabular-nums">{lvl.intoLevel}/{lvl.needed}</span>
             </div>
             <div className="flex items-center gap-3 mt-1.5">
-              <span className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground">
+              <span className="flex items-center gap-1 text-[10px] font-extrabold text-foreground/80">
                 <Flame className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} /> {hero.current_streak}-day streak
               </span>
-              <span className="text-[10px] text-muted-foreground">· {progress.total_levels_cleared} cleared</span>
+              <span className="text-[10px] text-foreground/70">· {progress.total_levels_cleared} cleared</span>
             </div>
           </div>
-          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          <ChevronRight className="w-4 h-4 text-foreground/60" />
         </div>
       </Link>
 
