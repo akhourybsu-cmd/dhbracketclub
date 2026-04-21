@@ -23,10 +23,15 @@ interface Props {
   corruptedCells?: Set<string>;
   /** Subset of `corruptedCells` that are active spreaders. */
   corruptionSources?: Set<string>;
+  /** Optional per-rune effect override (keyed by RuneType). When present,
+   *  replaces the default static preview so it can reflect class multipliers
+   *  (Warrior 1.25× red, Mage 2 mana on blue, Cleric 1.5× green) and chain
+   *  tier bonuses (chain 6/7/8+). */
+  effectOverride?: Partial<Record<RuneType, (n: number) => string>>;
 }
 
 // Mobile-first rune board with pointer-driven chain selection.
-export function RuneBoard({ grid, disabled, onChainComplete, seals, corruptedCells, corruptionSources }: Props) {
+export function RuneBoard({ grid, disabled, onChainComplete, seals, corruptedCells, corruptionSources, effectOverride }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [chain, setChain] = useState<Cell[]>([]);
   const draggingRef = useRef(false);
