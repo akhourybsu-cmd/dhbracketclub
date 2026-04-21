@@ -72,10 +72,10 @@ export function RuneDelveHUD() {
               </span>
             )}
             <div className="flex-1 min-w-0 leading-tight">
-              <p className="text-[12px] font-extrabold truncate tracking-tight">
+              <p className="font-rd-display text-[13px] font-extrabold truncate tracking-wide">
                 {hero?.hero_name ?? 'Rune Delve'}
               </p>
-              <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground truncate">
+              <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-foreground/70 truncate">
                 Chapter {chapter}{isPlaying && progress ? ` · L${location.pathname.split('/').pop()}` : ''}
               </p>
             </div>
