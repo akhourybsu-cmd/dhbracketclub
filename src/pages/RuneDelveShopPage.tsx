@@ -204,7 +204,7 @@ export default function RuneDelveShopPage() {
         shards={shards}
         pending={!!pendingId}
         onConfirm={confirmUpgrade}
-        onClose={() => setUpgradeRelic(null)}
+        onOpenChange={(o) => !o && setUpgradeRelic(null)}
       />
     </div>
   );
