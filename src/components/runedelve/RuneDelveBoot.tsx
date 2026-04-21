@@ -185,13 +185,13 @@ export function RuneDelveBoot() {
             className="text-center"
           >
             <p
-              className="text-[10px] font-extrabold uppercase tracking-[0.4em] mb-1.5"
+              className="font-rd-display text-[10px] font-extrabold uppercase tracking-[0.45em] mb-1.5"
               style={{ color: 'hsl(var(--rd-arcane))' }}
             >
               ◆ Rune Delve ◆
             </p>
             <h1
-              className="text-[28px] leading-none font-extrabold tracking-tight"
+              className="rd-title text-[30px] leading-none tracking-wide"
               style={{
                 background:
                   'linear-gradient(180deg, hsl(150 20% 98%) 0%, hsl(var(--rd-arcane) / 0.85) 100%)',
@@ -202,7 +202,7 @@ export function RuneDelveBoot() {
             >
               {meta.name}
             </h1>
-            <p className="text-[11px] font-bold text-muted-foreground mt-1.5 italic">
+            <p className="text-[11px] font-bold mt-1.5 italic" style={{ color: 'hsl(150 14% 78%)' }}>
               {meta.subtitle}
             </p>
           </motion.div>
