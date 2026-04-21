@@ -8,7 +8,10 @@ export interface ClearShardArgs {
   isFirstClear: boolean;
   bossClear: boolean;       // L25/50/75/100/125/150
   chapterCleared: boolean;  // first time finishing a chapter
-  compassEquipped: boolean; // Wanderer's Compass relic
+  compassEquipped: boolean; // Wanderer's Compass relic equipped
+  /** Wanderer's Compass rank-aware multiplier (1.15 R1 → 1.27 R5). When
+   *  omitted but `compassEquipped`, defaults to 1.15. */
+  compassMultiplier?: number;
 }
 
 export interface FailShardArgs {
@@ -21,6 +24,7 @@ export interface FailShardArgs {
   bossPhaseReached: number; // 0..3
   bossHasRule: boolean;
   compassEquipped: boolean;
+  compassMultiplier?: number;
 }
 
 export interface ShardBreakdown {
@@ -38,7 +42,7 @@ export function computeClearShards(args: ClearShardArgs): ShardBreakdown {
   const bonuses: { label: string; amount: number }[] = [];
   if (args.bossClear) bonuses.push({ label: 'Boss bonus', amount: 50 });
   if (args.chapterCleared) bonuses.push({ label: 'Chapter complete', amount: 200 });
-  const multiplier = args.compassEquipped ? 1.15 : 1;
+  const multiplier = args.compassEquipped ? (args.compassMultiplier ?? 1.15) : 1;
   const subtotal = base + bonuses.reduce((s, b) => s + b.amount, 0);
   const total = Math.max(1, Math.round(subtotal * multiplier));
   return { base, bonuses, multiplier, total };
@@ -68,7 +72,7 @@ export function computeFailureShards(args: FailShardArgs): ShardBreakdown {
   const base = Math.max(1, Math.round(baseClearVal * 0.2 * progress));
 
   const dimMult = failureMultiplier(args.failureCount);
-  const compassMult = args.compassEquipped ? 1.15 : 1;
+  const compassMult = args.compassEquipped ? (args.compassMultiplier ?? 1.15) : 1;
   const multiplier = dimMult * compassMult;
 
   const bonuses: { label: string; amount: number }[] = [];

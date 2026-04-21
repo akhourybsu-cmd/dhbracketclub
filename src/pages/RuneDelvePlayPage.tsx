@@ -26,6 +26,7 @@ import {
   shrineWardTurn1Mult,
   bossRuleSoften,
   momentumScoreBonusMult,
+  compassShardBonus,
   getTelegraphReadyEarly,
   getSealedTilesSpeedup,
   type ActiveRelics,
@@ -105,7 +106,8 @@ export default function RuneDelvePlayPage() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [introMechanic, setIntroMechanic] = useState<MechanicId | null>(null);
   const [endState, setEndState] = useState<null | { cleared: boolean; reason: 'cleared' | 'defeated' | 'timeout'; score: number; isNewBest: boolean; shards: number }>(null);
-  const [lastStandUsed, setLastStandUsed] = useState(false);
+  // Counter (not boolean) — Last Stand at R5 grants 2 saves per run.
+  const [lastStandUsed, setLastStandUsed] = useState(0);
   // Bonus-move rebalance: only one free turn per enemy cycle. Resets whenever
   // the enemy phase actually runs (i.e. a non-bonus chain or ability resolves).
   const [bonusUsedThisCycle, setBonusUsedThisCycle] = useState(false);
@@ -196,7 +198,7 @@ export default function RuneDelvePlayPage() {
     initial.shieldTurns = Math.max(initial.shieldTurns, getStartingShieldTurns(relics));
     setCombat(initial);
     setActiveRelicsSnapshot(relics);
-    setLastStandUsed(false);
+    setLastStandUsed(0);
     setRedChainCount(0);
     setChainCountTotal(0);
     setAbilityUsedCount(0);
@@ -272,7 +274,9 @@ export default function RuneDelvePlayPage() {
       hpRatio: combat.hp / Math.max(1, combat.maxHp),
       enemyHpRatioBeforeHit: enemyHpRatio,
     });
-    const { next, resolution } = applyChain(combat, type, chain.length, hero.class, bossRule);
+    // Momentum (rogue): chain bonus threshold drops from 5 → 4.
+    const rogueBonusThreshold = hero.class === 'rogue' && has(relics, 'momentum') ? 4 : 5;
+    const { next, resolution } = applyChain(combat, type, chain.length, hero.class, bossRule, rogueBonusThreshold);
     // Apply relic damage multiplier for red chains (composes with tier mult).
     if (type === 'red' && chainMods.bonusDamageMult > 1 && resolution.damageDealt > 0) {
       const baseDmg = resolution.damageDealt;
@@ -309,6 +313,54 @@ export default function RuneDelvePlayPage() {
     if (chainMods.bonusShieldTurns > 0) {
       next.shieldTurns += chainMods.bonusShieldTurns;
       resolution.guardGained += chainMods.bonusShieldTurns;
+    }
+    // Quickstep: first chain of run counts as +N length. Apply by adding the
+    // per-rune effect of the chain type (an extra "phantom" rune's worth) for
+    // every length bonus point. Also lifts the longest-chain stat for scoring.
+    if (chainMods.effectiveLengthBonus > 0) {
+      const bonusLen = chainMods.effectiveLengthBonus;
+      next.longestChain = Math.max(next.longestChain, chain.length + bonusLen);
+      if (type === 'red') {
+        // 8 dmg per rune base, scaled by warrior passive (matches applyChain).
+        const perRune = hero.class === 'warrior' ? Math.round(8 * 1.25) : 8;
+        const extra = perRune * bonusLen;
+        const target = next.enemies.find(e => e.hp > 0)
+          ?? next.enemies.find(e => resolution.enemyKills.includes(e.id));
+        if (target) {
+          const applied = Math.min(extra, Math.max(target.hp, 0));
+          if (applied > 0) {
+            target.hp -= applied;
+            resolution.damageDealt += applied;
+            next.totalDamage += applied;
+            if (target.hp <= 0 && !resolution.enemyKills.includes(target.id)) {
+              next.enemiesDefeated += 1;
+              resolution.enemyKills.push(target.id);
+            }
+          }
+        }
+      } else if (type === 'green') {
+        const perRune = hero.class === 'cleric' ? Math.round(6 * 1.5) : 6;
+        const extra = Math.min(perRune * bonusLen, next.maxHp - next.hp);
+        if (extra > 0) {
+          next.hp += extra;
+          resolution.hpHealed += extra;
+        }
+      } else if (type === 'blue') {
+        // Push the chain over the 5+ mana threshold if it wasn't already.
+        if (chain.length < 5 && chain.length + bonusLen >= 5 && next.mana < MAX_MANA) {
+          next.mana = Math.min(MAX_MANA, next.mana + 1);
+          resolution.manaGained += 1;
+        }
+      } else if (type === 'gold') {
+        // Gold scales shield turns by floor(length/3) — only push if it crosses a threshold.
+        const beforeT = Math.floor(chain.length / 3);
+        const afterT = Math.floor((chain.length + bonusLen) / 3);
+        const extraTurns = afterT - beforeT;
+        if (extraTurns > 0) {
+          next.shieldTurns += extraTurns;
+          resolution.guardGained += extraTurns;
+        }
+      }
     }
     // Update per-run counters.
     setChainCountTotal(c => c + 1);
@@ -477,22 +529,22 @@ export default function RuneDelvePlayPage() {
       if (mitigated > 0) turnLogs.push({ kind: 'mitigated', text: 'Your guard absorbed the blow', amount: mitigated });
     }
 
-    // Relic: Last Stand — survive lethal at 1 HP, once per run.
-    if (afterEnemies.hp <= 0 && !lastStandUsed) {
-      const ls = tryLastStand(activeRelics, afterEnemies.hp, false);
+    // Relic: Last Stand — survive lethal at 1 HP. R1–R4: 1 use; R5: 2 uses.
+    if (afterEnemies.hp <= 0) {
+      const ls = tryLastStand(relics, afterEnemies.hp, lastStandUsed);
       if (ls.saved) {
         afterEnemies = { ...afterEnemies, hp: ls.hp };
-        setLastStandUsed(true);
+        setLastStandUsed(c => c + 1);
         toast.success('💔 Last Stand! Survived at 1 HP', { duration: 1800 });
         turnLogs.push({ kind: 'laststand', text: 'Last Stand! You survived at 1 HP' });
       }
     }
 
-    // Relic: Bloodbond — heal 4 HP per kill this turn.
-    if (resolution.enemyKills.length && has(activeRelics, 'bloodbond')) {
+    // Relic: Bloodbond — heal per kill this turn (rank-aware: 4–6 HP).
+    if (resolution.enemyKills.length && has(relics, 'bloodbond')) {
       const beforeHeal = afterEnemies.hp;
       let healed = afterEnemies;
-      for (let i = 0; i < resolution.enemyKills.length; i++) healed = onEnemyKilled(activeRelics, healed);
+      for (let i = 0; i < resolution.enemyKills.length; i++) healed = onEnemyKilled(relics, healed);
       afterEnemies = { ...afterEnemies, hp: healed.hp };
       const gained = afterEnemies.hp - beforeHeal;
       if (gained > 0) turnLogs.push({ kind: 'heal', text: 'Bloodbond drew vigor from the slain', amount: gained });
@@ -600,7 +652,8 @@ export default function RuneDelvePlayPage() {
     const isNewBest = !existingRun || breakdown.total > (existingRun.score ?? 0);
 
     // ── Rune Shards reward ────────────────────────────────────────────────
-    const compassEquipped = has(activeRelics, 'wanderers_compass');
+    const compassEquipped = has(relicsForFinal, 'wanderers_compass');
+    const compassMultiplier = compassShardBonus(relicsForFinal);
     const isFirstClear = cleared && (!existingRun || !existingRun.dungeon_cleared);
     const bossClear = cleared && level.level_number % 25 === 0;
     const totalEnemies = (level.enemy_config?.length ?? final.enemies.length) || 1;
@@ -613,6 +666,7 @@ export default function RuneDelvePlayPage() {
           bossClear,
           chapterCleared: false,
           compassEquipped,
+          compassMultiplier,
         });
         shardsAwarded = breakdownShards.total;
       } else {
@@ -627,6 +681,7 @@ export default function RuneDelvePlayPage() {
           bossPhaseReached: 0,
           bossHasRule: !!bossRule,
           compassEquipped,
+          compassMultiplier,
         });
         shardsAwarded = breakdownShards.total;
       }
