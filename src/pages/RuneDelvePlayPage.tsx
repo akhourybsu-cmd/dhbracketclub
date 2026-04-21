@@ -349,36 +349,15 @@ export default function RuneDelvePlayPage() {
       amount: dealt > 0 ? dealt : healed > 0 ? healed : undefined,
     });
     if (killed > 0) turnLogs.push({ kind: 'kill', text: killed > 1 ? `${killed} foes vanquished!` : 'A foe was vanquished!' });
+    turnLogs.push({ kind: 'info', text: 'Free action — your turn continues.' });
+    toast.success('✨ Ability — free action!', { duration: 1200 });
 
-    // Capture pre-attack HP to derive damage taken from the enemy phase.
-    const hpBefore = next.hp;
-    const hadShield = next.shieldTurns > 0;
-    const rawIncoming = next.enemies.reduce((s, e) => s + (e.hp > 0 ? Math.round(e.damage) : 0), 0);
-
-    // enemiesAttack already runs applyBossTurnEffects internally.
-    const after = next.enemies.some(e => e.hp > 0)
-      ? enemiesAttack(next, telegraphActive, bossRule)
-      : endTurn(next);
-    if ((after as any).heavyFired) {
-      toast.error('⚡ Heavy strike!', { duration: 1200 });
-      turnLogs.push({ kind: 'heavy', text: 'A telegraphed heavy strike landed!' });
-    }
-    const hpLost = Math.max(0, hpBefore - after.hp);
-    if (hpLost > 0) turnLogs.push({ kind: 'taken', text: 'Enemies retaliated', amount: hpLost });
-    if (hadShield && rawIncoming > hpLost) {
-      const mitigated = rawIncoming - hpLost;
-      if (mitigated > 0) turnLogs.push({ kind: 'mitigated', text: 'Your guard absorbed the blow', amount: mitigated });
-    }
-
-    // Ability still consumes a turn — corruption advances.
-    if (corruptionActive && corruption.sources.size) {
-      setCorruption(spreadCorruption(corruption, rngTick, level.generation_seed, seals));
-      setRngTick(t => t + 1);
-    }
-    setCombat(after);
+    // Abilities are now FREE actions: no enemy retaliation, no turn consumed,
+    // no corruption spread. Player keeps their turn to chain again.
+    setCombat(next);
     pushLogs(turnLogs);
-    const status = checkObjective(after, level.turn_limit, objType, level.objective_target, secondaryObjective);
-    if (status.over) void finalize(after, status.cleared);
+    const status = checkObjective(next, level.turn_limit, objType, level.objective_target, secondaryObjective);
+    if (status.over) void finalize(next, status.cleared);
   };
 
   async function finalize(final: CombatState, cleared: boolean) {
