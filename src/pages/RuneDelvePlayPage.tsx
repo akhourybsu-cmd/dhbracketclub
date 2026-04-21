@@ -274,7 +274,9 @@ export default function RuneDelvePlayPage() {
       hpRatio: combat.hp / Math.max(1, combat.maxHp),
       enemyHpRatioBeforeHit: enemyHpRatio,
     });
-    const { next, resolution } = applyChain(combat, type, chain.length, hero.class, bossRule);
+    // Momentum (rogue): chain bonus threshold drops from 5 → 4.
+    const rogueBonusThreshold = hero.class === 'rogue' && has(relics, 'momentum') ? 4 : 5;
+    const { next, resolution } = applyChain(combat, type, chain.length, hero.class, bossRule, rogueBonusThreshold);
     // Apply relic damage multiplier for red chains (composes with tier mult).
     if (type === 'red' && chainMods.bonusDamageMult > 1 && resolution.damageDealt > 0) {
       const baseDmg = resolution.damageDealt;
