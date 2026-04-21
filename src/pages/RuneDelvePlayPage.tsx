@@ -136,6 +136,7 @@ export default function RuneDelvePlayPage() {
     initial.shieldTurns = Math.max(initial.shieldTurns, getStartingShieldTurns(activeRelics));
     setCombat(initial);
     setLastStandUsed(false);
+    setLog([{ id: `boot-${Date.now()}`, kind: 'info', text: `You enter Level ${level.level_number}. The runes hum.` }]);
   }, [level, hero, sealedTilesActive, telegraphActive, corruptionActive, activeRelics]);
 
   // One-time intro modal for any brand-new mechanic taught at this level.
