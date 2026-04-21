@@ -518,17 +518,17 @@ export default function RuneDelvePlayPage() {
         }}
       >
         <div className="flex items-center gap-1.5">
-          <span className="text-[9px] font-extrabold uppercase tracking-wider text-foreground/60">DMG</span>
+          <span className="text-[9px] font-extrabold uppercase tracking-wider text-foreground/80">DMG</span>
           <span className="text-[12px] font-extrabold tabular-nums text-foreground">{combat.totalDamage}</span>
         </div>
-        <span className="h-3 w-px bg-foreground/15" />
+        <span className="h-3 w-px bg-foreground/25" />
         <div className="flex items-center gap-1.5">
-          <span className="text-[9px] font-extrabold uppercase tracking-wider text-foreground/60">KILLS</span>
+          <span className="text-[9px] font-extrabold uppercase tracking-wider text-foreground/80">KILLS</span>
           <span className="text-[12px] font-extrabold tabular-nums text-foreground">{combat.enemiesDefeated}</span>
         </div>
-        <span className="h-3 w-px bg-foreground/15" />
+        <span className="h-3 w-px bg-foreground/25" />
         <div className="flex items-center gap-1.5">
-          <span className="text-[9px] font-extrabold uppercase tracking-wider text-foreground/60">CHAIN</span>
+          <span className="text-[9px] font-extrabold uppercase tracking-wider text-foreground/80">CHAIN</span>
           <span className="text-[12px] font-extrabold tabular-nums text-foreground">{combat.longestChain}</span>
         </div>
       </div>
