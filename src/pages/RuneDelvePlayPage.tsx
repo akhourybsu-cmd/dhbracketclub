@@ -844,6 +844,28 @@ export default function RuneDelvePlayPage() {
         }
       } catch { /* shards are best-effort */ }
 
+      // ── Bestiary: record defeats from this run ─────────────────────────
+      try {
+        const defeats = Array.from(defeatedArchetypesRef.current.entries()).map(
+          ([archetypeId, count]) => ({ archetypeId, count, levelNumber: level.level_number }),
+        );
+        if (defeats.length > 0) {
+          const { newlyDiscovered } = await recordDefeats.mutateAsync(defeats);
+          if (newlyDiscovered.length > 0) {
+            const names = newlyDiscovered
+              .map(id => rosterById(id)?.name ?? 'Unknown')
+              .slice(0, 3);
+            const more = newlyDiscovered.length - names.length;
+            toast.success(
+              newlyDiscovered.length === 1
+                ? `📖 Bestiary: ${names[0]} discovered!`
+                : `📖 Bestiary: ${names.join(', ')}${more > 0 ? ` +${more} more` : ''}`,
+              { duration: 4000 },
+            );
+          }
+        }
+      } catch { /* bestiary write is best-effort */ }
+
       setTimeout(() => navigate(`/rune-delve/results/${level.level_number}`), 2500);
     } catch (e: any) {
       toast.error(e?.message ?? 'Could not save run');

@@ -291,7 +291,10 @@ export default function RuneDelveHomePage() {
       </div>
 
       {/* Footer links */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
+        <Link to="/rune-delve/bestiary" className="glass-card p-3 text-center text-[12px] font-bold btn-press inline-flex items-center justify-center gap-1.5">
+          <BookOpen className="w-3.5 h-3.5 text-primary" /> Bestiary
+        </Link>
         <Link to="/rune-delve/history" className="glass-card p-3 text-center text-[12px] font-bold btn-press">History →</Link>
         <Link to="/rune-delve/hero" className="glass-card p-3 text-center text-[12px] font-bold btn-press">Hero →</Link>
       </div>
