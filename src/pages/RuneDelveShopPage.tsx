@@ -99,6 +99,7 @@ export default function RuneDelveShopPage() {
     try {
       await spend.mutateAsync(cost);
       await upgrade.mutateAsync({ relic_id: upgradeRelic.id, expected_rank: curRank });
+      sfx.play('success');
       toast.success(`⬆️ ${upgradeRelic.name} → R${curRank + 1}`);
       setUpgradeRelic(null);
     } catch (e: any) {
