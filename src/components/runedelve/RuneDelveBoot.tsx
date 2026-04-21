@@ -4,6 +4,7 @@ import { useRuneDelveHero } from '@/hooks/useRuneDelveHero';
 import { useMyProgress } from '@/hooks/useRuneDelveCampaign';
 import { chapterFor, chapterMeta } from '@/lib/runedelve/levelGenerator';
 import { getClass } from '@/lib/runedelve/classConfig';
+import runedelveEmblem from '@/assets/runedelve-emblem.png';
 
 const BOOT_FLAG = 'rd_boot_played_v1';
 const DURATION = 1400; // ms — short, premium, never annoying
@@ -165,21 +166,15 @@ export function RuneDelveBoot() {
                 borderStyle: 'dotted',
               }}
             />
-            {/* Class crest or default rune */}
-            <div
-              className="relative w-16 h-16 rounded-2xl flex items-center justify-center text-3xl"
-              style={{
-                background:
-                  'linear-gradient(135deg, hsl(var(--rd-arcane) / 0.35), hsl(var(--rd-rune-blue) / 0.2))',
-                border: '1px solid hsl(var(--rd-arcane) / 0.55)',
-                boxShadow:
-                  '0 0 22px hsl(var(--rd-arcane) / 0.55), inset 0 0 12px hsl(var(--rd-arcane) / 0.3)',
-              }}
-            >
-              <span style={{ filter: 'drop-shadow(0 0 6px hsl(var(--rd-arcane) / 0.85))' }}>
-                {cls?.emoji ?? '✦'}
-              </span>
-            </div>
+            {/* Rune Delve emblem */}
+            <img
+              src={runedelveEmblem}
+              alt="Rune Delve"
+              width={128}
+              height={128}
+              className="relative w-[120px] h-[120px] object-contain"
+              style={{ filter: 'drop-shadow(0 0 18px hsl(var(--rd-arcane) / 0.7))' }}
+            />
           </motion.div>
 
           {/* Title block */}
