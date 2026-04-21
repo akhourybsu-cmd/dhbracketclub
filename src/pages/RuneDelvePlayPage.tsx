@@ -180,6 +180,9 @@ export default function RuneDelvePlayPage() {
     setCorruption(buildInitialCorruption(level.generation_seed, corruptionActive, level.level_number, initialSeals));
     let enemies: Enemy[] = (level.enemy_config ?? []).map((e: any, i: number) => ({
       id: e.id ?? `e${i}`, name: e.name, emoji: e.emoji, hp: e.hp, maxHp: e.maxHp ?? e.hp, damage: e.damage,
+      archetypeId: e.archetypeId, family: e.family, role: e.role,
+      ability: e.ability, abilityCooldown: e.abilityCooldown, abilityCooldownMax: e.abilityCooldownMax ?? e.abilityCooldown,
+      telegraphLabel: e.telegraphLabel,
     }));
     if (telegraphActive) {
       enemies = applyInitialIntents(enemies, level.generation_seed, level.level_number);
