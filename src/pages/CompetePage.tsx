@@ -627,7 +627,7 @@ function PlayoffFormatGuide({ embedded = false }: { embedded?: boolean }) {
   ];
 
   return (
-    <div className="mt-4 pt-3 border-t border-border/15">
+    <div className={cn(embedded ? 'mt-3' : 'mt-4 pt-3 border-t border-border/15')}>
       <div className="flex items-center gap-1.5 mb-2">
         <Trophy className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />
         <p className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: 'hsl(var(--gold))' }}>
