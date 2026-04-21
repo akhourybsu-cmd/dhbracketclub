@@ -20,8 +20,8 @@ export function RuneDelveLayout({ children }: { children: ReactNode }) {
       <RuneDelveHUD />
 
       <main
-        className="max-w-[640px] mx-auto px-4 sm:px-5 py-4 sm:py-5"
-        style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
+        className="max-w-[640px] mx-auto px-3 sm:px-5 pt-2 pb-3 sm:pt-3 sm:pb-4"
+        style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
       >
         {children}
       </main>
