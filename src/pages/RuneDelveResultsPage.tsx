@@ -147,6 +147,22 @@ export default function RuneDelveResultsPage() {
         })}
       </div>
 
+      {/* Active loadout chip — reminds the player what was equipped this run */}
+      {hero && equippedRelics.length > 0 && (
+        <Link to="/rune-delve/armory" className="block">
+          <div className="glass-card p-3 btn-press flex items-center gap-2.5">
+            <Shield className="w-4 h-4 text-primary shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Loadout · {getClass(hero.class).name}</p>
+              <p className="text-[11px] font-extrabold truncate">
+                {equippedRelics.map(r => `${r!.icon} ${r!.name}`).join(' · ')}
+              </p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+          </div>
+        </Link>
+      )}
+
       {/* Mechanic recap — what was active on this level */}
       {(() => {
         const mods = (level.modifiers ?? {}) as {
