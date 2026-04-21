@@ -903,14 +903,30 @@
   --rd-stone-edge: 230 16% 16%;
   /* Lift muted text contrast inside the fantasy palette — the dark stone
      surface eats grays, so default 46% lightness reads as faded. Bump to
-     ~64% so secondary labels stay readable on a phone. */
-  --muted-foreground: 150 14% 64%;
+     ~70% so secondary labels stay clearly readable on a phone (WCAG AA on
+     --rd-stone). */
+  --muted-foreground: 150 14% 72%;
   position: relative;
 }
 
 /* Strong default body color — never let small fantasy text fall to muddy gray. */
 .rd-mode {
-  color: hsl(150 14% 92%);
+  color: hsl(150 14% 94%);
+}
+
+/* ── Fantasy display font, scoped to Rune Delve display moments ───
+   Uses Cinzel (engraved Roman serif) for headlines, hero names,
+   chapter pills, boot title, etc. Body copy stays Plus Jakarta Sans. */
+.font-rd-display {
+  font-family: 'Cinzel', 'Plus Jakarta Sans', serif;
+  letter-spacing: 0.015em;
+  font-weight: 700;
+}
+.rd-title {
+  font-family: 'Cinzel', 'Plus Jakarta Sans', serif;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 0 hsl(0 0% 0% / 0.4), 0 0 18px hsl(var(--rd-arcane) / 0.18);
 }
 
 /* Subtle dungeon backdrop — torchlit vignette + arcane sigil glow.
