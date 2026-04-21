@@ -607,6 +607,49 @@ function TopicPickerDialog({
 }
 
 /* ══════════════════════════════════════════════════════════
+   PLAYOFF FORMAT GUIDE — clear-cut rules card shown inside
+   the Playoff Picture so members always see how it works.
+   ══════════════════════════════════════════════════════════ */
+function PlayoffFormatGuide() {
+  const rules: { icon: React.ReactNode; label: string; body: string }[] = [
+    { icon: <Users className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />, label: 'Field',
+      body: 'Top 5 in Season Points qualify. #1, #2, #3 get a first-round bye.' },
+    { icon: <Swords className="w-3 h-3" style={{ color: 'hsl(var(--primary))' }} />, label: 'Bracket',
+      body: 'Play-In: #4 vs #5 (Bo1). Semis: #1 vs Play-In winner & #2 vs #3 (Bo1 each).' },
+    { icon: <Crown className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />, label: 'Final',
+      body: 'Best-of-3. First to 2 game wins is Champion.' },
+    { icon: <Award className="w-3 h-3" style={{ color: 'hsl(var(--bronze))' }} />, label: '3rd Place',
+      body: 'Bo1 between the two semifinal losers — the winner takes bronze.' },
+    { icon: <Sparkles className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />, label: 'Topic Picker',
+      body: 'Higher seed picks the draft topic. In the Final, picker rotates: G1 higher, G2 lower, G3 higher.' },
+    { icon: <Target className="w-3 h-3" style={{ color: 'hsl(var(--success))' }} />, label: 'Tiebreaks',
+      body: 'Match winner = highest draft score. Series clinched at 2 wins ends the Final.' },
+  ];
+
+  return (
+    <div className="mt-4 pt-3 border-t border-border/15">
+      <div className="flex items-center gap-1.5 mb-2">
+        <Trophy className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />
+        <p className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: 'hsl(var(--gold))' }}>
+          Playoff Format
+        </p>
+      </div>
+      <ul className="space-y-1.5">
+        {rules.map(r => (
+          <li key={r.label} className="flex items-start gap-2 p-2 rounded-md bg-muted/20">
+            <span className="mt-0.5 flex-shrink-0">{r.icon}</span>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold leading-tight">{r.label}</p>
+              <p className="text-[10px] text-muted-foreground/80 leading-snug mt-0.5">{r.body}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
    PLAYOFF BRACKET — visual bracket with connector lines
    ══════════════════════════════════════════════════════════ */
 function PlayoffPicture({ standings, matches, seasonId }: { standings: SeasonStanding[]; matches: PlayoffMatch[]; seasonId: string | undefined }) {
