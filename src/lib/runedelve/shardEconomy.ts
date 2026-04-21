@@ -34,7 +34,9 @@ export interface ShardBreakdown {
   total: number;
 }
 
-const baseClearValue = (level: number) => 10 + level;
+// Early-game (L1-15) gets a flat +5 bump so the first relic is reachable
+// in ~6-8 clears instead of ~12. Beyond L15 the curve is unchanged.
+const baseClearValue = (level: number) => 10 + level + (level <= 15 ? 5 : 0);
 const baseReplayValue = (level: number) => 3 + Math.floor(level / 10);
 
 export function computeClearShards(args: ClearShardArgs): ShardBreakdown {

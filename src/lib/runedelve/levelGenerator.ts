@@ -115,15 +115,20 @@ function turnLimitFor(level: number): number {
   return 8;
 }
 
-// Enemy count ramp — Rebalance: push the 3-enemy threshold from L≤25 down
-// to L≤8 always-2, then chance-gated until L25, full 3 from L26+.
+// Enemy count ramp — Rebalance v2: smooth the L14 cliff. Playtest showed
+// the 25% chance of 3 enemies at L14 paired with tanky Slime rolls created
+// a 2.5× HP spike vs L13. We now keep 2 enemies through L15, then ramp.
 function enemyCountFor(level: number, rng: () => number): number {
-  if (level <= 8) return 2;
-  if (level <= 15) return rng() < 0.75 ? 2 : 3;    // 75/25 split
-  if (level <= 25) return rng() < 0.5 ? 2 : 3;     // 50/50 split
+  if (level <= 15) return 2;                       // tutorial-friendly Chapter 1 opener
+  if (level <= 22) return rng() < 0.6 ? 2 : 3;     // 60/40 split — gentle introduction
+  if (level <= 30) return rng() < 0.35 ? 2 : 3;    // 35/65 — mostly 3
   if (level <= 75) return 3;
   return 3 + rngInt(rng, 2);                       // 3-4
 }
+
+// Per-template HP cap on early levels — keep the L14-15 area from rolling a
+// triple-Slime/Stone-Golem wall before the player has any relics.
+const EARLY_HP_CAP = 110;
 
 // HP/damage scaling — softer ramp through L25, then resume original curve.
 function scaleEnemy(base: { hp: number; damage: number }, level: number) {
@@ -181,20 +186,25 @@ export function generateLevel(level: number): LevelDefinition {
   for (let i = 0; i < enemyCount; i++) {
     const t = pickTemplate(level, rng);
     let { hp, damage } = scaleEnemy(t, level);
-    // Elite levels: last enemy is a beefier boss.
+    // Early-game HP cap: avoid triple-tank rolls (Slime/Stone Golem) before
+    // relics exist. Bosses/elites bypass this so milestones still feel weighty.
     const isElite = objective.type === 'defeat_elite' && i === enemyCount - 1;
+    const isFinalBossSlot = isBossLevel && i === enemyCount - 1;
+    if (level <= 18 && !isElite && !isFinalBossSlot) {
+      hp = Math.min(hp, EARLY_HP_CAP);
+    }
     if (isElite) {
       hp = Math.round(hp * 1.6);
       damage = Math.round(damage * 1.2);
     }
     // Boss-rule levels: meaningfully beef up the final enemy so the rule lands.
-    if (isBossLevel && i === enemyCount - 1) {
+    if (isFinalBossSlot) {
       hp = Math.round(hp * 1.8);
       damage = Math.round(damage * 1.15);
     }
     enemies.push({
       id: `e${i}`,
-      name: isBossLevel && i === enemyCount - 1
+      name: isFinalBossSlot
         ? `Boss ${t.name}`
         : isElite ? `Elite ${t.name}` : t.name,
       emoji: t.emoji,
