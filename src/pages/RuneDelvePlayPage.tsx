@@ -182,10 +182,28 @@ export default function RuneDelvePlayPage() {
     }
 
     // enemiesAttack already runs applyBossTurnEffects internally — do NOT call it again here.
-    const afterEnemies = next.enemies.some(e => e.hp > 0)
+    let afterEnemies = next.enemies.some(e => e.hp > 0)
       ? enemiesAttack(next, telegraphActive, bossRule)
       : endTurn(next);
     if ((afterEnemies as any).heavyFired) toast.error('⚡ Heavy strike!', { duration: 1200 });
+
+    // Relic: Last Stand — survive lethal at 1 HP, once per run.
+    if (afterEnemies.hp <= 0 && !lastStandUsed) {
+      const ls = tryLastStand(activeRelics, afterEnemies.hp, false);
+      if (ls.saved) {
+        afterEnemies = { ...afterEnemies, hp: ls.hp };
+        setLastStandUsed(true);
+        toast.success('💔 Last Stand! Survived at 1 HP', { duration: 1800 });
+      }
+    }
+
+    // Relic: Bloodbond — heal 4 HP per kill this turn.
+    if (resolution.enemyKills.length && has(activeRelics, 'bloodbond')) {
+      let healed = afterEnemies;
+      for (let i = 0; i < resolution.enemyKills.length; i++) healed = onEnemyKilled(activeRelics, healed);
+      afterEnemies = { ...afterEnemies, hp: healed.hp };
+    }
+
     const newGrid = resolveBoard(grid, chain, refillRng, seals);
 
     // Break any seals adjacent to the matched cells.
