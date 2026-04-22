@@ -65,6 +65,7 @@ import { MechanicBanner } from '@/components/runedelve/MechanicBanner';
 import { CombatLog, type CombatLogEntry } from '@/components/runedelve/CombatLog';
 import { FxLayer } from '@/components/runedelve/fx/FxLayer';
 import { useFxQueue, type FxRect } from '@/hooks/useFxQueue';
+import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { format } from 'date-fns';
 
 const RUNE_LABEL: Record<RuneType, string> = {
@@ -158,6 +159,7 @@ export default function RuneDelvePlayPage() {
 
   // FX overlay queue — purely visual feedback for chains and abilities.
   const fxQ = useFxQueue();
+  const { play: playSound } = useSoundEffect();
   const playRootRef = useRef<HTMLDivElement>(null);
   const rectFromEl = (el: Element | null): FxRect | undefined => {
     if (!el) return undefined;
@@ -168,6 +170,33 @@ export default function RuneDelvePlayPage() {
     rectFromEl(playRootRef.current?.querySelector(`[data-enemy-id="${id}"]`) ?? null);
   const findHudRect = (target: 'hp' | 'mana' | 'shield'): FxRect | undefined =>
     rectFromEl(playRootRef.current?.querySelector(`[data-fx-target="${target}"]`) ?? null);
+
+  // Trigger a brief CSS-driven camera shake on the play root. Cleans up
+  // any pending timer so rapid red chains don't stack the animation.
+  const shakeTimerRef = useRef<number | null>(null);
+  const triggerCamShake = (amount = 6) => {
+    const el = playRootRef.current;
+    if (!el) return;
+    el.style.setProperty('--rd-cam-shake-x', `${amount}px`);
+    el.style.setProperty('--rd-cam-shake-y', `${Math.round(amount * 0.6)}px`);
+    el.classList.remove('rd-cam-shake');
+    // Force reflow so the animation restarts cleanly.
+    void el.offsetWidth;
+    el.classList.add('rd-cam-shake');
+    if (shakeTimerRef.current) window.clearTimeout(shakeTimerRef.current);
+    shakeTimerRef.current = window.setTimeout(() => {
+      el.classList.remove('rd-cam-shake');
+    }, 240);
+  };
+
+  // Pulse the HP bar's inner glow (Lifebloom arrival cue).
+  const pulseHpGlow = () => {
+    const el = playRootRef.current?.querySelector('[data-fx-hp-glow-target]') as HTMLElement | null;
+    if (!el) return;
+    el.setAttribute('data-fx-hp-glow', 'on');
+    window.setTimeout(() => el.removeAttribute('data-fx-hp-glow'), 620);
+  };
+
 
   // Active relic loadout for this run (rank-aware).
   const activeRelics = useMemo(() => {
@@ -316,6 +345,19 @@ export default function RuneDelvePlayPage() {
       fxTarget = findHudRect('shield') ?? findHudRect('hp');
     }
     fxQ.trigger({ kind: 'rune', rune: type, length: chain.length, tier: fxTier, target: fxTarget });
+    // Audio + camera-feel beats per rune type.
+    if (type === 'red') {
+      playSound('error');
+      if (chain.length >= 4) triggerCamShake(chain.length >= 6 ? 8 : 6);
+    } else if (type === 'green') {
+      playSound('success');
+      window.setTimeout(pulseHpGlow, 520);
+    } else if (type === 'gold') {
+      playSound('achievement');
+    } else if (type === 'blue') {
+      playSound('ping');
+    }
+    if (chain.length >= 8) playSound('achievement');
     // Snapshot relics for this run (falls back to live for first chain).
     const relics = activeRelicsSnapshot ?? activeRelics;
     // Per-chain counters BEFORE applying — drives Ember Edge / Crimson Tide / Quickstep.
@@ -674,6 +716,8 @@ export default function RuneDelvePlayPage() {
       const firstAlive = combat.enemies.find(e => e.hp > 0);
       const target = firstAlive ? findEnemyRect(firstAlive.id) : undefined;
       fxQ.trigger({ kind: 'ability', cls: hero.class, target });
+      playSound('achievement');
+      if (hero.class === 'warrior') triggerCamShake(8);
     }
     // First Light: first N ability casts skip the mana cost. We restore the
     // mana after useAbility() consumes it so the cast still resolves normally.

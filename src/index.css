@@ -1224,8 +1224,47 @@
   0%, 100% { box-shadow: inset 0 0 0 1px hsl(280 70% 55% / 0.45), inset 0 0 12px hsl(280 80% 35% / 0.35), 0 0 8px hsl(280 80% 45% / 0.25); }
   50%      { box-shadow: inset 0 0 0 1px hsl(280 80% 65% / 0.7),  inset 0 0 18px hsl(280 90% 45% / 0.55), 0 0 16px hsl(280 90% 55% / 0.45); }
 }
+
+/* ─── Battle FX cinematic helpers ──────────────────────────────────── */
+/* Camera-feel shake — driven by --rd-cam-shake-x/y CSS vars set inline by
+   the play page. Pure transform; no layout reflow. Decays to 0 in ~200ms. */
+.rd-mode .rd-cam-shake {
+  animation: rd-cam-shake 220ms ease-out;
+}
+@keyframes rd-cam-shake {
+  0%   { transform: translate(0, 0); }
+  20%  { transform: translate(calc(var(--rd-cam-shake-x, 0px) * 1), calc(var(--rd-cam-shake-y, 0px) * -1)); }
+  40%  { transform: translate(calc(var(--rd-cam-shake-x, 0px) * -0.8), calc(var(--rd-cam-shake-y, 0px) * 0.8)); }
+  60%  { transform: translate(calc(var(--rd-cam-shake-x, 0px) * 0.5), calc(var(--rd-cam-shake-y, 0px) * -0.5)); }
+  80%  { transform: translate(calc(var(--rd-cam-shake-x, 0px) * -0.3), calc(var(--rd-cam-shake-y, 0px) * 0.3)); }
+  100% { transform: translate(0, 0); }
+}
+
+/* HP bar inner-glow target — pulses when Lifebloom finishes its arc. */
+.rd-mode [data-fx-hp-glow="on"] {
+  box-shadow: inset 0 0 12px hsl(var(--success) / 0.85), 0 0 8px hsl(var(--success) / 0.5);
+  animation: rd-hp-glow 600ms ease-out;
+}
+@keyframes rd-hp-glow {
+  0%   { box-shadow: inset 0 0 0px hsl(var(--success) / 0); }
+  40%  { box-shadow: inset 0 0 14px hsl(var(--success) / 0.95), 0 0 10px hsl(var(--success) / 0.7); }
+  100% { box-shadow: inset 0 0 0px hsl(var(--success) / 0); }
+}
+
+/* Bonus chip — gentle gold breathing while it floats up. */
+.rd-mode .rd-fx-bonus-chip {
+  animation: rd-bonus-chip 800ms ease-out;
+}
+@keyframes rd-bonus-chip {
+  0%, 100% { filter: drop-shadow(0 0 4px hsl(var(--gold) / 0.6)); }
+  50%      { filter: drop-shadow(0 0 12px hsl(var(--gold))); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rd-mode .rd-tile-corrupted { animation: none; }
+  .rd-mode .rd-cam-shake,
+  .rd-mode [data-fx-hp-glow="on"],
+  .rd-mode .rd-fx-bonus-chip { animation: none !important; }
   /* Combat FX overlay — collapse all motion to a quick fade so the player
      still gets visual confirmation without sweeping animation. */
   .rd-mode [aria-hidden] [style*="position"] { transition: opacity 120ms linear !important; }

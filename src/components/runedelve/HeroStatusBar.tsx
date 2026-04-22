@@ -18,7 +18,7 @@ export function HeroStatusBar({ state, cls, onAbility }: Props) {
     <div className="w-full space-y-2">
       <div className="flex items-center gap-2" data-fx-target="hp">
         <Heart className="w-4 h-4" style={{ color: 'hsl(var(--destructive))' }} />
-        <div className="flex-1 h-3 rounded-full bg-muted/50 overflow-hidden relative">
+        <div className="flex-1 h-3 rounded-full bg-muted/50 overflow-hidden relative" data-fx-hp-glow-target>
           <div
             className="h-full transition-all duration-300"
             style={{
