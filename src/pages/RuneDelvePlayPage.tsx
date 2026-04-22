@@ -877,13 +877,17 @@ export default function RuneDelvePlayPage() {
         const hit = ENEMY_ROSTER.find(a => a.name.toLowerCase() === raw);
         return hit?.id;
       };
-      const fresh: Enemy[] = (nextWave.enemies ?? []).map((e: any, i: number) => ({
+      let fresh: Enemy[] = (nextWave.enemies ?? []).map((e: any, i: number) => ({
         id: e.id ?? `w${wavesSpawnedRef.current + 1}-${i}`,
         name: e.name, emoji: e.emoji, hp: e.hp, maxHp: e.maxHp ?? e.hp, damage: e.damage,
         archetypeId: resolveAid(e), family: e.family, role: e.role,
         ability: e.ability, abilityCooldown: e.abilityCooldown, abilityCooldownMax: e.abilityCooldownMax ?? e.abilityCooldown,
         telegraphLabel: e.telegraphLabel, tier: e.tier,
       }));
+      // Telegraphed Attacks (L51+): wave-2 enemies must also carry intents.
+      if (telegraphActive) {
+        fresh = applyInitialIntents(fresh, level.generation_seed + wavesSpawnedRef.current + 1, level.level_number);
+      }
       postWave = spawnWave(postWave, fresh, nextWave.reinforcement_turns ?? 2);
       wavesSpawnedRef.current += 1;
       const isBossWave = fresh.some(e => e.tier === 'boss');
