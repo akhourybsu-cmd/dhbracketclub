@@ -15,7 +15,8 @@ import { levelFromXp, newTitleUnlocked, titleForLevel } from '@/lib/runedelve/cl
 import { useLoadout } from '@/hooks/useLoadout';
 import { useEarnShards, useFailureRow, useBumpFailure, useResetFailure, useRuneWallet, useUnlockSlot } from '@/hooks/useRuneShards';
 import { useRecordDefeats } from '@/hooks/useBestiary';
-import { rosterById } from '@/lib/runedelve/enemyRoster';
+import { rosterById, ENEMY_ROSTER } from '@/lib/runedelve/enemyRoster';
+import { spawnWave } from '@/lib/runedelve/combatEngine';
 import { useRelicCollection, rankMapFromOwned } from '@/hooks/useRelicCollection';
 import {
   buildActive,
@@ -236,11 +237,23 @@ export default function RuneDelvePlayPage() {
     }
     setSeals(initialSeals);
     setCorruption(buildInitialCorruption(level.generation_seed, corruptionActive, level.level_number, initialSeals));
+    // Name → archetype-id fallback for legacy levels seeded before the roster system.
+    const resolveArchetype = (e: any): string | undefined => {
+      if (e.archetypeId) return e.archetypeId;
+      const raw = String(e.name ?? '').replace(/^(Elite |Boss |Mini-Boss |Echo of )/, '').trim().toLowerCase();
+      if (!raw) return undefined;
+      const hit = ENEMY_ROSTER.find(a => a.name.toLowerCase() === raw);
+      if (hit) return hit.id;
+      // Common legacy aliases.
+      if (raw === 'slime') return 'ember_slime';
+      if (raw === 'skeleton') return 'skeleton_warrior';
+      return undefined;
+    };
     let enemies: Enemy[] = (level.enemy_config ?? []).map((e: any, i: number) => ({
       id: e.id ?? `e${i}`, name: e.name, emoji: e.emoji, hp: e.hp, maxHp: e.maxHp ?? e.hp, damage: e.damage,
-      archetypeId: e.archetypeId, family: e.family, role: e.role,
+      archetypeId: resolveArchetype(e), family: e.family, role: e.role,
       ability: e.ability, abilityCooldown: e.abilityCooldown, abilityCooldownMax: e.abilityCooldownMax ?? e.abilityCooldown,
-      telegraphLabel: e.telegraphLabel,
+      telegraphLabel: e.telegraphLabel, tier: e.tier,
     }));
     if (telegraphActive) {
       enemies = applyInitialIntents(enemies, level.generation_seed, level.level_number);
