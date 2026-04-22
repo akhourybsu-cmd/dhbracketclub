@@ -1,51 +1,55 @@
 
 
-## Rune Delve — Players blocked at Level 23 (admin-only level seeding)
+## Rune Delve — Levels 23+ are unplayable (root cause + fix)
 
-### What's happening
+### What's actually happening
 
-`rune_delve_levels` has only **22 rows** seeded. Its INSERT policy is admin-only (`is_app_admin(auth.uid())`). Both Alex (admin) and Tacooo top out at level 22/23 because that's all that exists in the DB, and any non-admin who tries to play L23+ hits this chain:
+The drag mechanic is **not broken** — it's the levels themselves. The bulk-seed migration that pre-populated levels 1–150 inserted `enemy_config: '[]'` and `modifiers: '{}'` for every brand-new row (23–150). The 22 pre-existing rows were preserved by `ON CONFLICT DO NOTHING` and still have real enemies.
 
-1. `useLevel(23)` queries `rune_delve_levels` → no row found.
-2. Client tries to INSERT a generated row → **RLS denies** (only admins can insert) → returns no row, no error code 23505.
-3. Falls through to a **transient row** with `id: "transient-23"`.
-4. Play page's `useMyLevelRun` is **disabled** for transient ids (`enabled: !levelId.startsWith('transient-')`), so "best run" never loads.
-5. `useSubmitLevelRun` writes `level_id: "transient-23"` to `rune_delve_runs.level_id` — the column is a UUID FK, the insert **fails**, and `useAdvanceProgress` (which fires on success) **never runs**.
-6. Player is permanently stuck — `highest_unlocked_level` never advances past whatever the admin last seeded.
+The client-side `hydrateLegacy()` helper in `useRuneDelveCampaign.ts` was supposed to overlay generator output onto sparse rows, but it only fills `enemy_config` when the level has a **boss** (`bossKindForLevel(n) !== null`). For non-boss levels (23, 24, 26, 27…), it leaves `enemy_config` as `[]`.
 
-So yes — **as it stands today, no non-admin can progress past a level the admin (or someone with admin role) hasn't already created the DB row for.** That's the bug.
+What players actually see on L23+:
+- Empty enemy area at the top of the screen.
+- Drag/chain works fine, but `combat.enemies = []` makes `isRunOver` report `cleared = true` after the first chain (an `[].every(...)` is vacuously true).
+- The level "ends" instantly with 0 damage, ~0 score, and a clear stamp — which then advances `highest_unlocked_level` and pushes them straight into the next equally-broken level.
 
-Note: the play-page lock guard (`levelNumber > progress.highest_unlocked_level`) is fine and not the cause. The cause is that submissions silently fail on transient levels, so progress never advances.
+This perfectly matches the "can't drag the tiles properly" complaint — the chain registers, but the result feels broken because there's nothing to fight.
+
+What IS working (verified, no changes needed):
+- `RuneBoard` pointer-down + document-level `pointermove` + `elementFromPoint` chain capture is correct on iOS Safari.
+- `touchAction: 'none'` on cells + container properly disables scroll-jacking during drag.
+- `isValidChain` adjacency, sealed/corruption guards, and `applyChain` math are all sound.
+- L1–L22 still play fine because their `enemy_config` was seeded properly the old way.
 
 ### Fix
 
-**1) Allow any authenticated user to seed canonical level rows** — generation is fully deterministic from `level_number` (Fisher-Yates on a fixed seed via `generateLevel()`), so two players seeding the same level produce identical rows. The unique constraint on `level_number` already prevents duplicates.
+**1) SQL migration — repopulate enemy_config + modifiers for the broken rows.** A PL/pgSQL block that walks levels 23..150, regenerates each row's deterministic shape using the same constants the client-side `generateLevel()` uses (board_size 5, generation_seed = `n*9301+49297`, turn_limit by tier, `chapter`, `difficulty_tier`), and **only updates rows where `enemy_config` is empty** — so any future hand-tuned levels are left alone.
 
-New migration:
+Since enemy generation logic lives in TypeScript (`generateLevel` → `rosterPoolForLevel` → roster definitions), the cleanest path is to keep the SQL migration minimal and instead **delete-and-let-rehydrate** the busted rows: levels 23–150 with empty enemy_config get deleted, then the client's `useLevel` hook re-seeds them properly on first visit using the now-fixed `INSERT` policy. No `rune_delve_runs` rows reference these levels yet (verified — `MAX(level_number) = 22`), so there's no FK fallout.
+
 ```sql
-DROP POLICY IF EXISTS "Admins can insert levels" ON public.rune_delve_levels;
-CREATE POLICY "Authenticated can seed levels"
-  ON public.rune_delve_levels
-  FOR INSERT TO authenticated
-  WITH CHECK (true);
--- UPDATE/DELETE remain admin-only — only seeding is opened up.
+DELETE FROM public.rune_delve_levels
+WHERE jsonb_array_length(enemy_config) = 0;
 ```
 
-**2) Pre-seed levels 1–150 in bulk** so first-touch latency disappears for everyone (and the Level Map preview shows real rows immediately). Done as a one-time SQL migration that calls a small PL/pgSQL loop generating each level's deterministic shape (mirroring `generateLevel()`'s output: chapter, difficulty_tier, generation_seed = `level_number * 9301 + 49297`, board_size, turn_limit, default `objective_type='defeat_all'`, empty `enemy_config: []`, empty `modifiers: {}`). The client-side `hydrateLegacy()` already overlays the rich generator output (enemies, mechanics, boss_kind, waves) on rows missing those fields, so empty seeds are perfectly safe and require no app changes.
+**2) Harden `hydrateLegacy` so this class of bug can't reappear.** In `src/hooks/useRuneDelveCampaign.ts`:
 
-**3) Defensive client hardening in `useLevel` (`src/hooks/useRuneDelveCampaign.ts`)** — even with the policy fix, never write to `rune_delve_runs` with a transient id:
-- After the insert attempt, if no row came back **and** the error wasn't a unique-violation, do one extra `SELECT` round-trip before falling back to transient. Belt-and-suspenders against any future RLS regression.
-- Log a clear `console.warn` when we return a `transient-*` row, so this kind of regression surfaces fast.
+- Treat an empty `enemy_config` (`[]`) as "missing" — when detected, overlay the generator's full `enemy_config` regardless of boss status.
+- Treat an empty `modifiers` (`{}`) the same way — overlay the generator's `modifiers` block (mechanics, secondary_objective, boss_rule, boss_kind, waves) so legacy rows always get the current shape.
+- Preserve any custom hand-tuned fields when present (existing safety belt for `mechanics`).
+
+**3) Verify drag mechanic is healthy after fix.** With the levels rehydrated, drag-to-chain on L23+ will behave identically to L1–L22 (enemies render, chains land, runs progress turn-by-turn).
 
 ### Verification
 
-- Hoosierdaddy and Nick Boyle (non-admins) can clear L3 → progress advances to L4, then L5… all the way through, without Alex needing to visit those levels first.
-- DB check: `SELECT COUNT(*) FROM rune_delve_levels` returns 150 after migration.
-- DB check: `SELECT MAX(level_number) FROM rune_delve_runs` can exceed 22.
-- No `transient-*` `level_id` values ever appear in `rune_delve_runs`.
+- DB check: `SELECT COUNT(*) FROM rune_delve_levels WHERE jsonb_array_length(enemy_config) = 0` returns 0 after the migration + first-visit hydration cycle.
+- Open L23 → see real enemies in the enemy area, drag a chain → damage applies, turn ticks, level continues normally to completion.
+- L10/L20/L25/L50/L75/L100 (boss/mini-boss levels) still show their boss portraits and rules — nothing about boss handling changes.
+- L1–L22 continue to play exactly as before (untouched by the migration).
+- No `transient-*` ids appear in `rune_delve_runs`, no broken instant-clears, no phantom XP.
 
 ### Files touched
 
-- New SQL migration — open INSERT policy + bulk-seed L1–L150.
-- `src/hooks/useRuneDelveCampaign.ts` — defensive re-fetch + transient warning in `useLevel`.
+- New SQL migration — deletes empty-config rows so the hardened client can reseed them with correct shape.
+- `src/hooks/useRuneDelveCampaign.ts` — `hydrateLegacy` treats empty `enemy_config` and empty `modifiers` as needing overlay, not just boss levels.
 
