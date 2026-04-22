@@ -2,8 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, BookOpen, Search, Skull } from 'lucide-react';
-import { ENEMY_ROSTER, MINION_BONE_HUSK, type EnemyFamily, type RosterEntry } from '@/lib/runedelve/enemyRoster';
+import { ArrowLeft, BookOpen, Crown, Search, Skull } from 'lucide-react';
+import {
+  BESTIARY_ROSTER,
+  parseBestiaryId,
+  type EnemyFamily,
+  type RosterEntry,
+} from '@/lib/runedelve/enemyRoster';
 import {
   ABILITY_BLURB,
   ARCHETYPE_FLAVOR,
@@ -17,7 +22,12 @@ import { Input } from '@/components/ui/input';
 
 type FilterChapter = 'all' | 1 | 2 | 3;
 
-const ALL_ARCHETYPES: RosterEntry[] = [...ENEMY_ROSTER, MINION_BONE_HUSK];
+/** Variant tier extracted from a bestiary id (mini / boss / null = base). */
+function variantOf(entry: RosterEntry): 'mini' | 'boss' | null {
+  return parseBestiaryId(entry.id).variant;
+}
+
+const ALL_ARCHETYPES: RosterEntry[] = BESTIARY_ROSTER;
 
 export default function RuneDelveBestiaryPage() {
   const navigate = useNavigate();
