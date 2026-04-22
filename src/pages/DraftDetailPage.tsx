@@ -1124,8 +1124,8 @@ export default function DraftDetailPage() {
           {/* ─── Playoff completion banners ─── */}
           {isPlayoffDraft && playoffMatch?.winner_user_id && (() => {
             const winnerId = playoffMatch.winner_user_id;
-            const winnerResult = draftResults.find((r: any) => r.user_id === winnerId);
-            const winnerName = winnerResult?.profiles?.display_name || 'Champion';
+            const winnerParticipant = participants.find(p => p.user_id === winnerId);
+            const winnerName = winnerParticipant?.profiles?.display_name || 'Champion';
             const round = playoffMatch.round;
             const isChampion = round === 'final' && (finalsSeriesWins[winnerId] || 0) >= 2;
             const seriesA = finalsSeriesWins[playoffMatch.user_a] || 0;
