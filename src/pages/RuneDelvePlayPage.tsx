@@ -565,6 +565,17 @@ export default function RuneDelvePlayPage() {
     ) {
       toast('🛡️ Boss is shielded — defeat the others first', { duration: 1600 });
     }
+    // Phase Lock fizzle: boss is mid-phase and ignored the strike.
+    if (
+      bossRule === 'phaselock' &&
+      type === 'red' &&
+      resolution.damageDealt === 0 &&
+      combat.enemies.some(e => e.hp > 0 && (e.phaseLockTurns ?? 0) > 0)
+    ) {
+      const phasing = combat.enemies.find(e => (e.phaseLockTurns ?? 0) > 0);
+      toast('🌀 The boss is phasing — strike fizzled', { duration: 1600 });
+      turnLogs.push({ kind: 'info', text: `${phasing?.name ?? 'The boss'} phased out — your strike found nothing` });
+    }
 
     // Apply corruption: HP cost for matching corrupted cells, then strip them.
     // Cleansing Touch: first N corrupt-source clears each run cost no HP.
