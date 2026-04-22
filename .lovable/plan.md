@@ -1,67 +1,93 @@
 
 
-## Rune Delve — Cinematic Chain & Ability FX Layer
+## Rune Delve — Battle FX Glow-Up: Distinctive, Signature Visuals
 
-Add a thematic, mobile-first overlay animation system that fires when a chain resolves or an ability triggers. Visuals match each rune's identity (and each class's ability), reinforce what the player just did, then get out of the way fast (~600–900ms). No gameplay logic changes — purely a visual/feedback pass.
+The current FX system works, but every effect leans on the same vocabulary: radial gradients, ✦ sparkles, and short fades. Players can't immediately tell red from blue at a glance. This pass replaces each effect with a **signature visual identity** — bespoke SVG shapes, particle physics, and timing that makes each rune and ability feel like its own move from a fighting game.
 
-### What players will see
+### What changes per rune (signature redesigns)
 
-**Per-rune chain FX (overlay above the board, then fly toward the relevant HUD target)**
+**🔴 Red — Blade Storm** (replaces 3 horizontal slashes)
+- Three SVG katana-shaped blades materialize *off-screen*, fly in from different angles (top-left, right, bottom-left), pierce the enemy at staggered 80ms intervals, then evaporate in red embers.
+- On impact: white-hot **impact star** (8-point SVG burst) flashes, enemy card hard-shakes (existing `shake` boosted to amplitude 6), red floor-crack lines briefly appear under the enemy portrait.
+- Chain ≥6: blades turn molten gold, embers double, a thin **kanji-style stroke** ("斬") flashes for 120ms.
 
-- **🔴 Red — Crimson Slash:** Three diagonal sword slashes streak across the targeted enemy's portrait (offset, staggered 60ms). Brief radial impact flash + screen-shake-lite (existing `shake`) on the enemy card. Color: `hsl(var(--destructive))`.
-- **🟢 Green — Verdant Bloom:** Soft emerald wind swirls from the board upward; HP bar pulses with a "rising" inner glow as the number ticks up. Tiny leaf/spark motes drift over the hero status bar.
-- **🟡 Gold — Bulwark Lock:** Two interlocking shield halves slide in from left/right, "click" together centered over the board (gold flash, scale 1.15→1.0), then dissolve into the shield turn counter. Pulse the `🛡 N` chip.
-- **🔵 Blue — Arcane Charge:** Pulsing diamond cores rise from each chained cell, converge into a single bright orb, then split into the mana pips that just filled. Blue-violet radial pulse on each newly lit orb.
+**🟢 Green — Lifebloom Spiral** (replaces drifting motes)
+- A single **SVG vine spiral** unfurls from the board, twisting upward toward the HP bar in a logarithmic curve (Framer Motion `path` with `pathLength` 0→1).
+- Along the vine, **3 SVG leaves** (custom path) bloom and detach, gently floating upward with sine-wave drift.
+- HP bar receives a **green inner-glow pulse** (box-shadow inset) synchronized to the leaves' arrival — looks like the leaves are *feeding* the bar.
+- Chain ≥6: vine is gold-veined; a small **bird silhouette** (SVG) crosses the screen briefly.
 
-**Per-class ability FX (full-board overlay, ~900ms)**
+**🟡 Gold — Aegis Forge** (replaces emoji shields)
+- Two **SVG shield halves** (proper heater-shield shape with rivets, beveled edge) slide in from screen edges, rotating slightly. They meet center-board with a **gold sparkscape** — 12 short radial sparks shoot outward like a hammer-strike.
+- A **runic ring** (SVG circle with notched ticks) briefly orbits the shield, then the whole construct *implodes* into the `🛡 N` chip with a ribbon of gold light.
+- Chain ≥6: shield is **double-rimmed**, ring contains 4 cardinal rune glyphs that flash sequentially.
 
-- **Warrior · Cleave:** A wide horizontal arc-slash sweeps across all enemy portraits with a red shockwave; each enemy's HP bar flashes white then drops.
-- **Mage · Arc Burst:** A bright violet bolt charges from the hero status bar, arcs upward, and detonates on the targeted enemy with a radial lightning ring.
-- **Rogue · Shadowstep:** Hero "afterimage" briefly streaks across the board; gold sparkle trail settles onto a new "Shadowstep ✦" badge that pulses until the next chain.
-- **Cleric · Sanctuary:** Concentric green halos expand outward from the hero bar; HP bar fills with a crest sweep; gold shield turns chip pops in with a soft chime sparkle.
+**🔵 Blue — Aether Resonance** (replaces converging diamonds)
+- Six **hexagonal SVG nodes** (not diamonds) rise from the chained cells with a vertical bob, each pulsing at a slightly offset phase so they look like they're *resonating*.
+- They draw connecting **lightning lines** (SVG polyline with jitter) between each other forming a magic circle, then *collapse inward* into a single bright orb that splits into ribbons of light streaking to each newly-filled mana pip.
+- Each filled pip gets a **2-frame ring expansion** + brief blue rim-light.
+- Chain ≥6: ribbons are gold and the magic circle leaves a faint gold afterimage on the board for 400ms.
 
-**Chain-tier flourishes** (visual only, no balance change)
-- Chain ≥6: rune trail flashes gold.
-- Chain ≥7 (bonus move): adds a subtle "✨ Bonus" floating chip near the chain.
-- Chain ≥8: full-board gold bloom on dissolve.
+### What changes per class ability (signature set pieces)
 
-### How it's built (technical)
+**⚔️ Warrior — Earthshatter Cleave** (replaces single arc)
+- Hero "winds up" (faint red aura pulses on the hero status bar for 180ms first), then a **ground-cracking arc** sweeps the full board: a wide curved SVG slash trails red embers; **3 jagged crack lines** split the floor under the enemies; a **white shockwave ring** expands; every enemy card flashes white → red and shakes.
+- Closes with falling **rock chunk particles** (small brown SVG triangles) for 240ms.
 
-**New files**
-- `src/components/runedelve/fx/RuneChainFx.tsx` — overlay layer rendering chain-specific motion presets via Framer Motion. Props: `kind: RuneType`, `length`, `tier`, `targetRect?: DOMRect`, `onDone()`.
-- `src/components/runedelve/fx/AbilityFx.tsx` — overlay layer for class abilities. Props: `cls: HeroClass`, `targetRect?: DOMRect`, `onDone()`.
-- `src/components/runedelve/fx/FxLayer.tsx` — single mounted portal-style absolutely-positioned layer (parented to the play page's relative container) that renders queued FX entries via `AnimatePresence`. Manages a small FIFO queue (max 2) so rapid chains don't pile up.
-- `src/hooks/useFxQueue.ts` — tiny hook returning `{ trigger(fx), Layer }`. Internally uses `useReducer` + `id` counter; auto-pops on each `onDone`.
+**🔮 Mage — Starfall Convergence** (replaces single bolt)
+- 3 **violet meteor streaks** rain down diagonally from off-screen top, each leaving a comet-tail. They converge on the targeted enemy, where a **runic glyph circle** (SVG) flashes gold-violet just before impact.
+- Detonation: chromatic-aberration ring (3 rings offset RGB-style: red, green, blue) expands; lightning forks branch outward to 4 directions with crackle.
 
-**CSS additions (in `src/index.css`, scoped under `.rd-mode`)**
-- `@keyframes rd-slash`, `rd-bloom`, `rd-shield-lock`, `rd-mana-pulse`, `rd-cleave-arc`, `rd-arc-bolt`, `rd-shadowstep`, `rd-sanctuary-halo` — purely transform/opacity for GPU compositing; no layout thrash.
-- All durations 400–900ms; `prefers-reduced-motion: reduce` short-circuits to a 120ms fade so accessibility users still get visual confirmation without motion.
+**🗡️ Rogue — Fivefold Shadow** (replaces single afterimage)
+- Hero's afterimage **splits into 5 ghost copies** that fan across the board horizontally with motion blur, each tagging an enemy with a tiny `✕` slash.
+- All ghosts converge back to a single point with an inward whoosh; a **Shadowstep ✦ badge** with a soft black smoke aura settles into the HUD.
 
-**Wiring (minimal touch to existing files)**
-- `src/pages/RuneDelvePlayPage.tsx`:
-  - Mount `<FxLayer />` once inside the existing root `<div className="space-y-2 pb-2 relative">`.
-  - In `handleChain`, after computing `type` + `chain.length`, find the targeted enemy DOM rect via `data-enemy-id={e.id}` (added in `EnemyDisplay`) and call `trigger({ kind: type, length: chain.length, tier, targetRect })`. For green/blue/gold the target is the corresponding HUD chip (added `data-fx-target="hp"|"mana"|"shield"` on `HeroStatusBar`).
-  - In `handleAbility`, call `trigger({ kind: 'ability', cls: hero.class, targetRect })` before `setCombat`.
-- `src/components/runedelve/EnemyDisplay.tsx`: add `data-enemy-id={e.id}` on the wrapping motion.div (no behavior change).
-- `src/components/runedelve/HeroStatusBar.tsx`: add `data-fx-target="hp" | "mana" | "shield"` on the relevant chips/bars.
+**✨ Cleric — Hallowed Sanctum** (replaces concentric rings)
+- A **6-pointed SVG star** (sacred geometry) inscribes itself on the board with `pathLength` animation (320ms draw-in), then a **dome of light** sweeps upward.
+- Concentric halos pulse outward in 3 waves with **floating gold cross-glyphs** (✟ SVG path, not emoji) drifting up; HP bar gets a **crest sweep** (gold gradient wipe left→right inside the bar fill).
+- Soft chime sparkle on the shield chip with a **brief radial bloom**.
 
-**Performance & a11y**
-- Single overlay node, `pointer-events-none`, `will-change: transform, opacity` only during animation.
-- Max 2 concurrent FX (queue overflow drops oldest visual cue but never blocks gameplay state).
-- Honors `@media (prefers-reduced-motion: reduce)` → 120ms cross-fade only.
-- Mobile-tuned: all FX clamp to the board's `max-w-[400px]` container so they never bleed past the safe area.
+### Cross-cutting upgrades
+
+- **Camera-feel screen shake** (CSS variable–driven): tiny `--rd-cam-shake-x/y` applied to the play container's transform on red chains and Warrior cleave only (4–8px, 200ms decay). No layout reflow — pure transform.
+- **Tier crescendo**: chain-tier flourishes restructured so 6/7/8 chains read like distinct beats — gold tint at 6, "✨ BONUS" floating chip + brief slow-mo (CSS `animation-duration *= 1.2` for next 200ms) at 7, screen-wide gold bloom + soft white vignette flash at 8.
+- **Audio sync hooks**: each effect calls existing `useSoundEffect` triggers at the right beat (slash impact, vine bloom, shield clang, mana resonance, ability detonation). Wire only — no new audio assets.
+- **Reduced motion**: keeps the existing 120ms cross-fade fallback. New SVG paths render statically (no draw-in) and just fade.
+
+### How it's built (minimal surface area)
+
+**New file**
+- `src/components/runedelve/fx/FxIcons.tsx` — pure SVG primitives: `<KatanaBlade/>`, `<HeaterShield/>`, `<HexNode/>`, `<VineLeaf/>`, `<Meteor/>`, `<RuneCircle/>`, `<SacredStar/>`, `<CrossGlyph/>`, `<Kanji/>`, `<RockChunk/>`. Each ~20–40 lines, accepts `size` + `color` + `className` props. Reusable across rune and ability components.
+
+**Edited files**
+- `src/components/runedelve/fx/RuneChainFx.tsx` — full rewrite of `RedSlash`, `GreenBloom`, `GoldShieldLock`, `BlueArcane` using the new SVG primitives + Framer Motion variants. Same component signatures, same `containerRect`/`tx`/`ty` math, same auto-clear timing. **No public API change.**
+- `src/components/runedelve/fx/AbilityFx.tsx` — full rewrite of `WarriorCleave`, `MageArcBurst`, `RogueShadowstep`, `ClericSanctuary` to the set-piece designs above. Same component signature.
+- `src/index.css` — add ~6 new keyframes scoped under `.rd-mode`: `rd-cam-shake`, `rd-bonus-chip`, `rd-vignette-flash`, `rd-crack`, `rd-ember-rise`, `rd-resonance-pulse`. Add `--rd-cam-shake-x/y` CSS vars wired to the play container.
+- `src/pages/RuneDelvePlayPage.tsx` — (1) on red chains ≥4 and Warrior ability, set inline `style={{ ['--rd-cam-shake-x' as any]: '6px' }}` on the root container for 200ms via a tiny `useShake()` ref helper; (2) call `playSound('slash'|'bloom'|'clang'|'resonance'|'cast')` at FX trigger points (existing hook, no new sounds — just additional invocations of the same primitives).
+- `src/components/runedelve/HeroStatusBar.tsx` — add `data-fx-hp-glow` toggle + a small CSS pulse target on the HP bar's inner fill so Lifebloom can sync the bar's inner-glow.
+
+**Performance**
+- All new visuals are SVG (transform/opacity only) or HSL gradients — same GPU-composited budget as before.
+- Particle counts capped: blades 3, leaves 3, sparks 12, hex nodes 6, meteors 3, ghost copies 5, halos 3, cross-glyphs 4. Total per-FX nodes ≤ 16, well under the 30-node mobile budget.
+- Queue cap stays at 2; no new state added to the FX queue.
+- `prefers-reduced-motion` short-circuits all draw-in animations to opacity-only.
 
 ### Files touched
-- New: `src/components/runedelve/fx/{FxLayer,RuneChainFx,AbilityFx}.tsx`, `src/hooks/useFxQueue.ts`
-- Edited: `src/pages/RuneDelvePlayPage.tsx` (mount layer + 2 trigger calls), `src/components/runedelve/EnemyDisplay.tsx` (1 data attr), `src/components/runedelve/HeroStatusBar.tsx` (3 data attrs), `src/index.css` (~8 keyframes scoped under `.rd-mode`)
 
-### Manual mobile testing checklist
-- 411×734 viewport: chain reds → slashes land on the leftmost living enemy, no horizontal overflow.
-- Chain green → leaf motes rise toward HP bar; HP number ticks up smoothly.
-- Chain gold → shield halves lock at board center; `🛡 N` chip pulses.
-- Chain blue → orbs converge to mana pips; pip border glows on fill.
-- Cast each class ability → ability FX fires once, finishes ≤900ms, no doubled animation on rapid taps.
-- Chain 8+ → gold bloom appears once.
-- Toggle reduced motion → all FX collapse to a quick fade.
-- Rapid two-chain test → second FX queues and plays after first.
+- New: `src/components/runedelve/fx/FxIcons.tsx`
+- Rewritten internals: `src/components/runedelve/fx/RuneChainFx.tsx`, `src/components/runedelve/fx/AbilityFx.tsx`
+- Light edits: `src/index.css` (+~6 keyframes), `src/pages/RuneDelvePlayPage.tsx` (cam-shake + sound hooks), `src/components/runedelve/HeroStatusBar.tsx` (HP glow target)
+
+### Manual testing checklist (411×734)
+
+- Red chain → katana blades fly in from 3 angles, impact star flashes, board shakes briefly. Chain ≥6 turns gold + 斬 glyph.
+- Green chain → vine spiral curls toward HP bar, 3 leaves bloom/float, HP bar inner-glow pulses on arrival.
+- Gold chain → shield halves slam together, sparkscape fires outward, runic ring orbits then implodes into 🛡 chip.
+- Blue chain → 6 hex nodes resonate, lightning lines connect them, ribbons stream to mana pips with rim-light.
+- Warrior ability → wind-up aura → arc-slash → ground cracks → shockwave → falling rock chunks. Screen shakes once.
+- Mage ability → 3 meteors converge on rune-circle → chromatic ring + lightning forks.
+- Rogue ability → 5 ghost copies fan across board, converge, shadow badge settles in HUD.
+- Cleric ability → sacred star inscribes, dome rises, cross-glyphs drift up, HP crest sweep.
+- Chain 8 → screen vignette flash + gold bloom; no overlap with next FX (queue caps at 2).
+- Reduced-motion mode → static SVG fade-in/out only, no draw or shake.
 
