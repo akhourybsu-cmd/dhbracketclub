@@ -205,6 +205,45 @@ export default function DraftDetailPage() {
     }
   }, [hasResults]);
 
+  // Fetch playoff match info for this draft (if it's a playoff draft)
+  useEffect(() => {
+    if (!draftId || !isPlayoffDraft || !season?.id) return;
+    let cancelled = false;
+    (async () => {
+      const { data: match } = await supabase
+        .from('draft_playoff_matches' as any)
+        .select('*')
+        .eq('draft_id', draftId)
+        .maybeSingle();
+      if (cancelled || !match) return;
+      setPlayoffMatch(match);
+      if ((match as any).round === 'final') {
+        const { data: finals } = await supabase
+          .from('draft_playoff_matches' as any)
+          .select('winner_user_id, status')
+          .eq('season_id', season.id)
+          .eq('round', 'final');
+        if (cancelled) return;
+        const wins: Record<string, number> = {};
+        (finals || []).forEach((f: any) => {
+          if (f.status === 'complete' && f.winner_user_id) {
+            wins[f.winner_user_id] = (wins[f.winner_user_id] || 0) + 1;
+          }
+        });
+        setFinalsSeriesWins(wins);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [draftId, isPlayoffDraft, season?.id, hasResults, draft?.status]);
+
+  // Auto-advance playoffs whenever a playoff draft is complete (idempotent server-side)
+  useEffect(() => {
+    if (!isPlayoffDraft || !season?.id || playoffsAdvanced.current) return;
+    if (draft?.status !== 'complete' || !hasResults) return;
+    playoffsAdvanced.current = true;
+    advancePlayoffs(season.id).catch(err => console.error('advancePlayoffs failed:', err));
+  }, [isPlayoffDraft, season?.id, draft?.status, hasResults]);
+
   // Fetch disputes for this draft
   const fetchDisputes = useCallback(async () => {
     if (!draftId) return;
