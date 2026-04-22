@@ -1018,30 +1018,6 @@ function CommissionerPanel({ season, entries, onUpdate }: { season: any; entries
             <p className="text-[10px] font-bold" style={{ color: 'hsl(var(--success))' }}>✓ All {totalDrafts} season slots are filled</p>
           </div>
         )}
-
-        {/* Advance Playoffs control — safe to click any time, idempotent */}
-        <div className="p-3 border-t border-border/10">
-          <button
-            onClick={async () => {
-              setBusy('advance');
-              try {
-                const res: any = await advancePlayoffs(season.id);
-                if (res?.log?.length) toast.success(`Playoffs: ${res.log.join(' • ')}`);
-                else toast.success('Playoffs check complete');
-                onUpdate();
-              } catch (err: any) {
-                toast.error(err.message || 'Failed to advance');
-              } finally {
-                setBusy(null);
-              }
-            }}
-            disabled={busy === 'advance'}
-            className="w-full h-9 rounded-lg text-[11px] font-bold transition-colors flex items-center justify-center gap-1.5 btn-press"
-            style={{ background: 'hsl(var(--gold) / 0.15)', color: 'hsl(var(--gold))' }}
-          >
-            {busy === 'advance' ? 'Advancing…' : <><Trophy className="w-3.5 h-3.5" /> Advance Playoffs</>}
-          </button>
-        </div>
       </div>
     </motion.div>
   );
