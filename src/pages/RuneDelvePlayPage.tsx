@@ -829,10 +829,39 @@ export default function RuneDelvePlayPage() {
 
     // Abilities are now FREE actions: no enemy retaliation, no turn consumed,
     // no corruption spread. Player keeps their turn to chain again.
-    setCombat(finalNext);
+    let postWave = finalNext;
+    const allDeadAbil = postWave.enemies.every(e => e.hp <= 0);
+    if (allDeadAbil && waveDefs && wavesSpawnedRef.current < waveDefs.length) {
+      const nextWave = waveDefs[wavesSpawnedRef.current];
+      const resolveAid = (e: any): string | undefined => {
+        if (e.archetypeId) return e.archetypeId;
+        const raw = String(e.name ?? '').replace(/^(Elite |Boss |Mini-Boss |Echo of )/, '').trim().toLowerCase();
+        if (!raw) return undefined;
+        const hit = ENEMY_ROSTER.find(a => a.name.toLowerCase() === raw);
+        return hit?.id;
+      };
+      const fresh: Enemy[] = (nextWave.enemies ?? []).map((e: any, i: number) => ({
+        id: e.id ?? `w${wavesSpawnedRef.current + 1}-${i}`,
+        name: e.name, emoji: e.emoji, hp: e.hp, maxHp: e.maxHp ?? e.hp, damage: e.damage,
+        archetypeId: resolveAid(e), family: e.family, role: e.role,
+        ability: e.ability, abilityCooldown: e.abilityCooldown, abilityCooldownMax: e.abilityCooldownMax ?? e.abilityCooldown,
+        telegraphLabel: e.telegraphLabel, tier: e.tier,
+      }));
+      postWave = spawnWave(postWave, fresh, nextWave.reinforcement_turns ?? 2);
+      wavesSpawnedRef.current += 1;
+      const isBossWave = fresh.some(e => e.tier === 'boss');
+      toast.success(isBossWave ? '👑 The Boss arrives!' : '⚔️ Wave 2 — Reinforcements!', { duration: 2000 });
+      pushLog({
+        kind: 'info',
+        text: isBossWave
+          ? `The ground trembles — the Boss enters! +${nextWave.reinforcement_turns ?? 2} turns granted.`
+          : `Reinforcements arrive! +${nextWave.reinforcement_turns ?? 2} turns granted.`,
+      });
+    }
+    setCombat(postWave);
     pushLogs(turnLogs);
-    const status = checkObjective(finalNext, level.turn_limit, objType, level.objective_target, secondaryObjective);
-    if (status.over) void finalize(finalNext, status.cleared);
+    const status = checkObjective(postWave, level.turn_limit, objType, level.objective_target, secondaryObjective);
+    if (status.over) void finalize(postWave, status.cleared);
   };
 
   async function finalize(final: CombatState, cleared: boolean) {
