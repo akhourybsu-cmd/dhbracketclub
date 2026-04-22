@@ -48,7 +48,12 @@ export function HeroStatusBar({ state, cls, onAbility }: Props) {
           ))}
         </div>
         {state.shieldTurns > 0 && (
-          <span data-fx-target="shield" className="flex items-center gap-1 text-[10px] font-bold text-gold">
+          <span
+            data-fx-target="shield"
+            className="flex items-center gap-1 text-[10px] font-bold text-gold"
+            title={cls === 'warrior' ? 'Reflects 40% of damage taken' : 'Reflects 25% of damage taken'}
+            aria-label={cls === 'warrior' ? 'Shield active — reflects 40% of damage taken' : 'Shield active — reflects 25% of damage taken'}
+          >
             <Shield className="w-3 h-3" /> {state.shieldTurns}
           </span>
         )}

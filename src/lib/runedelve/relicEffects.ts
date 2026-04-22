@@ -175,3 +175,9 @@ export function momentumScoreBonusMult(a: ActiveRelics, longestChain: number): n
   if (!has(a, 'momentum') || longestChain < 4) return 1;
   return effectValue('momentum', rankOf(a, 'momentum'));
 }
+
+// ── Spiked Aegis (extra Thorns multiplier on shielded hits) ─────────────
+export function thornsRelicMultiplier(a: ActiveRelics): number {
+  if (!has(a, 'spiked_aegis')) return 1;
+  return effectValue('spiked_aegis', rankOf(a, 'spiked_aegis'));
+}
