@@ -32,6 +32,19 @@ export default function RuneDelveResultsPage() {
   const { data: loadout } = useLoadout(hero?.class);
   const [showConfetti, setShowConfetti] = useState(false);
   const [graceElapsed, setGraceElapsed] = useState(false);
+  // Improvement flags handed off from the Play page via sessionStorage so the
+  // Results page can show "New fastest clear" / "New longest chain" chips
+  // even though the merged DB row no longer reveals what changed this run.
+  const [improvements, setImprovements] = useState<{
+    wasNewBest: boolean;
+    improvedChain: boolean;
+    improvedTurns: boolean;
+    improvedHp: boolean;
+    firstClear: boolean;
+    turnsUsed: number;
+    longestChain: number;
+    hpRemaining: number;
+  } | null>(null);
 
   // Belt-and-suspenders: nuke any stale cached `null` for this level on mount,
   // and reset the short "loading grace" window so the empty state never flashes
@@ -42,8 +55,20 @@ export default function RuneDelveResultsPage() {
     queryClient.invalidateQueries({ queryKey: ['rune-delve-progress'] });
     setGraceElapsed(false);
     const t = setTimeout(() => setGraceElapsed(true), 1800);
+    // Pull (and consume) the improvement payload — only if it's recent.
+    try {
+      const key = `rd-improvements-${levelNumber}`;
+      const raw = sessionStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.ts && Date.now() - parsed.ts < 60_000) {
+          setImprovements(parsed);
+        }
+        sessionStorage.removeItem(key);
+      }
+    } catch { /* sessionStorage may be unavailable */ }
     return () => clearTimeout(t);
-  }, [level?.id, queryClient]);
+  }, [level?.id, queryClient, levelNumber]);
 
   useEffect(() => {
     if (run?.dungeon_cleared) {
