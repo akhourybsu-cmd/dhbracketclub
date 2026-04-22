@@ -436,6 +436,10 @@ export default function DraftDetailPage() {
         // Auto-generate report immediately
         setAutoTriggered(true);
         generateResults();
+        // Kick off playoff advancement immediately if this is a playoff draft (idempotent)
+        if (isPlayoffDraft && season?.id) {
+          advancePlayoffs(season.id).catch(err => console.error('advancePlayoffs failed:', err));
+        }
       } else {
         const nextTotal = pickNumber;
         const nextRound = Math.floor(nextTotal / participants.length);
