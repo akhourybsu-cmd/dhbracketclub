@@ -565,6 +565,17 @@ export default function RuneDelvePlayPage() {
     ) {
       toast('🛡️ Boss is shielded — defeat the others first', { duration: 1600 });
     }
+    // Phase Lock fizzle: boss is mid-phase and ignored the strike.
+    if (
+      bossRule === 'phaselock' &&
+      type === 'red' &&
+      resolution.damageDealt === 0 &&
+      combat.enemies.some(e => e.hp > 0 && (e.phaseLockTurns ?? 0) > 0)
+    ) {
+      const phasing = combat.enemies.find(e => (e.phaseLockTurns ?? 0) > 0);
+      toast('🌀 The boss is phasing — strike fizzled', { duration: 1600 });
+      turnLogs.push({ kind: 'info', text: `${phasing?.name ?? 'The boss'} phased out — your strike found nothing` });
+    }
 
     // Apply corruption: HP cost for matching corrupted cells, then strip them.
     // Cleansing Touch: first N corrupt-source clears each run cost no HP.
@@ -634,31 +645,45 @@ export default function RuneDelvePlayPage() {
       // Restore damage on the post-attack array so future turns aren't permanently softened.
       afterEnemies.enemies = afterEnemies.enemies.map((e, i) => ({ ...e, damage: originalDamage[i] ?? e.damage }));
       // Apply ability side-effects (corrupt/seal/spawn) to the page-level state.
+      // IMPORTANT: corrupt_tile / seal_tile additions are collected into the
+      // local `nextCorruption` / `pendingSealAdds` so they merge with the
+      // single end-of-turn setCorruption/setSeals calls below — using
+      // functional updaters here would race and get overwritten.
       const effects = afterEnemies.abilityEffects ?? [];
+      const pendingSealAdds: string[] = [];
       for (const eff of effects) {
         if (eff.kind === 'spawn_minion') {
           afterEnemies = { ...afterEnemies, enemies: [...afterEnemies.enemies, eff.enemy] };
         } else if (eff.kind === 'corrupt_tile' && corruptionActive) {
-          // Drop one corrupted cell on a random non-sealed, non-corrupted square.
-          setCorruption(prev => {
-            const cells = new Set(prev.cells);
-            for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) {
-              const k = `${r}-${c}`;
-              if (!cells.has(k) && !seals.has(k)) { cells.add(k); return { cells, sources: prev.sources }; }
+          // Drop one corrupted cell on the first available non-sealed,
+          // non-corrupted square (deterministic scan keeps replays stable).
+          const cells = new Set(nextCorruption.cells);
+          let placed = false;
+          outer: for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) {
+            const k = `${r}-${c}`;
+            if (!cells.has(k) && !seals.has(k) && !pendingSealAdds.includes(k)) {
+              cells.add(k);
+              placed = true;
+              break outer;
             }
-            return prev;
-          });
+          }
+          if (placed) {
+            nextCorruption = { cells, sources: nextCorruption.sources };
+            turnLogs.push({ kind: 'corruption', text: 'A new rune was corrupted' });
+          }
         } else if (eff.kind === 'seal_tile') {
-          setSeals(prev => {
-            const next = new Set(prev);
-            for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) {
-              const k = `${r}-${c}`;
-              if (!next.has(k)) { next.add(k); return next; }
+          for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) {
+            const k = `${r}-${c}`;
+            if (!seals.has(k) && !pendingSealAdds.includes(k)) {
+              pendingSealAdds.push(k);
+              turnLogs.push({ kind: 'info', text: 'A rune was sealed shut' });
+              r = 5; c = 5; break;
             }
-            return next;
-          });
+          }
         }
       }
+      // Stash for the final setSeals merge below.
+      (afterEnemies as any).__pendingSealAdds = pendingSealAdds;
       // Push enemy ability logs (heavy_strike / shield_self / heal_ally / etc).
       if (afterEnemies.abilityLogs?.length) turnLogs.push(...afterEnemies.abilityLogs);
     } else {
@@ -718,13 +743,17 @@ export default function RuneDelvePlayPage() {
 
     const newGrid = resolveBoard(grid, chain, refillRng, seals);
 
-    // Break any seals adjacent to the matched cells.
-    if (seals.size) {
-      const broken = sealsBrokenByChain(seals, chain);
+    // Build the final seal set: drop any broken adjacents, then layer in any
+    // ability-driven additions (seal_tile from Voidspawn, etc.). One write
+    // total avoids racing the functional-updater path.
+    const pendingSealAdds: string[] = (afterEnemies as any).__pendingSealAdds ?? [];
+    const broken = seals.size ? sealsBrokenByChain(seals, chain) : [];
+    if (broken.length || pendingSealAdds.length) {
+      const nextSeals = new Set(seals);
+      broken.forEach(k => nextSeals.delete(k));
+      pendingSealAdds.forEach(k => nextSeals.add(k));
+      setSeals(nextSeals);
       if (broken.length) {
-        const nextSeals = new Set(seals);
-        broken.forEach(k => nextSeals.delete(k));
-        setSeals(nextSeals);
         turnLogs.push({ kind: 'info', text: broken.length > 1 ? `${broken.length} seals shattered` : 'A seal shattered' });
       }
     }
@@ -753,13 +782,18 @@ export default function RuneDelvePlayPage() {
         const hit = ENEMY_ROSTER.find(a => a.name.toLowerCase() === raw);
         return hit?.id;
       };
-      const fresh: Enemy[] = (nextWave.enemies ?? []).map((e: any, i: number) => ({
+      let fresh: Enemy[] = (nextWave.enemies ?? []).map((e: any, i: number) => ({
         id: e.id ?? `w${wavesSpawnedRef.current + 1}-${i}`,
         name: e.name, emoji: e.emoji, hp: e.hp, maxHp: e.maxHp ?? e.hp, damage: e.damage,
         archetypeId: resolveAid(e), family: e.family, role: e.role,
         ability: e.ability, abilityCooldown: e.abilityCooldown, abilityCooldownMax: e.abilityCooldownMax ?? e.abilityCooldown,
         telegraphLabel: e.telegraphLabel, tier: e.tier,
       }));
+      // Telegraphed Attacks (L51+): wave-2 enemies must also carry intents
+      // so their ⚡ badge appears and heavy strikes can fire on schedule.
+      if (telegraphActive) {
+        fresh = applyInitialIntents(fresh, level.generation_seed + wavesSpawnedRef.current + 1, level.level_number);
+      }
       postWave = spawnWave(postWave, fresh, nextWave.reinforcement_turns ?? 2);
       wavesSpawnedRef.current += 1;
       const isBossWave = fresh.some(e => e.tier === 'boss');
@@ -843,13 +877,17 @@ export default function RuneDelvePlayPage() {
         const hit = ENEMY_ROSTER.find(a => a.name.toLowerCase() === raw);
         return hit?.id;
       };
-      const fresh: Enemy[] = (nextWave.enemies ?? []).map((e: any, i: number) => ({
+      let fresh: Enemy[] = (nextWave.enemies ?? []).map((e: any, i: number) => ({
         id: e.id ?? `w${wavesSpawnedRef.current + 1}-${i}`,
         name: e.name, emoji: e.emoji, hp: e.hp, maxHp: e.maxHp ?? e.hp, damage: e.damage,
         archetypeId: resolveAid(e), family: e.family, role: e.role,
         ability: e.ability, abilityCooldown: e.abilityCooldown, abilityCooldownMax: e.abilityCooldownMax ?? e.abilityCooldown,
         telegraphLabel: e.telegraphLabel, tier: e.tier,
       }));
+      // Telegraphed Attacks (L51+): wave-2 enemies must also carry intents.
+      if (telegraphActive) {
+        fresh = applyInitialIntents(fresh, level.generation_seed + wavesSpawnedRef.current + 1, level.level_number);
+      }
       postWave = spawnWave(postWave, fresh, nextWave.reinforcement_turns ?? 2);
       wavesSpawnedRef.current += 1;
       const isBossWave = fresh.some(e => e.tier === 'boss');

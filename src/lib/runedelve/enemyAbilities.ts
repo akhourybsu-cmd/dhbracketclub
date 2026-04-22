@@ -64,6 +64,11 @@ export function tickEnemyAbilities(enemies: Enemy[], summonsSoFar = 0): AbilityR
   const effects: AbilityEffect[] = [];
   const logs: Array<Omit<CombatLogEntry, 'id'>> = [];
   let summons = summonsSoFar;
+  // Patch table: ability id → patch fn applied during the final pass. Used by
+  // heal_ally so heals actually land on the returned object (the prior
+  // implementation mutated an intermediate copy that was overwritten by the
+  // outer .map).
+  const healPatch = new Map<string, number>(); // enemy.id → new hp
 
   // Step 1 — tick cooldowns.
   let next = enemies.map(e => {
@@ -100,18 +105,24 @@ export function tickEnemyAbilities(enemies: Enemy[], summonsSoFar = 0): AbilityR
 
       case 'heal_ally': {
         // Find the most-wounded LIVING ally (prefer not self if anyone else is hurt).
+        // Account for any heals already queued this tick so two chanters don't
+        // both target the same ally and overheal.
         const candidates = next
           .filter(o => o.hp > 0 && o.hp < o.maxHp && o.id !== e.id)
-          .sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
-        const target = candidates[0];
-        if (!target) {
+          .map(o => ({ enemy: o, hp: healPatch.get(o.id) ?? o.hp }))
+          .filter(c => c.hp < c.enemy.maxHp)
+          .sort((a, b) => (a.hp / a.enemy.maxHp) - (b.hp / b.enemy.maxHp));
+        const targetCand = candidates[0];
+        if (!targetCand) {
           // No wounded ally — silent skip but still reset CD so we try again later.
           return { ...e, abilityCooldown: reset };
         }
-        // Mutate the target in the next pass below by tagging effect amount.
-        const heal = Math.min(HEAL_AMOUNT, target.maxHp - target.hp);
-        // Apply the heal directly to the target reference in the array.
-        target.hp = target.hp + heal;
+        const target = targetCand.enemy;
+        const currentHp = targetCand.hp;
+        const heal = Math.min(HEAL_AMOUNT, target.maxHp - currentHp);
+        // Queue the patch — applied to the post-map enemy object below so the
+        // mutation actually survives the .map's object replacement.
+        healPatch.set(target.id, currentHp + heal);
         logs.push({
           kind: 'heal',
           text: `${e.name} mended ${target.name}`,
@@ -168,6 +179,16 @@ export function tickEnemyAbilities(enemies: Enemy[], summonsSoFar = 0): AbilityR
         return { ...e, abilityCooldown: reset };
     }
   });
+
+  // Step 3.5 — apply queued heal patches BEFORE armor decay so the new HP
+  // value lands on the returned enemy reference.
+  if (healPatch.size > 0) {
+    next = next.map(e => {
+      const newHp = healPatch.get(e.id);
+      if (newHp == null) return e;
+      return { ...e, hp: Math.min(e.maxHp, newHp) };
+    });
+  }
 
   // Step 4 — decay armor (shield_self's effect has a soft duration).
   // We decay by 1 each tick so a single shield_self lasts ~SHIELD_DURATION turns
