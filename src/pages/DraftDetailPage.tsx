@@ -110,6 +110,10 @@ export default function DraftDetailPage() {
   const seasonEntry = seasonEntries.find(e => e.draft_id === draftId);
   const isPlayoffDraft = !!seasonEntry?.is_playoff;
 
+  // Playoff match info (round + series state for champion banner)
+  const [playoffMatch, setPlayoffMatch] = useState<any>(null);
+  const [finalsSeriesWins, setFinalsSeriesWins] = useState<Record<string, number>>({});
+  const playoffsAdvanced = useRef(false);
 
   const { results: draftResults, loading: resultsLoading, generating: resultsGenerating, hasResults, generateResults, regenerateResults, fetchResults } = useDraftResults(draftId);
 
