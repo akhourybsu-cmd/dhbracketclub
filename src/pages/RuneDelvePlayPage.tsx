@@ -33,6 +33,7 @@ import {
   compassShardBonus,
   getTelegraphReadyEarly,
   getSealedTilesSpeedup,
+  thornsRelicMultiplier,
   type ActiveRelics,
 } from '@/lib/runedelve/relicEffects';
 import { MAX_MANA } from '@/lib/runedelve/combatEngine';
@@ -768,7 +769,10 @@ export default function RuneDelvePlayPage() {
       }
       // Count minions already on the board so summon_minion respects its cap.
       const summonsSoFar = next.enemies.filter(e => e.archetypeId === 'bone_husk').length;
-      afterEnemies = enemiesAttack(next, telegraphActive, bossRule, summonsSoFar);
+      afterEnemies = enemiesAttack(next, telegraphActive, bossRule, summonsSoFar, {
+        cls: hero.class,
+        relicMultiplier: thornsRelicMultiplier(relics),
+      });
       // Restore damage on the post-attack array so future turns aren't permanently softened.
       afterEnemies.enemies = afterEnemies.enemies.map((e, i) => ({ ...e, damage: originalDamage[i] ?? e.damage }));
       // Apply ability side-effects (corrupt/seal/spawn) to the page-level state.
