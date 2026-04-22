@@ -792,6 +792,25 @@ export default function RuneDelvePlayPage() {
         improvedTurns = result.improvedTurns;
         improvedHp = result.improvedHp;
         firstClear = result.firstClear;
+        // Hand the improvement flags to the Results page so it can render
+        // the "secondary improvement" chip even though the saved row has
+        // already been merged (and thus doesn't reveal what changed).
+        try {
+          sessionStorage.setItem(
+            `rd-improvements-${level.level_number}`,
+            JSON.stringify({
+              ts: Date.now(),
+              wasNewBest: serverWasNewBest,
+              improvedChain,
+              improvedTurns,
+              improvedHp,
+              firstClear,
+              turnsUsed,
+              longestChain: final.longestChain,
+              hpRemaining: final.hp,
+            }),
+          );
+        } catch { /* sessionStorage may be unavailable */ }
         // Reflect server truth on the end-state card so the toast + chip
         // matches what's actually persisted.
         setEndState(prev => prev ? {
