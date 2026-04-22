@@ -363,6 +363,17 @@ export function useSubmitLevelRun() {
           .maybeSingle();
         if (error) throw error;
         row = data ?? (await refetch());
+        // Defensive verification: if RLS silently filters the UPDATE the row
+        // won't reflect our merged payload. Surface that loudly instead of
+        // pretending the write succeeded.
+        if (row && (row.attempts ?? 0) < merged.attempts) {
+          console.warn('[rune-delve] UPDATE on rune_delve_runs returned stale row', {
+            expectedAttempts: merged.attempts,
+            actualAttempts: row.attempts,
+            rowId: existing.id,
+          });
+          throw new Error('Failed to save run — please try again.');
+        }
       } else {
         const { data, error } = await (supabase as any)
           .from('rune_delve_runs')
