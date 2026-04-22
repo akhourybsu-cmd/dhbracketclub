@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ArrowLeft, HelpCircle, Trophy, Skull, Hourglass } from 'lucide-react';
 import { useRuneDelveHero, useUpdateHero } from '@/hooks/useRuneDelveHero';
@@ -78,6 +79,7 @@ const nextLogId = () => `l-${++logSeq}`;
 
 export default function RuneDelvePlayPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { levelNumber: levelParam } = useParams<{ levelNumber: string }>();
   const levelNumber = Math.max(1, parseInt(levelParam ?? '1', 10) || 1);
 
@@ -108,7 +110,7 @@ export default function RuneDelvePlayPage() {
   const [flashId, setFlashId] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [introMechanic, setIntroMechanic] = useState<MechanicId | null>(null);
-  const [endState, setEndState] = useState<null | { cleared: boolean; reason: 'cleared' | 'defeated' | 'timeout'; score: number; isNewBest: boolean; shards: number }>(null);
+  const [endState, setEndState] = useState<null | { cleared: boolean; reason: 'cleared' | 'defeated' | 'timeout'; score: number; isNewBest: boolean; shards: number; improvedChain?: boolean; improvedTurns?: boolean; improvedHp?: boolean; firstClear?: boolean }>(null);
   // Counter (not boolean) — Last Stand at R5 grants 2 saves per run.
   const [lastStandUsed, setLastStandUsed] = useState(0);
   // Bonus-move rebalance: only one free turn per enemy cycle. Resets whenever
@@ -234,6 +236,14 @@ export default function RuneDelvePlayPage() {
       if (!localStorage.getItem(seenMechanicKey(intro))) setIntroMechanic(intro);
     } catch {}
   }, [level, hero]);
+
+  // Always invalidate the cached existing-run on mount so replay flows
+  // ("Retry" → Play → finalize) compute isNewBest off fresh server data.
+  // Without this, a stale cached row caused phantom hero XP double-counts.
+  useEffect(() => {
+    if (!level?.id || level.id.startsWith('transient-')) return;
+    queryClient.invalidateQueries({ queryKey: ['rune-delve-level-run', level.id] });
+  }, [level?.id, queryClient]);
 
   const refillRng = useMemo(() => {
     if (!level) return null;
@@ -702,6 +712,9 @@ export default function RuneDelvePlayPage() {
       : rawBreakdown;
     const xp = xpForRun(breakdown.total, cleared);
     const reason: 'cleared' | 'defeated' | 'timeout' = cleared ? 'cleared' : final.hp <= 0 ? 'defeated' : 'timeout';
+    // OPTIMISTIC isNewBest — used only for the immediate end-state card. The
+    // canonical, server-truth value is taken from the mutation result below
+    // and used for hero XP/lifetime increments.
     const isNewBest = !existingRun || breakdown.total > (existingRun.score ?? 0);
 
     // ── Rune Shards reward ────────────────────────────────────────────────
@@ -741,6 +754,14 @@ export default function RuneDelvePlayPage() {
     } catch { shardsAwarded = 0; }
     setEndState({ cleared, reason, score: breakdown.total, isNewBest, shards: shardsAwarded });
     try {
+      // Server-truth flags. Default to the optimistic value so legacy
+      // (transient-level) submissions still award XP correctly.
+      let serverWasNewBest = isNewBest;
+      let improvedChain = false;
+      let improvedTurns = false;
+      let improvedHp = false;
+      let firstClear = false;
+
       // Don't submit transient levels (admin hasn't seeded them yet).
       if (!level.id.startsWith('transient-')) {
         // Signal to the results page that a run was just submitted, so
@@ -752,7 +773,7 @@ export default function RuneDelvePlayPage() {
             String(Date.now()),
           );
         } catch { /* sessionStorage may be unavailable */ }
-        await submit.mutateAsync({
+        const result = await submit.mutateAsync({
           level_id: level.id,
           level_number: level.level_number,
           score: breakdown.total,
@@ -766,10 +787,45 @@ export default function RuneDelvePlayPage() {
           ability_used: final.abilityUsed,
           hero_class: hero.class,
         });
+        serverWasNewBest = result.wasNewBest;
+        improvedChain = result.improvedChain;
+        improvedTurns = result.improvedTurns;
+        improvedHp = result.improvedHp;
+        firstClear = result.firstClear;
+        // Hand the improvement flags to the Results page so it can render
+        // the "secondary improvement" chip even though the saved row has
+        // already been merged (and thus doesn't reveal what changed).
+        try {
+          sessionStorage.setItem(
+            `rd-improvements-${level.level_number}`,
+            JSON.stringify({
+              ts: Date.now(),
+              wasNewBest: serverWasNewBest,
+              improvedChain,
+              improvedTurns,
+              improvedHp,
+              firstClear,
+              turnsUsed,
+              longestChain: final.longestChain,
+              hpRemaining: final.hp,
+            }),
+          );
+        } catch { /* sessionStorage may be unavailable */ }
+        // Reflect server truth on the end-state card so the toast + chip
+        // matches what's actually persisted.
+        setEndState(prev => prev ? {
+          ...prev,
+          isNewBest: serverWasNewBest,
+          improvedChain,
+          improvedTurns,
+          improvedHp,
+          firstClear,
+        } : prev);
         if (cleared) await advance.mutateAsync(level.level_number);
       }
-      // Hero progression — XP only on new best to keep grinding fair.
-      if (isNewBest) {
+      // Hero progression — XP only on a SERVER-confirmed new best to keep
+      // grinding fair and prevent stale-cache double-counts.
+      if (serverWasNewBest) {
         const today = format(new Date(), 'yyyy-MM-dd');
         const yesterday = format(new Date(Date.now() - 86_400_000), 'yyyy-MM-dd');
         const continued = hero.last_run_date === yesterday;

@@ -32,6 +32,19 @@ export default function RuneDelveResultsPage() {
   const { data: loadout } = useLoadout(hero?.class);
   const [showConfetti, setShowConfetti] = useState(false);
   const [graceElapsed, setGraceElapsed] = useState(false);
+  // Improvement flags handed off from the Play page via sessionStorage so the
+  // Results page can show "New fastest clear" / "New longest chain" chips
+  // even though the merged DB row no longer reveals what changed this run.
+  const [improvements, setImprovements] = useState<{
+    wasNewBest: boolean;
+    improvedChain: boolean;
+    improvedTurns: boolean;
+    improvedHp: boolean;
+    firstClear: boolean;
+    turnsUsed: number;
+    longestChain: number;
+    hpRemaining: number;
+  } | null>(null);
 
   // Belt-and-suspenders: nuke any stale cached `null` for this level on mount,
   // and reset the short "loading grace" window so the empty state never flashes
@@ -42,8 +55,20 @@ export default function RuneDelveResultsPage() {
     queryClient.invalidateQueries({ queryKey: ['rune-delve-progress'] });
     setGraceElapsed(false);
     const t = setTimeout(() => setGraceElapsed(true), 1800);
+    // Pull (and consume) the improvement payload — only if it's recent.
+    try {
+      const key = `rd-improvements-${levelNumber}`;
+      const raw = sessionStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.ts && Date.now() - parsed.ts < 60_000) {
+          setImprovements(parsed);
+        }
+        sessionStorage.removeItem(key);
+      }
+    } catch { /* sessionStorage may be unavailable */ }
     return () => clearTimeout(t);
-  }, [level?.id, queryClient]);
+  }, [level?.id, queryClient, levelNumber]);
 
   useEffect(() => {
     if (run?.dungeon_cleared) {
@@ -214,6 +239,66 @@ export default function RuneDelveResultsPage() {
         </div>
       )}
 
+      {/* Personal Best Tracker — replay-aware stats. Always visible so the
+          player sees their cumulative progress, not just this attempt. */}
+      <div className="glass-card p-3">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-bold text-[12px] flex items-center gap-1.5">
+            <Trophy className="w-3.5 h-3.5" style={{ color: 'hsl(var(--gold))' }} /> Personal Best Tracker
+          </h3>
+          {(run as any).attempts > 1 && (
+            <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+              {(run as any).clears ?? 0}/{(run as any).attempts ?? 1} clears
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-lg p-2 text-center" style={{ background: 'hsl(var(--gold) / 0.08)' }}>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Best Score</p>
+            <p className="font-mono text-[13px] font-extrabold tabular-nums" style={{ color: 'hsl(var(--gold))' }}>
+              {run.score.toLocaleString()}
+            </p>
+          </div>
+          <div className="rounded-lg p-2 text-center bg-muted/30">
+            <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Best Chain</p>
+            <p className="font-mono text-[13px] font-extrabold tabular-nums">{run.longest_chain}</p>
+          </div>
+          <div className="rounded-lg p-2 text-center bg-muted/30">
+            <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Fastest Clear</p>
+            <p className="font-mono text-[13px] font-extrabold tabular-nums">
+              {(run as any).best_turns_used != null ? `${(run as any).best_turns_used}t` : '—'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Secondary-improvement chips — celebrate replay progress that didn't
+          beat the high score but still improved a meaningful stat. */}
+      {improvements && !improvements.wasNewBest && (improvements.firstClear || improvements.improvedTurns || improvements.improvedChain || improvements.improvedHp) && (
+        <div className="flex flex-wrap gap-1.5">
+          {improvements.firstClear && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold"
+              style={{ background: 'hsl(var(--gold) / 0.18)', color: 'hsl(var(--gold))' }}>
+              🏆 First Clear!
+            </span>
+          )}
+          {improvements.improvedTurns && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-primary/15 text-primary">
+              ⚡ New fastest clear — {improvements.turnsUsed}t
+            </span>
+          )}
+          {improvements.improvedChain && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-primary/15 text-primary">
+              🔗 New longest chain — {improvements.longestChain}
+            </span>
+          )}
+          {improvements.improvedHp && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-success/15 text-success">
+              ❤️ New best HP left — {improvements.hpRemaining}
+            </span>
+          )}
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-2">
         {stats.map(s => {
           const Icon = s.icon;

@@ -223,7 +223,15 @@ export function useMyLevelRun(levelId: string | undefined, levelNumber?: number)
   });
 }
 
-// Submit (upsert) a run: keeps the higher score for the level.
+// Submit a run with per-stat best-of merge semantics.
+//
+// Why this is a single merged upsert (not "if better score, update"):
+//   - Score-tie or lower-score replays still might improve secondary stats
+//     (longer chain, faster clear, more HP left, first-time clear).
+//   - Replay metadata (attempts, clears, last_played_at) must always tick.
+// Returns the saved row + a `wasNewBest` flag (server truth) so the caller
+// doesn't have to rely on a possibly-stale cached `existingRun` to decide
+// whether to bump hero lifetime XP/runs.
 export function useSubmitLevelRun() {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -241,34 +249,84 @@ export function useSubmitLevelRun() {
       xp_earned: number;
       ability_used: boolean;
       hero_class: string;
-    }) => {
+    }): Promise<{ row: any; wasNewBest: boolean; improvedChain: boolean; improvedTurns: boolean; improvedHp: boolean; firstClear: boolean }> => {
       if (!user) throw new Error('Not authenticated');
 
-      // Read existing best — upsert manually to keep best-score semantics.
-      const { data: existing } = await supabase
+      const { data: existing } = await (supabase as any)
         .from('rune_delve_runs')
-        .select('id, score')
+        .select('*')
         .eq('user_id', user.id)
         .eq('level_id', params.level_id)
         .maybeSingle();
 
-      if (existing && existing.score >= params.score) {
-        // Keep the existing best, but update meta fields for the latest attempt.
-        const { data } = await supabase
+      const prevScore = existing?.score ?? 0;
+      const prevChain = existing?.longest_chain ?? 0;
+      const prevEnemies = existing?.enemies_defeated ?? 0;
+      const prevDamage = existing?.total_damage ?? 0;
+      const prevHpBest = existing?.best_hp_remaining ?? 0;
+      const prevTurnsBest = existing?.best_turns_used ?? null;
+      const prevAttempts = existing?.attempts ?? 0;
+      const prevClears = existing?.clears ?? 0;
+      const prevCleared = !!existing?.dungeon_cleared;
+      const prevXp = existing?.xp_earned ?? 0;
+
+      const wasNewBest = params.score > prevScore;
+      const improvedChain = params.longest_chain > prevChain;
+      // Only count "fastest clear" improvements when this run actually cleared.
+      const improvedTurns = params.dungeon_cleared
+        && (prevTurnsBest == null || params.turns_used < prevTurnsBest);
+      const improvedHp = params.dungeon_cleared && params.hp_remaining > prevHpBest;
+      const firstClear = params.dungeon_cleared && !prevCleared;
+
+      // Per-stat best-of merge. Score is canonical for leaderboards/XP, but
+      // the saved row keeps the maximum of every secondary stat ever seen.
+      const merged: Record<string, any> = {
+        // Always-tick replay metadata
+        attempts: prevAttempts + 1,
+        clears: prevClears + (params.dungeon_cleared ? 1 : 0),
+        last_played_at: new Date().toISOString(),
+        // Identity
+        hero_class: params.hero_class,
+        level_number: params.level_number,
+        ability_used: params.ability_used,
+        // Best-of (max)
+        score: Math.max(prevScore, params.score),
+        longest_chain: Math.max(prevChain, params.longest_chain),
+        enemies_defeated: Math.max(prevEnemies, params.enemies_defeated),
+        total_damage: Math.max(prevDamage, params.total_damage),
+        best_hp_remaining: Math.max(prevHpBest, params.dungeon_cleared ? params.hp_remaining : 0),
+        // Sticky-true
+        dungeon_cleared: prevCleared || params.dungeon_cleared,
+        // Best XP earned (mirrors best score)
+        xp_earned: Math.max(prevXp, params.xp_earned),
+        // Fastest clear (min over clears only). Stays null until first clear.
+        best_turns_used: improvedTurns ? params.turns_used : prevTurnsBest,
+      };
+
+      // Snapshot fields ("latest best attempt" view) — only refresh on a new
+      // best so the headline run on the Results page reflects the best run.
+      if (wasNewBest) {
+        merged.hp_remaining = params.hp_remaining;
+        merged.turns_used = params.turns_used;
+      }
+
+      let row: any;
+      if (existing) {
+        const { data, error } = await (supabase as any)
           .from('rune_delve_runs')
-          .update({
-            // intentionally only persist non-score meta to preserve best-of behavior
-            ability_used: params.ability_used,
-          })
+          .update(merged)
           .eq('id', existing.id)
           .select()
           .single();
-        return data;
-      }
-      if (existing) {
-        const { data } = await supabase
+        if (error) throw error;
+        row = data;
+      } else {
+        const { data, error } = await (supabase as any)
           .from('rune_delve_runs')
-          .update({
+          .insert({
+            user_id: user.id,
+            level_id: params.level_id,
+            level_number: params.level_number,
             score: params.score,
             enemies_defeated: params.enemies_defeated,
             dungeon_cleared: params.dungeon_cleared,
@@ -279,29 +337,25 @@ export function useSubmitLevelRun() {
             xp_earned: params.xp_earned,
             ability_used: params.ability_used,
             hero_class: params.hero_class,
-            level_number: params.level_number,
+            attempts: 1,
+            clears: params.dungeon_cleared ? 1 : 0,
+            best_turns_used: params.dungeon_cleared ? params.turns_used : null,
+            best_hp_remaining: params.dungeon_cleared ? params.hp_remaining : 0,
+            last_played_at: new Date().toISOString(),
           })
-          .eq('id', existing.id)
           .select()
           .single();
-        return data;
+        if (error) throw error;
+        row = data;
       }
-      const { data, error } = await supabase
-        .from('rune_delve_runs')
-        .insert({
-          user_id: user.id,
-          ...params,
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
+      return { row, wasNewBest, improvedChain, improvedTurns, improvedHp, firstClear };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['rune-delve-level-run'] });
       qc.invalidateQueries({ queryKey: ['rune-delve-progress'] });
       qc.invalidateQueries({ queryKey: ['rune-delve-progress-leaderboard'] });
       qc.invalidateQueries({ queryKey: ['rune-delve-history'] });
+      qc.invalidateQueries({ queryKey: ['rune-delve-level-history'] });
       qc.invalidateQueries({ queryKey: ['rune-delve-hero', user?.id] });
     },
   });

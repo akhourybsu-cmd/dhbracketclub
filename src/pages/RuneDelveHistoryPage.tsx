@@ -18,6 +18,9 @@ interface LevelRun {
   xp_earned: number;
   hero_class: string;
   completed_at: string;
+  attempts?: number | null;
+  clears?: number | null;
+  best_turns_used?: number | null;
 }
 
 function useLevelHistory(limit = 50) {
@@ -30,7 +33,7 @@ function useLevelHistory(limit = 50) {
       if (!user) return [];
       const { data } = await (supabase as any)
         .from('rune_delve_runs')
-        .select('id, level_id, level_number, score, enemies_defeated, longest_chain, dungeon_cleared, xp_earned, hero_class, completed_at')
+        .select('id, level_id, level_number, score, enemies_defeated, longest_chain, dungeon_cleared, xp_earned, hero_class, completed_at, attempts, clears, best_turns_used')
         .eq('user_id', user.id)
         .order('level_number', { ascending: false, nullsFirst: false })
         .limit(limit);
@@ -71,6 +74,14 @@ export default function RuneDelveHistoryPage() {
                 <p className="text-[10px] text-muted-foreground">
                   {r.dungeon_cleared && <span className="font-bold text-success">CLEAR · </span>}
                   {r.enemies_defeated} kills · chain {r.longest_chain}
+                  {(r.attempts ?? 0) > 1 && (
+                    <span className="ml-1.5 px-1.5 py-[1px] rounded-md bg-muted/40 font-bold tabular-nums">
+                      {r.clears ?? 0}/{r.attempts}
+                    </span>
+                  )}
+                  {r.best_turns_used != null && (
+                    <span className="ml-1.5 text-foreground/70">· ⚡ {r.best_turns_used}t</span>
+                  )}
                 </p>
               </div>
               <div className="text-right">
