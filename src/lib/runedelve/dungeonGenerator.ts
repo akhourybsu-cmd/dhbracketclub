@@ -33,6 +33,15 @@ export interface Enemy {
   armor?: number;
   /** Short label shown above the enemy when an ability is about to fire. */
   telegraphLabel?: string;
+  /** Boss-tier label used by EnemyDisplay (mini / boss). Optional — legacy enemies have none. */
+  tier?: 'mini' | 'boss';
+  // ── Boss-rule transient flags (Band 5 + new mid-cadence rules) ────────
+  /** Phase Lock: turns remaining of immunity after a damage threshold trigger. */
+  phaseLockTurns?: number;
+  /** Phase Lock: cumulative HP loss already credited to a phase trigger. */
+  phaseLockNextAt?: number;
+  /** Splitter: true once this boss has split (prevents repeat triggers). */
+  hasSplit?: boolean;
 }
 
 export interface DungeonConfig {

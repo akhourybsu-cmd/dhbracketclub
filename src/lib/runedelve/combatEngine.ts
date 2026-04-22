@@ -4,6 +4,7 @@ import type { RuneType } from './dungeonGenerator';
 import { resolveEnemyAttack, tickIntents } from './telegraph';
 import {
   applyBossTurnEffects,
+  applyPhaseLockOnDamage,
   enemyDamageMultiplier,
   filterTargetable,
   type BossRuleId,
@@ -98,6 +99,8 @@ export function applyChain(
         resolution.enemyKills.push(live.id);
       }
     }
+    // Phase Lock — kick in a 1-turn immunity each time a fresh 25% slice falls.
+    next.enemies = applyPhaseLockOnDamage(bossRule, next.enemies);
   } else if (type === 'blue') {
     let mana = 1;
     if (cls === 'mage') mana = 2;
@@ -150,10 +153,10 @@ export function enemiesAttack(
   let next: CombatState = { ...state, enemies: ticked.map(e => ({ ...e })) };
   let heavyFired = false;
   if (telegraphed) {
-    // Apply enrager multiplier in-place by temporarily scaling each enemy's
-    // damage for the resolve call, then restoring (telegraph reads `damage`).
+    // Apply enrager / aura multiplier in-place by temporarily scaling each
+    // enemy's damage for the resolve call, then restoring.
     const original = next.enemies.map(e => e.damage);
-    next.enemies.forEach(e => { e.damage = Math.round(e.damage * enemyDamageMultiplier(bossRule, e)); });
+    next.enemies.forEach(e => { e.damage = Math.round(e.damage * enemyDamageMultiplier(bossRule, e, next.enemies)); });
     const r = resolveEnemyAttack(next.enemies, next.shieldTurns > 0);
     next.enemies = r.enemies.map((e, i) => ({ ...e, damage: original[i] ?? e.damage }));
     heavyFired = r.heavyFired;
@@ -162,7 +165,7 @@ export function enemiesAttack(
   } else {
     let totalIncoming = 0;
     for (const e of next.enemies) {
-      if (e.hp > 0) totalIncoming += Math.round(e.damage * enemyDamageMultiplier(bossRule, e));
+      if (e.hp > 0) totalIncoming += Math.round(e.damage * enemyDamageMultiplier(bossRule, e, next.enemies));
     }
     if (next.shieldTurns > 0) {
       totalIncoming = Math.round(totalIncoming * 0.4);
@@ -250,5 +253,21 @@ export function useAbility(
     next.hp += heal;
     next.shieldTurns = Math.max(next.shieldTurns, 2);
   }
+  // Phase Lock — abilities can damage the boss too, so credit threshold ticks.
+  next.enemies = applyPhaseLockOnDamage(bossRule, next.enemies);
   return { next, ok: true };
+}
+
+/**
+ * Append a wave of reinforcements mid-fight. Adds the new enemies to the
+ * encounter and grants `bonusTurns` extra turns so the level stays clearable.
+ * Pure — returns a fresh state object.
+ */
+export function spawnWave(state: CombatState, enemies: Enemy[], bonusTurns = 2): CombatState {
+  if (!enemies.length) return state;
+  return {
+    ...state,
+    enemies: [...state.enemies, ...enemies.map(e => ({ ...e }))],
+    turnsRemaining: state.turnsRemaining + bonusTurns,
+  };
 }

@@ -26,14 +26,28 @@ export function EnemyDisplay({ enemies, flashId }: Props) {
           >
             <div className="relative">
               <div
-                className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl rd-enemy-frame ${e.name?.startsWith('Elite') ? 'is-elite' : ''}`}
+                className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl rd-enemy-frame ${e.name?.startsWith('Elite') ? 'is-elite' : ''} ${e.tier === 'mini' ? 'rd-enemy-mini' : ''} ${e.tier === 'boss' ? 'rd-enemy-boss' : ''}`}
                 style={{
                   filter: dead ? 'grayscale(1)' : 'none',
                   opacity: dead ? 0.5 : 1,
+                  boxShadow: !dead && e.tier === 'boss'
+                    ? '0 0 0 2px hsl(var(--gold)), 0 0 14px hsl(var(--gold) / 0.55)'
+                    : !dead && e.tier === 'mini'
+                      ? '0 0 0 2px hsl(var(--gold) / 0.7)'
+                      : undefined,
                 }}
               >
                 {dead ? '💀' : e.emoji}
               </div>
+              {!dead && e.tier && (
+                <div
+                  className="absolute -top-2 left-1/2 -translate-x-1/2 px-1.5 h-[14px] rounded-full text-[8px] font-extrabold uppercase tracking-wider flex items-center gap-0.5 shadow-md"
+                  style={{ background: 'hsl(var(--gold))', color: 'hsl(var(--background))' }}
+                  aria-label={e.tier === 'boss' ? 'Boss' : 'Mini-Boss'}
+                >
+                  {e.tier === 'boss' ? '👑 Boss' : '🥈 Mini'}
+                </div>
+              )}
               {hasIntent && (
                 <motion.div
                   animate={aboutToFire ? { scale: [1, 1.15, 1] } : {}}
