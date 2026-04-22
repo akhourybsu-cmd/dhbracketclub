@@ -294,9 +294,10 @@ export function generateLevel(level: number): LevelDefinition {
           if (level <= 50) pool = pool.filter(e => !e.ability);
           if (pool.length) t = pool[rngInt(rng, pool.length)];
         }
-        const isMidBossSlot = bossKind === 'mid' && i === reinforceCount - 1;
+        // Reinforcements are always mooks — the mid-boss is already in wave 1's
+        // final slot, so we never re-tag a wave-2 enemy as a boss.
         waveEnemies.push(buildEnemy(t, level, i, {
-          bossKind: isMidBossSlot ? bossKind : null,
+          bossKind: null,
           idPrefix: 'w2-',
         }));
       }
