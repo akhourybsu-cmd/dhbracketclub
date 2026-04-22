@@ -983,7 +983,9 @@ export default function RuneDelvePlayPage() {
   const equippedCount = [loadout?.slot_1, loadout?.slot_2, loadout?.slot_3].filter(Boolean).length;
 
   return (
-    <div className="space-y-2 pb-2 relative">
+    <div ref={playRootRef} className="space-y-2 pb-2 relative">
+      {/* Cinematic combat FX overlay — chains, abilities, tier flourishes. */}
+      <FxLayer queue={fxQ.queue} onComplete={fxQ.complete} />
       {/* Compact combined HUD: turn counter + objective on a single row */}
       <div
         className="rd-carved rounded-xl px-3 py-2 flex items-center gap-2"
