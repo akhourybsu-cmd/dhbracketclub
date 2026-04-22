@@ -337,8 +337,20 @@ export default function RuneDelveBestiaryPage() {
                     </p>
                     <p className="text-[12.5px] leading-relaxed italic text-foreground/85">
                       {discovered
-                        ? (ARCHETYPE_FLAVOR[selected.id] ?? 'A foe encountered in the depths.')
-                        : 'Defeat this foe in combat to reveal its entry.'}
+                        ? (
+                            ARCHETYPE_FLAVOR[selected.id]
+                            ?? ARCHETYPE_FLAVOR[parseBestiaryId(selected.id).baseId]
+                            ?? (tier === 'boss'
+                                ? 'A flagship terror — twice the menace of its lesser kin.'
+                                : tier === 'mini'
+                                  ? 'An elevated specimen, gold-ringed and dangerous.'
+                                  : 'A foe encountered in the depths.')
+                          )
+                        : (tier === 'boss'
+                            ? 'Defeat this BOSS in combat to inscribe its entry.'
+                            : tier === 'mini'
+                              ? 'Defeat this MINI-BOSS in combat to inscribe its entry.'
+                              : 'Defeat this foe in combat to reveal its entry.')}
                     </p>
                   </div>
 
