@@ -2,8 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, BookOpen, Search, Skull } from 'lucide-react';
-import { ENEMY_ROSTER, MINION_BONE_HUSK, type EnemyFamily, type RosterEntry } from '@/lib/runedelve/enemyRoster';
+import { ArrowLeft, BookOpen, Crown, Search, Skull } from 'lucide-react';
+import {
+  BESTIARY_ROSTER,
+  parseBestiaryId,
+  type EnemyFamily,
+  type RosterEntry,
+} from '@/lib/runedelve/enemyRoster';
 import {
   ABILITY_BLURB,
   ARCHETYPE_FLAVOR,
@@ -17,7 +22,12 @@ import { Input } from '@/components/ui/input';
 
 type FilterChapter = 'all' | 1 | 2 | 3;
 
-const ALL_ARCHETYPES: RosterEntry[] = [...ENEMY_ROSTER, MINION_BONE_HUSK];
+/** Variant tier extracted from a bestiary id (mini / boss / null = base). */
+function variantOf(entry: RosterEntry): 'mini' | 'boss' | null {
+  return parseBestiaryId(entry.id).variant;
+}
+
+const ALL_ARCHETYPES: RosterEntry[] = BESTIARY_ROSTER;
 
 export default function RuneDelveBestiaryPage() {
   const navigate = useNavigate();
@@ -181,6 +191,12 @@ export default function RuneDelveBestiaryPage() {
           {filtered.map((r, idx) => {
             const entry = entryMap.get(r.id);
             const discovered = !!entry;
+            const tier = variantOf(r);
+            const ringColor = tier === 'boss'
+              ? 'hsl(var(--gold))'
+              : tier === 'mini'
+                ? 'hsl(var(--gold) / 0.7)'
+                : null;
             return (
               <motion.button
                 key={r.id}
@@ -194,12 +210,30 @@ export default function RuneDelveBestiaryPage() {
                   background: discovered
                     ? `linear-gradient(160deg, ${FAMILY_COLOR[r.family]} / 0.12, hsl(var(--rd-stone-edge) / 0.6))`
                     : 'hsl(var(--rd-stone-edge) / 0.55)',
-                  border: discovered
-                    ? `1px solid ${FAMILY_COLOR[r.family].replace(')', ' / 0.35)')}`
-                    : '1px dashed hsl(var(--foreground) / 0.12)',
+                  border: ringColor
+                    ? `1.5px solid ${ringColor}`
+                    : discovered
+                      ? `1px solid ${FAMILY_COLOR[r.family].replace(')', ' / 0.35)')}`
+                      : '1px dashed hsl(var(--foreground) / 0.12)',
+                  boxShadow: ringColor && discovered
+                    ? `0 0 14px ${tier === 'boss' ? 'hsl(var(--gold) / 0.45)' : 'hsl(var(--gold) / 0.25)'}`
+                    : undefined,
                 }}
-                aria-label={discovered ? r.name : 'Undiscovered'}
+                aria-label={discovered ? r.name : (tier ? `Undiscovered ${tier === 'boss' ? 'boss' : 'mini-boss'}` : 'Undiscovered')}
               >
+                {tier && (
+                  <span
+                    className="absolute top-1 left-1 px-1 h-[14px] rounded-full text-[8px] font-extrabold uppercase tracking-wider flex items-center gap-0.5"
+                    style={{
+                      background: tier === 'boss' ? 'hsl(var(--gold))' : 'hsl(var(--gold) / 0.85)',
+                      color: 'hsl(var(--background))',
+                    }}
+                    aria-hidden
+                  >
+                    {tier === 'boss' ? <Crown className="w-2 h-2" /> : '★'}
+                    {tier === 'boss' ? 'Boss' : 'Mini'}
+                  </span>
+                )}
                 <div
                   className="text-3xl leading-none"
                   style={{
@@ -231,6 +265,12 @@ export default function RuneDelveBestiaryPage() {
           {selected && (() => {
             const entry = entryMap.get(selected.id);
             const discovered = !!entry;
+            const tier = variantOf(selected);
+            const ringColor = tier === 'boss'
+              ? 'hsl(var(--gold))'
+              : tier === 'mini'
+                ? 'hsl(var(--gold) / 0.7)'
+                : null;
             return (
               <>
                 <SheetHeader className="text-left">
@@ -239,7 +279,12 @@ export default function RuneDelveBestiaryPage() {
                       className="w-16 h-16 rounded-xl flex items-center justify-center text-4xl shrink-0"
                       style={{
                         background: `linear-gradient(160deg, ${FAMILY_COLOR[selected.family].replace(')', ' / 0.18)')}, hsl(var(--rd-stone-edge) / 0.6))`,
-                        border: `1px solid ${FAMILY_COLOR[selected.family].replace(')', ' / 0.35)')}`,
+                        border: ringColor
+                          ? `1.5px solid ${ringColor}`
+                          : `1px solid ${FAMILY_COLOR[selected.family].replace(')', ' / 0.35)')}`,
+                        boxShadow: ringColor && discovered
+                          ? `0 0 18px ${tier === 'boss' ? 'hsl(var(--gold) / 0.5)' : 'hsl(var(--gold) / 0.3)'}`
+                          : undefined,
                         filter: discovered ? 'none' : 'brightness(0) opacity(0.45)',
                       }}
                     >
@@ -247,9 +292,21 @@ export default function RuneDelveBestiaryPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <SheetTitle className="font-rd-display text-xl tracking-wide">
-                        {discovered ? selected.name : '???'}
+                        {discovered ? selected.name : (tier === 'boss' ? '??? (Boss)' : tier === 'mini' ? '??? (Mini-Boss)' : '???')}
                       </SheetTitle>
                       <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                        {tier && (
+                          <span
+                            className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center gap-1"
+                            style={{
+                              background: tier === 'boss' ? 'hsl(var(--gold))' : 'hsl(var(--gold) / 0.85)',
+                              color: 'hsl(var(--background))',
+                            }}
+                          >
+                            {tier === 'boss' ? <Crown className="w-2.5 h-2.5" /> : '★'}
+                            {tier === 'boss' ? 'Boss' : 'Mini-Boss'}
+                          </span>
+                        )}
                         <span
                           className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md"
                           style={{
@@ -280,8 +337,20 @@ export default function RuneDelveBestiaryPage() {
                     </p>
                     <p className="text-[12.5px] leading-relaxed italic text-foreground/85">
                       {discovered
-                        ? (ARCHETYPE_FLAVOR[selected.id] ?? 'A foe encountered in the depths.')
-                        : 'Defeat this foe in combat to reveal its entry.'}
+                        ? (
+                            ARCHETYPE_FLAVOR[selected.id]
+                            ?? ARCHETYPE_FLAVOR[parseBestiaryId(selected.id).baseId]
+                            ?? (tier === 'boss'
+                                ? 'A flagship terror — twice the menace of its lesser kin.'
+                                : tier === 'mini'
+                                  ? 'An elevated specimen, gold-ringed and dangerous.'
+                                  : 'A foe encountered in the depths.')
+                          )
+                        : (tier === 'boss'
+                            ? 'Defeat this BOSS in combat to inscribe its entry.'
+                            : tier === 'mini'
+                              ? 'Defeat this MINI-BOSS in combat to inscribe its entry.'
+                              : 'Defeat this foe in combat to reveal its entry.')}
                     </p>
                   </div>
 

@@ -125,12 +125,17 @@ export default function RuneDelvePlayPage() {
   const [log, setLog] = useState<CombatLogEntry[]>([]);
 
   // Per-run defeat ledger keyed by archetypeId. Submitted to the Bestiary on
-  // run-end. Using a ref keeps writes O(1) and avoids extra renders.
+  // run-end. Mini-boss / boss kills get tracked under variant ids
+  // (e.g. `goblin_scout__mini`, `goblin_scout__boss`) so the journal records
+  // them as distinct silhouetted entries with elevated borders.
   const defeatedArchetypesRef = useRef<Map<string, number>>(new Map());
-  const recordKill = (archetypeId: string | undefined) => {
-    if (!archetypeId) return;
+  const recordKill = (enemy: { archetypeId?: string; tier?: 'mini' | 'boss' } | undefined) => {
+    if (!enemy?.archetypeId) return;
+    const id = enemy.tier
+      ? `${enemy.archetypeId}__${enemy.tier}`
+      : enemy.archetypeId;
     const m = defeatedArchetypesRef.current;
-    m.set(archetypeId, (m.get(archetypeId) ?? 0) + 1);
+    m.set(id, (m.get(id) ?? 0) + 1);
   };
   // Tracks how many reinforcement waves have spawned this run so we never
   // double-spawn the same wave when the player clears multiple enemies in a turn.
@@ -547,7 +552,7 @@ export default function RuneDelvePlayPage() {
     }
     for (const killId of resolution.enemyKills) {
       const killed = combat.enemies.find(e => e.id === killId);
-      recordKill(killed?.archetypeId);
+      recordKill(killed);
       turnLogs.push({ kind: 'kill', text: `${killed?.name ?? 'A foe'} was vanquished!` });
     }
 
@@ -804,11 +809,9 @@ export default function RuneDelvePlayPage() {
     const healed = Math.max(0, next.hp - combat.hp);
     // Track which archetypes died from this ability for the Bestiary.
     if (killed > 0) {
-      const newlyDeadIds = next.enemies
-        .filter(e => e.hp <= 0 && combat.enemies.find(o => o.id === e.id && o.hp > 0))
-        .map(e => e.archetypeId)
-        .filter((id): id is string => !!id);
-      newlyDeadIds.forEach(recordKill);
+      const newlyDead = next.enemies
+        .filter(e => e.hp <= 0 && combat.enemies.find(o => o.id === e.id && o.hp > 0));
+      newlyDead.forEach(recordKill);
     }
     turnLogs.push({
       kind: 'ability',
