@@ -712,6 +712,9 @@ export default function RuneDelvePlayPage() {
       : rawBreakdown;
     const xp = xpForRun(breakdown.total, cleared);
     const reason: 'cleared' | 'defeated' | 'timeout' = cleared ? 'cleared' : final.hp <= 0 ? 'defeated' : 'timeout';
+    // OPTIMISTIC isNewBest — used only for the immediate end-state card. The
+    // canonical, server-truth value is taken from the mutation result below
+    // and used for hero XP/lifetime increments.
     const isNewBest = !existingRun || breakdown.total > (existingRun.score ?? 0);
 
     // ── Rune Shards reward ────────────────────────────────────────────────
