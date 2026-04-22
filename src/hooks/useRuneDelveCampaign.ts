@@ -72,7 +72,7 @@ export function useLevel(levelNumber: number | undefined) {
         .select('*')
         .eq('level_number', levelNumber)
         .maybeSingle();
-      if (existing) return existing as RuneDelveLevel;
+      if (existing) return hydrateLegacy(existing as RuneDelveLevel);
 
       // Generate deterministically client-side, then attempt to persist.
       // RLS only allows admins to insert — non-admins will fall through to the
@@ -97,7 +97,7 @@ export function useLevel(levelNumber: number | undefined) {
         .maybeSingle();
       if (inserted) {
         qc.invalidateQueries({ queryKey: ['rune-delve-levels-batch'] });
-        return inserted as RuneDelveLevel;
+        return hydrateLegacy(inserted as RuneDelveLevel);
       }
       // Only re-fetch on a unique-violation race (someone else just seeded it).
       // Other errors (RLS denial for non-admins) skip straight to the transient
@@ -108,7 +108,7 @@ export function useLevel(levelNumber: number | undefined) {
           .select('*')
           .eq('level_number', levelNumber)
           .maybeSingle();
-        if (again) return again as RuneDelveLevel;
+        if (again) return hydrateLegacy(again as RuneDelveLevel);
       }
       return {
         id: `transient-${def.level_number}`,
