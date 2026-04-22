@@ -100,8 +100,8 @@ function seedFor(level: number): number {
 // Rebalance (data-driven): keep 12 turns through L15 so the L8 cliff softens.
 function turnLimitFor(level: number): number {
   if (level <= 15) return 12;
-  if (level <= 30) return 11;
-  if (level <= 60) return 10;
+  if (level <= 25) return 11;
+  if (level <= 50) return 10;
   if (level <= 100) return 9;
   return 8;
 }
@@ -129,7 +129,7 @@ const EARLY_HP_CAP = 110;
 function pickTemplate(level: number, rng: () => number): RosterEntry {
   let pool = rosterPoolForLevel(level);
   // Never seed an ability-bearing enemy in Chapter 1 — keeps intro readable.
-  if (level <= 50) pool = pool.filter(e => !e.ability);
+  if (level <= 30) pool = pool.filter(e => !e.ability);
   // Per-enemy DPS cap on early levels — prefer tankier-but-softer templates.
   if (level <= 15) {
     const softPool = pool.filter(e => e.baseDamage <= 6);
@@ -152,7 +152,10 @@ function scaleEnemy(base: RosterEntry, level: number) {
   const hpRate  = level <= 25 ? 0.03  : 0.04;
   const dmgRate = level <= 25 ? 0.02  : 0.025;
   const hpMul   = 1 + (level - 1) * hpRate;
-  const dmgMul  = 1 + (level - 1) * dmgRate;
+  let dmgMul   = 1 + (level - 1) * dmgRate;
+  // Late Chapter 1 menace pass — ability enemies are softer by design,
+  // so add a gentle damage bump in the 31-50 band so fights bite back.
+  if (level >= 31 && level <= 50) dmgMul *= 1.10;
   return {
     hp: Math.round(base.baseHp * hpMul),
     damage: Math.max(base.baseDamage, Math.round(base.baseDamage * dmgMul)),
