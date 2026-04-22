@@ -238,11 +238,54 @@ export default function RuneDelvePlayPage() {
   const bossRule = ((level?.modifiers as any)?.boss_rule ?? null) as BossRuleId | null;
   const waveDefs = ((level?.modifiers as any)?.waves ?? null) as Array<{ enemies: any[]; reinforcement_turns: number }> | null;
 
+  // Per-run snapshot key (scoped to user + level so swapping levels or users
+  // can never bleed in stale state).
+  const runKey = useMemo(() => {
+    if (!user?.id || !level?.id) return null;
+    if (level.id.startsWith('transient-')) return null;
+    return snapshotKey(user.id, level.id);
+  }, [user?.id, level?.id]);
+
   // Build deterministic state. Snapshots `activeRelics` once at run-start so
   // mid-run relic toggles or rank changes can never reset the board.
+  // ALSO: prefer rehydrating an in-progress run from sessionStorage so
+  // backgrounding the WebView (iOS PWA) doesn't wipe player progress.
   useEffect(() => {
     if (!level || !hero) return;
     const relics = activeRelics; // snapshot
+
+    // ── Rehydrate path ──────────────────────────────────────────────────
+    if (runKey) {
+      const snap = loadSnapshot(runKey, level.generation_seed);
+      // Only restore mid-run snapshots — if HP is 0 or no turns remain we
+      // bail to fresh-board so the run actually ends rather than locking
+      // the player on a defeated screen.
+      if (snap && snap.combat.hp > 0 && snap.combat.turnsRemaining > 0) {
+        setGrid(snap.grid);
+        setCombat(snap.combat);
+        setSeals(new Set(snap.seals));
+        setCorruption({
+          cells: new Set(snap.corruption.cells),
+          sources: new Set(snap.corruption.sources),
+        });
+        setLog(snap.log);
+        setLastStandUsed(snap.lastStandUsed);
+        setBonusUsedThisCycle(snap.bonusUsedThisCycle);
+        setRedChainCount(snap.redChainCount);
+        setChainCountTotal(snap.chainCountTotal);
+        setAbilityUsedCount(snap.abilityUsedCount);
+        setCorruptCleansedCount(snap.corruptCleansedCount);
+        setRngTick(snap.rngTick);
+        setActiveRelicsSnapshot(rehydrateRelics(snap.activeRelicsSnapshot) ?? relics);
+        defeatedArchetypesRef.current = new Map(snap.defeatedArchetypes);
+        wavesSpawnedRef.current = snap.wavesSpawned;
+        const turnNow = level.turn_limit - snap.combat.turnsRemaining + 1;
+        toast(`↩️ Resumed your run (Turn ${turnNow} of ${level.turn_limit})`, { duration: 2200 });
+        return;
+      }
+    }
+
+    // ── Fresh-board path (existing behavior) ────────────────────────────
     const rng = mulberry32(level.generation_seed);
     setGrid(generateBoard(rng));
     let initialSeals = buildInitialSeals(level.generation_seed, sealedTilesActive);
@@ -298,12 +341,86 @@ export default function RuneDelvePlayPage() {
     setAbilityUsedCount(0);
     setCorruptCleansedCount(0);
     setBonusUsedThisCycle(false);
+    setRngTick(0);
     defeatedArchetypesRef.current = new Map();
     wavesSpawnedRef.current = 0;
     setLog([{ id: nextLogId(), kind: 'info', text: `You enter Level ${level.level_number}. The runes hum.` }]);
     // NOTE: `activeRelics` intentionally OMITTED from deps — see comment above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [level, hero, sealedTilesActive, telegraphActive, corruptionActive]);
+  }, [level, hero, sealedTilesActive, telegraphActive, corruptionActive, runKey]);
+
+  // ── Persist snapshot on every meaningful state change ─────────────────
+  // Skipped while there's no live run, after end-state, or when we don't
+  // have a stable key (anonymous user or transient level).
+  useEffect(() => {
+    if (!runKey || !level || !grid || !combat || endState) return;
+    if (combat.hp <= 0 || combat.turnsRemaining <= 0) return;
+    const snap = buildSnapshot({
+      levelNumber: level.level_number,
+      generationSeed: level.generation_seed,
+      grid,
+      combat,
+      seals,
+      corruption,
+      log,
+      lastStandUsed,
+      bonusUsedThisCycle,
+      redChainCount,
+      chainCountTotal,
+      abilityUsedCount,
+      corruptCleansedCount,
+      defeatedArchetypes: defeatedArchetypesRef.current,
+      wavesSpawned: wavesSpawnedRef.current,
+      rngTick,
+      activeRelicsSnapshot,
+    });
+    saveSnapshot(runKey, snap);
+  }, [
+    runKey, level, grid, combat, seals, corruption, log,
+    lastStandUsed, bonusUsedThisCycle, redChainCount, chainCountTotal,
+    abilityUsedCount, corruptCleansedCount, rngTick, activeRelicsSnapshot,
+    endState,
+  ]);
+
+  // Final-flush on visibilitychange / pagehide so the OS evicting the
+  // WebView mid-microtask still leaves a usable snapshot behind.
+  useEffect(() => {
+    if (!runKey || !level || !grid || !combat) return;
+    const flush = () => {
+      if (endState) return;
+      if (combat.hp <= 0 || combat.turnsRemaining <= 0) return;
+      const snap = buildSnapshot({
+        levelNumber: level.level_number,
+        generationSeed: level.generation_seed,
+        grid, combat, seals, corruption, log,
+        lastStandUsed, bonusUsedThisCycle, redChainCount, chainCountTotal,
+        abilityUsedCount, corruptCleansedCount,
+        defeatedArchetypes: defeatedArchetypesRef.current,
+        wavesSpawned: wavesSpawnedRef.current,
+        rngTick, activeRelicsSnapshot,
+      });
+      saveSnapshot(runKey, snap);
+    };
+    const onVis = () => { if (document.visibilityState === 'hidden') flush(); };
+    window.addEventListener('visibilitychange', onVis);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      window.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('pagehide', flush);
+    };
+  }, [
+    runKey, level, grid, combat, seals, corruption, log,
+    lastStandUsed, bonusUsedThisCycle, redChainCount, chainCountTotal,
+    abilityUsedCount, corruptCleansedCount, rngTick, activeRelicsSnapshot,
+    endState,
+  ]);
+
+  // Clear the snapshot whenever the run terminates — defeated, cleared, or
+  // timed out. Subsequent visits to this level start fresh.
+  useEffect(() => {
+    if (endState && runKey) clearSnapshot(runKey);
+  }, [endState, runKey]);
+
 
   // One-time intro modal for any brand-new mechanic taught at this level.
   useEffect(() => {
