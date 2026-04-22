@@ -2,6 +2,37 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { generateLevel, chapterFor, type LevelDefinition } from '@/lib/runedelve/levelGenerator';
+import { bossKindForLevel } from '@/lib/runedelve/bossRules';
+
+/**
+ * Self-heal legacy `rune_delve_levels` rows that were persisted before the
+ * boss/mini-boss + multi-wave system existed. If the stored modifiers lack
+ * `boss_kind` (or `waves`) but the deterministic generator now produces one
+ * for that level number, we overlay the generator's `enemy_config` and
+ * `modifiers` in-memory. The DB row is left untouched (preserves run FK
+ * history); only what the play page reads gets the new fields.
+ */
+function hydrateLegacy(row: RuneDelveLevel): RuneDelveLevel {
+  const expectedKind = bossKindForLevel(row.level_number);
+  const storedKind = (row.modifiers as any)?.boss_kind ?? null;
+  const storedWaves = (row.modifiers as any)?.waves;
+  const needsBossUpgrade = expectedKind && !storedKind;
+  const needsWaves = !storedWaves;
+  if (!needsBossUpgrade && !needsWaves) return row;
+  const def = generateLevel(row.level_number);
+  return {
+    ...row,
+    enemy_config: needsBossUpgrade ? def.enemy_config : row.enemy_config,
+    modifiers: {
+      ...(row.modifiers ?? {}),
+      ...def.modifiers,
+      // Preserve any custom mechanic/secondary the row already had — the
+      // generator's deterministic output is identical for the same level
+      // number anyway, so this is mostly a safety belt.
+      mechanics: (row.modifiers as any)?.mechanics ?? def.modifiers.mechanics,
+    },
+  };
+}
 
 export interface RuneDelveLevel {
   id: string;
