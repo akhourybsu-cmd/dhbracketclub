@@ -5,8 +5,9 @@ import { getBossRule, type BossRuleId } from '@/lib/runedelve/bossRules';
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  mechanicId: MechanicId;
-  /** Optional boss rule shown alongside the mechanic intro on boss levels. */
+  /** Optional — omit when this sheet is presenting a boss-rule only. */
+  mechanicId?: MechanicId | null;
+  /** Optional boss rule shown alongside (or instead of) the mechanic intro. */
   bossRuleId?: BossRuleId | null;
   /** Called when the player taps the primary CTA (Begin). */
   onBegin: () => void;
