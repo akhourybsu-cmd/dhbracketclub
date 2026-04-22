@@ -36,7 +36,6 @@ export interface RunSnapshot {
   rngTick: number;
   // Stored as JSON-safe shape — relic ranks Map flattened to entries.
   activeRelicsSnapshot: {
-    ids: ActiveRelics['ids'];
     ranks: Array<[string, number]>;
   } | null;
 }
