@@ -794,6 +794,15 @@ export default function DraftDetailPage() {
             <Award className="w-4 h-4" /> {seasonActionBusy ? 'Adding…' : 'Add to Season'}
           </button>
         ) : null}
+
+        {!isParticipant && user && (
+          <div className="flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full self-start bg-muted/40 border border-border/40">
+            <span className="text-[11px]">👁</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              {isPlayoffDraft ? 'Spectating Playoff Match' : 'Spectating'}
+            </span>
+          </div>
+        )}
       </motion.div>
 
       {/* Enrichment loading state */}
