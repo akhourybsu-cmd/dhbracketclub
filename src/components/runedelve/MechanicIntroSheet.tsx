@@ -19,8 +19,15 @@ interface Props {
  * Mobile-first: oversized icon, single-line title, one short rule, one CTA.
  */
 export function MechanicIntroSheet({ open, onOpenChange, mechanicId, bossRuleId, onBegin, levelNumber }: Props) {
-  const m = getMechanic(mechanicId);
+  const m = mechanicId ? getMechanic(mechanicId) : null;
   const boss = bossRuleId ? getBossRule(bossRuleId) : null;
+  // When a boss rule is present, it takes the headline slot. Otherwise the
+  // mechanic does. (At least one of the two MUST be supplied.)
+  const showBoss = !!boss;
+  const headlineLabel = showBoss ? boss!.label : m?.name ?? '';
+  const headlineIcon = showBoss ? '👑' : m?.icon ?? '✨';
+  const headlineFamily = showBoss ? boss!.label : m?.family ?? '';
+  const oneLiner = showBoss ? boss!.rule : m?.oneLiner ?? '';
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="rounded-t-3xl p-0 border-t-2" style={{ borderTopColor: 'hsl(var(--primary) / 0.5)' }}>
