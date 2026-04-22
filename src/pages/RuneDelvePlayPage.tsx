@@ -96,6 +96,7 @@ export default function RuneDelvePlayPage() {
   const { levelNumber: levelParam } = useParams<{ levelNumber: string }>();
   const levelNumber = Math.max(1, parseInt(levelParam ?? '1', 10) || 1);
 
+  const { user } = useAuth();
   const { data: hero } = useRuneDelveHero();
   const { data: progress } = useMyProgress();
   const { data: level } = useLevel(levelNumber);
