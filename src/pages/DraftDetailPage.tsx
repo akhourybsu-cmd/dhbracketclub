@@ -107,6 +107,7 @@ export default function DraftDetailPage() {
   const { entries: seasonEntries, refetch: refetchSeasonEntries } = useSeasonEntries(season?.id);
   const isCommissioner = useIsCommissioner(season);
   const seasonEntry = seasonEntries.find(e => e.draft_id === draftId);
+  const isPlayoffDraft = !!seasonEntry?.is_playoff;
 
 
   const { results: draftResults, loading: resultsLoading, generating: resultsGenerating, hasResults, generateResults, regenerateResults, fetchResults } = useDraftResults(draftId);
