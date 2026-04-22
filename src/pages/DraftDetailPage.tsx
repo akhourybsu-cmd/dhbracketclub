@@ -39,6 +39,7 @@ import {
   addDraftToSeason,
   removeDraftFromSeason,
   recalculateSeasonStandings,
+  advancePlayoffs,
 } from '@/hooks/useDraftSeasons';
 import {
   DropdownMenu,
@@ -109,6 +110,10 @@ export default function DraftDetailPage() {
   const seasonEntry = seasonEntries.find(e => e.draft_id === draftId);
   const isPlayoffDraft = !!seasonEntry?.is_playoff;
 
+  // Playoff match info (round + series state for champion banner)
+  const [playoffMatch, setPlayoffMatch] = useState<any>(null);
+  const [finalsSeriesWins, setFinalsSeriesWins] = useState<Record<string, number>>({});
+  const playoffsAdvanced = useRef(false);
 
   const { results: draftResults, loading: resultsLoading, generating: resultsGenerating, hasResults, generateResults, regenerateResults, fetchResults } = useDraftResults(draftId);
 
@@ -199,6 +204,45 @@ export default function DraftDetailPage() {
       return () => clearTimeout(timer);
     }
   }, [hasResults]);
+
+  // Fetch playoff match info for this draft (if it's a playoff draft)
+  useEffect(() => {
+    if (!draftId || !isPlayoffDraft || !season?.id) return;
+    let cancelled = false;
+    (async () => {
+      const { data: match } = await supabase
+        .from('draft_playoff_matches' as any)
+        .select('*')
+        .eq('draft_id', draftId)
+        .maybeSingle();
+      if (cancelled || !match) return;
+      setPlayoffMatch(match);
+      if ((match as any).round === 'final') {
+        const { data: finals } = await supabase
+          .from('draft_playoff_matches' as any)
+          .select('winner_user_id, status')
+          .eq('season_id', season.id)
+          .eq('round', 'final');
+        if (cancelled) return;
+        const wins: Record<string, number> = {};
+        (finals || []).forEach((f: any) => {
+          if (f.status === 'complete' && f.winner_user_id) {
+            wins[f.winner_user_id] = (wins[f.winner_user_id] || 0) + 1;
+          }
+        });
+        setFinalsSeriesWins(wins);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [draftId, isPlayoffDraft, season?.id, hasResults, draft?.status]);
+
+  // Auto-advance playoffs whenever a playoff draft is complete (idempotent server-side)
+  useEffect(() => {
+    if (!isPlayoffDraft || !season?.id || playoffsAdvanced.current) return;
+    if (draft?.status !== 'complete' || !hasResults) return;
+    playoffsAdvanced.current = true;
+    advancePlayoffs(season.id).catch(err => console.error('advancePlayoffs failed:', err));
+  }, [isPlayoffDraft, season?.id, draft?.status, hasResults]);
 
   // Fetch disputes for this draft
   const fetchDisputes = useCallback(async () => {
@@ -392,6 +436,10 @@ export default function DraftDetailPage() {
         // Auto-generate report immediately
         setAutoTriggered(true);
         generateResults();
+        // Kick off playoff advancement immediately if this is a playoff draft (idempotent)
+        if (isPlayoffDraft && season?.id) {
+          advancePlayoffs(season.id).catch(err => console.error('advancePlayoffs failed:', err));
+        }
       } else {
         const nextTotal = pickNumber;
         const nextRound = Math.floor(nextTotal / participants.length);
@@ -1073,6 +1121,69 @@ export default function DraftDetailPage() {
       {/* ═══ Complete — Results ═══ */}
       {(isDraftComplete || draft.status === 'complete') && (
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+          {/* ─── Playoff completion banners ─── */}
+          {isPlayoffDraft && playoffMatch?.winner_user_id && (() => {
+            const winnerId = playoffMatch.winner_user_id;
+            const winnerParticipant = participants.find(p => p.user_id === winnerId);
+            const winnerName = winnerParticipant?.profiles?.display_name || 'Champion';
+            const round = playoffMatch.round;
+            const isChampion = round === 'final' && (finalsSeriesWins[winnerId] || 0) >= 2;
+            const seriesA = finalsSeriesWins[playoffMatch.user_a] || 0;
+            const seriesB = finalsSeriesWins[playoffMatch.user_b] || 0;
+            const nextRoundLabel =
+              round === 'qf' ? 'Semifinals' :
+              round === 'sf' ? 'Finals' :
+              round === 'third_place' ? '🥉 Bronze Medal' :
+              round === 'final' ? `Series ${Math.max(seriesA, seriesB)}-${Math.min(seriesA, seriesB)}` : '';
+
+            if (isChampion) {
+              return (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: -8 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 200, damping: 18 }}
+                  className="relative overflow-hidden rounded-2xl p-5 mb-5 text-center"
+                  style={{
+                    background: 'linear-gradient(135deg, hsl(45, 93%, 52% / 0.18), hsl(38, 92%, 50% / 0.10))',
+                    border: '1px solid hsl(45, 93%, 52% / 0.45)',
+                    boxShadow: '0 10px 40px -10px hsl(45, 93%, 52% / 0.45)',
+                  }}
+                >
+                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style={{ color: 'hsl(45, 93%, 52%)' }}>
+                    {season?.season_label || 'Season'} Champion
+                  </div>
+                  <div className="text-2xl font-extrabold mb-1 flex items-center justify-center gap-2">
+                    <Trophy className="w-6 h-6" style={{ color: 'hsl(45, 93%, 52%)' }} />
+                    <span>{winnerName}</span>
+                    <Trophy className="w-6 h-6" style={{ color: 'hsl(45, 93%, 52%)' }} />
+                  </div>
+                  <div className="text-[12px] text-muted-foreground font-semibold">
+                    Clinched the Finals {Math.max(seriesA, seriesB)}–{Math.min(seriesA, seriesB)}
+                  </div>
+                </motion.div>
+              );
+            }
+
+            return (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-xl p-3 mb-4 text-center"
+                style={{
+                  background: 'hsl(var(--primary) / 0.08)',
+                  border: '1px solid hsl(var(--primary) / 0.25)',
+                }}
+              >
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary mb-0.5">
+                  {round === 'qf' ? 'Play-In' : round === 'sf' ? 'Semifinal' : round === 'final' ? 'Finals Game' : 'Bronze Match'} • Won
+                </div>
+                <div className="text-[13px] font-bold">
+                  {winnerName} {round === 'third_place' ? 'takes 3rd Place' : `advances to ${nextRoundLabel}`}
+                </div>
+              </motion.div>
+            );
+          })()}
+
           <div className="text-center mb-5">
             <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Draft Complete 🎉</p>
           </div>

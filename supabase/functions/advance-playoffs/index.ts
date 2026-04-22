@@ -143,6 +143,7 @@ Deno.serve(async (req) => {
           if (results && results.length > 0) {
             const sorted = [...results].sort((a: any, b: any) => Number(b.total_score) - Number(a.total_score));
             const winner = sorted[0].user_id;
+            const loser = winner === m.user_a ? m.user_b : m.user_a;
             await supabase.from("draft_playoff_matches").update({
               winner_user_id: winner,
               status: "complete",
@@ -150,7 +151,23 @@ Deno.serve(async (req) => {
             m.winner_user_id = winner;
             m.status = "complete";
             log.push(`scored ${m.round} M${m.match_number}, winner ${winner}`);
+
+            // Mark loser eliminated (except in finals — both finalists already medaled,
+            // and 3rd-place loser gets eliminated too). Skip if loser hasn't lost the series in finals.
+            if (loser && m.round !== "final") {
+              await supabase.from("draft_season_standings")
+                .update({ is_eliminated: true })
+                .eq("season_id", seasonId)
+                .eq("user_id", loser);
+            }
           }
+        } else if (draftRow?.status === "in_progress" && m.status === "pending") {
+          // Sync match status to in_progress when draft has started
+          await supabase.from("draft_playoff_matches")
+            .update({ status: "in_progress" })
+            .eq("id", m.id);
+          m.status = "in_progress";
+          log.push(`${m.round} M${m.match_number} → in_progress`);
         }
       }
     }
