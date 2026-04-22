@@ -345,6 +345,19 @@ export default function RuneDelvePlayPage() {
       fxTarget = findHudRect('shield') ?? findHudRect('hp');
     }
     fxQ.trigger({ kind: 'rune', rune: type, length: chain.length, tier: fxTier, target: fxTarget });
+    // Audio + camera-feel beats per rune type.
+    if (type === 'red') {
+      playSound('error');
+      if (chain.length >= 4) triggerCamShake(chain.length >= 6 ? 8 : 6);
+    } else if (type === 'green') {
+      playSound('success');
+      window.setTimeout(pulseHpGlow, 520);
+    } else if (type === 'gold') {
+      playSound('achievement');
+    } else if (type === 'blue') {
+      playSound('ping');
+    }
+    if (chain.length >= 8) playSound('achievement');
     // Snapshot relics for this run (falls back to live for first chain).
     const relics = activeRelicsSnapshot ?? activeRelics;
     // Per-chain counters BEFORE applying — drives Ember Edge / Crimson Tide / Quickstep.
@@ -703,6 +716,8 @@ export default function RuneDelvePlayPage() {
       const firstAlive = combat.enemies.find(e => e.hp > 0);
       const target = firstAlive ? findEnemyRect(firstAlive.id) : undefined;
       fxQ.trigger({ kind: 'ability', cls: hero.class, target });
+      playSound('achievement');
+      if (hero.class === 'warrior') triggerCamShake(8);
     }
     // First Light: first N ability casts skip the mana cost. We restore the
     // mana after useAbility() consumes it so the cast still resolves normally.
