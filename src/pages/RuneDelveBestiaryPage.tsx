@@ -191,6 +191,12 @@ export default function RuneDelveBestiaryPage() {
           {filtered.map((r, idx) => {
             const entry = entryMap.get(r.id);
             const discovered = !!entry;
+            const tier = variantOf(r);
+            const ringColor = tier === 'boss'
+              ? 'hsl(var(--gold))'
+              : tier === 'mini'
+                ? 'hsl(var(--gold) / 0.7)'
+                : null;
             return (
               <motion.button
                 key={r.id}
@@ -204,12 +210,30 @@ export default function RuneDelveBestiaryPage() {
                   background: discovered
                     ? `linear-gradient(160deg, ${FAMILY_COLOR[r.family]} / 0.12, hsl(var(--rd-stone-edge) / 0.6))`
                     : 'hsl(var(--rd-stone-edge) / 0.55)',
-                  border: discovered
-                    ? `1px solid ${FAMILY_COLOR[r.family].replace(')', ' / 0.35)')}`
-                    : '1px dashed hsl(var(--foreground) / 0.12)',
+                  border: ringColor
+                    ? `1.5px solid ${ringColor}`
+                    : discovered
+                      ? `1px solid ${FAMILY_COLOR[r.family].replace(')', ' / 0.35)')}`
+                      : '1px dashed hsl(var(--foreground) / 0.12)',
+                  boxShadow: ringColor && discovered
+                    ? `0 0 14px ${tier === 'boss' ? 'hsl(var(--gold) / 0.45)' : 'hsl(var(--gold) / 0.25)'}`
+                    : undefined,
                 }}
-                aria-label={discovered ? r.name : 'Undiscovered'}
+                aria-label={discovered ? r.name : (tier ? `Undiscovered ${tier === 'boss' ? 'boss' : 'mini-boss'}` : 'Undiscovered')}
               >
+                {tier && (
+                  <span
+                    className="absolute top-1 left-1 px-1 h-[14px] rounded-full text-[8px] font-extrabold uppercase tracking-wider flex items-center gap-0.5"
+                    style={{
+                      background: tier === 'boss' ? 'hsl(var(--gold))' : 'hsl(var(--gold) / 0.85)',
+                      color: 'hsl(var(--background))',
+                    }}
+                    aria-hidden
+                  >
+                    {tier === 'boss' ? <Crown className="w-2 h-2" /> : '★'}
+                    {tier === 'boss' ? 'Boss' : 'Mini'}
+                  </span>
+                )}
                 <div
                   className="text-3xl leading-none"
                   style={{
