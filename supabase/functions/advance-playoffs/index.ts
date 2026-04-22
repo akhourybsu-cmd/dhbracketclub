@@ -205,10 +205,12 @@ Deno.serve(async (req) => {
 
       // Also generate the 3rd-place game (Bo1) — losers of SF1 and SF2.
       if (sf1?.winner_user_id && sf2?.winner_user_id && thirdPlaceMatches.length === 0) {
-        const sf1Loser = sf1.winner_user_id === sf1.user_a ? sf1.user_b : sf1.user_a;
-        const sf1LoserSeed = sf1Loser === sf1.user_a ? sf1.seed_a : sf1.seed_b;
-        const sf2Loser = sf2.winner_user_id === sf2.user_a ? sf2.user_b : sf2.user_a;
-        const sf2LoserSeed = sf2Loser === sf2.user_a ? sf2.seed_a : sf2.seed_b;
+        const sf1LoserIsA = sf1.winner_user_id !== sf1.user_a;
+        const sf1Loser = sf1LoserIsA ? sf1.user_a : sf1.user_b;
+        const sf1LoserSeed = sf1LoserIsA ? sf1.seed_a : sf1.seed_b;
+        const sf2LoserIsA = sf2.winner_user_id !== sf2.user_a;
+        const sf2Loser = sf2LoserIsA ? sf2.user_a : sf2.user_b;
+        const sf2LoserSeed = sf2LoserIsA ? sf2.seed_a : sf2.seed_b;
         if (sf1Loser && sf2Loser) {
           const tpHigherSeed = sf1LoserSeed <= sf2LoserSeed ? sf1Loser : sf2Loser;
           await supabase.from("draft_playoff_matches").insert({
