@@ -125,12 +125,17 @@ export default function RuneDelvePlayPage() {
   const [log, setLog] = useState<CombatLogEntry[]>([]);
 
   // Per-run defeat ledger keyed by archetypeId. Submitted to the Bestiary on
-  // run-end. Using a ref keeps writes O(1) and avoids extra renders.
+  // run-end. Mini-boss / boss kills get tracked under variant ids
+  // (e.g. `goblin_scout__mini`, `goblin_scout__boss`) so the journal records
+  // them as distinct silhouetted entries with elevated borders.
   const defeatedArchetypesRef = useRef<Map<string, number>>(new Map());
-  const recordKill = (archetypeId: string | undefined) => {
-    if (!archetypeId) return;
+  const recordKill = (enemy: { archetypeId?: string; tier?: 'mini' | 'boss' } | undefined) => {
+    if (!enemy?.archetypeId) return;
+    const id = enemy.tier
+      ? `${enemy.archetypeId}__${enemy.tier}`
+      : enemy.archetypeId;
     const m = defeatedArchetypesRef.current;
-    m.set(archetypeId, (m.get(archetypeId) ?? 0) + 1);
+    m.set(id, (m.get(id) ?? 0) + 1);
   };
   // Tracks how many reinforcement waves have spawned this run so we never
   // double-spawn the same wave when the player clears multiple enemies in a turn.
