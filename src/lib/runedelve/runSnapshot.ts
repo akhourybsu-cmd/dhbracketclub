@@ -89,7 +89,6 @@ export function buildSnapshot(input: BuildSnapshotInput): RunSnapshot {
     rngTick: input.rngTick,
     activeRelicsSnapshot: input.activeRelicsSnapshot
       ? {
-          ids: input.activeRelicsSnapshot.ids,
           ranks: Array.from(input.activeRelicsSnapshot.ranks.entries()),
         }
       : null,
