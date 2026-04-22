@@ -552,7 +552,7 @@ export default function RuneDelvePlayPage() {
     }
     for (const killId of resolution.enemyKills) {
       const killed = combat.enemies.find(e => e.id === killId);
-      recordKill(killed?.archetypeId);
+      recordKill(killed);
       turnLogs.push({ kind: 'kill', text: `${killed?.name ?? 'A foe'} was vanquished!` });
     }
 
@@ -809,11 +809,9 @@ export default function RuneDelvePlayPage() {
     const healed = Math.max(0, next.hp - combat.hp);
     // Track which archetypes died from this ability for the Bestiary.
     if (killed > 0) {
-      const newlyDeadIds = next.enemies
-        .filter(e => e.hp <= 0 && combat.enemies.find(o => o.id === e.id && o.hp > 0))
-        .map(e => e.archetypeId)
-        .filter((id): id is string => !!id);
-      newlyDeadIds.forEach(recordKill);
+      const newlyDead = next.enemies
+        .filter(e => e.hp <= 0 && combat.enemies.find(o => o.id === e.id && o.hp > 0));
+      newlyDead.forEach(recordKill);
     }
     turnLogs.push({
       kind: 'ability',
