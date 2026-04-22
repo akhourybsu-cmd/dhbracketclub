@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ArrowLeft, HelpCircle, Trophy, Skull, Hourglass } from 'lucide-react';
 import { useRuneDelveHero, useUpdateHero } from '@/hooks/useRuneDelveHero';
@@ -78,6 +79,7 @@ const nextLogId = () => `l-${++logSeq}`;
 
 export default function RuneDelvePlayPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { levelNumber: levelParam } = useParams<{ levelNumber: string }>();
   const levelNumber = Math.max(1, parseInt(levelParam ?? '1', 10) || 1);
 
@@ -108,7 +110,7 @@ export default function RuneDelvePlayPage() {
   const [flashId, setFlashId] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [introMechanic, setIntroMechanic] = useState<MechanicId | null>(null);
-  const [endState, setEndState] = useState<null | { cleared: boolean; reason: 'cleared' | 'defeated' | 'timeout'; score: number; isNewBest: boolean; shards: number }>(null);
+  const [endState, setEndState] = useState<null | { cleared: boolean; reason: 'cleared' | 'defeated' | 'timeout'; score: number; isNewBest: boolean; shards: number; improvedChain?: boolean; improvedTurns?: boolean; improvedHp?: boolean; firstClear?: boolean }>(null);
   // Counter (not boolean) — Last Stand at R5 grants 2 saves per run.
   const [lastStandUsed, setLastStandUsed] = useState(0);
   // Bonus-move rebalance: only one free turn per enemy cycle. Resets whenever
