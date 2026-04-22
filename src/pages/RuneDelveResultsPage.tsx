@@ -78,8 +78,12 @@ export default function RuneDelveResultsPage() {
     }
   }, [run?.dungeon_cleared]);
 
+  // If the level row is still "transient" (not seeded in DB by an admin yet),
+  // useMyLevelRun is disabled and runLoading stays true forever — leaving the
+  // user stuck on a spinner. Detect that and skip straight to the empty state.
+  const isTransientLevel = !!level?.id && level.id.startsWith('transient-');
   if (!run || !level) {
-    const showSpinner = !graceElapsed || runLoading || runFetching;
+    const showSpinner = !isTransientLevel && (!graceElapsed || runLoading || runFetching);
     return (
       <div className="space-y-4 pb-8">
         <div className="glass-card p-8 flex flex-col items-center text-center gap-3">
