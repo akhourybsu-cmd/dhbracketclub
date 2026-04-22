@@ -10,7 +10,8 @@ export type MechanicId =
   | 'telegraphed_attacks'
   | 'corrupted_tiles'
   | 'multi_objective'
-  | 'boss_modifier';
+  | 'boss_modifier'
+  | 'thorns';
 
 export interface MechanicDef {
   id: MechanicId;
