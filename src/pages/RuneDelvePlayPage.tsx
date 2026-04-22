@@ -817,6 +817,37 @@ export default function RuneDelvePlayPage() {
       (afterEnemies as any).__pendingSealAdds = pendingSealAdds;
       // Push enemy ability logs (heavy_strike / shield_self / heal_ally / etc).
       if (afterEnemies.abilityLogs?.length) turnLogs.push(...afterEnemies.abilityLogs);
+      // ── Shield Thorns ── push reflect log + record bestiary kills + pulse FX
+      if (afterEnemies.thornsLog) {
+        turnLogs.push(afterEnemies.thornsLog);
+        // Diff pre/post-attack enemy hp to attribute kills to thorns for the
+        // Bestiary. Chain kills already recorded above; this catches any new
+        // foes who died during the enemy phase from reflected damage.
+        const preIds = new Set(combat.enemies.filter(e => e.hp > 0).map(e => e.id));
+        const chainKilledIds = new Set(resolution.enemyKills);
+        for (const e of afterEnemies.enemies) {
+          if (e.hp <= 0 && preIds.has(e.id) && !chainKilledIds.has(e.id)) {
+            recordKill(e);
+          }
+        }
+        // Brief shield-pill pulse to cue the reflect.
+        const shieldEl = playRootRef.current?.querySelector('[data-fx-target="shield"]') as HTMLElement | null;
+        if (shieldEl) {
+          shieldEl.style.transition = 'transform 220ms ease-out, filter 220ms ease-out';
+          shieldEl.style.transform = 'scale(1.35)';
+          shieldEl.style.filter = 'drop-shadow(0 0 6px hsl(var(--gold) / 0.9))';
+          window.setTimeout(() => {
+            shieldEl.style.transform = '';
+            shieldEl.style.filter = '';
+          }, 220);
+        }
+        // First-ever Thorns trigger → show one-time mechanic intro.
+        try {
+          if (!localStorage.getItem(seenMechanicKey('thorns'))) {
+            setIntroMechanic('thorns');
+          }
+        } catch { /* localStorage may be unavailable */ }
+      }
     } else {
       afterEnemies = endTurn(next);
     }
