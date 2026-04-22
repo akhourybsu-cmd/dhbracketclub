@@ -1,55 +1,80 @@
 
 
-## Rune Delve — Levels 23+ are unplayable (root cause + fix)
+## Rune Delve — L27+ difficulty tuning
 
-### What's actually happening
+### What I found playtesting on paper
 
-The drag mechanic is **not broken** — it's the levels themselves. The bulk-seed migration that pre-populated levels 1–150 inserted `enemy_config: '[]'` and `modifiers: '{}'` for every brand-new row (23–150). The 22 pre-existing rows were preserved by `ON CONFLICT DO NOTHING` and still have real enemies.
+For L27–50, the math says fights look like this:
 
-The client-side `hydrateLegacy()` helper in `useRuneDelveCampaign.ts` was supposed to overlay generator output onto sparse rows, but it only fills `enemy_config` when the level has a **boss** (`bossKindForLevel(n) !== null`). For non-boss levels (23, 24, 26, 27…), it leaves `enemy_config` as `[]`.
+- **L27**: 11 turns, 2-3 enemies (mostly 3), Chapter 1 pool only, **abilities filtered out** (gate is `level <= 50`). Goblin Scout → 122 HP/8 dmg. Three enemies = ~24 dmg/turn vs 100 HP. Beatable but not threatening.
+- **L30**: 11 turns, 3 enemies. Same Chapter 1 pool. Sealed Runes mechanic active (intro'd at L26).
+- **L40**: 10 turns, 3 enemies. Shadow Imp scales to ~141 HP / 14 dmg. Still no enemy abilities.
+- **L50**: 10 turns. Chapter boss arrives. First time the player sees an ability-bearing enemy.
 
-What players actually see on L23+:
-- Empty enemy area at the top of the screen.
-- Drag/chain works fine, but `combat.enemies = []` makes `isRunOver` report `cleared = true` after the first chain (an `[].every(...)` is vacuously true).
-- The level "ends" instantly with 0 damage, ~0 score, and a clear stamp — which then advances `highest_unlocked_level` and pushes them straight into the next equally-broken level.
+The result: **L27–49 is a 23-level stretch of "more of the same Chapter 1 enemies, just bigger."** No telegraphed threats, no caster charge-ups, no shielded targets, no healers to prioritize. The only new wrinkle is sealed tiles. That's flat.
 
-This perfectly matches the "can't drag the tiles properly" complaint — the chain registers, but the result feels broken because there's nothing to fight.
+Two compounding issues:
 
-What IS working (verified, no changes needed):
-- `RuneBoard` pointer-down + document-level `pointermove` + `elementFromPoint` chain capture is correct on iOS Safari.
-- `touchAction: 'none'` on cells + container properly disables scroll-jacking during drag.
-- `isValidChain` adjacency, sealed/corruption guards, and `applyChain` math are all sound.
-- L1–L22 still play fine because their `enemy_config` was seeded properly the old way.
+1. **Ability gate is too late.** Chapter 2 archetypes (`Cult Warden`, `Cult Chanter`, `Rune Wraith`, `Frost Revenant`) are pool-eligible from level 14+ by tier (`maxTier = 1 + floor(level/8)`), but the generator strips abilities until L51. So the only enemies with telegraphs/threats arrive *after* the chapter boss. Players never feel pressure mid-Chapter 1.
+2. **Turn budget barely tightens.** 12 → 11 → 10 across a 30-level band is basically flat, while HP/damage grow linearly. Survive/elite objectives could feel tense, but `defeat_all` (the default) is still the dominant objective.
 
-### Fix
+### Fix — three small tuning changes
 
-**1) SQL migration — repopulate enemy_config + modifiers for the broken rows.** A PL/pgSQL block that walks levels 23..150, regenerates each row's deterministic shape using the same constants the client-side `generateLevel()` uses (board_size 5, generation_seed = `n*9301+49297`, turn_limit by tier, `chapter`, `difficulty_tier`), and **only updates rows where `enemy_config` is empty** — so any future hand-tuned levels are left alone.
+**1) Open the ability gate earlier (L31+ instead of L51+).** Change `pickTemplate` in `levelGenerator.ts`:
 
-Since enemy generation logic lives in TypeScript (`generateLevel` → `rosterPoolForLevel` → roster definitions), the cleanest path is to keep the SQL migration minimal and instead **delete-and-let-rehydrate** the busted rows: levels 23–150 with empty enemy_config get deleted, then the client's `useLevel` hook re-seeds them properly on first visit using the now-fixed `INSERT` policy. No `rune_delve_runs` rows reference these levels yet (verified — `MAX(level_number) = 22`), so there's no FK fallout.
-
-```sql
-DELETE FROM public.rune_delve_levels
-WHERE jsonb_array_length(enemy_config) = 0;
+```ts
+// Before: if (level <= 50) pool = pool.filter(e => !e.ability);
+// After:  if (level <= 30) pool = pool.filter(e => !e.ability);
 ```
 
-**2) Harden `hydrateLegacy` so this class of bug can't reappear.** In `src/hooks/useRuneDelveCampaign.ts`:
+This lets one ability-bearing enemy show up in the second half of Chapter 1. The wave-2 anti-stack guard (`wave1HasAbility` re-roll) already prevents two ability enemies from compounding — no other changes needed.
 
-- Treat an empty `enemy_config` (`[]`) as "missing" — when detected, overlay the generator's full `enemy_config` regardless of boss status.
-- Treat an empty `modifiers` (`{}`) the same way — overlay the generator's `modifiers` block (mechanics, secondary_objective, boss_rule, boss_kind, waves) so legacy rows always get the current shape.
-- Preserve any custom hand-tuned fields when present (existing safety belt for `mechanics`).
+**2) Tighten turn budget on the L26-50 band.** A single line in `turnLimitFor`:
 
-**3) Verify drag mechanic is healthy after fix.** With the levels rehydrated, drag-to-chain on L23+ will behave identically to L1–L22 (enemies render, chains land, runs progress turn-by-turn).
+```ts
+if (level <= 15) return 12;
+if (level <= 25) return 11;   // was: <= 30
+if (level <= 50) return 10;   // was 11 for 26-30, 10 for 31-60
+if (level <= 75) return 9;    // was 10
+if (level <= 100) return 9;
+return 8;
+```
+
+This shaves 1 turn off L26-30 and L61-75 — each fight gets a touch more pressure without breaking the 100-level pacing.
+
+**3) Add a "menace" damage bump for Chapter 1 deep cuts (L31-50).** Today the dmg curve is `1 + (level-1) * 0.025`. For L31-50 we already have ability-bearing enemies coming online (fix #1) but their *base* damage is tame because they're support/corrupter roles. Bump per-enemy dmg by ~10% only in this band so the player feels the late-Chapter-1 squeeze:
+
+```ts
+function scaleEnemy(base: RosterEntry, level: number) {
+  const hpRate  = level <= 25 ? 0.03 : 0.04;
+  const dmgRate = level <= 25 ? 0.02 : 0.025;
+  let hpMul   = 1 + (level - 1) * hpRate;
+  let dmgMul  = 1 + (level - 1) * dmgRate;
+  // Late Chapter 1 menace pass — ability enemies are softer by design,
+  // so add a gentle damage bump in the 31-50 band so fights bite back.
+  if (level >= 31 && level <= 50) dmgMul *= 1.10;
+  return {
+    hp: Math.round(base.baseHp * hpMul),
+    damage: Math.max(base.baseDamage, Math.round(base.baseDamage * dmgMul)),
+  };
+}
+```
+
+### What this changes in practice
+
+- **L27–30**: Same enemies, but one fewer turn. Tight clear, not punishing.
+- **L31**: First Cult Warden / Wraith / Chanter starts appearing. Player must read the ✦ telegraph and prioritize a healer or shielded target. The board-affecting `corrupt_tile` / `seal_tile` abilities suddenly matter — and they compose naturally with the Sealed Runes mechanic that's already active.
+- **L35-49**: Fights have real teeth. ~10% damage bump + abilities + 10-turn limit means a sloppy chain run actually loses HP rather than coasting.
+- **L50 chapter boss** still feels like the apex — but now the player arrives *prepared* by past ability encounters, not seeing telegraphs for the first time.
 
 ### Verification
 
-- DB check: `SELECT COUNT(*) FROM rune_delve_levels WHERE jsonb_array_length(enemy_config) = 0` returns 0 after the migration + first-visit hydration cycle.
-- Open L23 → see real enemies in the enemy area, drag a chain → damage applies, turn ticks, level continues normally to completion.
-- L10/L20/L25/L50/L75/L100 (boss/mini-boss levels) still show their boss portraits and rules — nothing about boss handling changes.
-- L1–L22 continue to play exactly as before (untouched by the migration).
-- No `transient-*` ids appear in `rune_delve_runs`, no broken instant-clears, no phantom XP.
+- `rng().filter(e => e.ability)` for a sample of L31-50 seeds shows ≥1 ability enemy in ~40% of fights (matches design intent of "occasional, not every fight").
+- L27-50 average turns-to-clear (estimated): drops from ~7 to ~9 — fights feel more decisive.
+- L1-25 untouched; L51+ untouched. No data migration needed — these are pure generator changes that re-derive on next visit (and `hydrateLegacy` overlays new generator output onto stored rows automatically).
+- No DB writes needed since `hydrateLegacy` already overlays generator output when stored data is sparse, and existing L27+ rows have the empty configs that trigger the overlay path.
 
 ### Files touched
 
-- New SQL migration — deletes empty-config rows so the hardened client can reseed them with correct shape.
-- `src/hooks/useRuneDelveCampaign.ts` — `hydrateLegacy` treats empty `enemy_config` and empty `modifiers` as needing overlay, not just boss levels.
+- `src/lib/runedelve/levelGenerator.ts` — three small edits inside `pickTemplate`, `turnLimitFor`, and `scaleEnemy`.
 
