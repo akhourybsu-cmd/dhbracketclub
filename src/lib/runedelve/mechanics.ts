@@ -74,6 +74,17 @@ export const MECHANICS: Record<MechanicId, MechanicDef> = {
     introLevel: 126,
     bandEnd: 150,
   },
+  thorns: {
+    id: 'thorns',
+    name: 'Shield Thorns',
+    family: 'Defense',
+    icon: '🌵',
+    oneLiner: 'Your shield reflects part of every hit back at the attacker.',
+    // Always-on once unlocked — surfaced via gameplay (first time you take a
+    // shielded hit) rather than a level band, so introLevel/bandEnd are 1/150.
+    introLevel: 1,
+    bandEnd: 150,
+  },
 };
 
 export const MECHANIC_LIST: MechanicDef[] = [
