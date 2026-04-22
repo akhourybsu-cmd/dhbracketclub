@@ -41,7 +41,7 @@ export function useFxQueue() {
   const queueRef = useRef(queue);
   queueRef.current = queue;
 
-  const trigger = useCallback((entry: Omit<FxEntry, 'id'>) => {
+  const trigger = useCallback((entry: Omit<RuneFx, 'id'> | Omit<AbilityFx, 'id'>) => {
     setQueue(prev => {
       const next = [...prev, { ...entry, id: nextId() } as FxEntry];
       // Drop oldest if exceeding cap.
