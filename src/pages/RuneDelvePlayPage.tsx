@@ -733,11 +733,44 @@ export default function RuneDelvePlayPage() {
 
     setRngTick(t => t + 1);
     setGrid(newGrid);
-    setCombat(afterEnemies);
+
+    // ── Multi-wave: spawn the next wave when the current wave fully clears ──
+    // Avoid double-spawning when multiple kills land on the same chain.
+    let postWave = afterEnemies;
+    const allDead = postWave.enemies.every(e => e.hp <= 0);
+    if (allDead && waveDefs && wavesSpawnedRef.current < waveDefs.length) {
+      const nextWave = waveDefs[wavesSpawnedRef.current];
+      // Hydrate stored wave enemies (same archetype-id resolver as wave 1).
+      const resolveAid = (e: any): string | undefined => {
+        if (e.archetypeId) return e.archetypeId;
+        const raw = String(e.name ?? '').replace(/^(Elite |Boss |Mini-Boss |Echo of )/, '').trim().toLowerCase();
+        if (!raw) return undefined;
+        const hit = ENEMY_ROSTER.find(a => a.name.toLowerCase() === raw);
+        return hit?.id;
+      };
+      const fresh: Enemy[] = (nextWave.enemies ?? []).map((e: any, i: number) => ({
+        id: e.id ?? `w${wavesSpawnedRef.current + 1}-${i}`,
+        name: e.name, emoji: e.emoji, hp: e.hp, maxHp: e.maxHp ?? e.hp, damage: e.damage,
+        archetypeId: resolveAid(e), family: e.family, role: e.role,
+        ability: e.ability, abilityCooldown: e.abilityCooldown, abilityCooldownMax: e.abilityCooldownMax ?? e.abilityCooldown,
+        telegraphLabel: e.telegraphLabel, tier: e.tier,
+      }));
+      postWave = spawnWave(postWave, fresh, nextWave.reinforcement_turns ?? 2);
+      wavesSpawnedRef.current += 1;
+      const isBossWave = fresh.some(e => e.tier === 'boss');
+      toast.success(isBossWave ? '👑 The Boss arrives!' : '⚔️ Wave 2 — Reinforcements!', { duration: 2000 });
+      pushLog({
+        kind: 'info',
+        text: isBossWave
+          ? `The ground trembles — the Boss enters! +${nextWave.reinforcement_turns ?? 2} turns granted.`
+          : `Reinforcements arrive! +${nextWave.reinforcement_turns ?? 2} turns granted.`,
+      });
+    }
+    setCombat(postWave);
     pushLogs(turnLogs);
 
-    const status = checkObjective(afterEnemies, level.turn_limit, objType, level.objective_target, secondaryObjective);
-    if (status.over) void finalize(afterEnemies, status.cleared);
+    const status = checkObjective(postWave, level.turn_limit, objType, level.objective_target, secondaryObjective);
+    if (status.over) void finalize(postWave, status.cleared);
   };
 
   const handleAbility = () => {
