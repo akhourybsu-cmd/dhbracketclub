@@ -1,29 +1,51 @@
 
 
-## Rune Delve — Replay scores not updating (root cause + fix)
+## Rune Delve — Players blocked at Level 23 (admin-only level seeding)
 
-### What's actually broken
+### What's happening
 
-Every row in `rune_delve_runs` has `attempts = 1` and the `last_played_at` either matches `created_at` exactly or carries an old bulk-touch timestamp from a prior migration. The merge logic in `useSubmitLevelRun` is correct — but the writes never land.
+`rune_delve_levels` has only **22 rows** seeded. Its INSERT policy is admin-only (`is_app_admin(auth.uid())`). Both Alex (admin) and Tacooo top out at level 22/23 because that's all that exists in the DB, and any non-admin who tries to play L23+ hits this chain:
 
-**Root cause:** The `rune_delve_runs` table has SELECT and INSERT RLS policies but **no UPDATE policy**. When a user replays a level:
-1. The mutation finds the existing row (`existing` is non-null).
-2. It builds the correct `merged` payload (max score, ticked attempts, etc.).
-3. It runs `.update(merged).eq('id', existing.id)` — RLS silently filters the row out, the update affects 0 rows, **PostgREST does not throw**, and the cache invalidates with no actual change.
+1. `useLevel(23)` queries `rune_delve_levels` → no row found.
+2. Client tries to INSERT a generated row → **RLS denies** (only admins can insert) → returns no row, no error code 23505.
+3. Falls through to a **transient row** with `id: "transient-23"`.
+4. Play page's `useMyLevelRun` is **disabled** for transient ids (`enabled: !levelId.startsWith('transient-')`), so "best run" never loads.
+5. `useSubmitLevelRun` writes `level_id: "transient-23"` to `rune_delve_runs.level_id` — the column is a UUID FK, the insert **fails**, and `useAdvanceProgress` (which fires on success) **never runs**.
+6. Player is permanently stuck — `highest_unlocked_level` never advances past whatever the admin last seeded.
 
-This is the only Rune Delve table missing an UPDATE policy — every sibling table (`rune_delve_progress`, `rune_delve_heroes`, `rune_delve_bestiary`, `rune_delve_class_progress`, `rune_delve_loadouts`, `rune_delve_wallets`) has one. So replay scores, longest-chain bumps, fastest-clear improvements, attempts/clears counters, and the "best HP remaining" tracker have all been silently failing since launch.
+So yes — **as it stands today, no non-admin can progress past a level the admin (or someone with admin role) hasn't already created the DB row for.** That's the bug.
+
+Note: the play-page lock guard (`levelNumber > progress.highest_unlocked_level`) is fine and not the cause. The cause is that submissions silently fail on transient levels, so progress never advances.
 
 ### Fix
 
-**1) Add the missing UPDATE policy** on `public.rune_delve_runs`:
+**1) Allow any authenticated user to seed canonical level rows** — generation is fully deterministic from `level_number` (Fisher-Yates on a fixed seed via `generateLevel()`), so two players seeding the same level produce identical rows. The unique constraint on `level_number` already prevents duplicates.
+
+New migration:
 ```sql
-CREATE POLICY "Users can update own runs"
-  ON public.rune_delve_runs
-  FOR UPDATE TO authenticated
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Admins can insert levels" ON public.rune_delve_levels;
+CREATE POLICY "Authenticated can seed levels"
+  ON public.rune_delve_levels
+  FOR INSERT TO authenticated
+  WITH CHECK (true);
+-- UPDATE/DELETE remain admin-only — only seeding is opened up.
 ```
 
-**2) Harden the submit mutation** so a future RLS regression can't silently swallow writes again. In `useRuneDelveCampaign.ts → useSubmitLevelRun`:
-- After the `.update(...).select().maybeSingle()` call, if the returned row's `score`/`attempts` don't reflect `merged` (i.e. the update was filtered), throw a clear error so the toast surfaces it instead of pretending success.
-- Add a one-line console warning when a known-exist
+**2) Pre-seed levels 1–150 in bulk** so first-touch latency disappears for everyone (and the Level Map preview shows real rows immediately). Done as a one-time SQL migration that calls a small PL/pgSQL loop generating each level's deterministic shape (mirroring `generateLevel()`'s output: chapter, difficulty_tier, generation_seed = `level_number * 9301 + 49297`, board_size, turn_limit, default `objective_type='defeat_all'`, empty `enemy_config: []`, empty `modifiers: {}`). The client-side `hydrateLegacy()` already overlays the rich generator output (enemies, mechanics, boss_kind, waves) on rows missing those fields, so empty seeds are perfectly safe and require no app changes.
+
+**3) Defensive client hardening in `useLevel` (`src/hooks/useRuneDelveCampaign.ts`)** — even with the policy fix, never write to `rune_delve_runs` with a transient id:
+- After the insert attempt, if no row came back **and** the error wasn't a unique-violation, do one extra `SELECT` round-trip before falling back to transient. Belt-and-suspenders against any future RLS regression.
+- Log a clear `console.warn` when we return a `transient-*` row, so this kind of regression surfaces fast.
+
+### Verification
+
+- Hoosierdaddy and Nick Boyle (non-admins) can clear L3 → progress advances to L4, then L5… all the way through, without Alex needing to visit those levels first.
+- DB check: `SELECT COUNT(*) FROM rune_delve_levels` returns 150 after migration.
+- DB check: `SELECT MAX(level_number) FROM rune_delve_runs` can exceed 22.
+- No `transient-*` `level_id` values ever appear in `rune_delve_runs`.
+
+### Files touched
+
+- New SQL migration — open INSERT policy + bulk-seed L1–L150.
+- `src/hooks/useRuneDelveCampaign.ts` — defensive re-fetch + transient warning in `useLevel`.
+
