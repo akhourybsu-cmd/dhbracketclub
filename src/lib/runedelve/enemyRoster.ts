@@ -282,3 +282,15 @@ export function rosterPoolForLevel(level: number): RosterEntry[] {
   const maxTier = Math.min(5, 1 + Math.floor(level / 8));
   return ENEMY_ROSTER.filter(e => e.chapter <= chapter && e.tier <= maxTier);
 }
+
+/**
+ * Variant pool that lets the generator "bleed in" the next chapter early —
+ * used at L36-50 so a small minority of fights can include a Chapter 2
+ * ability-bearing enemy (Cult Warden / Chanter / Wraith). Caller decides how
+ * often to opt-in; this just returns the wider pool.
+ */
+export function rosterPoolForLevelAllowingNextChapter(level: number): RosterEntry[] {
+  const chapter = Math.min(3, (level <= 50 ? 1 : level <= 100 ? 2 : 3) + 1);
+  const maxTier = Math.min(5, 1 + Math.floor(level / 8));
+  return ENEMY_ROSTER.filter(e => e.chapter <= chapter && e.tier <= maxTier);
+}

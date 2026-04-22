@@ -4,7 +4,7 @@ import type { Enemy } from './dungeonGenerator';
 import { mechanicsForLevel, introMechanicForLevel, type MechanicId } from './mechanics';
 import { rollSecondaryObjective, type SecondaryObjective } from './layeredGoals';
 import { bossRuleForLevel, bossKindForLevel, bossStatBoost, bossNamePrefix, type BossRuleId, type BossKind } from './bossRules';
-import { rosterPoolForLevel, type RosterEntry } from './enemyRoster';
+import { rosterPoolForLevel, rosterPoolForLevelAllowingNextChapter, type RosterEntry } from './enemyRoster';
 
 export type ObjectiveType = 'defeat_all' | 'survive' | 'reach_score' | 'defeat_elite';
 
@@ -127,7 +127,13 @@ const EARLY_HP_CAP = 110;
 // already mirrors the prior pool-growth logic, so we just bias early levels
 // toward "soft" damage profiles to keep the L1-L15 ramp friendly.
 function pickTemplate(level: number, rng: () => number): RosterEntry {
-  let pool = rosterPoolForLevel(level);
+  // L36-50 "bleed-in": ~25% chance to widen the pool to Chapter 2 so the
+  // earlier ability gate (level <= 30) actually has Chapter-2 ability enemies
+  // to surface. Keeps Chapter 1 dominant the rest of the time.
+  const useNextChapter = level >= 36 && level <= 50 && rng() < 0.25;
+  let pool = useNextChapter
+    ? rosterPoolForLevelAllowingNextChapter(level)
+    : rosterPoolForLevel(level);
   // Never seed an ability-bearing enemy in Chapter 1 — keeps intro readable.
   if (level <= 30) pool = pool.filter(e => !e.ability);
   // Per-enemy DPS cap on early levels — prefer tankier-but-softer templates.
