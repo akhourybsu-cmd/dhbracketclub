@@ -133,7 +133,6 @@ export function rehydrateRelics(
 ): ActiveRelics | null {
   if (!stored) return null;
   return {
-    ids: stored.ids,
     ranks: new Map(stored.ranks),
   };
 }
