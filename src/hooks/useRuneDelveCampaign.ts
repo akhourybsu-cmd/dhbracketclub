@@ -16,20 +16,25 @@ function hydrateLegacy(row: RuneDelveLevel): RuneDelveLevel {
   const expectedKind = bossKindForLevel(row.level_number);
   const storedKind = (row.modifiers as any)?.boss_kind ?? null;
   const storedWaves = (row.modifiers as any)?.waves;
+  const storedMods = (row.modifiers ?? {}) as Record<string, unknown>;
+  const enemyArr = Array.isArray(row.enemy_config) ? row.enemy_config : [];
+  const needsEnemyConfig = enemyArr.length === 0;
+  const needsModifiers = Object.keys(storedMods).length === 0;
   const needsBossUpgrade = expectedKind && !storedKind;
   const needsWaves = !storedWaves;
-  if (!needsBossUpgrade && !needsWaves) return row;
+  if (!needsBossUpgrade && !needsWaves && !needsEnemyConfig && !needsModifiers) return row;
   const def = generateLevel(row.level_number);
   return {
     ...row,
-    enemy_config: needsBossUpgrade ? def.enemy_config : row.enemy_config,
+    // Treat empty enemy_config as "missing" — overlay generator output regardless of boss status.
+    enemy_config: (needsBossUpgrade || needsEnemyConfig) ? def.enemy_config : row.enemy_config,
     modifiers: {
-      ...(row.modifiers ?? {}),
+      ...storedMods,
       ...def.modifiers,
       // Preserve any custom mechanic/secondary the row already had — the
       // generator's deterministic output is identical for the same level
       // number anyway, so this is mostly a safety belt.
-      mechanics: (row.modifiers as any)?.mechanics ?? def.modifiers.mechanics,
+      mechanics: (storedMods as any)?.mechanics ?? def.modifiers.mechanics,
     },
   };
 }
