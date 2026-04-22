@@ -3160,6 +3160,10 @@ export type Database = {
       rune_delve_runs: {
         Row: {
           ability_used: boolean
+          attempts: number
+          best_hp_remaining: number
+          best_turns_used: number | null
+          clears: number
           completed_at: string
           created_at: string
           dungeon_cleared: boolean
@@ -3168,6 +3172,7 @@ export type Database = {
           hero_class: string
           hp_remaining: number
           id: string
+          last_played_at: string
           level_id: string | null
           level_number: number | null
           longest_chain: number
@@ -3181,6 +3186,10 @@ export type Database = {
         }
         Insert: {
           ability_used?: boolean
+          attempts?: number
+          best_hp_remaining?: number
+          best_turns_used?: number | null
+          clears?: number
           completed_at?: string
           created_at?: string
           dungeon_cleared?: boolean
@@ -3189,6 +3198,7 @@ export type Database = {
           hero_class: string
           hp_remaining?: number
           id?: string
+          last_played_at?: string
           level_id?: string | null
           level_number?: number | null
           longest_chain?: number
@@ -3202,6 +3212,10 @@ export type Database = {
         }
         Update: {
           ability_used?: boolean
+          attempts?: number
+          best_hp_remaining?: number
+          best_turns_used?: number | null
+          clears?: number
           completed_at?: string
           created_at?: string
           dungeon_cleared?: boolean
@@ -3210,6 +3224,7 @@ export type Database = {
           hero_class?: string
           hp_remaining?: number
           id?: string
+          last_played_at?: string
           level_id?: string | null
           level_number?: number | null
           longest_chain?: number
