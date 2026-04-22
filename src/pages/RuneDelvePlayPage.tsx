@@ -754,6 +754,14 @@ export default function RuneDelvePlayPage() {
     } catch { shardsAwarded = 0; }
     setEndState({ cleared, reason, score: breakdown.total, isNewBest, shards: shardsAwarded });
     try {
+      // Server-truth flags. Default to the optimistic value so legacy
+      // (transient-level) submissions still award XP correctly.
+      let serverWasNewBest = isNewBest;
+      let improvedChain = false;
+      let improvedTurns = false;
+      let improvedHp = false;
+      let firstClear = false;
+
       // Don't submit transient levels (admin hasn't seeded them yet).
       if (!level.id.startsWith('transient-')) {
         // Signal to the results page that a run was just submitted, so
@@ -765,7 +773,7 @@ export default function RuneDelvePlayPage() {
             String(Date.now()),
           );
         } catch { /* sessionStorage may be unavailable */ }
-        await submit.mutateAsync({
+        const result = await submit.mutateAsync({
           level_id: level.id,
           level_number: level.level_number,
           score: breakdown.total,
@@ -779,10 +787,26 @@ export default function RuneDelvePlayPage() {
           ability_used: final.abilityUsed,
           hero_class: hero.class,
         });
+        serverWasNewBest = result.wasNewBest;
+        improvedChain = result.improvedChain;
+        improvedTurns = result.improvedTurns;
+        improvedHp = result.improvedHp;
+        firstClear = result.firstClear;
+        // Reflect server truth on the end-state card so the toast + chip
+        // matches what's actually persisted.
+        setEndState(prev => prev ? {
+          ...prev,
+          isNewBest: serverWasNewBest,
+          improvedChain,
+          improvedTurns,
+          improvedHp,
+          firstClear,
+        } : prev);
         if (cleared) await advance.mutateAsync(level.level_number);
       }
-      // Hero progression — XP only on new best to keep grinding fair.
-      if (isNewBest) {
+      // Hero progression — XP only on a SERVER-confirmed new best to keep
+      // grinding fair and prevent stale-cache double-counts.
+      if (serverWasNewBest) {
         const today = format(new Date(), 'yyyy-MM-dd');
         const yesterday = format(new Date(Date.now() - 86_400_000), 'yyyy-MM-dd');
         const continued = hero.last_run_date === yesterday;
