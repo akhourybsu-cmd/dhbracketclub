@@ -164,13 +164,16 @@ export function enemiesAttack(
     // enemy's damage for the resolve call, then restoring.
     const original = next.enemies.map(e => e.damage);
     next.enemies.forEach(e => { e.damage = Math.round(e.damage * enemyDamageMultiplier(bossRule, e, next.enemies)); });
+    // Compute raw (pre-shield) damage directly from the scaled enemies so the
+    // Thorns math is independent of resolveEnemyAttack's internal guard math
+    // (which varies for heavy strikes via HEAVY_GUARD_PIERCE).
+    rawIncomingForThorns = next.enemies.reduce((sum, e) => {
+      if (e.hp <= 0) return sum;
+      const isHeavy = e.intent != null && e.intent <= 0;
+      const dmg = isHeavy ? Math.round(e.damage * 1.6) : e.damage; // mirror HEAVY_DAMAGE_MULT
+      return sum + dmg;
+    }, 0);
     const r = resolveEnemyAttack(next.enemies, next.shieldTurns > 0);
-    rawIncomingForThorns = r.totalDamage; // post-shield total (shield already scaled it)
-    // Resolve always passes the unscaled raw too via heavyFired flag — but
-    // resolveEnemyAttack returns the shielded total. To get the *raw* we
-    // recompute from the scaled enemies BEFORE resolveEnemyAttack applies
-    // its own shield math. Simpler: scale back by 1/0.4 if shielded.
-    if (shieldWasUp) rawIncomingForThorns = Math.round(r.totalDamage / 0.4);
     next.enemies = r.enemies.map((e, i) => ({ ...e, damage: original[i] ?? e.damage }));
     heavyFired = r.heavyFired;
     if (next.shieldTurns > 0) next.shieldTurns -= 1;
