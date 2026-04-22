@@ -188,10 +188,88 @@ export const MINION_BONE_HUSK: RosterEntry = {
   notes: 'Summoned by Bone Summoner. Fragile filler.',
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Boss / Mini-Boss variants
+//
+// Mini-bosses and bosses are tracked as DISTINCT bestiary entries (e.g.
+// `goblin_scout__mini`, `goblin_scout__boss`) so the journal showcases their
+// elevated status with a silhouetted slot until first defeated, and a
+// gold-ringed portrait afterwards. Variants inherit the base archetype's
+// emoji/name/family/role but bump tier up and re-tag family as 'elite' (mini)
+// or 'boss' (chapter/mid) so colour tokens render appropriately.
+// ─────────────────────────────────────────────────────────────────────────────
+export type BestiaryTier = 'mini' | 'boss';
+
+export const BESTIARY_VARIANT_SUFFIX: Record<BestiaryTier, string> = {
+  mini: '__mini',
+  boss: '__boss',
+};
+
+export function bestiaryVariantId(baseId: string, tier: BestiaryTier): string {
+  return `${baseId}${BESTIARY_VARIANT_SUFFIX[tier]}`;
+}
+
+/** Parse a possibly-variant id into its parts. */
+export function parseBestiaryId(id: string): { baseId: string; variant: BestiaryTier | null } {
+  if (id.endsWith(BESTIARY_VARIANT_SUFFIX.boss)) {
+    return { baseId: id.slice(0, -BESTIARY_VARIANT_SUFFIX.boss.length), variant: 'boss' };
+  }
+  if (id.endsWith(BESTIARY_VARIANT_SUFFIX.mini)) {
+    return { baseId: id.slice(0, -BESTIARY_VARIANT_SUFFIX.mini.length), variant: 'mini' };
+  }
+  return { baseId: id, variant: null };
+}
+
+/** Build a synthetic RosterEntry for a given archetype + variant tier. */
+function buildVariantEntry(base: RosterEntry, variant: BestiaryTier): RosterEntry {
+  const prefix = variant === 'boss' ? 'Boss ' : 'Mini-Boss ';
+  const family: EnemyFamily = variant === 'boss' ? 'boss' : 'elite';
+  const hpMul = variant === 'boss' ? 2.2 : 1.6;
+  const dmgMul = variant === 'boss' ? 1.2 : 1.1;
+  return {
+    ...base,
+    id: bestiaryVariantId(base.id, variant),
+    name: `${prefix}${base.name}`,
+    family,
+    tier: Math.min(5, base.tier + (variant === 'boss' ? 2 : 1)) as RosterEntry['tier'],
+    baseHp: Math.round(base.baseHp * hpMul),
+    baseDamage: Math.round(base.baseDamage * dmgMul),
+  };
+}
+
+/**
+ * Full bestiary roster including auto-generated mini-boss + boss variants for
+ * every base archetype that can reasonably be promoted (excludes the minion).
+ * Pure function — safe to memoize at module scope.
+ */
+export const BESTIARY_ROSTER: RosterEntry[] = (() => {
+  const base = [...ENEMY_ROSTER, MINION_BONE_HUSK];
+  const variants: RosterEntry[] = [];
+  for (const e of ENEMY_ROSTER) {
+    // Minions/echoes are never promoted; the dragon is already a boss-tier.
+    if (e.role === 'minion') continue;
+    variants.push(buildVariantEntry(e, 'mini'));
+    variants.push(buildVariantEntry(e, 'boss'));
+  }
+  return [...base, ...variants];
+})();
+
+const BESTIARY_BY_ID = new Map<string, RosterEntry>(
+  BESTIARY_ROSTER.map(e => [e.id, e]),
+);
+
 export function rosterById(id: string | undefined): RosterEntry | undefined {
   if (!id) return undefined;
-  if (id === MINION_BONE_HUSK.id) return MINION_BONE_HUSK;
-  return ENEMY_ROSTER.find(e => e.id === id);
+  // Fast path: exact match (covers base ids, the minion, and variants).
+  const hit = BESTIARY_BY_ID.get(id);
+  if (hit) return hit;
+  // Variant id whose base archetype no longer exists — synthesise on demand.
+  const { baseId, variant } = parseBestiaryId(id);
+  if (variant) {
+    const base = BESTIARY_BY_ID.get(baseId);
+    if (base) return buildVariantEntry(base, variant);
+  }
+  return undefined;
 }
 
 /**
