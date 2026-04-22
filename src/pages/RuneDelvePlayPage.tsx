@@ -237,6 +237,14 @@ export default function RuneDelvePlayPage() {
     } catch {}
   }, [level, hero]);
 
+  // Always invalidate the cached existing-run on mount so replay flows
+  // ("Retry" → Play → finalize) compute isNewBest off fresh server data.
+  // Without this, a stale cached row caused phantom hero XP double-counts.
+  useEffect(() => {
+    if (!level?.id || level.id.startsWith('transient-')) return;
+    queryClient.invalidateQueries({ queryKey: ['rune-delve-level-run', level.id] });
+  }, [level?.id, queryClient]);
+
   const refillRng = useMemo(() => {
     if (!level) return null;
     return mulberry32(level.generation_seed + 1000 + rngTick);
