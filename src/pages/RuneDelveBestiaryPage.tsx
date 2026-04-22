@@ -265,6 +265,12 @@ export default function RuneDelveBestiaryPage() {
           {selected && (() => {
             const entry = entryMap.get(selected.id);
             const discovered = !!entry;
+            const tier = variantOf(selected);
+            const ringColor = tier === 'boss'
+              ? 'hsl(var(--gold))'
+              : tier === 'mini'
+                ? 'hsl(var(--gold) / 0.7)'
+                : null;
             return (
               <>
                 <SheetHeader className="text-left">
@@ -273,7 +279,12 @@ export default function RuneDelveBestiaryPage() {
                       className="w-16 h-16 rounded-xl flex items-center justify-center text-4xl shrink-0"
                       style={{
                         background: `linear-gradient(160deg, ${FAMILY_COLOR[selected.family].replace(')', ' / 0.18)')}, hsl(var(--rd-stone-edge) / 0.6))`,
-                        border: `1px solid ${FAMILY_COLOR[selected.family].replace(')', ' / 0.35)')}`,
+                        border: ringColor
+                          ? `1.5px solid ${ringColor}`
+                          : `1px solid ${FAMILY_COLOR[selected.family].replace(')', ' / 0.35)')}`,
+                        boxShadow: ringColor && discovered
+                          ? `0 0 18px ${tier === 'boss' ? 'hsl(var(--gold) / 0.5)' : 'hsl(var(--gold) / 0.3)'}`
+                          : undefined,
                         filter: discovered ? 'none' : 'brightness(0) opacity(0.45)',
                       }}
                     >
@@ -281,9 +292,21 @@ export default function RuneDelveBestiaryPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <SheetTitle className="font-rd-display text-xl tracking-wide">
-                        {discovered ? selected.name : '???'}
+                        {discovered ? selected.name : (tier === 'boss' ? '??? (Boss)' : tier === 'mini' ? '??? (Mini-Boss)' : '???')}
                       </SheetTitle>
                       <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                        {tier && (
+                          <span
+                            className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center gap-1"
+                            style={{
+                              background: tier === 'boss' ? 'hsl(var(--gold))' : 'hsl(var(--gold) / 0.85)',
+                              color: 'hsl(var(--background))',
+                            }}
+                          >
+                            {tier === 'boss' ? <Crown className="w-2.5 h-2.5" /> : '★'}
+                            {tier === 'boss' ? 'Boss' : 'Mini-Boss'}
+                          </span>
+                        )}
                         <span
                           className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md"
                           style={{
