@@ -645,31 +645,45 @@ export default function RuneDelvePlayPage() {
       // Restore damage on the post-attack array so future turns aren't permanently softened.
       afterEnemies.enemies = afterEnemies.enemies.map((e, i) => ({ ...e, damage: originalDamage[i] ?? e.damage }));
       // Apply ability side-effects (corrupt/seal/spawn) to the page-level state.
+      // IMPORTANT: corrupt_tile / seal_tile additions are collected into the
+      // local `nextCorruption` / `pendingSealAdds` so they merge with the
+      // single end-of-turn setCorruption/setSeals calls below — using
+      // functional updaters here would race and get overwritten.
       const effects = afterEnemies.abilityEffects ?? [];
+      const pendingSealAdds: string[] = [];
       for (const eff of effects) {
         if (eff.kind === 'spawn_minion') {
           afterEnemies = { ...afterEnemies, enemies: [...afterEnemies.enemies, eff.enemy] };
         } else if (eff.kind === 'corrupt_tile' && corruptionActive) {
-          // Drop one corrupted cell on a random non-sealed, non-corrupted square.
-          setCorruption(prev => {
-            const cells = new Set(prev.cells);
-            for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) {
-              const k = `${r}-${c}`;
-              if (!cells.has(k) && !seals.has(k)) { cells.add(k); return { cells, sources: prev.sources }; }
+          // Drop one corrupted cell on the first available non-sealed,
+          // non-corrupted square (deterministic scan keeps replays stable).
+          const cells = new Set(nextCorruption.cells);
+          let placed = false;
+          outer: for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) {
+            const k = `${r}-${c}`;
+            if (!cells.has(k) && !seals.has(k) && !pendingSealAdds.includes(k)) {
+              cells.add(k);
+              placed = true;
+              break outer;
             }
-            return prev;
-          });
+          }
+          if (placed) {
+            nextCorruption = { cells, sources: nextCorruption.sources };
+            turnLogs.push({ kind: 'corruption', text: 'A new rune was corrupted' });
+          }
         } else if (eff.kind === 'seal_tile') {
-          setSeals(prev => {
-            const next = new Set(prev);
-            for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) {
-              const k = `${r}-${c}`;
-              if (!next.has(k)) { next.add(k); return next; }
+          for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) {
+            const k = `${r}-${c}`;
+            if (!seals.has(k) && !pendingSealAdds.includes(k)) {
+              pendingSealAdds.push(k);
+              turnLogs.push({ kind: 'info', text: 'A rune was sealed shut' });
+              r = 5; c = 5; break;
             }
-            return next;
-          });
+          }
         }
       }
+      // Stash for the final setSeals merge below.
+      (afterEnemies as any).__pendingSealAdds = pendingSealAdds;
       // Push enemy ability logs (heavy_strike / shield_self / heal_ally / etc).
       if (afterEnemies.abilityLogs?.length) turnLogs.push(...afterEnemies.abilityLogs);
     } else {
