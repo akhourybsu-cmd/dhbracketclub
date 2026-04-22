@@ -1,53 +1,47 @@
 
 
-## Drafts — let non-competitors spectate playoff matchups
+## Playoffs — fix missing Play-In match so MGMgrandiose can pick a topic
 
-### What's already true (and what isn't)
+### What's actually happening
 
-Good news: any signed-in member can already open `/drafts/:id` for any draft, including playoff matches. RLS is open and the detail page renders for everyone. The pick-history, results, podium, and report sections already display fine for non-participants.
+Season 1 already flipped to `status = 'playoffs'` on 2026-04-21, and standings are seeded #1–#5 correctly (MGMgrandiose is the #4 seed). But there are **zero rows in `draft_playoff_matches`** — the Quarterfinal (#4 vs #5, the play-in) was never created.
 
-The actual gaps for the playoff use case:
+Root cause is in `supabase/functions/advance-playoffs/index.ts`. The QF-creation block is nested *inside* the `if (season.status === "regular_season")` branch. The flow expects: same invocation that flips status to `playoffs` also inserts the QF. Something broke between those two writes on the previous run (likely the season was flipped to `playoffs` manually, or an earlier deploy that didn't include the QF block ran first). Now every subsequent call short-circuits past Phase 1 entirely, so the QF never gets created and MGMgrandiose has no match → no "Choose Topic" CTA on the Compete page.
 
-1. **Setup-phase playoff drafts show a "Join Draft" button to non-participants.** A spectator could accidentally insert themselves into, say, a Semifinal between the #2 and #3 seeds and break the bracket.
-2. **No "Spectating" framing.** A non-competitor opening a live playoff draft sees the same "Waiting for [other player]" banner the competitors see, with no signal that they're watching a match they aren't in.
-3. **No discovery surface for playoff matches** beyond the bracket on the Compete page. That's actually fine — but the bracket's "Open Draft" link should be the canonical entry point and should always work for everyone (it does).
+This is also a latent bug: the QF-creation code is unreachable on any season that's already in `playoffs` status, even though it's written to be idempotent (it checks `existingQF`).
 
-### Fix (small, surgical)
+### The fix
 
-**A) Suppress the Join Draft button on playoff drafts.**
-- In `DraftDetailPage`, derive `isPlayoffDraft` from `seasonEntries` (already loaded via `useSeasonEntries(season?.id)`) — `seasonEntries.find(e => e.draft_id === draftId)?.is_playoff === true`.
-- Only render the "Join Draft" button when `!isParticipant && user && !isPlayoffDraft`. Regular drafts keep the open join behavior; playoff matchups are competitor-locked.
+**A) Make Phase 1 self-healing.** Restructure `advance-playoffs/index.ts` so the QF-creation block runs whenever:
+- season status is `regular_season` AND all regular drafts are complete (existing path), **OR**
+- season status is already `playoffs` AND no QF row exists yet (new self-heal path).
 
-**B) Add a clear "Spectating" badge for non-participants on any draft.**
-- Below the topic header, when `!isParticipant && user`, render a small pill: "👁 Spectating" (muted styling, no glow). One-line addition near the season badge area around line 770.
-- For playoff drafts specifically, the pill reads: "👁 Spectating Playoff Match".
+The existing `existingQF` length check already makes the insert idempotent, so this just means moving the QF-creation block out of the inner `if/else` and gating it on `(season.status === 'playoffs' || justTransitioned) && standings.length >= 5`. Standings re-fetch happens unconditionally when we need to create the QF.
 
-**C) Soften the live-turn banner for spectators.**
-- The current "Waiting for [Name]" copy is correct, but for spectators we make the banner non-arena (no edge glow even when reading the host's own draft) — already true since `arena-edge` is gated on `isMyTurn`. No change needed; just verifying.
-- Hide the report-trigger CTA for non-participants when the draft is complete (line 1352 already gates `isParticipant && !autoTriggered`). Verified — no change needed.
+**B) Backfill Season 1's missing QF immediately.** Once the function is fixed, a single call to `advance-playoffs` for season `c62ab880-19f3-4a36-bf60-ba6a3e6318bb` will insert:
 
-**D) Spectator-safe pick history.**
-- The pick-list already hides edit/repick buttons for non-participants who aren't `canManage` (line 1031: `(canManage || pick.user_id === user?.id)`). Verified — no change needed.
-- Dispute button is already gated to `isParticipant` (line 1260). Verified — no change needed.
+```
+round=qf, match_number=1, seed_a=4, seed_b=5,
+user_a=a0e950e7-… (MGMgrandiose),
+user_b=79ebdb7f-… (seed #5),
+topic_picker_user_id=a0e950e7-… (MGMgrandiose),
+status='awaiting_topic'
+```
 
-### What this does NOT change
+Done from the Compete page by anyone (it's a public edge function), or directly from the admin tools page if there's a trigger there. Easiest: I'll just call it from the play page on next mount of the Compete page (it already auto-runs `advance-playoffs` on load — checking next), but we should also one-shot it now.
 
-- **No RLS changes.** Reads were already open to all authenticated members.
-- **No new routes.** Spectators use the existing `/drafts/:id` page.
-- **No discovery feed changes.** The Compete page playoff bracket and the Drafts list both already link out to detail; spectators click in the same way competitors do.
-- **No effect on regular (non-playoff) drafts** — Join button stays.
+**C) Verify Compete page surfaces the picker UI.** Already verified: `CompetePage.tsx` lines 712 and 1278 render a "Choose Topic" / gold "✨ Choose topic" button when `match.status === 'awaiting_topic'` and `user.id === match.topic_picker_user_id`. Once the QF row exists, MGMgrandiose will see that button under the Playoff Picture card.
 
 ### Files touched
 
-- `src/pages/DraftDetailPage.tsx`
-  - Compute `isPlayoffDraft = !!seasonEntry?.is_playoff`.
-  - Wrap the existing `!isParticipant && user` Join button in `&& !isPlayoffDraft`.
-  - Add a spectator pill under the season badge when `!isParticipant && user`, with playoff-aware copy.
+- `supabase/functions/advance-playoffs/index.ts` — lift the QF-creation block so it also runs when season is already in `playoffs` status with no QF row.
+- One-shot invoke `advance-playoffs` for season `c62ab880-19f3-4a36-bf60-ba6a3e6318bb` to backfill the QF row.
 
 ### Verification
 
-- Open a playoff Semifinal draft as a non-competitor → no Join button, "👁 Spectating Playoff Match" pill, full read-only access to picks/timer/results.
-- Open the same draft as one of the seeded competitors → no pill, normal pick UX.
-- Open a regular (non-playoff) draft as a non-participant → Join button still appears, pill reads "👁 Spectating".
-- Bracket "Open Draft" link from Compete page → opens correctly for any signed-in member.
+- After deploy + invoke, `select * from draft_playoff_matches` returns one QF row with MGMgrandiose as `topic_picker_user_id` and `status = 'awaiting_topic'`.
+- MGMgrandiose loads `/compete` → Playoff Picture card shows the QF, the gold "✨ Choose topic" button is visible to him only.
+- Submitting a topic calls `start-playoff-match` → creates the draft, flips match to `pending`, both players see the matchup.
+- Seed #5 sees the same match with a "Waiting on MGMgrandiose to choose topic" label, no button.
+- Future seasons: when the next one ends, the QF is created in the same edge-function call that flips status. If anything interrupts, the next invocation self-heals.
 
