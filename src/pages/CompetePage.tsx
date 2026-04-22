@@ -1048,8 +1048,393 @@ function CommissionerPanel({ season, entries, onUpdate }: { season: any; entries
 }
 
 /* ══════════════════════════════════════════════════════════
-   DRAFT HISTORY — collapsible with result indicators
+   PLAYOFF CONTROL CENTER — single guided portal that
+   answers "what should I do next?" for every member.
    ══════════════════════════════════════════════════════════ */
+function PlayoffControlCenter({
+  season, matches, standings, userId, onUpdate,
+}: {
+  season: any;
+  matches: PlayoffMatch[];
+  standings: SeasonStanding[];
+  userId: string | undefined;
+  onUpdate: () => void;
+}) {
+  const [pickerMatch, setPickerMatch] = useState<PlayoffMatch | null>(null);
+  const [showRules, setShowRules] = useState(false);
+  const [advancing, setAdvancing] = useState(false);
+  const [hasReadyWork, setHasReadyWork] = useState(false);
+  const [onboardingDismissed, setOnboardingDismissed] = useState(true);
+
+  const seasonId = season?.id as string | undefined;
+  const onboardingKey = seasonId ? `playoff_onboarding_dismissed_${seasonId}` : null;
+
+  useEffect(() => {
+    if (!onboardingKey) return;
+    setOnboardingDismissed(localStorage.getItem(onboardingKey) === '1');
+  }, [onboardingKey]);
+
+  const dismissOnboarding = () => {
+    if (onboardingKey) localStorage.setItem(onboardingKey, '1');
+    setOnboardingDismissed(true);
+  };
+
+  const getNameByUser = useCallback((uid: string | null): string => {
+    if (!uid) return 'TBD';
+    const s = standings.find(s => s.user_id === uid);
+    return (s?.profiles as any)?.display_name || '?';
+  }, [standings]);
+
+  // Detect if there's a match whose underlying draft is complete but match isn't scored.
+  useEffect(() => {
+    if (!seasonId) { setHasReadyWork(false); return; }
+    const candidateDraftIds = matches
+      .filter(m => m.draft_id && m.status !== 'complete')
+      .map(m => m.draft_id as string);
+    if (candidateDraftIds.length === 0) { setHasReadyWork(false); return; }
+    let cancelled = false;
+    supabase
+      .from('drafts')
+      .select('id, status')
+      .in('id', candidateDraftIds)
+      .then(({ data }) => {
+        if (cancelled) return;
+        const ready = (data || []).some((d: any) => d.status === 'complete');
+        setHasReadyWork(ready);
+      });
+    return () => { cancelled = true; };
+  }, [seasonId, matches]);
+
+  const handleAdvance = async () => {
+    if (!seasonId) return;
+    setAdvancing(true);
+    try {
+      const res: any = await advancePlayoffs(seasonId);
+      if (res?.log?.length) toast.success(`Playoffs: ${res.log.join(' • ')}`);
+      else toast.success('Up to date');
+      onUpdate();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to advance');
+    } finally {
+      setAdvancing(false);
+    }
+  };
+
+  const roundLabelForMatch = (m: PlayoffMatch): string => {
+    if (m.round === 'qf') return 'Play-In';
+    if (m.round === 'sf') return `Semi ${m.match_number}`;
+    if (m.round === 'final') return `Final · G${m.match_number}`;
+    if (m.round === 'third_place') return '3rd Place';
+    return m.round;
+  };
+
+  // Sort: awaiting_topic → in_progress → pending → complete; show top 3 active.
+  const order: Record<string, number> = { awaiting_topic: 0, in_progress: 1, pending: 2, complete: 3 };
+  const activeMatches = [...matches]
+    .filter(m => m.status !== 'complete')
+    .sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9))
+    .slice(0, 3);
+
+  // Lifecycle steps for the timeline.
+  const sfDone = matches.filter(m => m.round === 'sf' && m.status === 'complete').length;
+  const finalDone = matches.filter(m => m.round === 'final' && m.status === 'complete').length;
+  const finalWinByUser: Record<string, number> = {};
+  for (const m of matches) {
+    if (m.round === 'final' && m.status === 'complete' && m.winner_user_id) {
+      finalWinByUser[m.winner_user_id] = (finalWinByUser[m.winner_user_id] || 0) + 1;
+    }
+  }
+  const champion = Object.entries(finalWinByUser).find(([, n]) => n >= 2)?.[0] || null;
+  const playoffsStarted = season?.status === 'playoffs' || matches.length > 0;
+  const playInDone = matches.some(m => m.round === 'qf' && m.status === 'complete') || sfDone > 0;
+
+  type StepState = 'done' | 'active' | 'todo';
+  const steps: { label: string; state: StepState }[] = [
+    { label: 'Regular', state: playoffsStarted ? 'done' : 'active' },
+    { label: 'Play-In', state: !playoffsStarted ? 'todo' : (playInDone ? 'done' : 'active') },
+    { label: 'Semis', state: !playInDone ? 'todo' : (sfDone >= 2 ? 'done' : 'active') },
+    { label: 'Finals', state: sfDone < 2 ? 'todo' : (champion ? 'done' : 'active') },
+    { label: 'Champ', state: champion ? 'done' : 'todo' },
+  ];
+
+  // Champion banner — collapse the surface to celebration.
+  if (champion) {
+    return (
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }}>
+        <div
+          className="rounded-2xl p-4 text-center"
+          style={{
+            background: 'linear-gradient(135deg, hsl(var(--gold) / 0.22), hsl(var(--gold) / 0.04))',
+            border: '1px solid hsl(var(--gold) / 0.35)',
+          }}
+        >
+          <Trophy className="w-7 h-7 mx-auto mb-1.5" style={{ color: 'hsl(var(--gold))' }} />
+          <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Season Champion</p>
+          <p className="text-[16px] font-black mt-1" style={{ color: 'hsl(var(--gold))' }}>
+            {getNameByUser(champion)}
+          </p>
+          <p className="text-[10px] text-muted-foreground/80 mt-1">
+            Playoffs complete — see the bracket below for full results.
+          </p>
+        </div>
+      </motion.div>
+    );
+  }
+
+  const showOnboarding =
+    season?.status === 'playoffs' &&
+    !onboardingDismissed &&
+    matches.filter(m => m.status === 'complete').length === 0;
+
+  const statusPillLabel =
+    season?.status === 'playoffs' ? 'Playoffs Live' :
+    season?.status === 'regular_season' ? 'Regular Season' :
+    'Off-season';
+  const statusPillTone = season?.status === 'playoffs' ? 'gold' : 'muted';
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }}>
+      <div
+        className="glass-card overflow-hidden"
+        style={{ border: '1px solid hsl(var(--gold) / 0.22)' }}
+      >
+        {/* Header */}
+        <div
+          className="px-4 py-3 flex items-center justify-between gap-2"
+          style={{ background: 'hsl(var(--gold) / 0.06)', borderBottom: '1px solid hsl(var(--border) / 0.4)' }}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <Trophy className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(var(--gold))' }} />
+            <h3 className="font-bold text-[13px] truncate">Playoff Control Center</h3>
+          </div>
+          <span
+            className={cn(
+              'text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full',
+              statusPillTone === 'gold' ? 'text-gold' : 'text-muted-foreground',
+            )}
+            style={{
+              background: statusPillTone === 'gold' ? 'hsl(var(--gold) / 0.15)' : 'hsl(var(--muted) / 0.6)',
+            }}
+          >
+            {statusPillLabel}
+          </span>
+        </div>
+
+        {/* Onboarding banner */}
+        {showOnboarding && (
+          <div
+            className="px-3 py-2 flex items-start gap-2"
+            style={{ background: 'hsl(var(--gold) / 0.08)', borderBottom: '1px solid hsl(var(--border) / 0.3)' }}
+          >
+            <span className="text-[14px] leading-none mt-0.5">🏆</span>
+            <p className="text-[10.5px] leading-snug flex-1 text-foreground/80">
+              Playoffs have started! <strong>Higher seeds pick topics</strong>, then both players draft. First to clinch wins the round.
+            </p>
+            <button
+              onClick={dismissOnboarding}
+              className="text-muted-foreground/60 hover:text-foreground transition-colors p-0.5"
+              aria-label="Dismiss"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
+
+        {/* Timeline */}
+        <div className="px-3 pt-3">
+          <div className="flex items-center justify-between gap-1">
+            {steps.map((s, i) => (
+              <div key={s.label} className="flex items-center flex-1 min-w-0">
+                <div className="flex flex-col items-center gap-1 flex-1 min-w-0">
+                  <div
+                    className={cn(
+                      'w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold',
+                      s.state === 'done' && 'bg-success/20 text-success',
+                      s.state === 'active' && 'text-gold',
+                      s.state === 'todo' && 'bg-muted/40 text-muted-foreground/50',
+                    )}
+                    style={s.state === 'active' ? {
+                      background: 'hsl(var(--gold) / 0.18)',
+                      boxShadow: '0 0 0 2px hsl(var(--gold) / 0.25)',
+                    } : undefined}
+                  >
+                    {s.state === 'done' ? '✓' : i + 1}
+                  </div>
+                  <span
+                    className={cn(
+                      'text-[8.5px] font-bold uppercase tracking-wider truncate',
+                      s.state === 'active' && 'text-gold',
+                      s.state === 'done' && 'text-foreground/70',
+                      s.state === 'todo' && 'text-muted-foreground/50',
+                    )}
+                  >
+                    {s.label}
+                  </span>
+                </div>
+                {i < steps.length - 1 && (
+                  <div
+                    className={cn(
+                      'h-px flex-shrink-0 w-2 -mt-3.5',
+                      s.state === 'done' ? 'bg-success/40' : 'bg-border/30',
+                    )}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Active matches */}
+        <div className="p-3 space-y-2">
+          {activeMatches.length === 0 ? (
+            <div className="rounded-lg bg-muted/20 p-3 text-center">
+              <p className="text-[11px] font-bold text-foreground/80">
+                {season?.status === 'playoffs' ? 'Awaiting next round' : 'Regular season in progress'}
+              </p>
+              <p className="text-[10px] text-muted-foreground/70 mt-1">
+                {season?.status === 'playoffs'
+                  ? 'Matches will appear here as soon as the next round is created.'
+                  : 'Once all 12 regular drafts complete, playoffs unlock automatically.'}
+              </p>
+            </div>
+          ) : (
+            activeMatches.map(m => {
+              const isPicker = m.status === 'awaiting_topic' && userId && userId === m.topic_picker_user_id;
+              const pickerName = getNameByUser(m.topic_picker_user_id);
+              const aName = getNameByUser(m.user_a);
+              const bName = getNameByUser(m.user_b);
+
+              let statusSentence = '';
+              if (m.status === 'awaiting_topic') {
+                statusSentence = isPicker
+                  ? 'You\'re the higher seed — choose the draft topic to begin.'
+                  : `Waiting for ${pickerName} (higher seed) to choose a topic.`;
+              } else if (m.status === 'in_progress') {
+                statusSentence = 'Draft is live — make your picks before the timer runs out.';
+              } else if (m.status === 'pending') {
+                statusSentence = 'Match created — open the draft to start picking.';
+              }
+
+              return (
+                <div
+                  key={m.id}
+                  className="rounded-lg p-3 border space-y-2"
+                  style={{
+                    background: 'hsl(var(--muted) / 0.25)',
+                    borderColor: m.status === 'awaiting_topic'
+                      ? 'hsl(var(--gold) / 0.3)'
+                      : 'hsl(var(--border) / 0.3)',
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                      {roundLabelForMatch(m)}
+                    </span>
+                    <span
+                      className={cn(
+                        'text-[8.5px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider',
+                        m.status === 'awaiting_topic' && 'bg-gold/15 text-gold',
+                        m.status === 'in_progress' && 'bg-success/15 text-success',
+                        m.status === 'pending' && 'bg-muted text-muted-foreground',
+                      )}
+                    >
+                      {m.status === 'awaiting_topic' ? 'Pick Topic' :
+                       m.status === 'in_progress' ? 'Live' : 'Pending'}
+                    </span>
+                  </div>
+
+                  <p className="text-[11.5px] font-bold leading-snug">
+                    <span className="text-muted-foreground/70 font-semibold">#{m.seed_a}</span> {aName}
+                    <span className="text-muted-foreground mx-1.5">vs</span>
+                    <span className="text-muted-foreground/70 font-semibold">#{m.seed_b}</span> {bName}
+                  </p>
+
+                  <p className="text-[10.5px] text-muted-foreground/85 leading-snug">{statusSentence}</p>
+
+                  {/* Primary CTA */}
+                  {m.status === 'awaiting_topic' && isPicker && (
+                    <button
+                      onClick={() => setPickerMatch(m)}
+                      className="w-full h-9 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 btn-press transition-colors"
+                      style={{ background: 'hsl(var(--gold) / 0.18)', color: 'hsl(var(--gold))' }}
+                    >
+                      <Sparkles className="w-3.5 h-3.5" /> Choose Topic
+                    </button>
+                  )}
+                  {m.status === 'awaiting_topic' && !isPicker && (
+                    <button
+                      onClick={() => toast.success(`Reminder sent to ${pickerName}`)}
+                      className="w-full h-9 rounded-lg text-[11px] font-bold bg-muted/50 text-foreground/70 hover:bg-muted/70 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      Nudge {pickerName}
+                    </button>
+                  )}
+                  {(m.status === 'in_progress' || m.status === 'pending') && m.draft_id && (
+                    <Link to={`/drafts/${m.draft_id}`} className="block">
+                      <button
+                        className="w-full h-9 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 btn-press transition-colors"
+                        style={{ background: 'hsl(var(--gold) / 0.15)', color: 'hsl(var(--gold))' }}
+                      >
+                        Open Draft <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </Link>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Action row */}
+        <div className="px-3 pb-3 space-y-2">
+          <button
+            onClick={handleAdvance}
+            disabled={advancing}
+            className={cn(
+              'w-full h-10 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 btn-press transition-all disabled:opacity-50',
+            )}
+            style={{
+              background: hasReadyWork ? 'hsl(var(--gold) / 0.22)' : 'hsl(var(--muted) / 0.5)',
+              color: hasReadyWork ? 'hsl(var(--gold))' : 'hsl(var(--muted-foreground))',
+              boxShadow: hasReadyWork ? '0 0 0 1px hsl(var(--gold) / 0.3)' : undefined,
+            }}
+          >
+            {advancing ? (
+              <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Advancing…</>
+            ) : (
+              <><Trophy className="w-3.5 h-3.5" /> Advance Playoffs</>
+            )}
+          </button>
+          <p className="text-[10px] text-muted-foreground/70 text-center leading-snug">
+            {hasReadyWork
+              ? 'Tap to score completed games and create the next round.'
+              : 'Up to date · auto-advances after each draft.'}
+          </p>
+
+          {/* How it works — expandable */}
+          <button
+            onClick={() => setShowRules(v => !v)}
+            className="w-full h-8 rounded-lg text-[10.5px] font-bold text-foreground/70 hover:text-foreground bg-muted/30 hover:bg-muted/50 transition-colors flex items-center justify-center gap-1.5"
+          >
+            How it works
+            <ChevronDown className={cn('w-3 h-3 transition-transform', showRules && 'rotate-180')} />
+          </button>
+          {showRules && <PlayoffFormatGuide embedded />}
+        </div>
+      </div>
+
+      {pickerMatch && seasonId && (
+        <TopicPickerDialog
+          open={!!pickerMatch}
+          onOpenChange={(v) => { if (!v) setPickerMatch(null); }}
+          seasonId={seasonId}
+          match={pickerMatch}
+          onStarted={() => onUpdate()}
+        />
+      )}
+    </motion.div>
+  );
+}
 function SeasonDraftHistory({ entries, totalDrafts }: { entries: any[]; totalDrafts: number }) {
   const regularEntries = entries.filter(e => !e.is_playoff);
   const [isOpen, setIsOpen] = useState(regularEntries.length <= 4);
