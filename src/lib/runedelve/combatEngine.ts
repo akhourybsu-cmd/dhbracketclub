@@ -1,7 +1,7 @@
 import type { Enemy } from './dungeonGenerator';
 import type { HeroClass } from './classConfig';
 import type { RuneType } from './dungeonGenerator';
-import { resolveEnemyAttack, tickIntents } from './telegraph';
+import { resolveEnemyAttack, tickIntents, HEAVY_DAMAGE_MULT } from './telegraph';
 import {
   applyBossTurnEffects,
   applyPhaseLockOnDamage,
@@ -170,7 +170,7 @@ export function enemiesAttack(
     rawIncomingForThorns = next.enemies.reduce((sum, e) => {
       if (e.hp <= 0) return sum;
       const isHeavy = e.intent != null && e.intent <= 0;
-      const dmg = isHeavy ? Math.round(e.damage * 1.6) : e.damage; // mirror HEAVY_DAMAGE_MULT
+      const dmg = isHeavy ? Math.round(e.damage * HEAVY_DAMAGE_MULT) : e.damage;
       return sum + dmg;
     }, 0);
     const r = resolveEnemyAttack(next.enemies, next.shieldTurns > 0);
