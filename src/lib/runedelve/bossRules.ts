@@ -139,25 +139,41 @@ export function filterTargetable(rule: BossRuleId | null, enemies: Enemy[]): Ene
   return alive;
 }
 
-/** Apply per-turn boss effects (regen, splitter trigger, phaselock decay). */
-export function applyBossTurnEffects(state: CombatState, rule: BossRuleId | null): CombatState {
-  if (rule == null) return state;
+/**
+ * Apply per-turn boss effects (regen, splitter trigger, phaselock decay) and
+ * surface a small log batch so the Battle Chronicle can announce silent
+ * effects (regen ticks, splits, phase fades).
+ */
+export function applyBossTurnEffects(
+  state: CombatState,
+  rule: BossRuleId | null,
+): { state: CombatState; logs: Array<Omit<import('@/components/runedelve/CombatLog').CombatLogEntry, 'id'>> } {
+  const logs: Array<Omit<import('@/components/runedelve/CombatLog').CombatLogEntry, 'id'>> = [];
+  if (rule == null) return { state, logs };
   let enemies = state.enemies.map(e => ({ ...e }));
 
   if (rule === 'regenerator') {
     const last = enemies[enemies.length - 1];
     if (last && last.hp > 0 && last.hp < last.maxHp) {
+      const before = last.hp;
       last.hp = Math.min(last.maxHp, last.hp + 8);
+      const healed = last.hp - before;
+      if (healed > 0) {
+        logs.push({ kind: 'heal', text: `${last.name} regenerated`, amount: healed });
+      }
     }
   }
 
   if (rule === 'phaselock') {
-    // Decay any active phase-lock counters.
-    enemies = enemies.map(e => (
-      e.phaseLockTurns && e.phaseLockTurns > 0
-        ? { ...e, phaseLockTurns: Math.max(0, e.phaseLockTurns - 1) }
-        : e
-    ));
+    // Decay any active phase-lock counters; announce the fade.
+    enemies = enemies.map(e => {
+      if (!e.phaseLockTurns || e.phaseLockTurns <= 0) return e;
+      const next = Math.max(0, e.phaseLockTurns - 1);
+      if (next === 0) {
+        logs.push({ kind: 'info', text: `${e.name} phases back into reality` });
+      }
+      return { ...e, phaseLockTurns: next };
+    });
   }
 
   if (rule === 'splitter') {
@@ -177,10 +193,11 @@ export function applyBossTurnEffects(state: CombatState, rule: BossRuleId | null
         hasSplit: true,
       };
       enemies.splice(enemies.length, 0, twin);
+      logs.push({ kind: 'ability', text: `${last.name} split — an Echo emerges!` });
     }
   }
 
-  return { ...state, enemies };
+  return { state: { ...state, enemies }, logs };
 }
 
 /** Outgoing damage multiplier for an enemy under enrager / aura. */
