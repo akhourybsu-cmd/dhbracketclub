@@ -214,6 +214,39 @@ export default function RuneDelveResultsPage() {
         </div>
       )}
 
+      {/* Personal Best Tracker — replay-aware stats. Always visible so the
+          player sees their cumulative progress, not just this attempt. */}
+      <div className="glass-card p-3">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-bold text-[12px] flex items-center gap-1.5">
+            <Trophy className="w-3.5 h-3.5" style={{ color: 'hsl(var(--gold))' }} /> Personal Best Tracker
+          </h3>
+          {(run as any).attempts > 1 && (
+            <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+              {(run as any).clears ?? 0}/{(run as any).attempts ?? 1} clears
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-lg p-2 text-center" style={{ background: 'hsl(var(--gold) / 0.08)' }}>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Best Score</p>
+            <p className="font-mono text-[13px] font-extrabold tabular-nums" style={{ color: 'hsl(var(--gold))' }}>
+              {run.score.toLocaleString()}
+            </p>
+          </div>
+          <div className="rounded-lg p-2 text-center bg-muted/30">
+            <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Best Chain</p>
+            <p className="font-mono text-[13px] font-extrabold tabular-nums">{run.longest_chain}</p>
+          </div>
+          <div className="rounded-lg p-2 text-center bg-muted/30">
+            <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Fastest Clear</p>
+            <p className="font-mono text-[13px] font-extrabold tabular-nums">
+              {(run as any).best_turns_used != null ? `${(run as any).best_turns_used}t` : '—'}
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-2">
         {stats.map(s => {
           const Icon = s.icon;
