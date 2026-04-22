@@ -1226,4 +1226,8 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .rd-mode .rd-tile-corrupted { animation: none; }
+  /* Combat FX overlay — collapse all motion to a quick fade so the player
+     still gets visual confirmation without sweeping animation. */
+  .rd-mode [aria-hidden] [style*="position"] { transition: opacity 120ms linear !important; }
 }
+

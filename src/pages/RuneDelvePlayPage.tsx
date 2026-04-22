@@ -63,6 +63,8 @@ import { HowToPlaySheet } from '@/components/runedelve/HowToPlaySheet';
 import { MechanicIntroSheet } from '@/components/runedelve/MechanicIntroSheet';
 import { MechanicBanner } from '@/components/runedelve/MechanicBanner';
 import { CombatLog, type CombatLogEntry } from '@/components/runedelve/CombatLog';
+import { FxLayer } from '@/components/runedelve/fx/FxLayer';
+import { useFxQueue, type FxRect } from '@/hooks/useFxQueue';
 import { format } from 'date-fns';
 
 const RUNE_LABEL: Record<RuneType, string> = {
@@ -153,6 +155,19 @@ export default function RuneDelvePlayPage() {
       return next.length > 30 ? next.slice(-30) : next;
     });
   };
+
+  // FX overlay queue — purely visual feedback for chains and abilities.
+  const fxQ = useFxQueue();
+  const playRootRef = useRef<HTMLDivElement>(null);
+  const rectFromEl = (el: Element | null): FxRect | undefined => {
+    if (!el) return undefined;
+    const r = el.getBoundingClientRect();
+    return { x: r.left, y: r.top, w: r.width, h: r.height };
+  };
+  const findEnemyRect = (id: string): FxRect | undefined =>
+    rectFromEl(playRootRef.current?.querySelector(`[data-enemy-id="${id}"]`) ?? null);
+  const findHudRect = (target: 'hp' | 'mana' | 'shield'): FxRect | undefined =>
+    rectFromEl(playRootRef.current?.querySelector(`[data-fx-target="${target}"]`) ?? null);
 
   // Active relic loadout for this run (rank-aware).
   const activeRelics = useMemo(() => {
@@ -283,6 +298,24 @@ export default function RuneDelvePlayPage() {
       : len >= 6 ? { dmgMult: 1.2, bonus: false as const }
       : { dmgMult: 1, bonus: false as const };
     const tier = tierFor(chain.length);
+    // ── Visual FX trigger ─────────────────────────────────────────────────
+    // Aim red at the first living enemy (the same target applyChain hits);
+    // route green/blue/gold at the relevant HUD chip so the cue lands where
+    // the player's eye should travel.
+    const fxTier: 'normal' | 'big' | 'huge' =
+      chain.length >= 8 ? 'huge' : chain.length >= 6 ? 'big' : 'normal';
+    let fxTarget: FxRect | undefined;
+    if (type === 'red') {
+      const firstAlive = combat.enemies.find(e => e.hp > 0);
+      if (firstAlive) fxTarget = findEnemyRect(firstAlive.id);
+    } else if (type === 'green') {
+      fxTarget = findHudRect('hp');
+    } else if (type === 'blue') {
+      fxTarget = findHudRect('mana');
+    } else if (type === 'gold') {
+      fxTarget = findHudRect('shield') ?? findHudRect('hp');
+    }
+    fxQ.trigger({ kind: 'rune', rune: type, length: chain.length, tier: fxTier, target: fxTarget });
     // Snapshot relics for this run (falls back to live for first chain).
     const relics = activeRelicsSnapshot ?? activeRelics;
     // Per-chain counters BEFORE applying — drives Ember Edge / Crimson Tide / Quickstep.
@@ -636,6 +669,12 @@ export default function RuneDelvePlayPage() {
 
   const handleAbility = () => {
     const relics = activeRelicsSnapshot ?? activeRelics;
+    // Visual ability FX (fires regardless of mana refund — cue is the cast).
+    if (combat.mana >= MAX_MANA) {
+      const firstAlive = combat.enemies.find(e => e.hp > 0);
+      const target = firstAlive ? findEnemyRect(firstAlive.id) : undefined;
+      fxQ.trigger({ kind: 'ability', cls: hero.class, target });
+    }
     // First Light: first N ability casts skip the mana cost. We restore the
     // mana after useAbility() consumes it so the cast still resolves normally.
     const isFreeCast = abilityFreeFirstUse(relics, abilityUsedCount);
@@ -944,7 +983,9 @@ export default function RuneDelvePlayPage() {
   const equippedCount = [loadout?.slot_1, loadout?.slot_2, loadout?.slot_3].filter(Boolean).length;
 
   return (
-    <div className="space-y-2 pb-2 relative">
+    <div ref={playRootRef} className="space-y-2 pb-2 relative">
+      {/* Cinematic combat FX overlay — chains, abilities, tier flourishes. */}
+      <FxLayer queue={fxQ.queue} onComplete={fxQ.complete} />
       {/* Compact combined HUD: turn counter + objective on a single row */}
       <div
         className="rd-carved rounded-xl px-3 py-2 flex items-center gap-2"
