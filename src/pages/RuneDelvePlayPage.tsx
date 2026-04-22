@@ -132,6 +132,9 @@ export default function RuneDelvePlayPage() {
     const m = defeatedArchetypesRef.current;
     m.set(archetypeId, (m.get(archetypeId) ?? 0) + 1);
   };
+  // Tracks how many reinforcement waves have spawned this run so we never
+  // double-spawn the same wave when the player clears multiple enemies in a turn.
+  const wavesSpawnedRef = useRef(0);
 
   // Per-run relic-effect counters (drive Ember Edge / Crimson Tide / Quickstep /
   // First Light / Cleansing Touch / Shrine Ward turn-1 detection).
