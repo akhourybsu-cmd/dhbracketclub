@@ -1,54 +1,53 @@
 
 
-## Rune Delve — Mechanics audit & wiring fixes
+## Drafts — let non-competitors spectate playoff matchups
 
-I went through every band gate end-to-end (Sealed Runes / Telegraphed Attacks / Corrupted Tiles / Layered Goals / Boss Rules / per-enemy Abilities) and traced each from the level generator through `combatEngine` into the play page and the Battle Chronicle. The good news: most of it works. The bad news: there are several small but real wiring bugs that make a few mechanics either silent or fully no-op.
+### What's already true (and what isn't)
 
-### What's working correctly
+Good news: any signed-in member can already open `/drafts/:id` for any draft, including playoff matches. RLS is open and the detail page renders for everyone. The pick-history, results, podium, and report sections already display fine for non-participants.
 
-- **Sealed Runes (L26+)** — seeded deterministically, render correctly, `isValidChain` blocks them, broken-by-adjacency on chain land, log line fires.
-- **Telegraphed Attacks (L51+)** — initial intents applied, badge renders, heavy-strike fires + logs + toast, guard pierce honored.
-- **Corrupted Tiles (L76+)** — sources placed, spread tick happens, source-clear and HP cost both logged + toasted.
-- **Layered Goals (L101+)** — secondary objective rolled, pill rendered, `secondaryMet` correctly gates the clear, "Met" indicator updates live.
-- **Boss intro sheets** — fire once per `BossRuleId`, suppressed when a mechanic intro is already showing.
-- **Mini-boss / Mid / Chapter tier visuals** — gold ring, crown chip, name prefix all correct.
+The actual gaps for the playoff use case:
 
-### Bugs found (need fixing)
+1. **Setup-phase playoff drafts show a "Join Draft" button to non-participants.** A spectator could accidentally insert themselves into, say, a Semifinal between the #2 and #3 seeds and break the bracket.
+2. **No "Spectating" framing.** A non-competitor opening a live playoff draft sees the same "Waiting for [other player]" banner the competitors see, with no signal that they're watching a match they aren't in.
+3. **No discovery surface for playoff matches** beyond the bracket on the Compete page. That's actually fine — but the bracket's "Open Draft" link should be the canonical entry point and should always work for everyone (it does).
 
-**1. Enemy ability `heal_ally` is silently a no-op.** In `tickEnemyAbilities`, the heal mutates `target.hp` on an element of the intermediate `next` array, but the outer `.map` returns fresh object copies that don't include the mutation. Players see the log line "Cult Chanter mended X" but the ally's HP bar doesn't actually move. Fix: do the heal inside the same map pass by patching the target's hp on the returned object (track a `healPatch: Map<id, hp>` in step 2 and apply during step 4).
+### Fix (small, surgical)
 
-**2. State race between enemy-ability side-effects and end-of-turn `setCorruption` / `setSeals`.** When `corrupt_tile` or `seal_tile` ability fires, the page does a functional `setCorruption(prev => …)` / `setSeals(prev => …)`, but later in the same handler we call `setCorruption(nextCorruption)` and `setSeals(nextSeals)` with non-functional values that overwrite the ability-driven updates. Net effect: enemy `corrupt_tile` / `seal_tile` abilities get visually erased on their own turn. Fix: collect ability cell-additions into local `nextCorruption` / `nextSeals` variables before the final `setCorruption`/`setSeals`, so the merged value is what lands.
+**A) Suppress the Join Draft button on playoff drafts.**
+- In `DraftDetailPage`, derive `isPlayoffDraft` from `seasonEntries` (already loaded via `useSeasonEntries(season?.id)`) — `seasonEntries.find(e => e.draft_id === draftId)?.is_playoff === true`.
+- Only render the "Join Draft" button when `!isParticipant && user && !isPlayoffDraft`. Regular drafts keep the open join behavior; playoff matchups are competitor-locked.
 
-**3. Wave-2 reinforcements skip `applyInitialIntents` on telegraph levels (L51+).** When wave 2 spawns, enemies have no `intent` field, so the Telegraphed Attacks mechanic silently doesn't apply to them — no badge, no heavy strike, no skill expression. Fix: in the wave-spawn branch (both `handleChain` and `handleAbility`), if `telegraphActive`, run `applyInitialIntents(fresh, level.generation_seed + wavesSpawnedRef.current, level.level_number)` on the fresh enemy list before `spawnWave`.
+**B) Add a clear "Spectating" badge for non-participants on any draft.**
+- Below the topic header, when `!isParticipant && user`, render a small pill: "👁 Spectating" (muted styling, no glow). One-line addition near the season badge area around line 770.
+- For playoff drafts specifically, the pill reads: "👁 Spectating Playoff Match".
 
-**4. Boss-rule effects fire silently in the Battle Chronicle.** Three rules trigger but never write log lines:
-- `regenerator` — boss heals 8 HP each turn, no log
-- `splitter` — boss splits into "Echo of …", no log
-- `phaselock` — boss becomes immune for 1 turn, red chains fizzle without explanation
-- `aura` — minions hit 15% harder, no indication
+**C) Soften the live-turn banner for spectators.**
+- The current "Waiting for [Name]" copy is correct, but for spectators we make the banner non-arena (no edge glow even when reading the host's own draft) — already true since `arena-edge` is gated on `isMyTurn`. No change needed; just verifying.
+- Hide the report-trigger CTA for non-participants when the draft is complete (line 1352 already gates `isParticipant && !autoTriggered`). Verified — no change needed.
 
-Fix: have `applyBossTurnEffects` return a small `{state, logs}` shape, and surface a phase-lock log when `isImmune` blocks a red chain (mirror the existing `last_stand` toast/log pattern around line 559). Aura can be a one-time intro line ("Dread Aura — minions enraged while the Boss lives").
+**D) Spectator-safe pick history.**
+- The pick-list already hides edit/repick buttons for non-participants who aren't `canManage` (line 1031: `(canManage || pick.user_id === user?.id)`). Verified — no change needed.
+- Dispute button is already gated to `isParticipant` (line 1260). Verified — no change needed.
 
-**5. L31-50 ability gate is effectively dead code.** The prior tuning pass dropped the ability filter from `level <= 50` to `level <= 30`, but `rosterPoolForLevel` filters by `chapter <= (level<=50?1:2)` — so L31-50 still only see Chapter 1 enemies, none of which have abilities. Result: zero behaviour change from that tuning. Fix: extend the chapter window so L36-50 may pull from Chapter 2 as a small minority (e.g. 25% chance to use chapter≤2 pool when level ∈ [36,50]). Keeps Chapter 1 dominant but lets a Cult Warden / Wraith / Chanter actually appear, which is what the previous plan promised players would experience.
+### What this does NOT change
+
+- **No RLS changes.** Reads were already open to all authenticated members.
+- **No new routes.** Spectators use the existing `/drafts/:id` page.
+- **No discovery feed changes.** The Compete page playoff bracket and the Drafts list both already link out to detail; spectators click in the same way competitors do.
+- **No effect on regular (non-playoff) drafts** — Join button stays.
 
 ### Files touched
 
-- `src/lib/runedelve/enemyAbilities.ts` — fix `heal_ally` mutation; have effects pipeline carry HP patches.
-- `src/lib/runedelve/bossRules.ts` — `applyBossTurnEffects` returns `{state, logs}`; emit logs for regenerator / splitter / phaselock-decay.
-- `src/lib/runedelve/combatEngine.ts` — thread the new boss-rule logs into the existing `abilityLogs` channel.
-- `src/lib/runedelve/levelGenerator.ts` — small Chapter 2 bleed-in for L36-50 so the ability gate actually means something.
-- `src/lib/runedelve/enemyRoster.ts` — add a `rosterPoolForLevelAllowingNextChapter(level, rng)` helper used only in the L36-50 bleed-in.
-- `src/pages/RuneDelvePlayPage.tsx`:
-  - Wave-2 spawn: apply `applyInitialIntents` to fresh enemies on telegraph levels (both handlers).
-  - Merge ability `corrupt_tile` / `seal_tile` effects into the single end-of-turn `setCorruption` / `setSeals` call instead of racing functional updaters.
-  - Push a "Boss phases out — strike fizzled" log line when `phaselock` immunity blocks a red chain.
+- `src/pages/DraftDetailPage.tsx`
+  - Compute `isPlayoffDraft = !!seasonEntry?.is_playoff`.
+  - Wrap the existing `!isParticipant && user` Join button in `&& !isPlayoffDraft`.
+  - Add a spectator pill under the season badge when `!isParticipant && user`, with playoff-aware copy.
 
 ### Verification
 
-- L51+ wave-2 enemies show the ⚡ intent badge and can deliver heavy strikes.
-- Cult Chanter (L36+) actually heals an ally — the HP bar moves and the log line is truthful.
-- Rune Wraith corrupting a tile and Voidspawn sealing a tile leave the new cell on the board after the player's next chain (no race wipe).
-- L25 (regenerator), L75 (splitter), L100 (phaselock), L125 (aura) all surface their effects in the Battle Chronicle so the player can read what's happening.
-- L40 sample (5 seeds): at least one fight contains a Chapter-2 ability enemy (Warden / Chanter / Wraith).
-- Sealed Runes / Corrupted Tiles / Telegraphed Attacks / Layered Goals — unchanged behaviourally beyond the bug fixes.
+- Open a playoff Semifinal draft as a non-competitor → no Join button, "👁 Spectating Playoff Match" pill, full read-only access to picks/timer/results.
+- Open the same draft as one of the seeded competitors → no pill, normal pick UX.
+- Open a regular (non-playoff) draft as a non-participant → Join button still appears, pill reads "👁 Spectating".
+- Bracket "Open Draft" link from Compete page → opens correctly for any signed-in member.
 
