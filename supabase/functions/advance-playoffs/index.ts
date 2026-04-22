@@ -37,8 +37,9 @@ Deno.serve(async (req) => {
     if (sErr || !season) throw new Error("season not found");
 
     const log: string[] = [];
+    let needsQfCheck = false;
 
-    // ─── PHASE 1: REGULAR → PLAYOFFS TRANSITION ───
+    // ─── PHASE 1a: REGULAR → PLAYOFFS TRANSITION ───
     if (season.status === "regular_season") {
       const totalRegular = season.regular_season_drafts || season.regular_season_weeks || 12;
       const { data: regEntries } = await supabase
@@ -72,35 +73,50 @@ Deno.serve(async (req) => {
         }
 
         await supabase.from("draft_seasons").update({ status: "playoffs" }).eq("id", seasonId);
+        season.status = "playoffs";
         log.push("transitioned to playoffs");
-
-        // Create QF (#4 vs #5) — picker = higher seed (#4)
-        const { data: existingQF } = await supabase
-          .from("draft_playoff_matches").select("*")
-          .eq("season_id", seasonId).eq("round", "qf");
-
-        if (!existingQF || existingQF.length === 0) {
-          const seed4 = standings[3];
-          const seed5 = standings[4];
-          if (seed4 && seed5) {
-            await supabase.from("draft_playoff_matches").insert({
-              season_id: seasonId,
-              round: "qf",
-              match_number: 1,
-              seed_a: 4,
-              seed_b: 5,
-              user_a: seed4.user_id,
-              user_b: seed5.user_id,
-              topic_picker_user_id: seed4.user_id,
-              status: "awaiting_topic",
-            });
-            log.push("created QF (awaiting topic)");
-          }
-        }
+        needsQfCheck = true;
       } else {
         return new Response(JSON.stringify({ status: "waiting", completed: completedCount, target: totalRegular }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
+      }
+    } else if (season.status === "playoffs") {
+      needsQfCheck = true;
+    }
+
+    // ─── PHASE 1b: SELF-HEAL — ensure QF exists whenever season is in playoffs ───
+    if (needsQfCheck) {
+      const { data: existingQF } = await supabase
+        .from("draft_playoff_matches").select("id")
+        .eq("season_id", seasonId).eq("round", "qf");
+
+      if (!existingQF || existingQF.length === 0) {
+        const { data: seededStandings } = await supabase
+          .from("draft_season_standings").select("*")
+          .eq("season_id", seasonId)
+          .not("playoff_seed", "is", null)
+          .order("playoff_seed", { ascending: true })
+          .limit(5);
+
+        const seed4 = seededStandings?.find((s: any) => s.playoff_seed === 4);
+        const seed5 = seededStandings?.find((s: any) => s.playoff_seed === 5);
+        if (seed4 && seed5) {
+          await supabase.from("draft_playoff_matches").insert({
+            season_id: seasonId,
+            round: "qf",
+            match_number: 1,
+            seed_a: 4,
+            seed_b: 5,
+            user_a: seed4.user_id,
+            user_b: seed5.user_id,
+            topic_picker_user_id: seed4.user_id,
+            status: "awaiting_topic",
+          });
+          log.push("self-healed: created QF (awaiting topic)");
+        } else {
+          log.push("self-heal skipped: seeds 4/5 not assigned");
+        }
       }
     }
 
