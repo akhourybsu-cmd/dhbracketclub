@@ -743,13 +743,17 @@ export default function RuneDelvePlayPage() {
 
     const newGrid = resolveBoard(grid, chain, refillRng, seals);
 
-    // Break any seals adjacent to the matched cells.
-    if (seals.size) {
-      const broken = sealsBrokenByChain(seals, chain);
+    // Build the final seal set: drop any broken adjacents, then layer in any
+    // ability-driven additions (seal_tile from Voidspawn, etc.). One write
+    // total avoids racing the functional-updater path.
+    const pendingSealAdds: string[] = (afterEnemies as any).__pendingSealAdds ?? [];
+    const broken = seals.size ? sealsBrokenByChain(seals, chain) : [];
+    if (broken.length || pendingSealAdds.length) {
+      const nextSeals = new Set(seals);
+      broken.forEach(k => nextSeals.delete(k));
+      pendingSealAdds.forEach(k => nextSeals.add(k));
+      setSeals(nextSeals);
       if (broken.length) {
-        const nextSeals = new Set(seals);
-        broken.forEach(k => nextSeals.delete(k));
-        setSeals(nextSeals);
         turnLogs.push({ kind: 'info', text: broken.length > 1 ? `${broken.length} seals shattered` : 'A seal shattered' });
       }
     }
