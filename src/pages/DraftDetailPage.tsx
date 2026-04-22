@@ -1121,6 +1121,69 @@ export default function DraftDetailPage() {
       {/* ═══ Complete — Results ═══ */}
       {(isDraftComplete || draft.status === 'complete') && (
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+          {/* ─── Playoff completion banners ─── */}
+          {isPlayoffDraft && playoffMatch?.winner_user_id && (() => {
+            const winnerId = playoffMatch.winner_user_id;
+            const winnerResult = draftResults.find((r: any) => r.user_id === winnerId);
+            const winnerName = winnerResult?.profiles?.display_name || 'Champion';
+            const round = playoffMatch.round;
+            const isChampion = round === 'final' && (finalsSeriesWins[winnerId] || 0) >= 2;
+            const seriesA = finalsSeriesWins[playoffMatch.user_a] || 0;
+            const seriesB = finalsSeriesWins[playoffMatch.user_b] || 0;
+            const nextRoundLabel =
+              round === 'qf' ? 'Semifinals' :
+              round === 'sf' ? 'Finals' :
+              round === 'third_place' ? '🥉 Bronze Medal' :
+              round === 'final' ? `Series ${Math.max(seriesA, seriesB)}-${Math.min(seriesA, seriesB)}` : '';
+
+            if (isChampion) {
+              return (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: -8 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 200, damping: 18 }}
+                  className="relative overflow-hidden rounded-2xl p-5 mb-5 text-center"
+                  style={{
+                    background: 'linear-gradient(135deg, hsl(45, 93%, 52% / 0.18), hsl(38, 92%, 50% / 0.10))',
+                    border: '1px solid hsl(45, 93%, 52% / 0.45)',
+                    boxShadow: '0 10px 40px -10px hsl(45, 93%, 52% / 0.45)',
+                  }}
+                >
+                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style={{ color: 'hsl(45, 93%, 52%)' }}>
+                    {season?.season_label || 'Season'} Champion
+                  </div>
+                  <div className="text-2xl font-extrabold mb-1 flex items-center justify-center gap-2">
+                    <Trophy className="w-6 h-6" style={{ color: 'hsl(45, 93%, 52%)' }} />
+                    <span>{winnerName}</span>
+                    <Trophy className="w-6 h-6" style={{ color: 'hsl(45, 93%, 52%)' }} />
+                  </div>
+                  <div className="text-[12px] text-muted-foreground font-semibold">
+                    Clinched the Finals {Math.max(seriesA, seriesB)}–{Math.min(seriesA, seriesB)}
+                  </div>
+                </motion.div>
+              );
+            }
+
+            return (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-xl p-3 mb-4 text-center"
+                style={{
+                  background: 'hsl(var(--primary) / 0.08)',
+                  border: '1px solid hsl(var(--primary) / 0.25)',
+                }}
+              >
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary mb-0.5">
+                  {round === 'qf' ? 'Play-In' : round === 'sf' ? 'Semifinal' : round === 'final' ? 'Finals Game' : 'Bronze Match'} • Won
+                </div>
+                <div className="text-[13px] font-bold">
+                  {winnerName} {round === 'third_place' ? 'takes 3rd Place' : `advances to ${nextRoundLabel}`}
+                </div>
+              </motion.div>
+            );
+          })()}
+
           <div className="text-center mb-5">
             <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Draft Complete 🎉</p>
           </div>
