@@ -63,6 +63,8 @@ import { HowToPlaySheet } from '@/components/runedelve/HowToPlaySheet';
 import { MechanicIntroSheet } from '@/components/runedelve/MechanicIntroSheet';
 import { MechanicBanner } from '@/components/runedelve/MechanicBanner';
 import { CombatLog, type CombatLogEntry } from '@/components/runedelve/CombatLog';
+import { FxLayer } from '@/components/runedelve/fx/FxLayer';
+import { useFxQueue, type FxRect } from '@/hooks/useFxQueue';
 import { format } from 'date-fns';
 
 const RUNE_LABEL: Record<RuneType, string> = {
