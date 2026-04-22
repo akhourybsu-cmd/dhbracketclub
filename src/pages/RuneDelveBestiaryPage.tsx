@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, BookOpen, Search, Skull } from 'lucide-react';
@@ -48,6 +49,24 @@ export default function RuneDelveBestiaryPage() {
   const totalArchetypes = ALL_ARCHETYPES.length;
   const totalDefeats = (entries ?? []).reduce((s, e) => s + e.defeat_count, 0);
   const completion = Math.round((discoveredCount / totalArchetypes) * 100);
+
+  // One-time toast on the player's first Bestiary visit AFTER the retroactive
+  // backfill migration. We surface it only when the player actually has
+  // discovered foes (i.e. the backfill produced rows for them) so brand-new
+  // accounts don't see a confusing "backfill" message.
+  useEffect(() => {
+    if (isLoading) return;
+    if (discoveredCount === 0) return;
+    const KEY = 'rd-bestiary-backfill-toast-v1';
+    try {
+      if (localStorage.getItem(KEY)) return;
+      localStorage.setItem(KEY, '1');
+      toast.success('📖 Bestiary updated', {
+        description: `We added ${discoveredCount} foe${discoveredCount === 1 ? '' : 's'} from your earlier runs (${totalDefeats.toLocaleString()} kills).`,
+        duration: 6000,
+      });
+    } catch { /* localStorage may be unavailable in private mode */ }
+  }, [isLoading, discoveredCount, totalDefeats]);
 
   return (
     <div className="space-y-4 pb-8">

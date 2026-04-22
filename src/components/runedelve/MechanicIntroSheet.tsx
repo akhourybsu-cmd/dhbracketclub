@@ -5,8 +5,9 @@ import { getBossRule, type BossRuleId } from '@/lib/runedelve/bossRules';
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  mechanicId: MechanicId;
-  /** Optional boss rule shown alongside the mechanic intro on boss levels. */
+  /** Optional — omit when this sheet is presenting a boss-rule only. */
+  mechanicId?: MechanicId | null;
+  /** Optional boss rule shown alongside (or instead of) the mechanic intro. */
   bossRuleId?: BossRuleId | null;
   /** Called when the player taps the primary CTA (Begin). */
   onBegin: () => void;
@@ -18,31 +19,38 @@ interface Props {
  * Mobile-first: oversized icon, single-line title, one short rule, one CTA.
  */
 export function MechanicIntroSheet({ open, onOpenChange, mechanicId, bossRuleId, onBegin, levelNumber }: Props) {
-  const m = getMechanic(mechanicId);
+  const m = mechanicId ? getMechanic(mechanicId) : null;
   const boss = bossRuleId ? getBossRule(bossRuleId) : null;
+  // When a boss rule is present, it takes the headline slot. Otherwise the
+  // mechanic does. (At least one of the two MUST be supplied.)
+  const showBoss = !!boss;
+  const headlineLabel = showBoss ? boss!.label : m?.name ?? '';
+  const headlineIcon = showBoss ? '👑' : m?.icon ?? '✨';
+  const headlineFamily = showBoss ? boss!.label : m?.family ?? '';
+  const oneLiner = showBoss ? boss!.rule : m?.oneLiner ?? '';
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="rounded-t-3xl p-0 border-t-2" style={{ borderTopColor: 'hsl(var(--primary) / 0.5)' }}>
         <SheetHeader className="px-6 pt-6 pb-2 text-left">
           <div className="flex items-center gap-2 mb-3">
             <span className="px-2 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wider bg-primary/15 text-primary">
-              {boss ? 'Boss Encounter' : 'New mechanic'} · Lv {levelNumber}
+              {showBoss ? 'Boss Encounter' : 'New mechanic'} · Lv {levelNumber}
             </span>
-            <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{boss ? boss.label : m.family}</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{headlineFamily}</span>
           </div>
           <SheetTitle className="text-2xl font-extrabold tracking-tight flex items-center gap-3 leading-none">
-            <span className="text-4xl leading-none" aria-hidden>{boss ? '👑' : m.icon}</span>
-            <span>{boss ? boss.label : m.name}</span>
+            <span className="text-4xl leading-none" aria-hidden>{headlineIcon}</span>
+            <span>{headlineLabel}</span>
           </SheetTitle>
         </SheetHeader>
         <div className="px-6 pb-7 pt-3 space-y-5">
           <p className="text-[14px] leading-relaxed text-foreground/90">
-            {boss ? boss.rule : m.oneLiner}
+            {oneLiner}
           </p>
           <div className="rounded-xl border border-primary/25 bg-primary/5 px-4 py-3">
             <p className="text-[11px] uppercase tracking-wider font-extrabold text-primary mb-1">Tip</p>
             <p className="text-[12px] text-foreground/80 leading-snug">
-              {boss
+              {showBoss
                 ? 'Read the rule before you commit a chain. Bosses bend one rule each — adapt to the gimmick.'
                 : "From now on this mechanic can appear on later levels — sometimes mixed with what you've already learned."}
             </p>
@@ -56,7 +64,7 @@ export function MechanicIntroSheet({ open, onOpenChange, mechanicId, bossRuleId,
               boxShadow: 'var(--shadow-glow)',
             }}
           >
-            {boss ? 'Face the Boss' : `Begin Level ${levelNumber}`}
+            {showBoss ? 'Face the Boss' : `Begin Level ${levelNumber}`}
           </button>
         </div>
       </SheetContent>

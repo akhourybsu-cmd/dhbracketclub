@@ -114,6 +114,7 @@ export default function RuneDelvePlayPage() {
   const [flashId, setFlashId] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [introMechanic, setIntroMechanic] = useState<MechanicId | null>(null);
+  const [introBossRule, setIntroBossRule] = useState<BossRuleId | null>(null);
   const [endState, setEndState] = useState<null | { cleared: boolean; reason: 'cleared' | 'defeated' | 'timeout'; score: number; isNewBest: boolean; shards: number; improvedChain?: boolean; improvedTurns?: boolean; improvedHp?: boolean; firstClear?: boolean }>(null);
   // Counter (not boolean) — Last Stand at R5 grants 2 saves per run.
   const [lastStandUsed, setLastStandUsed] = useState(0);
@@ -131,6 +132,9 @@ export default function RuneDelvePlayPage() {
     const m = defeatedArchetypesRef.current;
     m.set(archetypeId, (m.get(archetypeId) ?? 0) + 1);
   };
+  // Tracks how many reinforcement waves have spawned this run so we never
+  // double-spawn the same wave when the player clears multiple enemies in a turn.
+  const wavesSpawnedRef = useRef(0);
 
   // Per-run relic-effect counters (drive Ember Edge / Crimson Tide / Quickstep /
   // First Light / Cleansing Touch / Shrine Ward turn-1 detection).
@@ -217,6 +221,7 @@ export default function RuneDelvePlayPage() {
   const corruptionActive = activeMechanics.includes('corrupted_tiles');
   const secondaryObjective = ((level?.modifiers as any)?.secondary_objective ?? null) as SecondaryObjective | null;
   const bossRule = ((level?.modifiers as any)?.boss_rule ?? null) as BossRuleId | null;
+  const waveDefs = ((level?.modifiers as any)?.waves ?? null) as Array<{ enemies: any[]; reinforcement_turns: number }> | null;
 
   // Build deterministic state. Snapshots `activeRelics` once at run-start so
   // mid-run relic toggles or rank changes can never reset the board.
@@ -279,6 +284,7 @@ export default function RuneDelvePlayPage() {
     setCorruptCleansedCount(0);
     setBonusUsedThisCycle(false);
     defeatedArchetypesRef.current = new Map();
+    wavesSpawnedRef.current = 0;
     setLog([{ id: nextLogId(), kind: 'info', text: `You enter Level ${level.level_number}. The runes hum.` }]);
     // NOTE: `activeRelics` intentionally OMITTED from deps — see comment above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -293,6 +299,18 @@ export default function RuneDelvePlayPage() {
       if (!localStorage.getItem(seenMechanicKey(intro))) setIntroMechanic(intro);
     } catch {}
   }, [level, hero]);
+
+  // One-time intro modal for boss-rule levels (chapter & mid-chapter bosses).
+  // Mini-bosses have no rule and skip this. Stored under a separate key per
+  // rule id so each new rule shows once across the campaign.
+  useEffect(() => {
+    if (!level || !hero) return;
+    if (!bossRule) return;
+    const key = `rd-seen-bossrule-${bossRule}`;
+    try {
+      if (!localStorage.getItem(key)) setIntroBossRule(bossRule);
+    } catch {}
+  }, [level, hero, bossRule]);
 
   // Always invalidate the cached existing-run on mount so replay flows
   // ("Retry" → Play → finalize) compute isNewBest off fresh server data.
@@ -715,11 +733,44 @@ export default function RuneDelvePlayPage() {
 
     setRngTick(t => t + 1);
     setGrid(newGrid);
-    setCombat(afterEnemies);
+
+    // ── Multi-wave: spawn the next wave when the current wave fully clears ──
+    // Avoid double-spawning when multiple kills land on the same chain.
+    let postWave = afterEnemies;
+    const allDead = postWave.enemies.every(e => e.hp <= 0);
+    if (allDead && waveDefs && wavesSpawnedRef.current < waveDefs.length) {
+      const nextWave = waveDefs[wavesSpawnedRef.current];
+      // Hydrate stored wave enemies (same archetype-id resolver as wave 1).
+      const resolveAid = (e: any): string | undefined => {
+        if (e.archetypeId) return e.archetypeId;
+        const raw = String(e.name ?? '').replace(/^(Elite |Boss |Mini-Boss |Echo of )/, '').trim().toLowerCase();
+        if (!raw) return undefined;
+        const hit = ENEMY_ROSTER.find(a => a.name.toLowerCase() === raw);
+        return hit?.id;
+      };
+      const fresh: Enemy[] = (nextWave.enemies ?? []).map((e: any, i: number) => ({
+        id: e.id ?? `w${wavesSpawnedRef.current + 1}-${i}`,
+        name: e.name, emoji: e.emoji, hp: e.hp, maxHp: e.maxHp ?? e.hp, damage: e.damage,
+        archetypeId: resolveAid(e), family: e.family, role: e.role,
+        ability: e.ability, abilityCooldown: e.abilityCooldown, abilityCooldownMax: e.abilityCooldownMax ?? e.abilityCooldown,
+        telegraphLabel: e.telegraphLabel, tier: e.tier,
+      }));
+      postWave = spawnWave(postWave, fresh, nextWave.reinforcement_turns ?? 2);
+      wavesSpawnedRef.current += 1;
+      const isBossWave = fresh.some(e => e.tier === 'boss');
+      toast.success(isBossWave ? '👑 The Boss arrives!' : '⚔️ Wave 2 — Reinforcements!', { duration: 2000 });
+      pushLog({
+        kind: 'info',
+        text: isBossWave
+          ? `The ground trembles — the Boss enters! +${nextWave.reinforcement_turns ?? 2} turns granted.`
+          : `Reinforcements arrive! +${nextWave.reinforcement_turns ?? 2} turns granted.`,
+      });
+    }
+    setCombat(postWave);
     pushLogs(turnLogs);
 
-    const status = checkObjective(afterEnemies, level.turn_limit, objType, level.objective_target, secondaryObjective);
-    if (status.over) void finalize(afterEnemies, status.cleared);
+    const status = checkObjective(postWave, level.turn_limit, objType, level.objective_target, secondaryObjective);
+    if (status.over) void finalize(postWave, status.cleared);
   };
 
   const handleAbility = () => {
@@ -778,10 +829,39 @@ export default function RuneDelvePlayPage() {
 
     // Abilities are now FREE actions: no enemy retaliation, no turn consumed,
     // no corruption spread. Player keeps their turn to chain again.
-    setCombat(finalNext);
+    let postWave = finalNext;
+    const allDeadAbil = postWave.enemies.every(e => e.hp <= 0);
+    if (allDeadAbil && waveDefs && wavesSpawnedRef.current < waveDefs.length) {
+      const nextWave = waveDefs[wavesSpawnedRef.current];
+      const resolveAid = (e: any): string | undefined => {
+        if (e.archetypeId) return e.archetypeId;
+        const raw = String(e.name ?? '').replace(/^(Elite |Boss |Mini-Boss |Echo of )/, '').trim().toLowerCase();
+        if (!raw) return undefined;
+        const hit = ENEMY_ROSTER.find(a => a.name.toLowerCase() === raw);
+        return hit?.id;
+      };
+      const fresh: Enemy[] = (nextWave.enemies ?? []).map((e: any, i: number) => ({
+        id: e.id ?? `w${wavesSpawnedRef.current + 1}-${i}`,
+        name: e.name, emoji: e.emoji, hp: e.hp, maxHp: e.maxHp ?? e.hp, damage: e.damage,
+        archetypeId: resolveAid(e), family: e.family, role: e.role,
+        ability: e.ability, abilityCooldown: e.abilityCooldown, abilityCooldownMax: e.abilityCooldownMax ?? e.abilityCooldown,
+        telegraphLabel: e.telegraphLabel, tier: e.tier,
+      }));
+      postWave = spawnWave(postWave, fresh, nextWave.reinforcement_turns ?? 2);
+      wavesSpawnedRef.current += 1;
+      const isBossWave = fresh.some(e => e.tier === 'boss');
+      toast.success(isBossWave ? '👑 The Boss arrives!' : '⚔️ Wave 2 — Reinforcements!', { duration: 2000 });
+      pushLog({
+        kind: 'info',
+        text: isBossWave
+          ? `The ground trembles — the Boss enters! +${nextWave.reinforcement_turns ?? 2} turns granted.`
+          : `Reinforcements arrive! +${nextWave.reinforcement_turns ?? 2} turns granted.`,
+      });
+    }
+    setCombat(postWave);
     pushLogs(turnLogs);
-    const status = checkObjective(finalNext, level.turn_limit, objType, level.objective_target, secondaryObjective);
-    if (status.over) void finalize(finalNext, status.cleared);
+    const status = checkObjective(postWave, level.turn_limit, objType, level.objective_target, secondaryObjective);
+    if (status.over) void finalize(postWave, status.cleared);
   };
 
   async function finalize(final: CombatState, cleared: boolean) {
@@ -1195,6 +1275,20 @@ export default function RuneDelvePlayPage() {
           onBegin={() => {
             try { localStorage.setItem(seenMechanicKey(introMechanic), '1'); } catch {}
             setIntroMechanic(null);
+          }}
+        />
+      )}
+
+      {/* One-time intro for a boss-rule level (chapter & mid-chapter bosses). */}
+      {introBossRule && !introMechanic && (
+        <MechanicIntroSheet
+          open={!!introBossRule}
+          onOpenChange={(o) => { if (!o) setIntroBossRule(null); }}
+          bossRuleId={introBossRule}
+          levelNumber={level.level_number}
+          onBegin={() => {
+            try { localStorage.setItem(`rd-seen-bossrule-${introBossRule}`, '1'); } catch {}
+            setIntroBossRule(null);
           }}
         />
       )}
