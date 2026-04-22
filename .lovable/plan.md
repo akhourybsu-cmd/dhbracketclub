@@ -1,93 +1,61 @@
 
 
-## Playoff Control Center — guided portal for advancing the playoffs
+## Rune Delve replay — fix score persistence and add replay-aware stats
 
-The playoff machinery (advance + topic-picker + bracket) is already wired correctly, but it's scattered and unguided. Members hit the Playoff Picture and see static cards with no clear "what now?" Commissioners have to dig into a management drawer to trigger Advance Playoffs. Let's add a dedicated **Playoff Control Center** that consolidates state, status, and next actions in one mobile-first card — visible to everyone, with role-aware CTAs.
+### The bug (root cause)
+
+The submit flow in `useSubmitLevelRun` (`src/hooks/useRuneDelveCampaign.ts`) is correct in principle: it reads `existing` and only overwrites when `params.score > existing.score`. But on the **Play page**, `existingRun` is fed by `useMyLevelRun(level?.id)` which is cached by React Query. Two real-world failure modes:
+
+1. **`isNewBest` is computed from a stale `existingRun`.** After a player retries from Results → Play, the `rune-delve-level-run` cache may still hold an older `null`/lower-score row, so `isNewBest` is `true`, hero/class lifetime stats get incremented again, but the DB write *correctly* keeps the previous best — which is exactly the "I beat my old score but it didn't save" feeling (and inversely, lifetime totals double-count).
+2. **Score-tie path silently drops the new run's better secondary stats.** When `existing.score >= params.score`, the function only updates `ability_used` and ignores `enemies_defeated`, `longest_chain`, `hp_remaining`, `dungeon_cleared`, etc. So a tied-score run that cleared the dungeon for the first time, or chained higher, is invisible.
+3. **No replay attempt count or "best-by-stat" tracking.** The row is a single best-by-score snapshot. Players have no sense of "I beat this 4 times" or "my fastest clear was X turns."
 
 ### What this builds
 
-A new `PlayoffControlCenter` component that renders just above the Playoff Picture during `regular_season` and `playoffs` seasons. It is the **single source of "what happens next"** for the entire playoff lifecycle.
+**A. Fix the persistence + cache bug (smallest possible change)**
+- In `useSubmitLevelRun`, always **merge each stat as a per-stat best**: the saved row should reflect (max score, max enemies_defeated, max longest_chain, max hp_remaining, **min** turns_used among clears, `dungeon_cleared = existing || new`). Score still drives `isNewBest`/XP.
+- Force-invalidate `['rune-delve-level-run', level.id]` *immediately on Play page mount* (mirroring what Results already does), so a fresh `existingRun` is always the basis for `isNewBest` comparisons. Belt-and-suspenders: also re-read the row inside the mutation (already happens) and return the actual saved score so the page can trust the server's verdict.
+- Compute `isNewBest` from the **mutation's returned row** (server truth), not the pre-mutation `existingRun`. This kills the stale-cache double-count of hero `lifetime_runs`/`lifetime_score`.
 
-```text
-┌─────────────────────────────────────┐
-│ 🏆 PLAYOFF CONTROL CENTER           │
-│ Status pill: Regular Season / Live  │
-├─────────────────────────────────────┤
-│ Current step (live, contextual):    │
-│ • "Play-In: #4 vs #5 — waiting for  │
-│    Alex to choose topic"            │
-│   [Choose topic ✦]  ← if you're picker│
-│   [Open Draft →]    ← if draft live │
-├─────────────────────────────────────┤
-│ Next steps timeline (3 dots):       │
-│ ✓ Regular Season  ● Play-In  ○ Semis│
-├─────────────────────────────────────┤
-│ Action row:                         │
-│ [Advance Playoffs] [How it works ⓘ] │
-└─────────────────────────────────────┘
-```
+**B. Add replay-aware stats (new columns on `rune_delve_runs`)**
+Migration adds five small columns, all with sensible defaults:
+- `attempts` int default 1 — total times this level was played to completion (any outcome).
+- `clears` int default 0 — total successful clears.
+- `best_turns_used` int nullable — fastest clear (lower is better; only updated on clears).
+- `best_hp_remaining` int default 0 — highest HP-left on any clear.
+- `last_played_at` timestamptz default now() — timestamp of most recent attempt.
 
-### 1. Active match surface (always visible to everyone)
+The submit path increments `attempts` every run, increments `clears` when `dungeon_cleared`, and updates `best_*` columns only when the new run improves them. `score`, `longest_chain`, and `enemies_defeated` continue as best-of (no regression). The existing `score`/`xp_earned`/`completed_at` semantics are preserved so all leaderboards keep working.
 
-For each match in `awaiting_topic`, `pending`, or `in_progress` state, render a single high-priority row with:
-- Round label (`Play-In`, `Semi 1`, `Semi 2`, `Final G2`, `3rd Place`)
-- Both players + seeds
-- A **clear status sentence** like *"Waiting for Alex (higher seed) to pick the topic"* or *"Draft is live — go make your picks"*
-- A **single primary CTA** that adapts:
-  - `awaiting_topic` + you're the picker → **"Choose Topic ✦"** (opens existing TopicPickerDialog)
-  - `awaiting_topic` + not picker → muted **"Nudge Picker"** (toast-only "Reminder sent" stub for now, no infra needed)
-  - `pending` / `in_progress` → **"Open Draft →"**
-  - `complete` → muted "Final · Winner: X"
+**C. Surface the new stats on the Results page** (mobile-first, no layout overhaul)
+- Add a small **"Personal Best Tracker"** strip below the score block showing: `Best Score`, `Best Chain`, `Fastest Clear` (turns), `Attempts`, `Clears`.
+- When the just-played run improves any *secondary* stat (e.g. faster clear, better chain) but not the score, show a soft chip: *"⚡ New fastest clear — 12 turns"* / *"🔗 New longest chain — 7"*. Replaces the binary "New best score!" tag with something that recognizes meaningful replay progress.
+- The existing star rating + "New best score!" line keeps working unchanged.
 
-Sort matches: `awaiting_topic` first, then `in_progress`, then `pending`, then `complete`. Show only the top 3 to keep it scannable.
+**D. Surface replay activity on the History page**
+`RuneDelveHistoryPage` already lists per-level bests. Add a small `· {clears}/{attempts}` chip next to each level row so the player sees their replay activity at a glance.
 
-### 2. Lifecycle status pill + timeline
+### Files touched
 
-A small horizontal stepper showing where the season is:
-`Regular Season → Play-In → Semis → Finals → Champion Crowned`
-The current step glows gold; completed steps get a checkmark; future steps stay muted.
-
-Auto-derived from `season.status` and the highest-progress completed round in `matches`.
-
-### 3. "Advance Playoffs" — promoted out of the Commissioner panel
-
-Move the **Advance Playoffs** button out of the Commissioner drawer and into the Control Center action row. Keep it visible to everyone (the edge function is idempotent and safe), but show a friendly subtitle:
-- If nothing to advance: button is **muted** with text *"Up to date · auto-advances after each draft"*
-- If there's progress to score / next round to spawn: button is **gold** with text *"Tap to score completed games and create the next round"*
-
-Detection logic: look for any `m.draft_id` whose underlying draft is `complete` but `m.status !== 'complete'`, OR any qualifying-round transition gap (e.g. SF done but no Final created). When detected, surface as ready-to-act.
-
-### 4. "How it works" — replaces the duplicated PlayoffFormatGuide blocks
-
-A compact **inline expandable** (chevron) that shows the existing `PlayoffFormatGuide` content. Removes the need to render the format guide three separate times in `PlayoffPicture` (currently rendered in all three states). Format guide stays as the same component — just relocated/dedupped.
-
-### 5. First-time-in-playoffs onboarding hint
-
-When `season.status === 'playoffs'` and there are zero completed playoff matches yet, prepend a one-line dismissible banner inside the Control Center:
-*"🏆 Playoffs have started! Higher seeds pick topics, then both players draft. First to clinch wins the round."*
-Uses `localStorage` key `playoff_onboarding_dismissed_{seasonId}`.
-
-### Files to touch
-
-- **`src/pages/CompetePage.tsx`**
-  - Add new `PlayoffControlCenter` component (just above where `PlayoffPicture` is rendered).
-  - Render `<PlayoffControlCenter season={season} matches={matches} standings={standings} userId={user?.id} onUpdate={handleSeasonUpdate} />` between `StandingsCard` and `PlayoffPicture`.
-  - Remove the three duplicate `<PlayoffFormatGuide />` renders inside `PlayoffPicture` (the Control Center owns the guide now).
-  - Remove the **Advance Playoffs** button from `CommissionerPanel` (it now lives in the Control Center for everyone).
-  - The existing `TopicPickerDialog` is reused — Control Center opens it the same way `PlayoffPicture` does.
+- **Migration**: add `attempts`, `clears`, `best_turns_used`, `best_hp_remaining`, `last_played_at` to `rune_delve_runs`. Backfill existing rows: `attempts = 1`, `clears = (dungeon_cleared ? 1 : 0)`, `best_turns_used = (dungeon_cleared ? turns_used : null)`, `best_hp_remaining = hp_remaining`, `last_played_at = completed_at`.
+- **`src/hooks/useRuneDelveCampaign.ts`** — rewrite `useSubmitLevelRun` mutation to do a single merged upsert with per-stat best logic and increment `attempts`/`clears`. Return the saved row (with a `wasNewBest` flag) so callers can trust server truth.
+- **`src/pages/RuneDelvePlayPage.tsx`** — (1) on mount, invalidate `['rune-delve-level-run', level.id]`; (2) after `submit.mutateAsync(...)`, derive `isNewBest` (and new "improved" flags for chain/turns) from the returned row, and only then bump hero `lifetime_runs`/`lifetime_score`. Pass the improvement flags into `endState` so Results can show them.
+- **`src/pages/RuneDelveResultsPage.tsx`** — add the Personal Best Tracker strip and the secondary-improvement chip. Pull from `run` (now includes the new columns).
+- **`src/pages/RuneDelveHistoryPage.tsx`** — add `clears/attempts` chip to each row; select the new columns.
+- **`src/integrations/supabase/types.ts`** — auto-regenerated after migration; no manual edit.
 
 ### Why this works
 
-- **One place to look.** The Control Center answers "what should I do?" at a glance.
-- **No backend changes.** All the edge functions (`advance-playoffs`, `start-playoff-match`, `suggest-playoff-topics`) already exist and are idempotent.
-- **Doesn't replace the bracket.** The Playoff Picture stays as the visual map; the Control Center is the *action* layer.
-- **Mobile-first.** Compact stack, single-CTA-per-row, no horizontal scroll.
+- **Fixes the reported bug both ways**: the new row never silently drops a better stat, and stale cache can no longer cause phantom "new best" hero increments.
+- **No regression**: `score` is still the canonical best-of; XP/leaderboards/star ratings are unchanged.
+- **Adds satisfying replay loop**: attempts, clears, fastest clear, best HP — the things players naturally want to chase on a Retry — without redesigning the campaign or scoring.
+- **Mobile-first**: only one new strip on Results and one chip on History; no layout overhaul.
 
-### Manual testing checklist after build
+### Manual testing checklist
 
-- View as non-commissioner during regular season → see status pill + format guide, no scary buttons.
-- View as #4 seed when Play-In is `awaiting_topic` → see "Choose Topic ✦" as primary CTA.
-- View as #5 seed at same moment → see "Waiting for #4 to pick topic" with muted Nudge.
-- Complete a playoff draft → return to Compete → "Advance Playoffs" button glows gold, tapping it scores + spawns next round.
-- After Final clinch → Control Center collapses to a Champion banner.
+- Clear level 1 with score X → return → replay and beat X → Results shows new score and "New best score!"; History row shows `2/2`.
+- Clear level 1 with score X → replay and score X-100 → DB still shows X; hero `lifetime_runs` only incremented once per session, not twice.
+- Clear level 1 in 18 turns → replay and clear in 12 turns at lower score → Results shows "⚡ New fastest clear — 12 turns" chip; `best_turns_used` = 12.
+- Fail level 5 three times then clear → `attempts = 4`, `clears = 1`, History row reads `1/4`.
+- Cross-class replay: switch class, replay a cleared level — per-class XP only updates on score improvement (existing rule preserved).
 
