@@ -272,6 +272,33 @@ export default function RuneDelveResultsPage() {
         </div>
       </div>
 
+      {/* Secondary-improvement chips — celebrate replay progress that didn't
+          beat the high score but still improved a meaningful stat. */}
+      {improvements && !improvements.wasNewBest && (improvements.firstClear || improvements.improvedTurns || improvements.improvedChain || improvements.improvedHp) && (
+        <div className="flex flex-wrap gap-1.5">
+          {improvements.firstClear && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold"
+              style={{ background: 'hsl(var(--gold) / 0.18)', color: 'hsl(var(--gold))' }}>
+              🏆 First Clear!
+            </span>
+          )}
+          {improvements.improvedTurns && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-primary/15 text-primary">
+              ⚡ New fastest clear — {improvements.turnsUsed}t
+            </span>
+          )}
+          {improvements.improvedChain && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-primary/15 text-primary">
+              🔗 New longest chain — {improvements.longestChain}
+            </span>
+          )}
+          {improvements.improvedHp && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-success/15 text-success">
+              ❤️ New best HP left — {improvements.hpRemaining}
+            </span>
+          )}
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-2">
         {stats.map(s => {
           const Icon = s.icon;
