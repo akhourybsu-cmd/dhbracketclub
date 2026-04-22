@@ -310,16 +310,28 @@ export function useSubmitLevelRun() {
         merged.turns_used = params.turns_used;
       }
 
-      let row: any;
+      // Helper: re-fetch the canonical row for this (user, level) when the
+      // post-write SELECT returns no row (can happen under RLS / replica lag).
+      const refetch = async () => {
+        const { data } = await (supabase as any)
+          .from('rune_delve_runs')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('level_id', params.level_id)
+          .maybeSingle();
+        return data ?? null;
+      };
+
+      let row: any = null;
       if (existing) {
         const { data, error } = await (supabase as any)
           .from('rune_delve_runs')
           .update(merged)
           .eq('id', existing.id)
           .select()
-          .single();
+          .maybeSingle();
         if (error) throw error;
-        row = data;
+        row = data ?? (await refetch());
       } else {
         const { data, error } = await (supabase as any)
           .from('rune_delve_runs')
@@ -344,9 +356,32 @@ export function useSubmitLevelRun() {
             last_played_at: new Date().toISOString(),
           })
           .select()
-          .single();
-        if (error) throw error;
-        row = data;
+          .maybeSingle();
+        if (error) {
+          // Unique-violation race (another submit landed first): merge into it.
+          if ((error as any)?.code === '23505') {
+            const current = await refetch();
+            if (current) {
+              const { data: upd, error: updErr } = await (supabase as any)
+                .from('rune_delve_runs')
+                .update(merged)
+                .eq('id', current.id)
+                .select()
+                .maybeSingle();
+              if (updErr) throw updErr;
+              row = upd ?? (await refetch());
+            }
+          } else {
+            throw error;
+          }
+        } else {
+          row = data ?? (await refetch());
+        }
+      }
+      // Last-resort fallback: synthesize a client-side row so the UI can still
+      // render Results even if RLS hides the post-write SELECT.
+      if (!row) {
+        row = { ...merged, user_id: user.id, level_id: params.level_id };
       }
       return { row, wasNewBest, improvedChain, improvedTurns, improvedHp, firstClear };
     },
