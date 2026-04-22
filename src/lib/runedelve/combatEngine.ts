@@ -253,5 +253,21 @@ export function useAbility(
     next.hp += heal;
     next.shieldTurns = Math.max(next.shieldTurns, 2);
   }
+  // Phase Lock — abilities can damage the boss too, so credit threshold ticks.
+  next.enemies = applyPhaseLockOnDamage(bossRule, next.enemies);
   return { next, ok: true };
+}
+
+/**
+ * Append a wave of reinforcements mid-fight. Adds the new enemies to the
+ * encounter and grants `bonusTurns` extra turns so the level stays clearable.
+ * Pure — returns a fresh state object.
+ */
+export function spawnWave(state: CombatState, enemies: Enemy[], bonusTurns = 2): CombatState {
+  if (!enemies.length) return state;
+  return {
+    ...state,
+    enemies: [...state.enemies, ...enemies.map(e => ({ ...e }))],
+    turnsRemaining: state.turnsRemaining + bonusTurns,
+  };
 }
