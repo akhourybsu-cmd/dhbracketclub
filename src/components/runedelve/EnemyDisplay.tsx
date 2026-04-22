@@ -18,6 +18,7 @@ export function EnemyDisplay({ enemies, flashId }: Props) {
         return (
           <motion.div
             key={e.id}
+            data-enemy-id={e.id}
             animate={flashId === e.id ? { x: [-3, 3, -2, 2, 0] } : false}
             transition={{ duration: 0.3 }}
             className="flex flex-col items-center gap-0.5 min-w-[64px]"

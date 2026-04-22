@@ -16,7 +16,7 @@ export function HeroStatusBar({ state, cls, onAbility }: Props) {
   const hpPct = Math.round((state.hp / state.maxHp) * 100);
   return (
     <div className="w-full space-y-2">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2" data-fx-target="hp">
         <Heart className="w-4 h-4" style={{ color: 'hsl(var(--destructive))' }} />
         <div className="flex-1 h-3 rounded-full bg-muted/50 overflow-hidden relative">
           <div
@@ -32,7 +32,7 @@ export function HeroStatusBar({ state, cls, onAbility }: Props) {
         </span>
       </div>
       <div className="flex items-center gap-2">
-        <div className="flex gap-1">
+        <div className="flex gap-1" data-fx-target="mana">
           {Array.from({ length: MAX_MANA }).map((_, i) => (
             <div
               key={i}
@@ -48,7 +48,7 @@ export function HeroStatusBar({ state, cls, onAbility }: Props) {
           ))}
         </div>
         {state.shieldTurns > 0 && (
-          <span className="flex items-center gap-1 text-[10px] font-bold text-gold">
+          <span data-fx-target="shield" className="flex items-center gap-1 text-[10px] font-bold text-gold">
             <Shield className="w-3 h-3" /> {state.shieldTurns}
           </span>
         )}
