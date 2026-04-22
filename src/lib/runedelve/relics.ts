@@ -45,6 +45,7 @@ export const RELIC_CATALOG: RelicDef[] = [
   { id: 'momentum',         name: 'Momentum',          category: 'tempo',     tier: 2, cost: 280, icon: '⚡', description: "Rogue's chain bonus threshold becomes 4+ (was 5+). Other classes: chains of 4+ score +10%." },
   { id: 'foresight',        name: 'Foresight',         category: 'objective', tier: 2, cost: 350, icon: '👁️', description: 'Telegraphed enemy intents reveal 1 turn earlier.' },
   { id: 'bulwark',          name: 'Bulwark',           category: 'survival',  tier: 2, cost: 320, icon: '🪨', description: 'Gold chains grant +1 shield turn.' },
+  { id: 'spiked_aegis',     name: 'Spiked Aegis',      category: 'survival',  tier: 2, cost: 340, icon: '🌵', description: 'Shield reflects more damage back at attackers (+10% / +20% / +35%).' },
 
   // ── Tier 3 — specialised synergy (chapter 3+) ─────────────────────────
   { id: 'executioners_mark',name: "Executioner's Mark",category: 'offense',   tier: 3, cost: 600, icon: '🎯', description: '+30% damage vs enemies below 25% HP.' },
@@ -132,6 +133,7 @@ export const RANK_EFFECTS: Record<string, RankTable> = {
   bloodbond:         [4,    5,    5,    6,    6   ], // HP heal on kill
   last_stand:        [1,    1,    1,    1,    2   ], // uses per run
   bulwark:           [1,    1,    1,    2,    2   ], // shield turns added on gold
+  spiked_aegis:      [1.10, 1.15, 1.20, 1.28, 1.35], // thorns multiplier (composes with class base)
 
   // Board / tempo / utility
   keysight:          [1,    1,    1,    2,    2   ], // sealed speedup turns
