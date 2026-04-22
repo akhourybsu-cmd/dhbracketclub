@@ -23,14 +23,21 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Pull all topics already used in this season (regular + playoffs) to avoid repeats
-    const { data: entries } = await supabase
+    // Pull topics used in THIS season + ALL prior seasons (regular + playoffs)
+    // so the AI never proposes a category we've already drafted league-wide.
+    const { data: allEntries } = await supabase
       .from("draft_season_entries")
-      .select("drafts:draft_id(topic)")
-      .eq("season_id", seasonId);
-    const usedTopics = (entries || [])
-      .map((e: any) => e.drafts?.topic)
-      .filter(Boolean) as string[];
+      .select("drafts:draft_id(topic, category)");
+    const usedTopics = Array.from(new Set(
+      (allEntries || [])
+        .map((e: any) => e.drafts?.topic)
+        .filter(Boolean) as string[]
+    ));
+    const usedCategories = Array.from(new Set(
+      (allEntries || [])
+        .map((e: any) => e.drafts?.category)
+        .filter(Boolean) as string[]
+    ));
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
@@ -42,9 +49,13 @@ Topics should be:
 - Specific enough to draft 5 distinct items
 - NOT serious or work-related
 - Varied across categories
+- COMPLETELY DIFFERENT in subject matter from any topic or category already used in past seasons (see lists below). Do not propose minor rewordings, sub-variants, or topics in the same broad category — pick a brand new angle.
 
-DO NOT use any of these already-used topics:
+ALREADY-USED TOPICS (across all seasons — do NOT repeat or rephrase any of these):
 ${usedTopics.map(t => `- ${t}`).join("\n") || "(none yet)"}
+
+ALREADY-USED CATEGORIES (avoid these subject areas entirely):
+${usedCategories.map(c => `- ${c}`).join("\n") || "(none yet)"}
 
 Return ONLY a JSON object: { "topics": ["topic 1", "topic 2", "topic 3"] }
 No prose, no markdown, just the JSON.`;
