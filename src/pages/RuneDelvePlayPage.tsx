@@ -300,6 +300,18 @@ export default function RuneDelvePlayPage() {
     } catch {}
   }, [level, hero]);
 
+  // One-time intro modal for boss-rule levels (chapter & mid-chapter bosses).
+  // Mini-bosses have no rule and skip this. Stored under a separate key per
+  // rule id so each new rule shows once across the campaign.
+  useEffect(() => {
+    if (!level || !hero) return;
+    if (!bossRule) return;
+    const key = `rd-seen-bossrule-${bossRule}`;
+    try {
+      if (!localStorage.getItem(key)) setIntroBossRule(bossRule);
+    } catch {}
+  }, [level, hero, bossRule]);
+
   // Always invalidate the cached existing-run on mount so replay flows
   // ("Retry" → Play → finalize) compute isNewBest off fresh server data.
   // Without this, a stale cached row caused phantom hero XP double-counts.
