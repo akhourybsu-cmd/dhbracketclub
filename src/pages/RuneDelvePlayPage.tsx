@@ -221,6 +221,7 @@ export default function RuneDelvePlayPage() {
   const corruptionActive = activeMechanics.includes('corrupted_tiles');
   const secondaryObjective = ((level?.modifiers as any)?.secondary_objective ?? null) as SecondaryObjective | null;
   const bossRule = ((level?.modifiers as any)?.boss_rule ?? null) as BossRuleId | null;
+  const waveDefs = ((level?.modifiers as any)?.waves ?? null) as Array<{ enemies: any[]; reinforcement_turns: number }> | null;
 
   // Build deterministic state. Snapshots `activeRelics` once at run-start so
   // mid-run relic toggles or rank changes can never reset the board.
@@ -283,6 +284,7 @@ export default function RuneDelvePlayPage() {
     setCorruptCleansedCount(0);
     setBonusUsedThisCycle(false);
     defeatedArchetypesRef.current = new Map();
+    wavesSpawnedRef.current = 0;
     setLog([{ id: nextLogId(), kind: 'info', text: `You enter Level ${level.level_number}. The runes hum.` }]);
     // NOTE: `activeRelics` intentionally OMITTED from deps — see comment above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
