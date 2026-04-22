@@ -107,6 +107,7 @@ export default function DraftDetailPage() {
   const { entries: seasonEntries, refetch: refetchSeasonEntries } = useSeasonEntries(season?.id);
   const isCommissioner = useIsCommissioner(season);
   const seasonEntry = seasonEntries.find(e => e.draft_id === draftId);
+  const isPlayoffDraft = !!seasonEntry?.is_playoff;
 
 
   const { results: draftResults, loading: resultsLoading, generating: resultsGenerating, hasResults, generateResults, regenerateResults, fetchResults } = useDraftResults(draftId);
@@ -793,6 +794,15 @@ export default function DraftDetailPage() {
             <Award className="w-4 h-4" /> {seasonActionBusy ? 'Adding…' : 'Add to Season'}
           </button>
         ) : null}
+
+        {!isParticipant && user && (
+          <div className="flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full self-start bg-muted/40 border border-border/40">
+            <span className="text-[11px]">👁</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              {isPlayoffDraft ? 'Spectating Playoff Match' : 'Spectating'}
+            </span>
+          </div>
+        )}
       </motion.div>
 
       {/* Enrichment loading state */}
@@ -827,7 +837,7 @@ export default function DraftDetailPage() {
             <p className="text-[10px] text-muted-foreground/60 mt-3">Share this draft link to invite others. Order will be randomized when the draft starts.</p>
           </div>
 
-          {!isParticipant && user && (
+          {!isParticipant && user && !isPlayoffDraft && (
             <Button
               onClick={async () => {
                 try {
