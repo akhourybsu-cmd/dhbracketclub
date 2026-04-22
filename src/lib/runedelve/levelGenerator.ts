@@ -172,6 +172,61 @@ function objectiveFor(level: number, rng: () => number): { type: ObjectiveType; 
   return { type: 'defeat_all', target: 0 };
 }
 
+// Helper: build a single Enemy entry from a roster pick at a given level,
+// applying the early-HP cap + role-specific decorations. Used both for the
+// main wave and any reinforcement waves so behaviour stays identical.
+function buildEnemy(
+  template: RosterEntry,
+  level: number,
+  index: number,
+  opts: { isElite?: boolean; bossKind?: BossKind; idPrefix?: string } = {},
+): Enemy {
+  const { isElite = false, bossKind = null, idPrefix = 'e' } = opts;
+  let { hp, damage } = scaleEnemy(template, level);
+  const isFinalBossSlot = bossKind != null;
+  if (level <= 18 && !isElite && !isFinalBossSlot) {
+    hp = Math.min(hp, EARLY_HP_CAP);
+  }
+  if (isElite) {
+    hp = Math.round(hp * 1.6);
+    damage = Math.round(damage * 1.2);
+  }
+  if (isFinalBossSlot) {
+    const boost = bossStatBoost(bossKind);
+    hp = Math.round(hp * boost.hpMul);
+    damage = Math.round(damage * boost.dmgMul);
+  }
+  const namePrefix = isFinalBossSlot ? bossNamePrefix(bossKind) : isElite ? 'Elite ' : '';
+  return {
+    id: `${idPrefix}${index}`,
+    name: `${namePrefix}${template.name}`,
+    emoji: template.emoji,
+    hp,
+    maxHp: hp,
+    damage,
+    archetypeId: template.id,
+    family: template.family,
+    role: template.role,
+    // Mini-bosses keep their family ability so the gold-ringed portrait
+    // actually feels threatening. Mid/chapter bosses skip — boss rules carry
+    // the gimmick and we don't want to double-stack telegraphs.
+    ability: !isElite && (bossKind === 'mini' || !isFinalBossSlot) ? template.ability : undefined,
+    abilityCooldown: !isElite && (bossKind === 'mini' || !isFinalBossSlot) && template.ability ? template.abilityCooldown : undefined,
+    abilityCooldownMax: !isElite && (bossKind === 'mini' || !isFinalBossSlot) && template.ability ? template.abilityCooldown : undefined,
+    telegraphLabel: !isElite && (bossKind === 'mini' || !isFinalBossSlot) ? template.telegraphLabel : undefined,
+    tier: bossKind === 'mini' ? 'mini' : isFinalBossSlot ? 'boss' : undefined,
+  };
+}
+
+// Levels that get a second wave: mid/chapter beats, plus every 20 levels
+// from L60 upward (excluding pure mini-boss beats).
+function hasSecondWave(level: number): boolean {
+  if (level <= 24) return false;
+  if (level === 25 || level === 50 || level === 75 || level === 100 || level === 125 || level === 150) return true;
+  if (level >= 60 && level % 20 === 0) return true;
+  return false;
+}
+
 export function generateLevel(level: number): LevelDefinition {
   const seed = seedFor(level);
   const rng = mulberry32(seed);
@@ -180,47 +235,24 @@ export function generateLevel(level: number): LevelDefinition {
   const objective = objectiveFor(level, rng);
   const turnLimit = turnLimitFor(level);
   const mechanics = mechanicsForLevel(level);
-  const isBossLevel = bossRuleForLevel(level) != null;
+  const bossKind = bossKindForLevel(level);
+  const isChapterBossLevel = bossKind === 'chapter';
 
-  for (let i = 0; i < enemyCount; i++) {
+  // For chapter bosses, wave 1 = warm-up gauntlet of 2 mooks; the boss spawns
+  // in wave 2 so the fight reads like a proper boss arena. Other tiers keep
+  // the boss in wave 1 (final slot) per the legacy generator behaviour.
+  const wave1EnemyCount = isChapterBossLevel ? 2 : enemyCount;
+  const wave1BossKind: BossKind = isChapterBossLevel ? null : bossKind;
+
+  for (let i = 0; i < wave1EnemyCount; i++) {
     const t = pickTemplate(level, rng);
-    let { hp, damage } = scaleEnemy(t, level);
-    // Early-game HP cap: avoid triple-tank rolls (Slime/Stone Golem) before
-    // relics exist. Bosses/elites bypass this so milestones still feel weighty.
-    const isElite = objective.type === 'defeat_elite' && i === enemyCount - 1;
-    const isFinalBossSlot = isBossLevel && i === enemyCount - 1;
-    if (level <= 18 && !isElite && !isFinalBossSlot) {
-      hp = Math.min(hp, EARLY_HP_CAP);
-    }
-    if (isElite) {
-      hp = Math.round(hp * 1.6);
-      damage = Math.round(damage * 1.2);
-    }
-    // Boss-rule levels: meaningfully beef up the final enemy so the rule lands.
-    if (isFinalBossSlot) {
-      hp = Math.round(hp * 1.8);
-      damage = Math.round(damage * 1.15);
-    }
-    enemies.push({
-      id: `e${i}`,
-      name: isFinalBossSlot
-        ? `Boss ${t.name}`
-        : isElite ? `Elite ${t.name}` : t.name,
-      emoji: t.emoji,
-      hp,
-      maxHp: hp,
-      damage,
-      // Roster metadata — drives combat-log voice + ability ticks.
-      archetypeId: t.id,
-      family: t.family,
-      role: t.role,
-      // Only attach abilities to non-elite/non-boss slot picks (boss/elite
-      // already have their own signature treatment via boss rules + stat boosts).
-      ability: !isElite && !isFinalBossSlot ? t.ability : undefined,
-      abilityCooldown: !isElite && !isFinalBossSlot && t.ability ? t.abilityCooldown : undefined,
-      abilityCooldownMax: !isElite && !isFinalBossSlot && t.ability ? t.abilityCooldown : undefined,
-      telegraphLabel: !isElite && !isFinalBossSlot ? t.telegraphLabel : undefined,
-    });
+    const isElite = objective.type === 'defeat_elite' && i === wave1EnemyCount - 1 && !wave1BossKind;
+    const isFinalBossSlot = wave1BossKind != null && i === wave1EnemyCount - 1;
+    enemies.push(buildEnemy(t, level, i, {
+      isElite,
+      bossKind: isFinalBossSlot ? wave1BossKind : null,
+      idPrefix: 'e',
+    }));
   }
 
   // Layered Goals (Band 4): only when the multi_objective mechanic is active
@@ -228,6 +260,42 @@ export function generateLevel(level: number): LevelDefinition {
   const wantsSecondary = mechanics.includes('multi_objective')
     && (objective.type === 'defeat_all' || objective.type === 'defeat_elite');
   const secondary = wantsSecondary ? rollSecondaryObjective(seed, level, turnLimit) : null;
+
+  // ── Build optional second wave ───────────────────────────────────────────
+  let waves: LevelModifiers['waves'];
+  if (hasSecondWave(level)) {
+    const waveEnemies: Enemy[] = [];
+    if (isChapterBossLevel) {
+      // Wave 2 = the boss alone (single dramatic spawn).
+      const t = pickTemplate(level, rng);
+      waveEnemies.push(buildEnemy(t, level, 0, {
+        bossKind,
+        idPrefix: 'w2-',
+      }));
+    } else {
+      // Mid/regular multi-wave levels: 1-2 reinforcements, never with a 2nd
+      // ability-bearing enemy if wave 1 already had one.
+      const wave1HasAbility = enemies.some(e => !!e.ability);
+      const reinforceCount = bossKind === 'mid' ? 1 : (rng() < 0.5 ? 1 : 2);
+      for (let i = 0; i < reinforceCount; i++) {
+        let t = pickTemplate(level, rng);
+        if (wave1HasAbility && t.ability) {
+          // Re-roll once to a non-ability template if pool allows it.
+          let pool = rosterPoolForLevel(level).filter(e => !e.ability);
+          if (level <= 50) pool = pool.filter(e => !e.ability);
+          if (pool.length) t = pool[rngInt(rng, pool.length)];
+        }
+        const isMidBossSlot = bossKind === 'mid' && i === reinforceCount - 1;
+        waveEnemies.push(buildEnemy(t, level, i, {
+          bossKind: isMidBossSlot ? bossKind : null,
+          idPrefix: 'w2-',
+        }));
+      }
+    }
+    if (waveEnemies.length) {
+      waves = [{ enemies: waveEnemies, reinforcement_turns: 2 }];
+    }
+  }
 
   return {
     level_number: level,
@@ -244,6 +312,8 @@ export function generateLevel(level: number): LevelDefinition {
       intro_mechanic: introMechanicForLevel(level),
       secondary_objective: secondary,
       boss_rule: bossRuleForLevel(level),
+      boss_kind: bossKind,
+      waves,
     },
   };
 }
