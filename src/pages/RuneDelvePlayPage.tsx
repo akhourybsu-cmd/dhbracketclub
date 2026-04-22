@@ -156,6 +156,19 @@ export default function RuneDelvePlayPage() {
     });
   };
 
+  // FX overlay queue — purely visual feedback for chains and abilities.
+  const fxQ = useFxQueue();
+  const playRootRef = useRef<HTMLDivElement>(null);
+  const rectFromEl = (el: Element | null): FxRect | undefined => {
+    if (!el) return undefined;
+    const r = el.getBoundingClientRect();
+    return { x: r.left, y: r.top, w: r.width, h: r.height };
+  };
+  const findEnemyRect = (id: string): FxRect | undefined =>
+    rectFromEl(playRootRef.current?.querySelector(`[data-enemy-id="${id}"]`) ?? null);
+  const findHudRect = (target: 'hp' | 'mana' | 'shield'): FxRect | undefined =>
+    rectFromEl(playRootRef.current?.querySelector(`[data-fx-target="${target}"]`) ?? null);
+
   // Active relic loadout for this run (rank-aware).
   const activeRelics = useMemo(() => {
     const ranks = rankMapFromOwned(ownedRelics);
