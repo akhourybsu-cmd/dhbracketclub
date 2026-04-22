@@ -65,6 +65,7 @@ import { MechanicBanner } from '@/components/runedelve/MechanicBanner';
 import { CombatLog, type CombatLogEntry } from '@/components/runedelve/CombatLog';
 import { FxLayer } from '@/components/runedelve/fx/FxLayer';
 import { useFxQueue, type FxRect } from '@/hooks/useFxQueue';
+import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { format } from 'date-fns';
 
 const RUNE_LABEL: Record<RuneType, string> = {
@@ -158,6 +159,7 @@ export default function RuneDelvePlayPage() {
 
   // FX overlay queue — purely visual feedback for chains and abilities.
   const fxQ = useFxQueue();
+  const { play: playSound } = useSoundEffect();
   const playRootRef = useRef<HTMLDivElement>(null);
   const rectFromEl = (el: Element | null): FxRect | undefined => {
     if (!el) return undefined;
@@ -168,6 +170,33 @@ export default function RuneDelvePlayPage() {
     rectFromEl(playRootRef.current?.querySelector(`[data-enemy-id="${id}"]`) ?? null);
   const findHudRect = (target: 'hp' | 'mana' | 'shield'): FxRect | undefined =>
     rectFromEl(playRootRef.current?.querySelector(`[data-fx-target="${target}"]`) ?? null);
+
+  // Trigger a brief CSS-driven camera shake on the play root. Cleans up
+  // any pending timer so rapid red chains don't stack the animation.
+  const shakeTimerRef = useRef<number | null>(null);
+  const triggerCamShake = (amount = 6) => {
+    const el = playRootRef.current;
+    if (!el) return;
+    el.style.setProperty('--rd-cam-shake-x', `${amount}px`);
+    el.style.setProperty('--rd-cam-shake-y', `${Math.round(amount * 0.6)}px`);
+    el.classList.remove('rd-cam-shake');
+    // Force reflow so the animation restarts cleanly.
+    void el.offsetWidth;
+    el.classList.add('rd-cam-shake');
+    if (shakeTimerRef.current) window.clearTimeout(shakeTimerRef.current);
+    shakeTimerRef.current = window.setTimeout(() => {
+      el.classList.remove('rd-cam-shake');
+    }, 240);
+  };
+
+  // Pulse the HP bar's inner glow (Lifebloom arrival cue).
+  const pulseHpGlow = () => {
+    const el = playRootRef.current?.querySelector('[data-fx-hp-glow-target]') as HTMLElement | null;
+    if (!el) return;
+    el.setAttribute('data-fx-hp-glow', 'on');
+    window.setTimeout(() => el.removeAttribute('data-fx-hp-glow'), 620);
+  };
+
 
   // Active relic loadout for this run (rank-aware).
   const activeRelics = useMemo(() => {
