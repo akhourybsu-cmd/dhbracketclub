@@ -99,10 +99,11 @@ export function useLevel(levelNumber: number | undefined) {
         qc.invalidateQueries({ queryKey: ['rune-delve-levels-batch'] });
         return hydrateLegacy(inserted as RuneDelveLevel);
       }
-      // Only re-fetch on a unique-violation race (someone else just seeded it).
-      // Other errors (RLS denial for non-admins) skip straight to the transient
-      // fallback so we don't pay an extra round-trip on every level page load.
-      if (error?.code === '23505') {
+      // Always re-fetch when insert returned no row — covers both unique-violation
+      // races AND any RLS regression. We never want to fall through to a transient
+      // row if a canonical one is reachable, because submissions on transient ids
+      // silently fail (UUID FK on rune_delve_runs.level_id) and freeze progression.
+      {
         const { data: again } = await supabase
           .from('rune_delve_levels')
           .select('*')
@@ -110,6 +111,7 @@ export function useLevel(levelNumber: number | undefined) {
           .maybeSingle();
         if (again) return hydrateLegacy(again as RuneDelveLevel);
       }
+      console.warn('[rune-delve] Falling back to transient level — submissions will fail. Insert error:', error, 'level:', levelNumber);
       return {
         id: `transient-${def.level_number}`,
         level_number: def.level_number,
