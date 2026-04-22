@@ -147,7 +147,7 @@ export function useLevelWindow(start: number, count: number) {
       // hydrate into identical canonical rows when an admin (or first run) seeds them.
       return numbers.map(n => {
         const existing = byNum.get(n);
-        if (existing) return existing;
+        if (existing) return hydrateLegacy(existing);
         const def = generateLevel(n);
         return {
           id: `transient-${n}`,
