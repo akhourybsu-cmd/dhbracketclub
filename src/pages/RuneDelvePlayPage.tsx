@@ -759,7 +759,7 @@ export default function RuneDelvePlayPage() {
     const wardMult = shrineWardTurn1Mult(relics, isTurnOne);
     const crownMult = bossRule ? bossRuleSoften(relics) : 1;
     const incomingMult = wardMult * crownMult;
-    let afterEnemies: CombatState & { heavyFired?: boolean; abilityLogs?: Array<Omit<CombatLogEntry, 'id'>>; abilityEffects?: any[] };
+    let afterEnemies: CombatState & { heavyFired?: boolean; abilityLogs?: Array<Omit<CombatLogEntry, 'id'>>; abilityEffects?: any[]; thornsLog?: Omit<CombatLogEntry, 'id'> };
     if (grantsBonusMove) {
       afterEnemies = next;
     } else if (enemiesAlive) {
