@@ -1,0 +1,138 @@
+// Per-run snapshot persistence for Rune Delve so backgrounding the WebView
+// (especially on iOS PWAs) doesn't wipe live combat state.
+//
+// We serialize to sessionStorage under a per-user + per-level key, with
+// JSON-safe conversions for Set / Map. Runs are tied to a level's
+// `generation_seed` so a re-seed (admin reseed, schema change) safely bails
+// to a fresh board instead of restoring stale state.
+
+import type { RuneType } from './dungeonGenerator';
+import type { CombatState } from './combatEngine';
+import type { CorruptionState } from './corruptedTiles';
+import type { ActiveRelics } from './relicEffects';
+import type { CombatLogEntry } from '@/components/runedelve/CombatLog';
+
+export const SNAPSHOT_VERSION = 1;
+export const SNAPSHOT_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h
+
+export interface RunSnapshot {
+  version: number;
+  levelNumber: number;
+  generationSeed: number;
+  savedAt: number;
+  grid: RuneType[][];
+  combat: CombatState;
+  seals: string[];
+  corruption: { cells: string[]; sources: string[] };
+  log: CombatLogEntry[];
+  lastStandUsed: number;
+  bonusUsedThisCycle: boolean;
+  redChainCount: number;
+  chainCountTotal: number;
+  abilityUsedCount: number;
+  corruptCleansedCount: number;
+  defeatedArchetypes: Array<[string, number]>;
+  wavesSpawned: number;
+  rngTick: number;
+  // Stored as JSON-safe shape — relic ranks Map flattened to entries.
+  activeRelicsSnapshot: {
+    ranks: Array<[string, number]>;
+  } | null;
+}
+
+export function snapshotKey(userId: string, levelId: string): string {
+  return `rd-run:${userId}:${levelId}`;
+}
+
+export interface BuildSnapshotInput {
+  levelNumber: number;
+  generationSeed: number;
+  grid: RuneType[][];
+  combat: CombatState;
+  seals: Set<string>;
+  corruption: CorruptionState;
+  log: CombatLogEntry[];
+  lastStandUsed: number;
+  bonusUsedThisCycle: boolean;
+  redChainCount: number;
+  chainCountTotal: number;
+  abilityUsedCount: number;
+  corruptCleansedCount: number;
+  defeatedArchetypes: Map<string, number>;
+  wavesSpawned: number;
+  rngTick: number;
+  activeRelicsSnapshot: ActiveRelics | null;
+}
+
+export function buildSnapshot(input: BuildSnapshotInput): RunSnapshot {
+  return {
+    version: SNAPSHOT_VERSION,
+    levelNumber: input.levelNumber,
+    generationSeed: input.generationSeed,
+    savedAt: Date.now(),
+    grid: input.grid,
+    combat: input.combat,
+    seals: Array.from(input.seals),
+    corruption: {
+      cells: Array.from(input.corruption.cells),
+      sources: Array.from(input.corruption.sources),
+    },
+    log: input.log,
+    lastStandUsed: input.lastStandUsed,
+    bonusUsedThisCycle: input.bonusUsedThisCycle,
+    redChainCount: input.redChainCount,
+    chainCountTotal: input.chainCountTotal,
+    abilityUsedCount: input.abilityUsedCount,
+    corruptCleansedCount: input.corruptCleansedCount,
+    defeatedArchetypes: Array.from(input.defeatedArchetypes.entries()),
+    wavesSpawned: input.wavesSpawned,
+    rngTick: input.rngTick,
+    activeRelicsSnapshot: input.activeRelicsSnapshot
+      ? {
+          ranks: Array.from(input.activeRelicsSnapshot.ranks.entries()),
+        }
+      : null,
+  };
+}
+
+export function saveSnapshot(key: string, snapshot: RunSnapshot): void {
+  try {
+    sessionStorage.setItem(key, JSON.stringify(snapshot));
+  } catch {
+    /* sessionStorage may be unavailable / quota exceeded */
+  }
+}
+
+export function loadSnapshot(
+  key: string,
+  expectedSeed: number,
+): RunSnapshot | null {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as RunSnapshot;
+    if (!parsed || parsed.version !== SNAPSHOT_VERSION) return null;
+    if (parsed.generationSeed !== expectedSeed) return null;
+    if (Date.now() - parsed.savedAt > SNAPSHOT_MAX_AGE_MS) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function clearSnapshot(key: string): void {
+  try {
+    sessionStorage.removeItem(key);
+  } catch {
+    /* noop */
+  }
+}
+
+export function rehydrateRelics(
+  stored: RunSnapshot['activeRelicsSnapshot'],
+): ActiveRelics | null {
+  if (!stored) return null;
+  return {
+    ranks: new Map(stored.ranks),
+  };
+}
