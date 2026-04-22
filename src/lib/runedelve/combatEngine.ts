@@ -144,20 +144,33 @@ export function enemiesAttack(
   telegraphed = false,
   bossRule: BossRuleId | null = null,
   summonsSoFar = 0,
+  thornsOpts?: { cls?: HeroClass; relicMultiplier?: number },
 ): CombatState & {
   heavyFired?: boolean;
   abilityLogs?: Array<Omit<CombatLogEntry, 'id'>>;
   abilityEffects?: AbilityEffect[];
+  thornsLog?: Omit<CombatLogEntry, 'id'>;
 } {
   const ticked = telegraphed ? tickIntents(state.enemies) : state.enemies;
   let next: CombatState = { ...state, enemies: ticked.map(e => ({ ...e })) };
   let heavyFired = false;
+  // Snapshot pre-attack info needed for Thorns calc.
+  const shieldWasUp = next.shieldTurns > 0;
+  let rawIncomingForThorns = 0;
+  // Capture which enemies were "swinging" this turn — used to split Thorns.
+  const attackerSnapshot = next.enemies.map(e => ({ id: e.id, alive: e.hp > 0 }));
   if (telegraphed) {
     // Apply enrager / aura multiplier in-place by temporarily scaling each
     // enemy's damage for the resolve call, then restoring.
     const original = next.enemies.map(e => e.damage);
     next.enemies.forEach(e => { e.damage = Math.round(e.damage * enemyDamageMultiplier(bossRule, e, next.enemies)); });
     const r = resolveEnemyAttack(next.enemies, next.shieldTurns > 0);
+    rawIncomingForThorns = r.totalDamage; // post-shield total (shield already scaled it)
+    // Resolve always passes the unscaled raw too via heavyFired flag — but
+    // resolveEnemyAttack returns the shielded total. To get the *raw* we
+    // recompute from the scaled enemies BEFORE resolveEnemyAttack applies
+    // its own shield math. Simpler: scale back by 1/0.4 if shielded.
+    if (shieldWasUp) rawIncomingForThorns = Math.round(r.totalDamage / 0.4);
     next.enemies = r.enemies.map((e, i) => ({ ...e, damage: original[i] ?? e.damage }));
     heavyFired = r.heavyFired;
     if (next.shieldTurns > 0) next.shieldTurns -= 1;
@@ -167,11 +180,70 @@ export function enemiesAttack(
     for (const e of next.enemies) {
       if (e.hp > 0) totalIncoming += Math.round(e.damage * enemyDamageMultiplier(bossRule, e, next.enemies));
     }
+    rawIncomingForThorns = totalIncoming;
     if (next.shieldTurns > 0) {
       totalIncoming = Math.round(totalIncoming * 0.4);
       next.shieldTurns -= 1;
     }
     next.hp = Math.max(0, next.hp - totalIncoming);
+  }
+
+  // ── Shield Thorns ──────────────────────────────────────────────────────
+  // Reflect a portion of the raw pre-shield damage back at attackers when
+  // shield was active. Splits evenly across living, targetable enemies who
+  // were alive and swinging at the start of the enemy phase.
+  let thornsLog: Omit<CombatLogEntry, 'id'> | undefined;
+  if (shieldWasUp && rawIncomingForThorns > 0) {
+    const baseRate = thornsOpts?.cls === 'warrior' ? 0.40 : 0.25;
+    const relicMul = thornsOpts?.relicMultiplier ?? 1;
+    const totalThorns = Math.round(rawIncomingForThorns * baseRate * relicMul);
+    if (totalThorns > 0) {
+      // Living, targetable attackers (boss-rule respects untargetable / phaselock).
+      const targetable = filterTargetable(bossRule, next.enemies);
+      const targetableIds = new Set(targetable.map(e => e.id));
+      // Was swinging this turn AND still standing AND not phased/locked-out.
+      const validTargets = next.enemies.filter(e => {
+        const snap = attackerSnapshot.find(a => a.id === e.id);
+        return snap?.alive && e.hp > 0 && targetableIds.has(e.id);
+      });
+      if (validTargets.length > 0) {
+        const perEnemy = Math.floor(totalThorns / validTargets.length);
+        let remainder = totalThorns - perEnemy * validTargets.length;
+        let totalApplied = 0;
+        const killedNames: string[] = [];
+        const targetIdSet = new Set(validTargets.map(t => t.id));
+        next.enemies = next.enemies.map(e => {
+          if (!targetIdSet.has(e.id) || e.hp <= 0) return e;
+          const portion = perEnemy + (remainder > 0 ? 1 : 0);
+          if (remainder > 0) remainder -= 1;
+          if (portion <= 0) return e;
+          const afterArmor = applyArmorToDamage(e, portion);
+          const applied = Math.min(afterArmor, e.hp);
+          if (applied <= 0) return e;
+          const newHp = e.hp - applied;
+          totalApplied += applied;
+          if (newHp <= 0) {
+            next.enemiesDefeated += 1;
+            killedNames.push(e.name);
+          }
+          return { ...e, hp: newHp };
+        });
+        if (totalApplied > 0) {
+          next.totalDamage += totalApplied;
+          const tName = validTargets.length === 1
+            ? validTargets[0].name
+            : `${validTargets.length} enemies`;
+          const killSuffix = killedNames.length
+            ? ` (${killedNames.length === 1 ? `slew ${killedNames[0]}` : `${killedNames.length} slain`})`
+            : '';
+          thornsLog = {
+            kind: 'damage',
+            text: `🌵 Thorns reflected to ${tName}${killSuffix}`,
+            amount: totalApplied,
+          };
+        }
+      }
+    }
   }
 
   // ── Ability tick ──────────────────────────────────────────────────────
@@ -203,6 +275,7 @@ export function enemiesAttack(
     // Strip the damage_hero effects we already applied — only board effects
     // and spawns need to leave the engine.
     abilityEffects: abilityResult.effects.filter(e => e.kind !== 'damage_hero'),
+    thornsLog,
   };
 }
 
