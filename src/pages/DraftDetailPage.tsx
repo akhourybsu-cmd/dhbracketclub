@@ -837,7 +837,7 @@ export default function DraftDetailPage() {
             <p className="text-[10px] text-muted-foreground/60 mt-3">Share this draft link to invite others. Order will be randomized when the draft starts.</p>
           </div>
 
-          {!isParticipant && user && (
+          {!isParticipant && user && !isPlayoffDraft && (
             <Button
               onClick={async () => {
                 try {
