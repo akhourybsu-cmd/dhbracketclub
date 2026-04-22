@@ -67,6 +67,15 @@ import { CombatLog, type CombatLogEntry } from '@/components/runedelve/CombatLog
 import { FxLayer } from '@/components/runedelve/fx/FxLayer';
 import { useFxQueue, type FxRect } from '@/hooks/useFxQueue';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  buildSnapshot,
+  clearSnapshot,
+  loadSnapshot,
+  rehydrateRelics,
+  saveSnapshot,
+  snapshotKey,
+} from '@/lib/runedelve/runSnapshot';
 import { format } from 'date-fns';
 
 const RUNE_LABEL: Record<RuneType, string> = {
