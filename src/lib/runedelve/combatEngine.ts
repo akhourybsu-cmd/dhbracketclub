@@ -190,12 +190,16 @@ export function enemiesAttack(
   }
 
   next.turnsRemaining = Math.max(0, next.turnsRemaining - 1);
-  // Boss-rule end-of-turn effects (e.g. regenerator).
-  next = applyBossTurnEffects(next, bossRule);
+  // Boss-rule end-of-turn effects (e.g. regenerator, splitter, phaselock decay).
+  const bossOut = applyBossTurnEffects(next, bossRule);
+  next = bossOut.state;
+  // Merge boss logs alongside ability logs so the Battle Chronicle reads them
+  // chronologically as a single batch.
+  const mergedLogs = [...(abilityResult.logs ?? []), ...bossOut.logs];
   return {
     ...next,
     heavyFired,
-    abilityLogs: abilityResult.logs,
+    abilityLogs: mergedLogs,
     // Strip the damage_hero effects we already applied — only board effects
     // and spawns need to leave the engine.
     abilityEffects: abilityResult.effects.filter(e => e.kind !== 'damage_hero'),
