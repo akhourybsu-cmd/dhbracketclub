@@ -64,6 +64,7 @@ import { buildInitialEclipse, type EclipseSet } from '@/lib/runedelve/eclipseTil
 import { secondaryMet, secondaryShort, secondaryLabel, type SecondaryObjective } from '@/lib/runedelve/layeredGoals';
 import { getBossRule, type BossRuleId } from '@/lib/runedelve/bossRules';
 import { useTodayDaily, useSubmitDailyRun } from '@/hooks/useDailyChallenge';
+import { useReportQuestProgress } from '@/hooks/useQuests';
 import { dailyLevelFor } from '@/lib/runedelve/dailyChallenge';
 import {
   dailyDamageMultiplier,
@@ -132,6 +133,7 @@ export default function RuneDelvePlayPage() {
   const isDailyMode = searchParams.get('daily') === '1';
   const today = useTodayDaily();
   const submitDaily = useSubmitDailyRun();
+  const reportQuestProgress = useReportQuestProgress();
   // In daily mode, force the level number to today's daily level (URL param
   // is ignored — preserves "everyone faces the same trial today").
   const levelNumber = isDailyMode
@@ -1594,6 +1596,39 @@ export default function RuneDelvePlayPage() {
           }
         }
       } catch { /* bestiary write is best-effort */ }
+
+      // ── Quests: report progress for this run (best-effort, never throws) ─
+      try {
+        const enemyKills = Array.from(defeatedArchetypesRef.current.values()).reduce((a, b) => a + b, 0);
+        const bossKills = Array.from(defeatedArchetypesRef.current.entries())
+          .filter(([id]) => rosterById(id)?.role === 'controller')
+          .reduce((sum, [, n]) => sum + n, 0);
+        const longestChain = chainsThisFight; // proxy
+        const heroClass = hero?.class;
+        type QEvent = Parameters<typeof reportQuestProgress>[0];
+        const events: QEvent[] = [
+          { type: 'enemies_defeated', amount: enemyKills, heroClass },
+          { type: 'longest_chain', amount: 0, heroClass, meta: { chainLength: longestChain } },
+          { type: 'total_score', amount: breakdown.total, heroClass },
+        ];
+        if (cleared) {
+          events.push({ type: 'levels_cleared', amount: 1, heroClass });
+          events.push({ type: 'class_run_complete', amount: 1, heroClass });
+          events.push({ type: 'high_level_clears', amount: 1, heroClass, meta: { levelNumber: level.level_number } });
+          if (final.hp >= final.maxHp) {
+            events.push({ type: 'no_damage_clear', amount: 1, heroClass });
+          }
+        }
+        if (bossKills > 0) {
+          events.push({ type: 'bosses_defeated', amount: bossKills, heroClass, meta: { isBoss: true } });
+        }
+        if (shardsAwarded > 0) {
+          events.push({ type: 'shards_earned', amount: shardsAwarded, heroClass });
+        }
+        for (const e of events) {
+          await reportQuestProgress(e);
+        }
+      } catch (err) { console.warn('[quests] progress report failed', err); }
 
       // ── Daily Challenge: submit run, surface star + bonus rewards ────────
       if (isDailyMode && hero) {

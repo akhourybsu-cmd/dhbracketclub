@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sparkles, Trophy, Flame, ChevronRight, Swords, BookOpen, Map, ShoppingBag, Shield, Calendar } from 'lucide-react';
+import { Sparkles, Trophy, Flame, ChevronRight, Swords, BookOpen, Map, ShoppingBag, Shield, Calendar, Target } from 'lucide-react';
 import { useRuneDelveHero, useEnsureHero } from '@/hooks/useRuneDelveHero';
 import { useAllClassProgress } from '@/hooks/useRuneDelveClassProgress';
 import { useMyProgress, useCampaignLeaderboard } from '@/hooks/useRuneDelveCampaign';
@@ -15,6 +15,7 @@ import { HowToPlaySheet } from '@/components/runedelve/HowToPlaySheet';
 import { CodexSheet } from '@/components/runedelve/CodexSheet';
 import { useTodayDaily, useMyDailyRun, useMyDailyStreak } from '@/hooks/useDailyChallenge';
 import { getDailyModifier } from '@/lib/runedelve/dailyModifiers';
+import { useQuestSummary } from '@/hooks/useQuests';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -38,6 +39,7 @@ export default function RuneDelveHomePage() {
   const today = useTodayDaily();
   const { data: myDailyRun } = useMyDailyRun();
   const { data: dailyStreak } = useMyDailyStreak();
+  const questSummary = useQuestSummary();
 
   // First-visit auto-open of help sheet.
   useEffect(() => {
@@ -251,6 +253,38 @@ export default function RuneDelveHomePage() {
           </motion.div>
         );
       })()}
+
+      {/* Quests — daily + weekly objectives with bonus shard rewards. */}
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+        <Link to="/rune-delve/quests" className="block">
+          <div
+            className="glass-card p-4 btn-press relative overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, hsl(var(--primary) / 0.10), hsl(var(--accent) / 0.08))',
+              borderColor: 'hsl(var(--primary) / 0.25)',
+            }}
+          >
+            <div className="flex items-center gap-2 mb-1.5">
+              <Target className="w-4 h-4 text-primary" />
+              <span className="font-rd-display text-[11px] font-extrabold tracking-[0.18em] text-primary uppercase">Quests</span>
+              {questSummary.claimable > 0 && (
+                <span className="ml-auto text-[10px] font-extrabold px-1.5 py-0.5 rounded-md bg-gold/20 text-gold tabular-nums">
+                  {questSummary.claimable} ready to claim
+                </span>
+              )}
+            </div>
+            <p className="text-[12px] font-extrabold text-foreground mb-0.5">
+              {questSummary.claimable > 0
+                ? `Tap to claim your bonus shards`
+                : `${questSummary.total} active · 3 daily + 3 weekly`}
+            </p>
+            <div className="flex items-center gap-2 text-[10px] font-extrabold text-foreground/70">
+              <span>Earn bonus 💎 shards by completing objectives</span>
+              <ChevronRight className="w-3.5 h-3.5 ml-auto text-primary" />
+            </div>
+          </div>
+        </Link>
+      </motion.div>
 
       {/* Hero snapshot */}
       <Link to="/rune-delve/hero" className="block">
