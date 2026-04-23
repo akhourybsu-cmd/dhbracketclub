@@ -257,6 +257,7 @@ export default function AdminHub() {
     { icon: Trophy, label: "NFL Pick'em Admin", description: 'Seasons, weeks, games, scoring', to: '/pickem/admin', iconColor: 'gold' },
     { icon: Bookmark, label: 'Drafts Hub', description: 'Manage drafts & league seasons', to: '/drafts', iconColor: 'accent' },
     { icon: Swords, label: 'Rune Delve Analytics', description: 'Per-level stats, cliffs, AI handoff', to: '/rune-delve/analytics', iconColor: 'primary' },
+    { icon: Swords, label: 'Rune Delve Playtest Sim', description: 'Stress-test any future level (1-150)', to: '/rune-delve/simulator', iconColor: 'accent' },
   ];
 
   const diagnostics: Tool[] = [
