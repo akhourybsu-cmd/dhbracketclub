@@ -335,13 +335,21 @@ export default function RuneDelvePlayPage() {
         ));
       }
     }
-    // Apply pre-run relic effects: starting mana + starting shield.
-    const initial = initialCombat(enemies, level.turn_limit);
+    // Apply pre-run relic effects: starting mana + starting shield, plus
+    // Foreseer's Lens (+ turns/level) and Void Pact (-maxHp, applied below).
+    const bonusTurns = getForeseerBonusTurns(relics);
+    const initial = initialCombat(enemies, level.turn_limit + bonusTurns);
     initial.mana = Math.min(MAX_MANA, initial.mana + getStartingMana(relics));
     initial.shieldTurns = Math.max(initial.shieldTurns, getStartingShieldTurns(relics));
+    const voidCost = getVoidPactHpCost(relics);
+    if (voidCost > 0) {
+      initial.maxHp = Math.max(10, initial.maxHp - voidCost);
+      initial.hp = Math.min(initial.hp, initial.maxHp);
+    }
     setCombat(initial);
     setActiveRelicsSnapshot(relics);
     setLastStandUsed(0);
+    setPhoenixUsed(false);
     setRedChainCount(0);
     setChainCountTotal(0);
     setAbilityUsedCount(0);
@@ -543,6 +551,7 @@ export default function RuneDelvePlayPage() {
       isFirstChainOfRun,
       hpRatio: combat.hp / Math.max(1, combat.maxHp),
       enemyHpRatioBeforeHit: enemyHpRatio,
+      chainNumberThisRun: chainCountTotal + 1,
     });
     // Momentum (rogue): chain bonus threshold drops from 5 → 4.
     const rogueBonusThreshold = hero.class === 'rogue' && has(relics, 'momentum') ? 4 : 5;
