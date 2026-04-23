@@ -231,7 +231,7 @@ export default function RuneDelveHomePage() {
                     <span
                       key={m!.id}
                       className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-foreground/5 border border-foreground/10"
-                      title={m!.description}
+                      title={m!.rule}
                     >
                       {m!.icon} {m!.name}
                     </span>
