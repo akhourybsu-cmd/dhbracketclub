@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sparkles, Trophy, Flame, ChevronRight, Swords, BookOpen, Map, ShoppingBag, Shield, Calendar, Target } from 'lucide-react';
+import { Sparkles, Trophy, Flame, ChevronRight, Swords, BookOpen, Map, ShoppingBag, Shield, Calendar, Target, ChevronDown, Wrench, HelpCircle, ScrollText, History as HistoryIcon, User as UserIcon } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useRuneDelveHero, useEnsureHero } from '@/hooks/useRuneDelveHero';
 import { useAllClassProgress } from '@/hooks/useRuneDelveClassProgress';
 import { useMyProgress, useCampaignLeaderboard } from '@/hooks/useRuneDelveCampaign';
@@ -201,90 +202,60 @@ export default function RuneDelveHomePage() {
         </div>
       </motion.div>
 
-      {/* Daily Challenge — single attempt per UTC day, modifier-stacked twist on the campaign. */}
-      {(() => {
-        const playedToday = !!myDailyRun;
-        const stars = myDailyRun?.stars ?? 0;
-        const modIcons = today.modifiers.map(id => getDailyModifier(id)).filter(Boolean);
-        return (
-          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+      {/* TODAY — daily ritual: Daily Challenge + Quests, side-by-side compact */}
+      <Section label="Today" />
+      <div className="grid grid-cols-2 gap-2">
+        {(() => {
+          const playedToday = !!myDailyRun;
+          const stars = myDailyRun?.stars ?? 0;
+          return (
             <Link to="/rune-delve/daily" className="block">
               <div
-                className="glass-card p-4 btn-press relative overflow-hidden"
+                className="glass-card p-3 btn-press h-full flex flex-col"
                 style={{
                   background: 'linear-gradient(135deg, hsl(var(--accent) / 0.14), hsl(var(--gold) / 0.08))',
                   borderColor: 'hsl(var(--accent) / 0.35)',
                 }}
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <Calendar className="w-4 h-4 text-accent" />
-                  <span className="font-rd-display text-[11px] font-extrabold tracking-[0.18em] text-accent uppercase">Daily Challenge</span>
-                  {playedToday && (
-                    <span className="ml-auto text-[10px] font-extrabold text-foreground/70 tabular-nums">
-                      {'⭐'.repeat(stars)}{stars === 0 && '—'}
-                    </span>
-                  )}
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-accent" />
+                  <span className="font-rd-display text-[10px] font-extrabold tracking-[0.16em] text-accent uppercase">Daily</span>
+                  <ChevronRight className="w-3.5 h-3.5 ml-auto text-accent/70" />
                 </div>
-                <p className="text-[12px] font-extrabold text-foreground mb-1">
-                  {playedToday ? 'Run completed · Come back tomorrow' : 'A fresh trial awaits'}
+                <p className="text-[11px] font-extrabold text-foreground leading-tight">
+                  {playedToday ? `Done ${'⭐'.repeat(stars) || '—'}` : 'Fresh trial'}
                 </p>
-                <div className="flex items-center gap-1.5 flex-wrap mb-2">
-                  {modIcons.map(m => (
-                    <span
-                      key={m!.id}
-                      className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-foreground/5 border border-foreground/10"
-                      title={m!.rule}
-                    >
-                      {m!.icon} {m!.name}
-                    </span>
-                  ))}
-                </div>
-                <div className="flex items-center gap-3 text-[10px] font-extrabold text-foreground/70">
-                  <span className="flex items-center gap-1">
-                    <Flame className="w-3 h-3 text-gold" />
-                    {dailyStreak?.current_streak ?? 0}-day streak
-                  </span>
-                  <span>·</span>
-                  <span>L{today.levelNumber}</span>
-                  <ChevronRight className="w-3.5 h-3.5 ml-auto text-accent" />
-                </div>
+                <p className="text-[10px] font-extrabold text-foreground/70 mt-0.5 flex items-center gap-1">
+                  <Flame className="w-3 h-3 text-gold" />
+                  {dailyStreak?.current_streak ?? 0}-day · L{today.levelNumber}
+                </p>
               </div>
             </Link>
-          </motion.div>
-        );
-      })()}
+          );
+        })()}
 
-      {/* Quests — daily + weekly objectives with bonus shard rewards. */}
-      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
         <Link to="/rune-delve/quests" className="block">
           <div
-            className="glass-card p-4 btn-press relative overflow-hidden"
+            className="glass-card p-3 btn-press h-full flex flex-col"
             style={{
               background: 'linear-gradient(135deg, hsl(var(--primary) / 0.10), hsl(var(--accent) / 0.08))',
               borderColor: 'hsl(var(--primary) / 0.25)',
             }}
           >
-            <div className="flex items-center gap-2 mb-1.5">
-              <Target className="w-4 h-4 text-primary" />
-              <span className="font-rd-display text-[11px] font-extrabold tracking-[0.18em] text-primary uppercase">Quests</span>
-              {questSummary.claimable > 0 && (
-                <span className="ml-auto text-[10px] font-extrabold px-1.5 py-0.5 rounded-md bg-gold/20 text-gold tabular-nums">
-                  {questSummary.claimable} ready to claim
-                </span>
-              )}
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Target className="w-3.5 h-3.5 text-primary" />
+              <span className="font-rd-display text-[10px] font-extrabold tracking-[0.16em] text-primary uppercase">Quests</span>
+              <ChevronRight className="w-3.5 h-3.5 ml-auto text-primary/70" />
             </div>
-            <p className="text-[12px] font-extrabold text-foreground mb-0.5">
-              {questSummary.claimable > 0
-                ? `Tap to claim your bonus shards`
-                : `${questSummary.total} active · 3 daily + 3 weekly`}
+            <p className="text-[11px] font-extrabold text-foreground leading-tight">
+              {questSummary.claimable > 0 ? `${questSummary.claimable} ready` : `${questSummary.total} active`}
             </p>
-            <div className="flex items-center gap-2 text-[10px] font-extrabold text-foreground/70">
-              <span>Earn bonus 💎 shards by completing objectives</span>
-              <ChevronRight className="w-3.5 h-3.5 ml-auto text-primary" />
-            </div>
+            <p className="text-[10px] font-extrabold text-foreground/70 mt-0.5">
+              {questSummary.claimable > 0 ? 'Tap to claim 💎' : 'Daily + weekly'}
+            </p>
           </div>
         </Link>
-      </motion.div>
+      </div>
 
       {/* Hero snapshot */}
       <Link to="/rune-delve/hero" className="block">
@@ -348,61 +319,90 @@ export default function RuneDelveHomePage() {
         </div>
       </Link>
 
-      {/* How to play + Codex */}
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          onClick={() => setHelpOpen(true)}
-          className="glass-card p-3 flex items-center justify-center gap-2 text-[12px] font-bold btn-press text-primary"
-        >
-          <BookOpen className="w-3.5 h-3.5" /> How to Play
-        </button>
-        <button
-          onClick={() => setCodexOpen(true)}
-          className="glass-card p-3 flex items-center justify-center gap-2 text-[12px] font-bold btn-press text-accent"
-        >
-          📖 Codex
-        </button>
-      </div>
+      {/* Gear & Progression group */}
+      <Section label="Explore" />
+      <HomeGroup id="gear" icon={<Wrench className="w-3.5 h-3.5 text-primary" />} label="Gear & Progression">
+        {loadout && (() => {
+          const equipped = [loadout.slot_1, loadout.slot_2, loadout.slot_3].filter(Boolean) as string[];
+          return (
+            <GroupRow
+              to="/rune-delve/armory"
+              icon={<Shield className="w-4 h-4 text-primary" />}
+              label="Active Loadout"
+              detail={equipped.length === 0 ? 'No relics equipped' : equipped.map(id => RELIC_BY_ID[id]?.name ?? '?').join(' · ')}
+            />
+          );
+        })()}
+        <GroupRow to="/rune-delve/shop" icon={<ShoppingBag className="w-4 h-4 text-primary" />} label="Shop" />
+        <GroupRow to="/rune-delve/armory" icon={<Shield className="w-4 h-4 text-primary" />} label="Armory" />
+        <GroupRow to="/rune-delve/bestiary" icon={<BookOpen className="w-4 h-4 text-primary" />} label="Bestiary" />
+        <GroupRow to="/rune-delve/history" icon={<HistoryIcon className="w-4 h-4 text-primary" />} label="History" />
+        <GroupRow to="/rune-delve/hero" icon={<UserIcon className="w-4 h-4 text-primary" />} label="Hero details" />
+      </HomeGroup>
 
-      {/* Loadout preview + Shop/Armory tiles */}
-      {loadout && (() => {
-        const equipped = [loadout.slot_1, loadout.slot_2, loadout.slot_3].filter(Boolean) as string[];
-        return (
-          <Link to="/rune-delve/armory" className="block">
-            <div className="glass-card p-3 btn-press flex items-center gap-2.5">
-              <Shield className="w-4 h-4 text-primary shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-extrabold">Active loadout · {getClass(hero.class).name}</p>
-                <p className="text-[10px] text-muted-foreground truncate">
-                  {equipped.length === 0 ? 'No relics equipped — tap to set up' : equipped.map(id => RELIC_BY_ID[id]?.name ?? '?').join(' · ')}
-                </p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-            </div>
-          </Link>
-        );
-      })()}
-
-      <div className="grid grid-cols-2 gap-2">
-        <Link to="/rune-delve/shop" className="glass-card p-3 text-center text-[12px] font-bold btn-press inline-flex items-center justify-center gap-1.5">
-          <ShoppingBag className="w-3.5 h-3.5 text-primary" /> Shop
-        </Link>
-        <Link to="/rune-delve/armory" className="glass-card p-3 text-center text-[12px] font-bold btn-press inline-flex items-center justify-center gap-1.5">
-          <Shield className="w-3.5 h-3.5 text-primary" /> Armory
-        </Link>
-      </div>
-
-      {/* Footer links */}
-      <div className="grid grid-cols-3 gap-2">
-        <Link to="/rune-delve/bestiary" className="glass-card p-3 text-center text-[12px] font-bold btn-press inline-flex items-center justify-center gap-1.5">
-          <BookOpen className="w-3.5 h-3.5 text-primary" /> Bestiary
-        </Link>
-        <Link to="/rune-delve/history" className="glass-card p-3 text-center text-[12px] font-bold btn-press">History →</Link>
-        <Link to="/rune-delve/hero" className="glass-card p-3 text-center text-[12px] font-bold btn-press">Hero →</Link>
-      </div>
+      {/* Help & Reference group */}
+      <Section label="Reference" />
+      <HomeGroup id="help" icon={<HelpCircle className="w-3.5 h-3.5 text-accent" />} label="Help & Reference">
+        <GroupRow onClick={() => setHelpOpen(true)} icon={<BookOpen className="w-4 h-4 text-primary" />} label="How to Play" />
+        <GroupRow onClick={() => setCodexOpen(true)} icon={<ScrollText className="w-4 h-4 text-accent" />} label="Codex" />
+      </HomeGroup>
 
       <HowToPlaySheet open={helpOpen} onOpenChange={setHelpOpen} heroClass={hero.class} />
       <CodexSheet open={codexOpen} onOpenChange={setCodexOpen} />
     </div>
   );
+}
+
+/** Tiny uppercase eyebrow + thin divider, used to break the home into sections. */
+function Section({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-2 pt-1 px-1">
+      <span className="text-[9px] font-extrabold uppercase tracking-[0.22em] text-muted-foreground">{label}</span>
+      <div className="flex-1 h-px bg-border/60" />
+    </div>
+  );
+}
+
+/** Collapsible group with localStorage-persisted open state. */
+function HomeGroup({ id, icon, label, children }: { id: string; icon: React.ReactNode; label: string; children: React.ReactNode }) {
+  const storageKey = `rd_home_group_${id}`;
+  const [open, setOpen] = useState<boolean>(() => {
+    try { return localStorage.getItem(storageKey) === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(storageKey, open ? '1' : '0'); } catch {}
+  }, [open, storageKey]);
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <div className="glass-card overflow-hidden">
+        <CollapsibleTrigger className="w-full p-3 flex items-center gap-2 btn-press">
+          {icon}
+          <span className="font-rd-display text-[12px] font-extrabold tracking-wide flex-1 text-left">{label}</span>
+          <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', open && 'rotate-180')} />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="border-t border-border/40 divide-y divide-border/30">
+            {children}
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  );
+}
+
+/** Single list row inside a HomeGroup. Acts as Link when `to` is set, button when `onClick` is set. */
+function GroupRow({ to, onClick, icon, label, detail }: { to?: string; onClick?: () => void; icon: React.ReactNode; label: string; detail?: string }) {
+  const inner = (
+    <div className="w-full px-3 py-2.5 flex items-center gap-3 btn-press text-left">
+      <div className="shrink-0">{icon}</div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[12px] font-extrabold leading-tight">{label}</p>
+        {detail && <p className="text-[10px] text-muted-foreground truncate mt-0.5">{detail}</p>}
+      </div>
+      <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+    </div>
+  );
+  if (to) return <Link to={to} className="block">{inner}</Link>;
+  return <button type="button" onClick={onClick} className="w-full block">{inner}</button>;
 }
