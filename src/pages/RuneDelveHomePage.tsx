@@ -319,61 +319,90 @@ export default function RuneDelveHomePage() {
         </div>
       </Link>
 
-      {/* How to play + Codex */}
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          onClick={() => setHelpOpen(true)}
-          className="glass-card p-3 flex items-center justify-center gap-2 text-[12px] font-bold btn-press text-primary"
-        >
-          <BookOpen className="w-3.5 h-3.5" /> How to Play
-        </button>
-        <button
-          onClick={() => setCodexOpen(true)}
-          className="glass-card p-3 flex items-center justify-center gap-2 text-[12px] font-bold btn-press text-accent"
-        >
-          📖 Codex
-        </button>
-      </div>
+      {/* Gear & Progression group */}
+      <Section label="Explore" />
+      <HomeGroup id="gear" icon={<Wrench className="w-3.5 h-3.5 text-primary" />} label="Gear & Progression">
+        {loadout && (() => {
+          const equipped = [loadout.slot_1, loadout.slot_2, loadout.slot_3].filter(Boolean) as string[];
+          return (
+            <GroupRow
+              to="/rune-delve/armory"
+              icon={<Shield className="w-4 h-4 text-primary" />}
+              label="Active Loadout"
+              detail={equipped.length === 0 ? 'No relics equipped' : equipped.map(id => RELIC_BY_ID[id]?.name ?? '?').join(' · ')}
+            />
+          );
+        })()}
+        <GroupRow to="/rune-delve/shop" icon={<ShoppingBag className="w-4 h-4 text-primary" />} label="Shop" />
+        <GroupRow to="/rune-delve/armory" icon={<Shield className="w-4 h-4 text-primary" />} label="Armory" />
+        <GroupRow to="/rune-delve/bestiary" icon={<BookOpen className="w-4 h-4 text-primary" />} label="Bestiary" />
+        <GroupRow to="/rune-delve/history" icon={<HistoryIcon className="w-4 h-4 text-primary" />} label="History" />
+        <GroupRow to="/rune-delve/hero" icon={<UserIcon className="w-4 h-4 text-primary" />} label="Hero details" />
+      </HomeGroup>
 
-      {/* Loadout preview + Shop/Armory tiles */}
-      {loadout && (() => {
-        const equipped = [loadout.slot_1, loadout.slot_2, loadout.slot_3].filter(Boolean) as string[];
-        return (
-          <Link to="/rune-delve/armory" className="block">
-            <div className="glass-card p-3 btn-press flex items-center gap-2.5">
-              <Shield className="w-4 h-4 text-primary shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-extrabold">Active loadout · {getClass(hero.class).name}</p>
-                <p className="text-[10px] text-muted-foreground truncate">
-                  {equipped.length === 0 ? 'No relics equipped — tap to set up' : equipped.map(id => RELIC_BY_ID[id]?.name ?? '?').join(' · ')}
-                </p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-            </div>
-          </Link>
-        );
-      })()}
-
-      <div className="grid grid-cols-2 gap-2">
-        <Link to="/rune-delve/shop" className="glass-card p-3 text-center text-[12px] font-bold btn-press inline-flex items-center justify-center gap-1.5">
-          <ShoppingBag className="w-3.5 h-3.5 text-primary" /> Shop
-        </Link>
-        <Link to="/rune-delve/armory" className="glass-card p-3 text-center text-[12px] font-bold btn-press inline-flex items-center justify-center gap-1.5">
-          <Shield className="w-3.5 h-3.5 text-primary" /> Armory
-        </Link>
-      </div>
-
-      {/* Footer links */}
-      <div className="grid grid-cols-3 gap-2">
-        <Link to="/rune-delve/bestiary" className="glass-card p-3 text-center text-[12px] font-bold btn-press inline-flex items-center justify-center gap-1.5">
-          <BookOpen className="w-3.5 h-3.5 text-primary" /> Bestiary
-        </Link>
-        <Link to="/rune-delve/history" className="glass-card p-3 text-center text-[12px] font-bold btn-press">History →</Link>
-        <Link to="/rune-delve/hero" className="glass-card p-3 text-center text-[12px] font-bold btn-press">Hero →</Link>
-      </div>
+      {/* Help & Reference group */}
+      <Section label="Reference" />
+      <HomeGroup id="help" icon={<HelpCircle className="w-3.5 h-3.5 text-accent" />} label="Help & Reference">
+        <GroupRow onClick={() => setHelpOpen(true)} icon={<BookOpen className="w-4 h-4 text-primary" />} label="How to Play" />
+        <GroupRow onClick={() => setCodexOpen(true)} icon={<ScrollText className="w-4 h-4 text-accent" />} label="Codex" />
+      </HomeGroup>
 
       <HowToPlaySheet open={helpOpen} onOpenChange={setHelpOpen} heroClass={hero.class} />
       <CodexSheet open={codexOpen} onOpenChange={setCodexOpen} />
     </div>
   );
+}
+
+/** Tiny uppercase eyebrow + thin divider, used to break the home into sections. */
+function Section({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-2 pt-1 px-1">
+      <span className="text-[9px] font-extrabold uppercase tracking-[0.22em] text-muted-foreground">{label}</span>
+      <div className="flex-1 h-px bg-border/60" />
+    </div>
+  );
+}
+
+/** Collapsible group with localStorage-persisted open state. */
+function HomeGroup({ id, icon, label, children }: { id: string; icon: React.ReactNode; label: string; children: React.ReactNode }) {
+  const storageKey = `rd_home_group_${id}`;
+  const [open, setOpen] = useState<boolean>(() => {
+    try { return localStorage.getItem(storageKey) === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(storageKey, open ? '1' : '0'); } catch {}
+  }, [open, storageKey]);
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <div className="glass-card overflow-hidden">
+        <CollapsibleTrigger className="w-full p-3 flex items-center gap-2 btn-press">
+          {icon}
+          <span className="font-rd-display text-[12px] font-extrabold tracking-wide flex-1 text-left">{label}</span>
+          <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', open && 'rotate-180')} />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="border-t border-border/40 divide-y divide-border/30">
+            {children}
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  );
+}
+
+/** Single list row inside a HomeGroup. Acts as Link when `to` is set, button when `onClick` is set. */
+function GroupRow({ to, onClick, icon, label, detail }: { to?: string; onClick?: () => void; icon: React.ReactNode; label: string; detail?: string }) {
+  const inner = (
+    <div className="w-full px-3 py-2.5 flex items-center gap-3 btn-press text-left">
+      <div className="shrink-0">{icon}</div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[12px] font-extrabold leading-tight">{label}</p>
+        {detail && <p className="text-[10px] text-muted-foreground truncate mt-0.5">{detail}</p>}
+      </div>
+      <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+    </div>
+  );
+  if (to) return <Link to={to} className="block">{inner}</Link>;
+  return <button type="button" onClick={onClick} className="w-full block">{inner}</button>;
 }
