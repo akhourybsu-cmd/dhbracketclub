@@ -153,7 +153,7 @@ export function useSubmitDailyRun() {
             score: params.score,
             stars,
             dungeon_cleared: params.cleared,
-            modifiers: modifiers as unknown as object,
+            modifiers: modifiers as unknown as import('@/integrations/supabase/types').Json,
             hero_class: params.heroClass,
             completed_at: new Date().toISOString(),
           }], { onConflict: 'user_id,daily_date' });
@@ -186,13 +186,13 @@ export function useSubmitDailyRun() {
 
         await supabase
           .from('rune_delve_daily_streaks')
-          .upsert({
+          .upsert([{
             user_id: user.id,
             current_streak: nextStreak,
             best_streak: Math.max(bestStreak, nextStreak),
             last_completed_date: today,
             lifetime_clears: last === today ? lifetime : lifetime + 1,
-          }, { onConflict: 'user_id' });
+          }], { onConflict: 'user_id' });
       }
 
       const reward = computeDailyReward(stars, nextStreak);
