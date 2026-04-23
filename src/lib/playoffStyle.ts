@@ -1,7 +1,7 @@
 /** Single source of truth for playoff visual treatment across surfaces. */
 
 /** Every playoff draft (Play-In, Semis, Finals G1–G3, Bronze) uses this round count. */
-export const PLAYOFF_DRAFT_ROUNDS = 5;
+export const PLAYOFF_DRAFT_ROUNDS = 3;
 
 export type PlayoffRound = 'qf' | 'sf' | 'final' | 'third_place' | string;
 
