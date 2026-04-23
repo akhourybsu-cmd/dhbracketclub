@@ -176,7 +176,15 @@ export default function RuneDelvePlayPage() {
   // the enemy phase actually runs (i.e. a non-bonus chain or ability resolves).
   const [bonusUsedThisCycle, setBonusUsedThisCycle] = useState(false);
   const [corruption, setCorruption] = useState<CorruptionState>(emptyCorruption);
+  const [shift, setShift] = useState<ShiftState>({ column: -1 });
+  const [linkedPairs, setLinkedPairs] = useState<LinkedPairsState>({ pairs: new Map() });
+  const [eclipse, setEclipse] = useState<EclipseSet>(new Set());
   const [log, setLog] = useState<CombatLogEntry[]>([]);
+  // First-chain-of-fight detection for cleric mastery.
+  const [chainsThisFight, setChainsThisFight] = useState(0);
+  const [bonusShardsFromMastery, setBonusShardsFromMastery] = useState(0);
+  // Track lifetime mana spent for Mage Overflow mastery refund cadence.
+  const [totalManaSpent, setTotalManaSpent] = useState(0);
 
   // Per-run defeat ledger keyed by archetypeId. Submitted to the Bestiary on
   // run-end. Mini-boss / boss kills get tracked under variant ids
