@@ -98,6 +98,57 @@ const CHAPTER_1: RosterEntry[] = [
     chapter: 1, tier: 2, emoji: '🕷️', baseHp: 70, baseDamage: 5,
     notes: 'Deep-Chapter-1 swarm; replaces bats once they get tame.',
   },
+  // ── Expansion drop (10 new) — readable, ability-free Chapter 1 fillers ────
+  {
+    id: 'ember_rat', name: 'Ember Rat', family: 'beast', role: 'swarm',
+    chapter: 1, tier: 1, emoji: '🐀', baseHp: 38, baseDamage: 4,
+    notes: 'Pack filler under Cave Bats. Tiny HP, quick bites.',
+  },
+  {
+    id: 'tunnel_kobold', name: 'Tunnel Kobold', family: 'cultist', role: 'striker',
+    chapter: 1, tier: 1, emoji: '🗿', baseHp: 55, baseDamage: 6,
+    notes: 'Knife-and-grin alt to Goblin Scout.',
+  },
+  {
+    id: 'cave_lizard', name: 'Cave Lizard', family: 'beast', role: 'striker',
+    chapter: 1, tier: 1, emoji: '🦎', baseHp: 60, baseDamage: 5,
+    notes: 'Mid-band biter; rounds out the Ch.1 striker pool.',
+  },
+  {
+    id: 'mossback_toad', name: 'Mossback Toad', family: 'beast', role: 'tank',
+    chapter: 1, tier: 2, emoji: '🐸', baseHp: 95, baseDamage: 3,
+    notes: 'Wet-noodle alt to Ember Slime.',
+  },
+  {
+    id: 'lantern_moth', name: 'Lantern Moth', family: 'magical', role: 'swarm',
+    chapter: 1, tier: 1, emoji: '🦋', baseHp: 35, baseDamage: 4,
+    notes: 'Glowing nuisance, very low HP.',
+  },
+  {
+    id: 'goblin_brute', name: 'Goblin Brute', family: 'cultist', role: 'tank',
+    chapter: 1, tier: 2, emoji: '🧌', baseHp: 110, baseDamage: 5,
+    notes: 'Heavier Goblin profile; soaks but rarely bursts.',
+  },
+  {
+    id: 'cave_crab', name: 'Cave Crab', family: 'cave', role: 'defender',
+    chapter: 1, tier: 2, emoji: '🦀', baseHp: 105, baseDamage: 4,
+    notes: 'Naturally tough shell; low DPS, hard to chip.',
+  },
+  {
+    id: 'ember_pup', name: 'Ember Pup', family: 'beast', role: 'striker',
+    chapter: 1, tier: 2, emoji: '🐺', baseHp: 65, baseDamage: 7,
+    notes: 'Quick chomp; pairs naturally with bats.',
+  },
+  {
+    id: 'dust_wisp', name: 'Dust Wisp', family: 'magical', role: 'swarm',
+    chapter: 1, tier: 1, emoji: '💨', baseHp: 30, baseDamage: 3,
+    notes: 'Tiny HP, lowest damage in the pool.',
+  },
+  {
+    id: 'feral_imp', name: 'Feral Imp', family: 'magical', role: 'striker',
+    chapter: 1, tier: 2, emoji: '👺', baseHp: 60, baseDamage: 7,
+    notes: 'Tier-2 striker bridging into Chapter 2.',
+  },
 ];
 
 // ── Chapter 2 — Crystal Hollow (more disruptive, tactical) ───────────────────
@@ -134,6 +185,65 @@ const CHAPTER_2: RosterEntry[] = [
   {
     id: 'stone_golem', name: 'Stone Golem', family: 'cave', role: 'tank',
     chapter: 2, tier: 4, emoji: '🗿', baseHp: 150, baseDamage: 8,
+  },
+  // ── Expansion drop (10 new) — Chapter 2 tactical reinforcements ───────────
+  {
+    id: 'frost_acolyte', name: 'Frost Acolyte', family: 'cultist', role: 'caster',
+    chapter: 2, tier: 3, emoji: '❄️', baseHp: 105, baseDamage: 7,
+    notes: 'Mid-tier caster; no ability, just menace.',
+  },
+  {
+    id: 'bone_archer', name: 'Bone Archer', family: 'undead', role: 'striker',
+    chapter: 2, tier: 3, emoji: '🏹', baseHp: 70, baseDamage: 9,
+    notes: 'Glass-cannon ranged feel; punishes slow chains.',
+  },
+  {
+    id: 'crystal_construct', name: 'Crystal Construct', family: 'cave', role: 'tank',
+    chapter: 2, tier: 4, emoji: '💎', baseHp: 145, baseDamage: 7,
+    notes: 'Stone-Golem sibling with prettier teeth.',
+  },
+  {
+    id: 'glacial_imp', name: 'Glacial Imp', family: 'magical', role: 'striker',
+    chapter: 2, tier: 3, emoji: '🥶', baseHp: 70, baseDamage: 8,
+    notes: 'Frosty echo of the Shadow Imp.',
+  },
+  {
+    id: 'cult_seer', name: 'Cult Seer', family: 'cultist', role: 'support',
+    chapter: 2, tier: 3, emoji: '👁️', baseHp: 80, baseDamage: 4,
+    ability: 'shield_self', abilityCooldown: 5,
+    telegraphLabel: 'Visions ward…',
+    notes: 'Self-wards on a slower cadence than the Warden.',
+  },
+  {
+    id: 'revenant_thrall', name: 'Revenant Thrall', family: 'undead', role: 'swarm',
+    chapter: 2, tier: 2, emoji: '🧟', baseHp: 60, baseDamage: 5,
+    notes: 'Pack filler in Chapter 2 fights.',
+  },
+  {
+    id: 'hollow_shrieker', name: 'Hollow Shrieker', family: 'undead', role: 'support',
+    chapter: 2, tier: 3, emoji: '😱', baseHp: 80, baseDamage: 4,
+    ability: 'heal_ally', abilityCooldown: 5,
+    telegraphLabel: 'Shrieking a mend…',
+    notes: 'Slower-cadence Chanter analogue.',
+  },
+  {
+    id: 'quartz_serpent', name: 'Quartz Serpent', family: 'beast', role: 'striker',
+    chapter: 2, tier: 4, emoji: '🐍', baseHp: 95, baseDamage: 9,
+    notes: 'Late-Ch.2 mid-striker.',
+  },
+  {
+    id: 'frost_warden', name: 'Frost Warden', family: 'undead', role: 'defender',
+    chapter: 2, tier: 4, emoji: '🛡️', baseHp: 130, baseDamage: 7,
+    ability: 'shield_self', abilityCooldown: 4,
+    telegraphLabel: 'Frosting wards…',
+    notes: 'Pre-echo of the Cursed Knight.',
+  },
+  {
+    id: 'whisper_witch', name: 'Whisper Witch', family: 'cultist', role: 'corrupter',
+    chapter: 2, tier: 4, emoji: '🧙‍♀️', baseHp: 95, baseDamage: 6,
+    ability: 'corrupt_tile', abilityCooldown: 4,
+    telegraphLabel: 'Whispering rot…',
+    notes: 'Slower Wraith echo. Corrupts on a 4-turn cadence.',
   },
 ];
 
@@ -175,6 +285,65 @@ const CHAPTER_3: RosterEntry[] = [
     id: 'ancient_drake', name: 'Ancient Drake', family: 'boss', role: 'controller',
     chapter: 3, tier: 5, emoji: '🐉', baseHp: 240, baseDamage: 12,
     notes: 'Hard mini-boss profile. Used at boss-rule milestones.',
+  },
+  // ── Expansion drop (10 new) — Chapter 3 layered threats ───────────────────
+  {
+    id: 'void_acolyte', name: 'Void Acolyte', family: 'corrupted', role: 'caster',
+    chapter: 3, tier: 4, emoji: '🌌', baseHp: 125, baseDamage: 9,
+    notes: 'Telegraph-friendly caster.',
+  },
+  {
+    id: 'wraith_lord', name: 'Wraith Lord', family: 'undead', role: 'corrupter',
+    chapter: 3, tier: 5, emoji: '👤', baseHp: 135, baseDamage: 8,
+    ability: 'corrupt_tile', abilityCooldown: 3,
+    telegraphLabel: 'Lording rot…',
+    notes: 'Faster-cycle Wraith for late game.',
+  },
+  {
+    id: 'sundered_titan', name: 'Sundered Titan', family: 'cave', role: 'tank',
+    chapter: 3, tier: 5, emoji: '⛰️', baseHp: 220, baseDamage: 8,
+    notes: 'Massive HP pool with restrained DPS.',
+  },
+  {
+    id: 'void_stalker', name: 'Void Stalker', family: 'corrupted', role: 'striker',
+    chapter: 3, tier: 5, emoji: '🥷', baseHp: 90, baseDamage: 13,
+    notes: 'Glass cannon — even faster than the Assassin.',
+  },
+  {
+    id: 'dread_summoner', name: 'Dread Summoner', family: 'undead', role: 'summoner',
+    chapter: 3, tier: 5, emoji: '☠️', baseHp: 110, baseDamage: 6,
+    ability: 'summon_minion', abilityCooldown: 6,
+    telegraphLabel: 'Calling the dread…',
+    notes: 'Echo of Bone Summoner with longer cooldown.',
+  },
+  {
+    id: 'arcane_warden', name: 'Arcane Warden', family: 'magical', role: 'defender',
+    chapter: 3, tier: 4, emoji: '🪬', baseHp: 130, baseDamage: 7,
+    ability: 'shield_self', abilityCooldown: 3,
+    telegraphLabel: 'Weaving wards…',
+    notes: 'Frequent self-shield, low DPS.',
+  },
+  {
+    id: 'bone_juggernaut', name: 'Bone Juggernaut', family: 'undead', role: 'tank',
+    chapter: 3, tier: 5, emoji: '🦴', baseHp: 200, baseDamage: 9,
+    notes: 'Pure stat tank for the late game.',
+  },
+  {
+    id: 'void_seer', name: 'Void Seer', family: 'corrupted', role: 'support',
+    chapter: 3, tier: 4, emoji: '🔮', baseHp: 100, baseDamage: 5,
+    ability: 'heal_ally', abilityCooldown: 4,
+    telegraphLabel: 'Seeing a mend…',
+    notes: 'Heals corrupted allies on a tight cadence.',
+  },
+  {
+    id: 'gloom_wisp', name: 'Gloom Wisp', family: 'magical', role: 'swarm',
+    chapter: 3, tier: 4, emoji: '🌫️', baseHp: 55, baseDamage: 6,
+    notes: 'Late-game swarm filler.',
+  },
+  {
+    id: 'vault_revenant', name: 'Vault Revenant', family: 'undead', role: 'striker',
+    chapter: 3, tier: 5, emoji: '⚰️', baseHp: 110, baseDamage: 11,
+    notes: 'Rounds out the Chapter-3 striker pool.',
   },
 ];
 
