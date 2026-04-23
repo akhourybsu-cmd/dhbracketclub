@@ -949,6 +949,17 @@ export default function RuneDelvePlayPage() {
         turnLogs.push({ kind: 'laststand', text: 'Last Stand! You survived at 1 HP' });
       }
     }
+    // Relic: Phoenix Heart — full revive at 50%+ maxHp once per run. Runs
+    // AFTER Last Stand so the cheap save fires first when both are equipped.
+    if (afterEnemies.hp <= 0) {
+      const reviveHp = tryPhoenixHeart(relics, afterEnemies.maxHp, phoenixUsed);
+      if (reviveHp != null) {
+        afterEnemies = { ...afterEnemies, hp: reviveHp };
+        setPhoenixUsed(true);
+        toast.success(`🔥 Phoenix Heart! Revived at ${reviveHp} HP`, { duration: 2200 });
+        turnLogs.push({ kind: 'laststand', text: `Phoenix Heart blazed — revived at ${reviveHp} HP` });
+      }
+    }
 
     // Relic: Bloodbond — heal per kill this turn (rank-aware: 4–6 HP).
     if (resolution.enemyKills.length && has(relics, 'bloodbond')) {
