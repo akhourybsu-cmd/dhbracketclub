@@ -402,13 +402,21 @@ export default function RuneDelvePlayPage() {
     // Apply pre-run relic effects: starting mana + starting shield, plus
     // Foreseer's Lens (+ turns/level) and Void Pact (-maxHp, applied below).
     const bonusTurns = getForeseerBonusTurns(relics);
-    const initial = initialCombat(enemies, level.turn_limit + bonusTurns);
-    initial.mana = Math.min(MAX_MANA, initial.mana + getStartingMana(relics));
+    const dailyTurnDelta = isDailyMode ? dailyTurnLimitDelta(dailyMods) : 0;
+    const initial = initialCombat(enemies, Math.max(3, level.turn_limit + bonusTurns + dailyTurnDelta));
+    // Mastery: starting mana bonus (Mage T1) layered on top of relic effects.
+    initial.mana = Math.min(MAX_MANA, initial.mana + getStartingMana(relics) + getMasteryStartingMana(activeMasteries));
     initial.shieldTurns = Math.max(initial.shieldTurns, getStartingShieldTurns(relics));
     const voidCost = getVoidPactHpCost(relics);
     if (voidCost > 0) {
       initial.maxHp = Math.max(10, initial.maxHp - voidCost);
       initial.hp = Math.min(initial.hp, initial.maxHp);
+    }
+    // Daily Glass Cannon: halve max HP at run start.
+    const dailyHpMult = isDailyMode ? dailyMaxHpMultiplier(dailyMods) : 1;
+    if (dailyHpMult !== 1) {
+      initial.maxHp = Math.max(10, Math.round(initial.maxHp * dailyHpMult));
+      initial.hp = initial.maxHp;
     }
     setCombat(initial);
     setActiveRelicsSnapshot(relics);
@@ -425,7 +433,7 @@ export default function RuneDelvePlayPage() {
     setLog([{ id: nextLogId(), kind: 'info', text: `You enter Level ${level.level_number}. The runes hum.` }]);
     // NOTE: `activeRelics` intentionally OMITTED from deps — see comment above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [level, hero, sealedTilesActive, telegraphActive, corruptionActive, runKey]);
+  }, [level, hero, sealedTilesActive, telegraphActive, corruptionActive, shiftingActive, linkedPairsActive, eclipseActive, runKey, isDailyMode]);
 
   // ── Persist snapshot on every meaningful state change ─────────────────
   // Skipped while there's no live run, after end-state, or when we don't
