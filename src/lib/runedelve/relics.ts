@@ -119,28 +119,28 @@ export const RANK_EFFECTS: Record<string, RankTable> = {
   // Offense (multipliers — small +0.05 bumps)
   ember_edge:        [1.50, 1.55, 1.60, 1.65, 1.70],
   crimson_tide:      [1.75, 1.80, 1.85, 1.90, 1.95],
-  executioners_mark: [1.30, 1.34, 1.38, 1.42, 1.46],
-  desperate_surge:   [1.25, 1.29, 1.33, 1.37, 1.41],
+  executioners_mark: [1.30, 1.36, 1.42, 1.48, 1.55],
+  desperate_surge:   [1.25, 1.30, 1.36, 1.42, 1.50],
 
   // Mana (flat — integer breakpoints)
-  aether_spark:      [2,    2,    2,    3,    3   ],
-  sapphire_flow:     [1,    1,    1,    2,    2   ],
-  first_light:       [1,    1,    1,    1,    2   ], // free uses
+  aether_spark:      [2,    3,    3,    4,    5   ],
+  sapphire_flow:     [1,    1,    2,    2,    3   ],
+  first_light:       [1,    1,    2,    2,    3   ], // free uses
 
   // Survival
-  iron_resolve:      [1,    1,    2,    2,    2   ], // shield turns
+  iron_resolve:      [1,    2,    2,    3,    3   ], // shield turns
   verdant_heart:     [1.0,  1.1,  1.2,  1.3,  1.4 ], // heal multiplier on length
-  bloodbond:         [4,    5,    5,    6,    6   ], // HP heal on kill
-  last_stand:        [1,    1,    1,    1,    2   ], // uses per run
-  bulwark:           [1,    1,    1,    2,    2   ], // shield turns added on gold
+  bloodbond:         [4,    5,    6,    7,    8   ], // HP heal on kill
+  last_stand:        [1,    1,    2,    2,    3   ], // uses per run
+  bulwark:           [1,    2,    2,    3,    3   ], // shield turns added on gold
   spiked_aegis:      [1.10, 1.15, 1.20, 1.28, 1.35], // thorns multiplier (composes with class base)
 
   // Board / tempo / utility
-  keysight:          [1,    1,    1,    2,    2   ], // sealed speedup turns
-  cleansing_touch:   [1,    1,    1,    1,    2   ], // free clears
-  quickstep:         [1,    1,    1,    2,    2   ], // length bonus on first chain
-  momentum:          [1.10, 1.12, 1.14, 1.16, 1.18],
-  foresight:         [1,    1,    1,    2,    2   ], // turns of early reveal
+  keysight:          [1,    2,    2,    3,    3   ], // sealed speedup turns
+  cleansing_touch:   [1,    1,    2,    2,    3   ], // free clears
+  quickstep:         [1,    2,    2,    3,    3   ], // length bonus on first chain
+  momentum:          [1.10, 1.13, 1.16, 1.20, 1.25],
+  foresight:         [1,    1,    2,    2,    3   ], // turns of early reveal
   shrine_ward:       [0.90, 0.88, 0.86, 0.84, 0.82], // damage multiplier (lower = better)
   wanderers_compass: [1.15, 1.18, 1.21, 1.24, 1.27],
   cracked_crown:     [0.85, 0.83, 0.81, 0.79, 0.77], // boss soften (lower = better)
