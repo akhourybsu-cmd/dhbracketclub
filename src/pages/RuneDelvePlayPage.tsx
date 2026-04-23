@@ -78,7 +78,7 @@ import {
   dailyReflectivePct,
   dailyHidesForesight,
 } from '@/lib/runedelve/dailyModifierEffects';
-import { getActiveMasteries, masteryUnlockedAt, getMasteryDef } from '@/lib/runedelve/classMastery';
+import { getActiveMasteries, masteryUnlockedAt } from '@/lib/runedelve/classMastery';
 import {
   getMasteryStartingMana,
   getMasteryManaCap,
