@@ -119,8 +119,8 @@ export const RANK_EFFECTS: Record<string, RankTable> = {
   // Offense (multipliers — small +0.05 bumps)
   ember_edge:        [1.50, 1.55, 1.60, 1.65, 1.70],
   crimson_tide:      [1.75, 1.80, 1.85, 1.90, 1.95],
-  executioners_mark: [1.30, 1.34, 1.38, 1.42, 1.46],
-  desperate_surge:   [1.25, 1.29, 1.33, 1.37, 1.41],
+  executioners_mark: [1.30, 1.36, 1.42, 1.48, 1.55],
+  desperate_surge:   [1.25, 1.30, 1.36, 1.42, 1.50],
 
   // Mana (flat — integer breakpoints)
   aether_spark:      [2,    3,    3,    4,    5   ],
