@@ -834,8 +834,7 @@ export default function RuneDelvePlayPage() {
       }
     }
     setChainsThisFight(c => c + 1);
-    // (placeholder — closing brace from outer block follows)
-    if (false) {
+    // ── Vampiric Sigil — heal % of red damage dealt ──────────────────────
     if (type === 'red' && chainMods.lifestealPctOfDamage > 0 && resolution.damageDealt > 0) {
       const lifesteal = Math.round(resolution.damageDealt * chainMods.lifestealPctOfDamage);
       const applied = Math.min(lifesteal, next.maxHp - next.hp);
