@@ -286,9 +286,20 @@ export default function RuneDelvePlayPage() {
   const sealedTilesActive = activeMechanics.includes('sealed_tiles');
   const telegraphActive = activeMechanics.includes('telegraphed_attacks');
   const corruptionActive = activeMechanics.includes('corrupted_tiles');
+  const shiftingActive = activeMechanics.includes('shifting_runes');
+  const linkedPairsActive = activeMechanics.includes('linked_pairs');
+  const eclipseActive = activeMechanics.includes('eclipse_tiles');
   const secondaryObjective = ((level?.modifiers as any)?.secondary_objective ?? null) as SecondaryObjective | null;
   const bossRule = ((level?.modifiers as any)?.boss_rule ?? null) as BossRuleId | null;
   const waveDefs = ((level?.modifiers as any)?.waves ?? null) as Array<{ enemies: any[]; reinforcement_turns: number }> | null;
+
+  // Active mastery ids for the hero's class (computed once per render —
+  // class level is stable per run since XP only awards on completion).
+  const activeMasteries = useMemo(() => {
+    if (!hero) return [];
+    const lvl = (classTracks ?? []).find(t => t.class === hero.class)?.level ?? hero.level ?? 1;
+    return getActiveMasteries(hero.class, lvl);
+  }, [hero, classTracks]);
 
   // Per-run snapshot key (scoped to user + level so swapping levels or users
   // can never bleed in stale state).
