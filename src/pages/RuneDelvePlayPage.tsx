@@ -1595,6 +1595,36 @@ export default function RuneDelvePlayPage() {
         }
       } catch { /* bestiary write is best-effort */ }
 
+      // ── Daily Challenge: submit run, surface star + bonus rewards ────────
+      if (isDailyMode && hero) {
+        try {
+          const result = await submitDaily.mutateAsync({
+            score: breakdown.total,
+            cleared,
+            heroClass: hero.class,
+            levelNumber: level.level_number,
+          });
+          if (cleared) {
+            const starStr = '★'.repeat(result.stars) + '☆'.repeat(3 - result.stars);
+            toast.success(`Daily Cleared — ${starStr}`, {
+              description: `+${result.reward.shards} shards · +${result.reward.xp} XP${result.reward.title ? ` · 🏆 ${result.reward.title}` : ''}`,
+              duration: 6000,
+            });
+            if (result.reward.shards > 0) {
+              try { await earnShards.mutateAsync(result.reward.shards); } catch { /* best-effort */ }
+            }
+          } else {
+            toast(`Daily run logged — try again tomorrow.`, { duration: 4000 });
+          }
+        } catch (e: any) {
+          toast.error(`Couldn't save daily: ${e?.message ?? 'unknown error'}`);
+        }
+        // Daily mode bypasses the campaign results screen — players return
+        // to the Daily landing page with the leaderboard refresh.
+        setTimeout(() => navigate('/rune-delve/daily'), 2500);
+        return;
+      }
+
       setTimeout(() => navigate(`/rune-delve/results/${level.level_number}`), 2500);
     } catch (e: any) {
       toast.error(e?.message ?? 'Could not save run');
