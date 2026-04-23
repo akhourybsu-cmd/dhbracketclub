@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sparkles, Trophy, Flame, ChevronRight, Swords, BookOpen, Map, ShoppingBag, Shield } from 'lucide-react';
+import { Sparkles, Trophy, Flame, ChevronRight, Swords, BookOpen, Map, ShoppingBag, Shield, Calendar } from 'lucide-react';
 import { useRuneDelveHero, useEnsureHero } from '@/hooks/useRuneDelveHero';
 import { useAllClassProgress } from '@/hooks/useRuneDelveClassProgress';
 import { useMyProgress, useCampaignLeaderboard } from '@/hooks/useRuneDelveCampaign';
@@ -12,6 +12,9 @@ import { ClassBadge } from '@/components/runedelve/ClassBadge';
 import { ShardBalance } from '@/components/runedelve/ShardBalance';
 import { RELIC_BY_ID } from '@/lib/runedelve/relics';
 import { HowToPlaySheet } from '@/components/runedelve/HowToPlaySheet';
+import { CodexSheet } from '@/components/runedelve/CodexSheet';
+import { useTodayDaily, useMyDailyRun, useMyDailyStreak } from '@/hooks/useDailyChallenge';
+import { getDailyModifier } from '@/lib/runedelve/dailyModifiers';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
