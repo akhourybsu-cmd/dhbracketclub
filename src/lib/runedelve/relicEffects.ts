@@ -216,8 +216,36 @@ export function momentumScoreBonusMult(a: ActiveRelics, longestChain: number): n
   return effectValue('momentum', rankOf(a, 'momentum'));
 }
 
-// ── Spiked Aegis (extra Thorns multiplier on shielded hits) ─────────────
+// ── Spiked Aegis + Brambleward (extra Thorns multiplier on shielded hits) ─
+// Both relics compose multiplicatively on top of the class base thorns rate.
 export function thornsRelicMultiplier(a: ActiveRelics): number {
-  if (!has(a, 'spiked_aegis')) return 1;
-  return effectValue('spiked_aegis', rankOf(a, 'spiked_aegis'));
+  let mult = 1;
+  if (has(a, 'spiked_aegis')) mult *= effectValue('spiked_aegis', rankOf(a, 'spiked_aegis'));
+  if (has(a, 'brambleward')) mult *= effectValue('brambleward', rankOf(a, 'brambleward'));
+  return mult;
+}
+
+// ── Foreseer's Lens — bonus turns added to every level's turn limit ──────
+export function getForeseerBonusTurns(a: ActiveRelics): number {
+  if (!has(a, 'foreseers_lens')) return 0;
+  return Math.round(effectValue('foreseers_lens', rankOf(a, 'foreseers_lens')));
+}
+
+// ── Void Pact — sacrifice max HP at run start in exchange for damage mult.
+// Returns the flat HP to subtract from both maxHp and starting hp.
+export function getVoidPactHpCost(a: ActiveRelics): number {
+  if (!has(a, 'void_pact')) return 0;
+  return 10;
+}
+
+// ── Phoenix Heart — full revive once per run on lethal damage. Returns the
+// HP to revive at, or null if not equipped / already used.
+export function tryPhoenixHeart(
+  a: ActiveRelics,
+  maxHp: number,
+  alreadyUsed: boolean,
+): number | null {
+  if (!has(a, 'phoenix_heart') || alreadyUsed) return null;
+  const frac = effectValue('phoenix_heart', rankOf(a, 'phoenix_heart'));
+  return Math.max(1, Math.round(maxHp * frac));
 }
