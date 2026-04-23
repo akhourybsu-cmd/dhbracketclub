@@ -1,18 +1,76 @@
 
 
-## Playoff Drafts — tournament-grade visual treatment
+# Relic Rank Progression Audit & Rebalance
 
-Make playoff drafts impossible to mistake for a regular draft. Right now the only signal a draft is a playoff match is a small gold "Season Draft #N" pill on the detail page — every other surface (Drafts list, Dashboard, header chrome) treats it identically to a freeform draft. We'll layer in a distinctive **Tournament** visual identity that scales from list rows up to the full detail header.
+I audited all 21 relic rank tables in `src/lib/runedelve/relics.ts`. Many ranks today are **dead upgrades** — players spend hundreds of shards (rank cost doubles each tier) and get the same integer value back. Below are the relics where R2/R3/R4/R5 don't deliver a felt improvement, with proposed fixes.
 
-### Visual language
+## Audit findings
 
-A new "Tournament" treatment built on the existing palette so it stays on-brand:
-- **Primary accent**: gold (`hsl(var(--gold))`) — already the league color — paired with a deeper amber gradient stop to push contrast vs regular drafts.
-- **Accent shape**: a rotated `Trophy`/`Swords` icon and a tournament-bracket motif (✦ + chevron rails) used only on playoff drafts.
-- **Glow + edge**: amber outer glow (`box-shadow: 0 0 18px hsl(45 93% 52% / 0.25)`) + a 2px gold left border on cards, plus the existing `arena-edge` shimmer reused with the gold variant (`var(--gradient-arena-edge-gold)`).
-- **Round-aware label**: every pill that says "Setup / In Progress / Complete" gets a leading round chip — `PLAY-IN`, `SEMIFINAL`, `FINALS G1/G2/G3`, `BRONZE`. Pulled from `playoff_round` + `match_number` on `draft_playoff_matches`.
+### ❌ Dead-rank relics (most critical)
 
-### Where it shows up
+These have ranks that round to the **same value** as the prior rank — a wasted spend:
 
-**1) `DraftsListPage.tsx` — list rows**
-- Add `playoffMatchByDraft` lookup (one query: `draft_playoff_matches` filtered to `draft_id I
+| Relic | Current table | Problem |
+|---|---|---|
+| `aether_spark` | 2,2,2,3,3 | R2 & R3 do nothing; R5 does nothing |
+| `sapphire_flow` | 1,1,1,2,2 | R2/R3/R5 do nothing |
+| `first_light` | 1,1,1,1,2 | Only R5 changes anything — 4 dead ranks |
+| `iron_resolve` | 1,1,2,2,2 | R2, R4, R5 do nothing |
+| `last_stand` | 1,1,1,1,2 | Only R5 changes anything |
+| `bulwark` | 1,1,1,2,2 | R2/R3/R5 do nothing |
+| `keysight` | 1,1,1,2,2 | R2/R3/R5 do nothing |
+| `cleansing_touch` | 1,1,1,1,2 | Only R5 changes anything |
+| `quickstep` | 1,1,1,2,2 | R2/R3/R5 do nothing |
+| `foresight` | 1,1,1,2,2 | R2/R3/R5 do nothing |
+| `bloodbond` | 4,5,5,6,6 | R3 & R5 do nothing |
+
+### ⚠️ Underwhelming-but-functional
+
+Each rank changes a number, but the felt impact is too thin for the cost curve:
+
+- `momentum` 1.10 → 1.18 (only +8% over 4 ranks)
+- `executioners_mark` 1.30 → 1.46 (+16% over 4 ranks, on a niche condition)
+- `desperate_surge` 1.25 → 1.41 (only fires below 30% HP)
+
+### ✅ Already well-tuned
+
+`ember_edge`, `crimson_tide`, `verdant_heart`, `spiked_aegis`, `shrine_ward`, `wanderers_compass`, `cracked_crown` — clean monotonic progression with a felt bump every rank.
+
+---
+
+## Proposed fix — every rank delivers a real upgrade
+
+Rebalanced tables (only the dead/weak ones change):
+
+```ts
+// Mana — integer relics get a meaningful breakpoint each rank
+aether_spark:    [2,    3,    3,    4,    5   ],  // also unlocks R2 mana floor for caster builds
+sapphire_flow:   [1,    1,    2,    2,    3   ],  // breakpoints at R3 and R5
+first_light:     [1,    1,    2,    2,    3   ],  // R3 second free cast = real ability build
+
+// Survival — integer ranks get spaced upgrades
+iron_resolve:    [1,    2,    2,    3,    3   ],  // R2 doubles starting shield
+last_stand:      [1,    1,    2,    2,    3   ],  // R3 second life-save, R5 third
+bulwark:         [1,    2,    2,    3,    3   ],
+bloodbond:       [4,    5,    6,    7,    8   ],  // clean +1/rank curve
+
+// Board / tempo / utility
+keysight:        [1,    2,    2,    3,    3   ],
+cleansing_touch: [1,    1,    2,    2,    3   ],
+quickstep:       [1,    2,    2,    3,    3   ],
+foresight:       [1,    1,    2,    2,    3   ],
+
+// Tempo multiplier — widen the curve so R5 feels earned
+momentum:        [1.10, 1.13, 1.16, 1.20, 1.25],
+
+// Offense — bigger swings on conditional damage
+executioners_mark: [1.30, 1.36, 1.42, 1.48, 1.55],
+desperate_surge:   [1.25, 1.30, 1.36, 1.42, 1.50],
+```
+
+### Why this works
+
+- **Every rank now changes the displayed value** in `RelicUpgradeSheet`'s "Current → Next" delta, so the upgrade UI never lies.
+- **Integer relics use a 1 → 2 → 3 cadence** (with a doubling at R2 or R3) instead of stalling on the same number for 3 ranks.
+- **Conditional offense relics get bigger swings** to compensate for their narrow trigger windows.
+- **Power ceiling is preserved** — R5 totals stay close to or just above the old R5 (e.g., `b
