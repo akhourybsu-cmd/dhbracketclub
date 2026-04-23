@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Sparkles } from 'lucide-react';
+import { ArrowLeft, BookOpen, Sparkles } from 'lucide-react';
 import { useRuneDelveHero } from '@/hooks/useRuneDelveHero';
 import { useMyProgress } from '@/hooks/useRuneDelveCampaign';
 import { useRuneWallet } from '@/hooks/useRuneShards';
 import { ClassBadge } from './ClassBadge';
 import { ShardBalance } from './ShardBalance';
 import { ExitRunDialog } from './ExitRunDialog';
+import { CodexSheet } from './CodexSheet';
 import { chapterFor } from '@/lib/runedelve/levelGenerator';
 import { cn } from '@/lib/utils';
 
@@ -23,6 +24,7 @@ export function RuneDelveHUD() {
   const { data: progress } = useMyProgress();
   const { data: wallet } = useRuneWallet();
   const [exitOpen, setExitOpen] = useState(false);
+  const [codexOpen, setCodexOpen] = useState(false);
 
   const isHome = location.pathname === '/rune-delve';
   const isPlaying = location.pathname.startsWith('/rune-delve/play/');
@@ -81,6 +83,17 @@ export function RuneDelveHUD() {
             </div>
           </Link>
 
+          {!isPlaying && (
+            <button
+              onClick={() => setCodexOpen(true)}
+              aria-label="Open Codex"
+              className="w-9 h-9 rounded-xl flex items-center justify-center btn-press text-foreground/85 hover:text-primary"
+              style={{ background: 'hsl(var(--rd-arcane) / 0.12)' }}
+            >
+              <BookOpen className="w-4 h-4" />
+            </button>
+          )}
+
           <Link to="/rune-delve/shop" aria-label="Shop">
             <ShardBalance shards={wallet?.shards ?? 0} size="sm" />
           </Link>
@@ -95,6 +108,7 @@ export function RuneDelveHUD() {
           navigate('/rune-delve');
         }}
       />
+      <CodexSheet open={codexOpen} onOpenChange={setCodexOpen} />
     </>
   );
 }
