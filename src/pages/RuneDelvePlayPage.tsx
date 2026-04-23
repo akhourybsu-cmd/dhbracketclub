@@ -1138,7 +1138,25 @@ export default function RuneDelvePlayPage() {
       if (gained > 0) turnLogs.push({ kind: 'heal', text: 'Bloodbond drew vigor from the slain', amount: gained });
     }
 
-    const newGrid = resolveBoard(grid, chain, refillRng, seals);
+    // ── Linked Pairs (L46+) — clearing one cell triggers its twin too. ──
+    let chainForResolve = chain;
+    if (linkedPairsActive && linkedPairs.pairs.size > 0) {
+      const triggered = pairsTriggeredByChain(linkedPairs, chain);
+      if (triggered.length > 0) {
+        chainForResolve = [...chain, ...triggered];
+        const clearedKeys = chainForResolve.map(c => `${c.r}-${c.c}`);
+        const nextPairs: LinkedPairsState = { pairs: new Map(linkedPairs.pairs) };
+        consumePairs(nextPairs, clearedKeys);
+        setLinkedPairs(nextPairs);
+        turnLogs.push({ kind: 'info', text: `🔗 Linked twin${triggered.length > 1 ? 's' : ''} cleared` });
+      }
+    }
+    let newGrid = resolveBoard(grid, chainForResolve, refillRng, seals);
+
+    // ── Shifting Runes (L36+) — drift the active column down each turn. ─
+    if (shiftingActive && shift.column >= 0 && !grantsBonusMove) {
+      newGrid = applyShift(newGrid, shift, refillRng, seals);
+    }
 
     // Build the final seal set: drop any broken adjacents, then layer in any
     // ability-driven additions (seal_tile from Voidspawn, etc.). One write
