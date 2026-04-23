@@ -567,7 +567,13 @@ export default function RuneDelvePlayPage() {
   const objType = level.objective_type as ObjectiveType;
 
   const handleChain = (chain: Cell[]) => {
-    if (!isValidChain(grid, chain, seals)) return;
+    if (!isValidChain(grid, chain, seals, eclipse)) return;
+    // Daily Overcharge caps chain length at 5.
+    const chainCap = isDailyMode ? dailyChainCap(dailyMods) : 0;
+    if (chainCap > 0 && chain.length > chainCap) {
+      toast('⚡ Overcharge limits chains to 5', { duration: 1400 });
+      return;
+    }
     const type = grid[chain[0].r][chain[0].c];
     // Tiered chain bonus: 6=heavy strike (no free turn), 7=+30% & free turn,
     // 8+=+40% & free turn. Only ONE free turn per enemy cycle.
@@ -740,6 +746,94 @@ export default function RuneDelvePlayPage() {
         }
       }
     }
+    // ── Daily + Mastery damage compounding (red chains only) ─────────────
+    // Stacks multiplicatively on top of the tier multiplier so power-builds
+    // really feel powerful. Mastery T5 Last Stand also kicks in below 20% HP.
+    if (type === 'red' && resolution.damageDealt > 0) {
+      let extraMult = 1;
+      if (isDailyMode) extraMult *= dailyDamageMultiplier(dailyMods, type);
+      if (isDailyMode) extraMult *= dailyIroncladDamageMult(dailyMods, chain.length);
+      extraMult *= getMasteryChainDamageMult(activeMasteries, type);
+      if (isLastStandActive(activeMasteries, combat.hp, combat.maxHp)) extraMult *= 1.5;
+      if (extraMult !== 1) {
+        const baseDmg = resolution.damageDealt;
+        const boostedDmg = Math.round(baseDmg * extraMult);
+        const extra = boostedDmg - baseDmg;
+        if (extra !== 0) {
+          const target = next.enemies.find(e => e.hp > 0)
+            ?? next.enemies.find(e => resolution.enemyKills.includes(e.id));
+          if (target && extra > 0) {
+            const applied = Math.min(extra, Math.max(target.hp, 0));
+            if (applied > 0) {
+              target.hp -= applied;
+              resolution.damageDealt += applied;
+              next.totalDamage += applied;
+              if (target.hp <= 0 && !resolution.enemyKills.includes(target.id)) {
+                next.enemiesDefeated += 1;
+                resolution.enemyKills.push(target.id);
+              }
+            }
+          }
+        }
+      }
+    }
+    // ── Mastery: Mage T2 — blue chains heal a flat 2 HP. ─────────────────
+    if (type === 'blue') {
+      const blueHeal = getMasteryBlueChainHeal(activeMasteries);
+      if (blueHeal > 0) {
+        const applied = Math.min(blueHeal, next.maxHp - next.hp);
+        if (applied > 0) {
+          next.hp += applied;
+          resolution.hpHealed += applied;
+        }
+      }
+    }
+    // ── Mastery: Cleric T1 — first chain of fight heals a small amount. ──
+    {
+      const openHeal = getMasteryOpeningHeal(activeMasteries, chainsThisFight);
+      if (openHeal > 0) {
+        const applied = Math.min(openHeal, next.maxHp - next.hp);
+        if (applied > 0) {
+          next.hp += applied;
+          resolution.hpHealed += applied;
+        }
+      }
+    }
+    // ── Mastery: Cleric T2 — shields persist +1 turn. ────────────────────
+    if (type === 'gold' && resolution.guardGained > 0) {
+      const bonus = getMasteryShieldBonus(activeMasteries);
+      if (bonus > 0) {
+        next.shieldTurns += bonus;
+        resolution.guardGained += bonus;
+      }
+    }
+    // ── Daily: Hourglass refunds 1 mana per chain. ───────────────────────
+    if (isDailyMode) {
+      const refund = dailyManaRefundPerChain(dailyMods);
+      if (refund > 0 && next.mana < MAX_MANA) {
+        const before = next.mana;
+        next.mana = Math.min(MAX_MANA, next.mana + refund);
+        resolution.manaGained += next.mana - before;
+      }
+    }
+    // ── Daily: Reflective — % of damage you deal hits you back. ──────────
+    if (isDailyMode && resolution.damageDealt > 0) {
+      const pct = dailyReflectivePct(dailyMods);
+      if (pct > 0) {
+        const reflect = Math.round(resolution.damageDealt * pct);
+        if (reflect > 0) {
+          next.hp = Math.max(0, next.hp - reflect);
+        }
+      }
+    }
+    // ── Mastery: Rogue T5 — +1 shard per chain. Tracked, awarded on finalize.
+    {
+      const perChain = getMasteryShardsPerChain(activeMasteries);
+      if (perChain > 0) {
+        setBonusShardsFromMastery(s => s + perChain);
+      }
+    }
+    setChainsThisFight(c => c + 1);
     // ── Vampiric Sigil — heal % of red damage dealt ──────────────────────
     if (type === 'red' && chainMods.lifestealPctOfDamage > 0 && resolution.damageDealt > 0) {
       const lifesteal = Math.round(resolution.damageDealt * chainMods.lifestealPctOfDamage);
@@ -1044,7 +1138,25 @@ export default function RuneDelvePlayPage() {
       if (gained > 0) turnLogs.push({ kind: 'heal', text: 'Bloodbond drew vigor from the slain', amount: gained });
     }
 
-    const newGrid = resolveBoard(grid, chain, refillRng, seals);
+    // ── Linked Pairs (L46+) — clearing one cell triggers its twin too. ──
+    let chainForResolve = chain;
+    if (linkedPairsActive && linkedPairs.pairs.size > 0) {
+      const triggered = pairsTriggeredByChain(linkedPairs, chain);
+      if (triggered.length > 0) {
+        chainForResolve = [...chain, ...triggered];
+        const clearedKeys = chainForResolve.map(c => `${c.r}-${c.c}`);
+        const nextPairs: LinkedPairsState = { pairs: new Map(linkedPairs.pairs) };
+        consumePairs(nextPairs, clearedKeys);
+        setLinkedPairs(nextPairs);
+        turnLogs.push({ kind: 'info', text: `🔗 Linked twin${triggered.length > 1 ? 's' : ''} cleared` });
+      }
+    }
+    let newGrid = resolveBoard(grid, chainForResolve, refillRng, seals);
+
+    // ── Shifting Runes (L36+) — drift the active column down each turn. ─
+    if (shiftingActive && shift.column >= 0 && !grantsBonusMove) {
+      newGrid = applyShift(newGrid, shift, refillRng, seals);
+    }
 
     // Build the final seal set: drop any broken adjacents, then layer in any
     // ability-driven additions (seal_tile from Voidspawn, etc.). One write
@@ -1107,6 +1219,14 @@ export default function RuneDelvePlayPage() {
           ? `The ground trembles — the Boss enters! +${nextWave.reinforcement_turns ?? 2} turns granted.`
           : `Reinforcements arrive! +${nextWave.reinforcement_turns ?? 2} turns granted.`,
       });
+    }
+    // ── Daily Inferno: lose flat HP per turn (skipped on bonus moves). ──
+    if (isDailyMode && !grantsBonusMove) {
+      const drain = dailyHpDrainPerTurn(dailyMods);
+      if (drain > 0) {
+        afterEnemies.hp = Math.max(0, afterEnemies.hp - drain);
+        turnLogs.push({ kind: 'corruption', text: '🔥 Inferno burns', amount: drain });
+      }
     }
     setCombat(postWave);
     pushLogs(turnLogs);
@@ -1244,6 +1364,9 @@ export default function RuneDelvePlayPage() {
     const bossClear = cleared && level.level_number % 25 === 0;
     const totalEnemies = (level.enemy_config?.length ?? final.enemies.length) || 1;
     let shardsAwarded = 0;
+    // Daily Greed multiplies shard reward; bonus shards from Rogue T5 mastery
+    // get added on top after the base computation.
+    const dailyShardMult = isDailyMode ? dailyShardMultiplier(dailyMods) : 1;
     try {
       if (cleared) {
         const breakdownShards = computeClearShards({
@@ -1558,6 +1681,9 @@ export default function RuneDelvePlayPage() {
         seals={seals}
         corruptedCells={corruption.cells}
         corruptionSources={corruption.sources}
+        eclipsedCells={eclipse}
+        linkedCells={new Set(linkedPairs.pairs.keys())}
+        shiftingColumn={shift.column}
         effectOverride={{
           // Class-aware previews. Tier bonus shows when chain hits 6+.
           red: (n) => {

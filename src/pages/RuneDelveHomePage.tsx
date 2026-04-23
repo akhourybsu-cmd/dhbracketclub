@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sparkles, Trophy, Flame, ChevronRight, Swords, BookOpen, Map, ShoppingBag, Shield } from 'lucide-react';
+import { Sparkles, Trophy, Flame, ChevronRight, Swords, BookOpen, Map, ShoppingBag, Shield, Calendar } from 'lucide-react';
 import { useRuneDelveHero, useEnsureHero } from '@/hooks/useRuneDelveHero';
 import { useAllClassProgress } from '@/hooks/useRuneDelveClassProgress';
 import { useMyProgress, useCampaignLeaderboard } from '@/hooks/useRuneDelveCampaign';
@@ -12,6 +12,9 @@ import { ClassBadge } from '@/components/runedelve/ClassBadge';
 import { ShardBalance } from '@/components/runedelve/ShardBalance';
 import { RELIC_BY_ID } from '@/lib/runedelve/relics';
 import { HowToPlaySheet } from '@/components/runedelve/HowToPlaySheet';
+import { CodexSheet } from '@/components/runedelve/CodexSheet';
+import { useTodayDaily, useMyDailyRun, useMyDailyStreak } from '@/hooks/useDailyChallenge';
+import { getDailyModifier } from '@/lib/runedelve/dailyModifiers';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,6 +34,10 @@ export default function RuneDelveHomePage() {
   const [picking, setPicking] = useState<HeroClass | null>(null);
   const [heroName, setHeroName] = useState('');
   const [helpOpen, setHelpOpen] = useState(false);
+  const [codexOpen, setCodexOpen] = useState(false);
+  const today = useTodayDaily();
+  const { data: myDailyRun } = useMyDailyRun();
+  const { data: dailyStreak } = useMyDailyStreak();
 
   // First-visit auto-open of help sheet.
   useEffect(() => {
@@ -192,6 +199,59 @@ export default function RuneDelveHomePage() {
         </div>
       </motion.div>
 
+      {/* Daily Challenge — single attempt per UTC day, modifier-stacked twist on the campaign. */}
+      {(() => {
+        const playedToday = !!myDailyRun;
+        const stars = myDailyRun?.stars ?? 0;
+        const modIcons = today.modifiers.map(id => getDailyModifier(id)).filter(Boolean);
+        return (
+          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+            <Link to="/rune-delve/daily" className="block">
+              <div
+                className="glass-card p-4 btn-press relative overflow-hidden"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(var(--accent) / 0.14), hsl(var(--gold) / 0.08))',
+                  borderColor: 'hsl(var(--accent) / 0.35)',
+                }}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar className="w-4 h-4 text-accent" />
+                  <span className="font-rd-display text-[11px] font-extrabold tracking-[0.18em] text-accent uppercase">Daily Challenge</span>
+                  {playedToday && (
+                    <span className="ml-auto text-[10px] font-extrabold text-foreground/70 tabular-nums">
+                      {'⭐'.repeat(stars)}{stars === 0 && '—'}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[12px] font-extrabold text-foreground mb-1">
+                  {playedToday ? 'Run completed · Come back tomorrow' : 'A fresh trial awaits'}
+                </p>
+                <div className="flex items-center gap-1.5 flex-wrap mb-2">
+                  {modIcons.map(m => (
+                    <span
+                      key={m!.id}
+                      className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-foreground/5 border border-foreground/10"
+                      title={m!.rule}
+                    >
+                      {m!.icon} {m!.name}
+                    </span>
+                  ))}
+                </div>
+                <div className="flex items-center gap-3 text-[10px] font-extrabold text-foreground/70">
+                  <span className="flex items-center gap-1">
+                    <Flame className="w-3 h-3 text-gold" />
+                    {dailyStreak?.current_streak ?? 0}-day streak
+                  </span>
+                  <span>·</span>
+                  <span>L{today.levelNumber}</span>
+                  <ChevronRight className="w-3.5 h-3.5 ml-auto text-accent" />
+                </div>
+              </div>
+            </Link>
+          </motion.div>
+        );
+      })()}
+
       {/* Hero snapshot */}
       <Link to="/rune-delve/hero" className="block">
         <div className="glass-card p-4 flex items-center gap-3 btn-press">
@@ -254,13 +314,21 @@ export default function RuneDelveHomePage() {
         </div>
       </Link>
 
-      {/* How to play */}
-      <button
-        onClick={() => setHelpOpen(true)}
-        className="w-full glass-card p-3 flex items-center justify-center gap-2 text-[12px] font-bold btn-press text-primary"
-      >
-        <BookOpen className="w-3.5 h-3.5" /> How to Play
-      </button>
+      {/* How to play + Codex */}
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          onClick={() => setHelpOpen(true)}
+          className="glass-card p-3 flex items-center justify-center gap-2 text-[12px] font-bold btn-press text-primary"
+        >
+          <BookOpen className="w-3.5 h-3.5" /> How to Play
+        </button>
+        <button
+          onClick={() => setCodexOpen(true)}
+          className="glass-card p-3 flex items-center justify-center gap-2 text-[12px] font-bold btn-press text-accent"
+        >
+          📖 Codex
+        </button>
+      </div>
 
       {/* Loadout preview + Shop/Armory tiles */}
       {loadout && (() => {
@@ -300,6 +368,7 @@ export default function RuneDelveHomePage() {
       </div>
 
       <HowToPlaySheet open={helpOpen} onOpenChange={setHelpOpen} heroClass={hero.class} />
+      <CodexSheet open={codexOpen} onOpenChange={setCodexOpen} />
     </div>
   );
 }
