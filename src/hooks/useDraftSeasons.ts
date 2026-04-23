@@ -640,6 +640,7 @@ async function renumberSeasonEntries(seasonId: string) {
         .from('draft_season_entries' as any)
         .update({ week_number: correctNumber } as any)
         .eq('id', entry.id);
+    }
   }
 }
 
