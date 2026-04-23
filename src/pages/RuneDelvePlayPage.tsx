@@ -667,6 +667,49 @@ export default function RuneDelvePlayPage() {
         }
       }
     }
+    // ── Vampiric Sigil — heal % of red damage dealt ──────────────────────
+    if (type === 'red' && chainMods.lifestealPctOfDamage > 0 && resolution.damageDealt > 0) {
+      const lifesteal = Math.round(resolution.damageDealt * chainMods.lifestealPctOfDamage);
+      const applied = Math.min(lifesteal, next.maxHp - next.hp);
+      if (applied > 0) {
+        next.hp += applied;
+        resolution.hpHealed += applied;
+      }
+    }
+    // ── Rune Echo — repeat the chain's effect at echoMult strength ──────
+    if (chainMods.echoMult > 0) {
+      const m = chainMods.echoMult;
+      if (type === 'red' && resolution.damageDealt > 0) {
+        const echoDmg = Math.round(resolution.damageDealt * m);
+        const target = next.enemies.find(e => e.hp > 0)
+          ?? next.enemies.find(e => resolution.enemyKills.includes(e.id));
+        if (target && echoDmg > 0) {
+          const applied = Math.min(echoDmg, Math.max(target.hp, 0));
+          if (applied > 0) {
+            target.hp -= applied;
+            resolution.damageDealt += applied;
+            next.totalDamage += applied;
+            if (target.hp <= 0 && !resolution.enemyKills.includes(target.id)) {
+              next.enemiesDefeated += 1;
+              resolution.enemyKills.push(target.id);
+            }
+          }
+        }
+      } else if (type === 'green' && resolution.hpHealed > 0) {
+        const echoHeal = Math.round(resolution.hpHealed * m);
+        const applied = Math.min(echoHeal, next.maxHp - next.hp);
+        if (applied > 0) { next.hp += applied; resolution.hpHealed += applied; }
+      } else if (type === 'blue' && resolution.manaGained > 0) {
+        const echoMana = Math.max(1, Math.round(resolution.manaGained * m));
+        const before = next.mana;
+        next.mana = Math.min(MAX_MANA, next.mana + echoMana);
+        resolution.manaGained += next.mana - before;
+      } else if (type === 'gold' && resolution.guardGained > 0) {
+        const echoTurns = Math.max(1, Math.round(resolution.guardGained * m));
+        next.shieldTurns += echoTurns;
+        resolution.guardGained += echoTurns;
+      }
+    }
     if (resolution.enemyKills.length) setFlashId(resolution.enemyKills[0]);
 
     // Build the per-turn log batch as we go so the order matches the events.
