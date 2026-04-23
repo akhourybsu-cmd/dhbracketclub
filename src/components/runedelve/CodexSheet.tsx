@@ -10,7 +10,7 @@ import { useAllClassProgress } from '@/hooks/useRuneDelveClassProgress';
 import { useMyProgress } from '@/hooks/useRuneDelveCampaign';
 import { getClass, type HeroClass } from '@/lib/runedelve/classConfig';
 import { ClassBadge } from './ClassBadge';
-import { RELIC_LIST } from '@/lib/runedelve/relics';
+import { RELIC_CATALOG } from '@/lib/runedelve/relics';
 import { Lock, Flame, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -172,7 +172,7 @@ export function CodexSheet({ open, onOpenChange, defaultTab = 'mechanics' }: Pro
 
               {/* RELICS */}
               <TabsContent value="relics" className="mt-0 space-y-2">
-                {RELIC_LIST.map(r => (
+                {RELIC_CATALOG.map(r => (
                   <div key={r.id} className="glass-card p-3 flex items-center gap-3">
                     <div className="text-xl shrink-0" aria-hidden>{r.icon ?? '✦'}</div>
                     <div className="flex-1 min-w-0">
