@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sparkles, Trophy, Flame, ChevronRight, Swords, BookOpen, Map, ShoppingBag, Shield, Calendar } from 'lucide-react';
+import { Sparkles, Trophy, Flame, ChevronRight, Swords, BookOpen, Map, ShoppingBag, Shield, Calendar, Target } from 'lucide-react';
 import { useRuneDelveHero, useEnsureHero } from '@/hooks/useRuneDelveHero';
 import { useAllClassProgress } from '@/hooks/useRuneDelveClassProgress';
 import { useMyProgress, useCampaignLeaderboard } from '@/hooks/useRuneDelveCampaign';
@@ -15,6 +15,7 @@ import { HowToPlaySheet } from '@/components/runedelve/HowToPlaySheet';
 import { CodexSheet } from '@/components/runedelve/CodexSheet';
 import { useTodayDaily, useMyDailyRun, useMyDailyStreak } from '@/hooks/useDailyChallenge';
 import { getDailyModifier } from '@/lib/runedelve/dailyModifiers';
+import { useQuestSummary } from '@/hooks/useQuests';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -38,6 +39,7 @@ export default function RuneDelveHomePage() {
   const today = useTodayDaily();
   const { data: myDailyRun } = useMyDailyRun();
   const { data: dailyStreak } = useMyDailyStreak();
+  const questSummary = useQuestSummary();
 
   // First-visit auto-open of help sheet.
   useEffect(() => {
