@@ -1670,6 +1670,9 @@ export default function RuneDelvePlayPage() {
         seals={seals}
         corruptedCells={corruption.cells}
         corruptionSources={corruption.sources}
+        eclipsedCells={eclipse}
+        linkedCells={new Set(linkedPairs.pairs.keys())}
+        shiftingColumn={shift.column}
         effectOverride={{
           // Class-aware previews. Tier bonus shows when chain hits 6+.
           red: (n) => {
