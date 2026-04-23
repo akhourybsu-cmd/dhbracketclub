@@ -1601,31 +1601,32 @@ export default function RuneDelvePlayPage() {
       try {
         const enemyKills = Array.from(defeatedArchetypesRef.current.values()).reduce((a, b) => a + b, 0);
         const bossKills = Array.from(defeatedArchetypesRef.current.entries())
-          .filter(([id]) => rosterById(id)?.tier === 'boss')
+          .filter(([id]) => rosterById(id)?.role === 'controller')
           .reduce((sum, [, n]) => sum + n, 0);
-        const longestChain = chainsThisFight; // proxy — best available without deeper plumbing
+        const longestChain = chainsThisFight; // proxy
         const heroClass = hero?.class;
-        const events = [
-          { type: 'enemies_defeated' as const, amount: enemyKills, heroClass },
-          { type: 'longest_chain' as const, amount: 0, heroClass, meta: { chainLength: longestChain } },
-          { type: 'total_score' as const, amount: breakdown.total, heroClass },
+        type QEvent = Parameters<typeof reportQuestProgress>[0];
+        const events: QEvent[] = [
+          { type: 'enemies_defeated', amount: enemyKills, heroClass },
+          { type: 'longest_chain', amount: 0, heroClass, meta: { chainLength: longestChain } },
+          { type: 'total_score', amount: breakdown.total, heroClass },
         ];
         if (cleared) {
-          events.push({ type: 'levels_cleared' as const, amount: 1, heroClass });
-          events.push({ type: 'class_run_complete' as const, amount: 1, heroClass });
-          events.push({ type: 'high_level_clears' as const, amount: 1, heroClass, meta: { levelNumber: level.level_number } });
+          events.push({ type: 'levels_cleared', amount: 1, heroClass });
+          events.push({ type: 'class_run_complete', amount: 1, heroClass });
+          events.push({ type: 'high_level_clears', amount: 1, heroClass, meta: { levelNumber: level.level_number } });
           if (final.hp >= final.maxHp) {
-            events.push({ type: 'no_damage_clear' as const, amount: 1, heroClass });
+            events.push({ type: 'no_damage_clear', amount: 1, heroClass });
           }
         }
         if (bossKills > 0) {
-          events.push({ type: 'bosses_defeated' as const, amount: bossKills, heroClass, meta: { isBoss: true } });
+          events.push({ type: 'bosses_defeated', amount: bossKills, heroClass, meta: { isBoss: true } });
         }
         if (shardsAwarded > 0) {
-          events.push({ type: 'shards_earned' as const, amount: shardsAwarded, heroClass });
+          events.push({ type: 'shards_earned', amount: shardsAwarded, heroClass });
         }
         for (const e of events) {
-          await reportQuestProgress(e as never);
+          await reportQuestProgress(e);
         }
       } catch (err) { console.warn('[quests] progress report failed', err); }
 
