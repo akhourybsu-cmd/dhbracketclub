@@ -314,13 +314,21 @@ export default function RuneDelveHomePage() {
         </div>
       </Link>
 
-      {/* How to play */}
-      <button
-        onClick={() => setHelpOpen(true)}
-        className="w-full glass-card p-3 flex items-center justify-center gap-2 text-[12px] font-bold btn-press text-primary"
-      >
-        <BookOpen className="w-3.5 h-3.5" /> How to Play
-      </button>
+      {/* How to play + Codex */}
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          onClick={() => setHelpOpen(true)}
+          className="glass-card p-3 flex items-center justify-center gap-2 text-[12px] font-bold btn-press text-primary"
+        >
+          <BookOpen className="w-3.5 h-3.5" /> How to Play
+        </button>
+        <button
+          onClick={() => setCodexOpen(true)}
+          className="glass-card p-3 flex items-center justify-center gap-2 text-[12px] font-bold btn-press text-accent"
+        >
+          📖 Codex
+        </button>
+      </div>
 
       {/* Loadout preview + Shop/Armory tiles */}
       {loadout && (() => {
