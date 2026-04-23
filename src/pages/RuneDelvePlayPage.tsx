@@ -133,6 +133,7 @@ export default function RuneDelvePlayPage() {
   const isDailyMode = searchParams.get('daily') === '1';
   const today = useTodayDaily();
   const submitDaily = useSubmitDailyRun();
+  const reportQuestProgress = useReportQuestProgress();
   // In daily mode, force the level number to today's daily level (URL param
   // is ignored — preserves "everyone faces the same trial today").
   const levelNumber = isDailyMode
