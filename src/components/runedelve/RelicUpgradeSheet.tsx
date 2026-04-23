@@ -50,6 +50,14 @@ const FORMAT_RULES: Record<string, (v: number) => string> = {
   cleansing_touch:   (v) => `${Math.round(v)} clear${v > 1 ? 's' : ''}`,
   quickstep:         (v) => `+${Math.round(v)} length`,
   foresight:         (v) => `${Math.round(v)} turn${v > 1 ? 's' : ''}`,
+  // New relics
+  mirror_shard:      (v) => `×${v.toFixed(2)}`,
+  brambleward:       (v) => `×${v.toFixed(2)}`,
+  vampiric_sigil:    (v) => `${Math.round(v * 100)}% lifesteal`,
+  rune_echo:         (v) => `${Math.round(v * 100)}% echo`,
+  foreseers_lens:    (v) => `+${Math.round(v)} turn${v > 1 ? 's' : ''}`,
+  void_pact:         (v) => `×${v.toFixed(2)}`,
+  phoenix_heart:     (v) => `${Math.round(v * 100)}% HP revive`,
 };
 
 function formatEffect(relicId: string, value: number): string {
