@@ -16,6 +16,17 @@ export interface DraftSeason {
   playoff_weeks: number;
   best_of: number;
   commissioner_user_id: string | null;
+  champion_user_id?: string | null;
+  runner_up_user_id?: string | null;
+  third_place_user_id?: string | null;
+  regular_season_champion_user_id?: string | null;
+  archived_at?: string | null;
+  summary?: {
+    finalized_at?: string;
+    series_score?: Record<string, number>;
+    finals?: Array<{ game: number; winner: string; draft_id: string | null }>;
+    third_place_match_id?: string | null;
+  } | null;
 }
 
 export interface SeasonStanding {
