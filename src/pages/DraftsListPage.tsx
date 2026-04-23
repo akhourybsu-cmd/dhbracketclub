@@ -9,7 +9,9 @@ import { cn } from '@/lib/utils';
 import { getDerivedDraftTurn } from '@/lib/draftTurn';
 import { formatDistanceToNow } from 'date-fns';
 import { useDraftListUpdates } from '@/hooks/useRealtimeSubscription';
-import { useCurrentSeason, useSeasonEntries } from '@/hooks/useDraftSeasons';
+import { useCurrentSeason, useSeasonEntries, usePlayoffMatchByDraftIds } from '@/hooks/useDraftSeasons';
+import { PlayoffBadge } from '@/components/draft/PlayoffBadge';
+import { getPlayoffGameLabel } from '@/lib/playoffStyle';
 
 export default function DraftsListPage() {
   const { user } = useAuth();
