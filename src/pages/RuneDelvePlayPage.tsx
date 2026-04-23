@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, Link, useParams } from 'react-router-dom';
+import { useNavigate, Link, useParams, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ArrowLeft, HelpCircle, Trophy, Skull, Hourglass } from 'lucide-react';
+import { ArrowLeft, HelpCircle, Trophy, Skull, Hourglass, Sparkles as SparklesIcon } from 'lucide-react';
 import { useRuneDelveHero, useUpdateHero } from '@/hooks/useRuneDelveHero';
 import { useAllClassProgress, useUpdateClassProgress } from '@/hooks/useRuneDelveClassProgress';
 import { useLevel, useMyLevelRun, useSubmitLevelRun, useAdvanceProgress, useMyProgress } from '@/hooks/useRuneDelveCampaign';
