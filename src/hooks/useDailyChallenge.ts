@@ -147,7 +147,7 @@ export function useSubmitDailyRun() {
       if (!existing || params.score > (existing.score ?? 0)) {
         const { error } = await supabase
           .from('rune_delve_daily_runs')
-          .upsert({
+          .upsert([{
             user_id: user.id,
             daily_date: dateStr,
             score: params.score,
@@ -156,7 +156,7 @@ export function useSubmitDailyRun() {
             modifiers: modifiers as unknown as object,
             hero_class: params.heroClass,
             completed_at: new Date().toISOString(),
-          }, { onConflict: 'user_id,daily_date' });
+          }], { onConflict: 'user_id,daily_date' });
         if (error) throw error;
       }
 
