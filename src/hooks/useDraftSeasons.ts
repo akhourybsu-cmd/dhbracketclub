@@ -640,6 +640,45 @@ async function renumberSeasonEntries(seasonId: string) {
         .from('draft_season_entries' as any)
         .update({ week_number: correctNumber } as any)
         .eq('id', entry.id);
-    }
   }
+}
+
+/** Fetch a single season by id. */
+export function useSeasonById(seasonId: string | undefined) {
+  const [season, setSeason] = useState<DraftSeason | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    if (!seasonId) { setLoading(false); return; }
+    (async () => {
+      const { data } = await supabase
+        .from('draft_seasons' as any)
+        .select('*')
+        .eq('id', seasonId)
+        .maybeSingle();
+      setSeason((data as unknown as DraftSeason) ?? null);
+      setLoading(false);
+    })();
+  }, [seasonId]);
+  return { season, loading };
+}
+
+/** Fetch display profile rows for a list of user ids. */
+export function useProfilesByIds(ids: Array<string | null | undefined>) {
+  const key = Array.from(new Set(ids.filter(Boolean) as string[])).sort().join(',');
+  const [map, setMap] = useState<Map<string, { display_name: string; avatar_url: string | null }>>(new Map());
+  useEffect(() => {
+    if (!key) { setMap(new Map()); return; }
+    const idArr = key.split(',');
+    (async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, display_name, avatar_url')
+        .in('id', idArr);
+      const m = new Map<string, { display_name: string; avatar_url: string | null }>();
+      (data || []).forEach((p: any) => m.set(p.id, { display_name: p.display_name, avatar_url: p.avatar_url }));
+      setMap(m);
+    })();
+  }, [key]);
+  return map;
+}
 }
