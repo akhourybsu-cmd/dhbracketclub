@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, Link, useParams } from 'react-router-dom';
+import { useNavigate, Link, useParams, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ArrowLeft, HelpCircle, Trophy, Skull, Hourglass } from 'lucide-react';
+import { ArrowLeft, HelpCircle, Trophy, Skull, Hourglass, Sparkles as SparklesIcon } from 'lucide-react';
 import { useRuneDelveHero, useUpdateHero } from '@/hooks/useRuneDelveHero';
 import { useAllClassProgress, useUpdateClassProgress } from '@/hooks/useRuneDelveClassProgress';
 import { useLevel, useMyLevelRun, useSubmitLevelRun, useAdvanceProgress, useMyProgress } from '@/hooks/useRuneDelveCampaign';
@@ -58,8 +58,37 @@ import {
   emptyCorruption,
   type CorruptionState,
 } from '@/lib/runedelve/corruptedTiles';
+import { buildInitialShift, applyShift, type ShiftState } from '@/lib/runedelve/shiftingRunes';
+import { buildInitialPairs, pairsTriggeredByChain, consumePairs, type LinkedPairsState } from '@/lib/runedelve/linkedPairs';
+import { buildInitialEclipse, type EclipseSet } from '@/lib/runedelve/eclipseTiles';
 import { secondaryMet, secondaryShort, secondaryLabel, type SecondaryObjective } from '@/lib/runedelve/layeredGoals';
 import { getBossRule, type BossRuleId } from '@/lib/runedelve/bossRules';
+import { useTodayDaily, useSubmitDailyRun } from '@/hooks/useDailyChallenge';
+import { dailyLevelFor } from '@/lib/runedelve/dailyChallenge';
+import {
+  dailyDamageMultiplier,
+  dailyMaxHpMultiplier,
+  dailyHpDrainPerTurn,
+  dailyChainCap,
+  dailyManaRefundPerChain,
+  dailyTurnLimitDelta,
+  dailyShardMultiplier,
+  dailyEnemyHpMultiplier,
+  dailyIroncladDamageMult,
+  dailyReflectivePct,
+} from '@/lib/runedelve/dailyModifierEffects';
+import { getActiveMasteries, masteryUnlockedAt } from '@/lib/runedelve/classMastery';
+import {
+  getMasteryStartingMana,
+  getMasteryManaCap,
+  getMasteryChainDamageMult,
+  isLastStandActive,
+  getMasteryBlueChainHeal,
+  getMasteryShardsPerChain,
+  getMasteryOpeningHeal,
+  getMasteryShieldBonus,
+  shouldMasteryRefundMana,
+} from '@/lib/runedelve/masteryEffects';
 import { Crown, Target } from 'lucide-react';
 import { RuneBoard } from '@/components/runedelve/RuneBoard';
 import { EnemyDisplay } from '@/components/runedelve/EnemyDisplay';
@@ -98,7 +127,16 @@ export default function RuneDelvePlayPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { levelNumber: levelParam } = useParams<{ levelNumber: string }>();
-  const levelNumber = Math.max(1, parseInt(levelParam ?? '1', 10) || 1);
+  const [searchParams] = useSearchParams();
+  const isDailyMode = searchParams.get('daily') === '1';
+  const today = useTodayDaily();
+  const submitDaily = useSubmitDailyRun();
+  // In daily mode, force the level number to today's daily level (URL param
+  // is ignored — preserves "everyone faces the same trial today").
+  const levelNumber = isDailyMode
+    ? today.levelNumber
+    : Math.max(1, parseInt(levelParam ?? '1', 10) || 1);
+  const dailyMods = isDailyMode ? today.modifiers : [];
 
   const { user } = useAuth();
   const { data: hero } = useRuneDelveHero();
@@ -138,7 +176,15 @@ export default function RuneDelvePlayPage() {
   // the enemy phase actually runs (i.e. a non-bonus chain or ability resolves).
   const [bonusUsedThisCycle, setBonusUsedThisCycle] = useState(false);
   const [corruption, setCorruption] = useState<CorruptionState>(emptyCorruption);
+  const [shift, setShift] = useState<ShiftState>({ column: -1 });
+  const [linkedPairs, setLinkedPairs] = useState<LinkedPairsState>({ pairs: new Map() });
+  const [eclipse, setEclipse] = useState<EclipseSet>(new Set());
   const [log, setLog] = useState<CombatLogEntry[]>([]);
+  // First-chain-of-fight detection for cleric mastery.
+  const [chainsThisFight, setChainsThisFight] = useState(0);
+  const [bonusShardsFromMastery, setBonusShardsFromMastery] = useState(0);
+  // Track lifetime mana spent for Mage Overflow mastery refund cadence.
+  const [totalManaSpent, setTotalManaSpent] = useState(0);
 
   // Per-run defeat ledger keyed by archetypeId. Submitted to the Bestiary on
   // run-end. Mini-boss / boss kills get tracked under variant ids
@@ -240,9 +286,20 @@ export default function RuneDelvePlayPage() {
   const sealedTilesActive = activeMechanics.includes('sealed_tiles');
   const telegraphActive = activeMechanics.includes('telegraphed_attacks');
   const corruptionActive = activeMechanics.includes('corrupted_tiles');
+  const shiftingActive = activeMechanics.includes('shifting_runes');
+  const linkedPairsActive = activeMechanics.includes('linked_pairs');
+  const eclipseActive = activeMechanics.includes('eclipse_tiles');
   const secondaryObjective = ((level?.modifiers as any)?.secondary_objective ?? null) as SecondaryObjective | null;
   const bossRule = ((level?.modifiers as any)?.boss_rule ?? null) as BossRuleId | null;
   const waveDefs = ((level?.modifiers as any)?.waves ?? null) as Array<{ enemies: any[]; reinforcement_turns: number }> | null;
+
+  // Active mastery ids for the hero's class (computed once per render —
+  // class level is stable per run since XP only awards on completion).
+  const activeMasteries = useMemo(() => {
+    if (!hero) return [];
+    const lvl = (classTracks ?? []).find(t => t.class === hero.class)?.level ?? hero.level ?? 1;
+    return getActiveMasteries(hero.class, lvl);
+  }, [hero, classTracks]);
 
   // Per-run snapshot key (scoped to user + level so swapping levels or users
   // can never bleed in stale state).
@@ -307,6 +364,12 @@ export default function RuneDelvePlayPage() {
     }
     setSeals(initialSeals);
     setCorruption(buildInitialCorruption(level.generation_seed, corruptionActive, level.level_number, initialSeals));
+    setShift(buildInitialShift(level.generation_seed, shiftingActive));
+    setLinkedPairs(buildInitialPairs(level.generation_seed, linkedPairsActive, initialSeals));
+    setEclipse(buildInitialEclipse(level.generation_seed, eclipseActive, initialSeals));
+    setChainsThisFight(0);
+    setBonusShardsFromMastery(0);
+    setTotalManaSpent(0);
     // Name → archetype-id fallback for legacy levels seeded before the roster system.
     const resolveArchetype = (e: any): string | undefined => {
       if (e.archetypeId) return e.archetypeId;
@@ -339,13 +402,21 @@ export default function RuneDelvePlayPage() {
     // Apply pre-run relic effects: starting mana + starting shield, plus
     // Foreseer's Lens (+ turns/level) and Void Pact (-maxHp, applied below).
     const bonusTurns = getForeseerBonusTurns(relics);
-    const initial = initialCombat(enemies, level.turn_limit + bonusTurns);
-    initial.mana = Math.min(MAX_MANA, initial.mana + getStartingMana(relics));
+    const dailyTurnDelta = isDailyMode ? dailyTurnLimitDelta(dailyMods) : 0;
+    const initial = initialCombat(enemies, Math.max(3, level.turn_limit + bonusTurns + dailyTurnDelta));
+    // Mastery: starting mana bonus (Mage T1) layered on top of relic effects.
+    initial.mana = Math.min(MAX_MANA, initial.mana + getStartingMana(relics) + getMasteryStartingMana(activeMasteries));
     initial.shieldTurns = Math.max(initial.shieldTurns, getStartingShieldTurns(relics));
     const voidCost = getVoidPactHpCost(relics);
     if (voidCost > 0) {
       initial.maxHp = Math.max(10, initial.maxHp - voidCost);
       initial.hp = Math.min(initial.hp, initial.maxHp);
+    }
+    // Daily Glass Cannon: halve max HP at run start.
+    const dailyHpMult = isDailyMode ? dailyMaxHpMultiplier(dailyMods) : 1;
+    if (dailyHpMult !== 1) {
+      initial.maxHp = Math.max(10, Math.round(initial.maxHp * dailyHpMult));
+      initial.hp = initial.maxHp;
     }
     setCombat(initial);
     setActiveRelicsSnapshot(relics);
@@ -362,7 +433,7 @@ export default function RuneDelvePlayPage() {
     setLog([{ id: nextLogId(), kind: 'info', text: `You enter Level ${level.level_number}. The runes hum.` }]);
     // NOTE: `activeRelics` intentionally OMITTED from deps — see comment above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [level, hero, sealedTilesActive, telegraphActive, corruptionActive, runKey]);
+  }, [level, hero, sealedTilesActive, telegraphActive, corruptionActive, shiftingActive, linkedPairsActive, eclipseActive, runKey, isDailyMode]);
 
   // ── Persist snapshot on every meaningful state change ─────────────────
   // Skipped while there's no live run, after end-state, or when we don't

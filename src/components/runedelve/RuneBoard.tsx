@@ -23,6 +23,12 @@ interface Props {
   corruptedCells?: Set<string>;
   /** Subset of `corruptedCells` that are active spreaders. */
   corruptionSources?: Set<string>;
+  /** Eclipsed cells — cannot START a chain, can extend one. */
+  eclipsedCells?: Set<string>;
+  /** Linked-pair cells — show 🔗 indicator. */
+  linkedCells?: Set<string>;
+  /** Column index that drifts each turn (Shifting Runes mechanic). -1 = none. */
+  shiftingColumn?: number;
   /** Optional per-rune effect override (keyed by RuneType). When present,
    *  replaces the default static preview so it can reflect class multipliers
    *  (Warrior 1.25× red, Mage 2 mana on blue, Cleric 1.5× green) and chain
@@ -31,7 +37,7 @@ interface Props {
 }
 
 // Mobile-first rune board with pointer-driven chain selection.
-export function RuneBoard({ grid, disabled, onChainComplete, seals, corruptedCells, corruptionSources, effectOverride }: Props) {
+export function RuneBoard({ grid, disabled, onChainComplete, seals, corruptedCells, corruptionSources, eclipsedCells, linkedCells, shiftingColumn, effectOverride }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [chain, setChain] = useState<Cell[]>([]);
   const draggingRef = useRef(false);
@@ -60,6 +66,11 @@ export function RuneBoard({ grid, disabled, onChainComplete, seals, corruptedCel
     if (seals?.has(cellKey(target))) return;
     setChain(prev => {
       if (!prev.length) {
+        // Eclipse Tiles: can't START on an eclipsed cell.
+        if (eclipsedCells?.has(cellKey(target))) {
+          toast('🌑 Eclipsed runes can\'t start a chain', { duration: 1400 });
+          return prev;
+        }
         return [target];
       }
       const key = cellKey(target);
@@ -79,7 +90,7 @@ export function RuneBoard({ grid, disabled, onChainComplete, seals, corruptedCel
       play('tap');
       return [...prev, target];
     });
-  }, [disabled, grid, play, seals]);
+  }, [disabled, grid, play, seals, eclipsedCells]);
 
   const cellFromPoint = (x: number, y: number): Cell | null => {
     const el = document.elementFromPoint(x, y) as HTMLElement | null;
@@ -161,6 +172,9 @@ export function RuneBoard({ grid, disabled, onChainComplete, seals, corruptedCel
               const isSealed = seals?.has(k) ?? false;
               const isCorrupted = corruptedCells?.has(k) ?? false;
               const isSource = corruptionSources?.has(k) ?? false;
+              const isEclipsed = eclipsedCells?.has(k) ?? false;
+              const isLinked = linkedCells?.has(k) ?? false;
+              const isShifting = (shiftingColumn ?? -1) === c;
               return (
                 <RuneCell
                   key={`${r}-${c}`}
@@ -172,6 +186,9 @@ export function RuneBoard({ grid, disabled, onChainComplete, seals, corruptedCel
                   sealed={isSealed}
                   corrupted={isCorrupted}
                   corruptionSource={isSource}
+                  eclipsed={isEclipsed}
+                  linked={isLinked}
+                  shifting={isShifting}
                   onPointerDown={handlePointerDown(r, c)}
                 />
               );
