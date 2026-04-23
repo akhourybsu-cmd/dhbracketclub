@@ -828,8 +828,21 @@ export default function DraftDetailPage() {
           </div>
         </div>
 
-        {/* Season badge / commissioner action */}
-        {seasonEntry ? (
+        {/* Playoff banner (replaces simple Season Draft pill for playoff drafts) */}
+        {isPlayoffDraft && playoffMatch ? (
+          <div className="mt-3">
+            <PlayoffHeaderBanner
+              round={playoffMatch.round}
+              matchNumber={playoffMatch.match_number}
+              seasonName={season?.name || season?.season_label || null}
+              userAName={participants.find(p => p.user_id === playoffMatch.user_a)?.profiles?.display_name || null}
+              userBName={participants.find(p => p.user_id === playoffMatch.user_b)?.profiles?.display_name || null}
+              finalsWins={finalsSeriesWins}
+              userA={playoffMatch.user_a}
+              userB={playoffMatch.user_b}
+            />
+          </div>
+        ) : seasonEntry ? (
           <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded-lg" style={{ background: 'hsl(var(--gold) / 0.08)', border: '1px solid hsl(var(--gold) / 0.15)' }}>
             <Award className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(var(--gold))' }} />
             <span className="text-[11px] font-bold" style={{ color: 'hsl(var(--gold))' }}>Season Draft #{seasonEntry.week_number}</span>
