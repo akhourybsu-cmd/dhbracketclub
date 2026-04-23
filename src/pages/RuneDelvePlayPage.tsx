@@ -276,6 +276,7 @@ export default function RuneDelvePlayPage() {
         });
         setLog(snap.log);
         setLastStandUsed(snap.lastStandUsed);
+        setPhoenixUsed(snap.phoenixUsed ?? false);
         setBonusUsedThisCycle(snap.bonusUsedThisCycle);
         setRedChainCount(snap.redChainCount);
         setChainCountTotal(snap.chainCountTotal);
@@ -378,6 +379,7 @@ export default function RuneDelvePlayPage() {
       corruption,
       log,
       lastStandUsed,
+      phoenixUsed,
       bonusUsedThisCycle,
       redChainCount,
       chainCountTotal,
@@ -407,7 +409,7 @@ export default function RuneDelvePlayPage() {
         levelNumber: level.level_number,
         generationSeed: level.generation_seed,
         grid, combat, seals, corruption, log,
-        lastStandUsed, bonusUsedThisCycle, redChainCount, chainCountTotal,
+        lastStandUsed, phoenixUsed, bonusUsedThisCycle, redChainCount, chainCountTotal,
         abilityUsedCount, corruptCleansedCount,
         defeatedArchetypes: defeatedArchetypesRef.current,
         wavesSpawned: wavesSpawnedRef.current,
