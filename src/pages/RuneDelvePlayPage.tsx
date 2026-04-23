@@ -1364,6 +1364,9 @@ export default function RuneDelvePlayPage() {
     const bossClear = cleared && level.level_number % 25 === 0;
     const totalEnemies = (level.enemy_config?.length ?? final.enemies.length) || 1;
     let shardsAwarded = 0;
+    // Daily Greed multiplies shard reward; bonus shards from Rogue T5 mastery
+    // get added on top after the base computation.
+    const dailyShardMult = isDailyMode ? dailyShardMultiplier(dailyMods) : 1;
     try {
       if (cleared) {
         const breakdownShards = computeClearShards({
