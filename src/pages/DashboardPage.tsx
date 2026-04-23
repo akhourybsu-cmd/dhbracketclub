@@ -16,7 +16,9 @@ import { usePwaInstall } from '@/hooks/usePwaInstall';
 import dhMonogram from '@/assets/dh-monogram.png';
 import { formatDistanceToNow, format, isPast, isToday, isTomorrow, isThisWeek } from 'date-fns';
 import { useActivityFeedUpdates, useDraftListUpdates } from '@/hooks/useRealtimeSubscription';
-import { useCurrentSeason, useSeasonStandings, useSeasonEntries, getSeasonDraftTarget } from '@/hooks/useDraftSeasons';
+import { useCurrentSeason, useSeasonStandings, useSeasonEntries, getSeasonDraftTarget, usePlayoffMatchByDraftIds } from '@/hooks/useDraftSeasons';
+import { PlayoffBadge } from '@/components/draft/PlayoffBadge';
+import { getPlayoffGameLabel } from '@/lib/playoffStyle';
 
 const MODULE_ICONS: Record<string, any> = {
   bracket_pool: Trophy,
