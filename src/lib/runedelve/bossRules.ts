@@ -29,7 +29,7 @@ export interface BossRuleDef {
 
 export const BOSS_RULES: Record<BossRuleId, BossRuleDef> = {
   last_stand:  { id: 'last_stand',  label: 'Last Stand',  rule: 'The final enemy is immune until every other foe falls.' },
-  regenerator: { id: 'regenerator', label: 'Regenerator', rule: 'The final enemy heals 8 HP each turn — burn it down.' },
+  regenerator: { id: 'regenerator', label: 'Regenerator', rule: 'The final enemy heals 5 HP each turn — burn it down.' },
   enrager:     { id: 'enrager',     label: 'Enraged',     rule: 'Enemies hit 25% harder once below half HP.' },
   splitter:    { id: 'splitter',    label: 'Splitter',    rule: 'At half HP the boss splits into two half-strength echoes.' },
   phaselock:   { id: 'phaselock',   label: 'Phase Lock',  rule: 'Every 25% HP lost, the boss phases out for one turn.' },
@@ -79,12 +79,16 @@ export function bossKindForLevel(level: number): BossKind {
  * Stat scalars applied by `levelGenerator.ts` to the FINAL enemy slot when a
  * level is a boss tier. Mini-bosses get a lighter bump than mid/chapter.
  */
+// Tuned 2026-04 after a 200-run Monte Carlo on L25: the prior 1.9× / 2.2×
+// promotions stacked with 3 mooks and a wave-2 reinforcement put mid/chapter
+// bosses well past the survivable damage-per-turn ceiling. Softened the
+// flagship bumps so the encounter scales with the move budget below.
 export function bossStatBoost(kind: BossKind): { hpMul: number; dmgMul: number } {
   switch (kind) {
-    case 'mini':    return { hpMul: 1.6, dmgMul: 1.10 };
-    case 'mid':     return { hpMul: 1.9, dmgMul: 1.15 };
-    case 'chapter': return { hpMul: 2.2, dmgMul: 1.20 };
-    default:        return { hpMul: 1,   dmgMul: 1 };
+    case 'mini':    return { hpMul: 1.6,  dmgMul: 1.10 };
+    case 'mid':     return { hpMul: 1.65, dmgMul: 1.10 };
+    case 'chapter': return { hpMul: 1.95, dmgMul: 1.12 };
+    default:        return { hpMul: 1,    dmgMul: 1 };
   }
 }
 
@@ -156,7 +160,11 @@ export function applyBossTurnEffects(
     const last = enemies[enemies.length - 1];
     if (last && last.hp > 0 && last.hp < last.maxHp) {
       const before = last.hp;
-      last.hp = Math.min(last.maxHp, last.hp + 8);
+      // 5 HP/turn (was 8). Tuned 2026-04 — at 8 HP/turn the rule combined
+      // with 3-enemy mid-boss waves required ~47 sustained DPS, well past
+      // the player ceiling. 5 HP/turn still demands focus without being
+      // mathematically unwinnable.
+      last.hp = Math.min(last.maxHp, last.hp + 5);
       const healed = last.hp - before;
       if (healed > 0) {
         logs.push({ kind: 'heal', text: `${last.name} regenerated`, amount: healed });

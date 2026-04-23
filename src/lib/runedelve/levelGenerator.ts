@@ -98,12 +98,24 @@ function seedFor(level: number): number {
 
 // Tighten move budget as the campaign deepens — but keep it humane.
 // Rebalance (data-driven): keep 12 turns through L15 so the L8 cliff softens.
+//
+// Boss tiers get a generous turn-budget bump on top of the band default —
+// mid/chapter encounters carry stat-promoted bosses, boss rules, and (for
+// chapter beats) a dramatic wave-2 spawn, so flat 10-11 turns left them
+// mathematically unwinnable per Monte Carlo. Mini-bosses keep the band
+// budget — the +60% HP bump is still survivable inside the same window.
 function turnLimitFor(level: number): number {
-  if (level <= 15) return 12;
-  if (level <= 25) return 11;
-  if (level <= 50) return 10;
-  if (level <= 100) return 9;
-  return 8;
+  const base = (() => {
+    if (level <= 15) return 12;
+    if (level <= 25) return 11;
+    if (level <= 50) return 10;
+    if (level <= 100) return 9;
+    return 8;
+  })();
+  const kind = bossKindForLevel(level);
+  if (kind === 'mid')     return base + 4;
+  if (kind === 'chapter') return base + 5;
+  return base;
 }
 
 // Enemy count ramp — Rebalance v2: smooth the L14 cliff. Playtest showed
@@ -227,11 +239,16 @@ function buildEnemy(
   };
 }
 
-// Levels that get a second wave: mid/chapter beats, plus every 20 levels
-// from L60 upward (excluding pure mini-boss beats).
+// Levels that get a second wave: chapter beats only, plus every 20 levels
+// from L60 upward (for late-campaign variety).
+//
+// Mid-boss levels (25, 75, 125) USED to spawn a wave-2 reinforcement on top
+// of an already 3-enemy fight + a boss rule. Per Monte Carlo this pushed the
+// encounter past any survivable DPS budget, so mid-bosses now stay at one
+// wave — the boss promotion + rule already carries the difficulty bump.
 function hasSecondWave(level: number): boolean {
   if (level <= 24) return false;
-  if (level === 25 || level === 50 || level === 75 || level === 100 || level === 125 || level === 150) return true;
+  if (level === 50 || level === 100 || level === 150) return true; // chapter bosses
   if (level >= 60 && level % 20 === 0) return true;
   return false;
 }
