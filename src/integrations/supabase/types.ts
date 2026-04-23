@@ -682,57 +682,103 @@ export type Database = {
       }
       draft_seasons: {
         Row: {
+          archived_at: string | null
           best_of: number
+          champion_user_id: string | null
           commissioner_user_id: string | null
           created_at: string
           ends_at: string
           id: string
           name: string
           playoff_weeks: number
+          regular_season_champion_user_id: string | null
           regular_season_drafts: number
           regular_season_weeks: number
+          runner_up_user_id: string | null
           season_label: string
           starts_at: string
           status: string
+          summary: Json | null
+          third_place_user_id: string | null
           updated_at: string
           year: number
         }
         Insert: {
+          archived_at?: string | null
           best_of?: number
+          champion_user_id?: string | null
           commissioner_user_id?: string | null
           created_at?: string
           ends_at: string
           id?: string
           name: string
           playoff_weeks?: number
+          regular_season_champion_user_id?: string | null
           regular_season_drafts?: number
           regular_season_weeks?: number
+          runner_up_user_id?: string | null
           season_label: string
           starts_at: string
           status?: string
+          summary?: Json | null
+          third_place_user_id?: string | null
           updated_at?: string
           year: number
         }
         Update: {
+          archived_at?: string | null
           best_of?: number
+          champion_user_id?: string | null
           commissioner_user_id?: string | null
           created_at?: string
           ends_at?: string
           id?: string
           name?: string
           playoff_weeks?: number
+          regular_season_champion_user_id?: string | null
           regular_season_drafts?: number
           regular_season_weeks?: number
+          runner_up_user_id?: string | null
           season_label?: string
           starts_at?: string
           status?: string
+          summary?: Json | null
+          third_place_user_id?: string | null
           updated_at?: string
           year?: number
         }
         Relationships: [
           {
+            foreignKeyName: "draft_seasons_champion_user_id_fkey"
+            columns: ["champion_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "draft_seasons_commissioner_user_id_fkey"
             columns: ["commissioner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draft_seasons_regular_season_champion_user_id_fkey"
+            columns: ["regular_season_champion_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draft_seasons_runner_up_user_id_fkey"
+            columns: ["runner_up_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draft_seasons_third_place_user_id_fkey"
+            columns: ["third_place_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
