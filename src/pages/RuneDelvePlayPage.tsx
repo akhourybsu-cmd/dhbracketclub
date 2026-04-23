@@ -1409,6 +1409,9 @@ export default function RuneDelvePlayPage() {
         shardsAwarded = breakdownShards.total;
       }
     } catch { shardsAwarded = 0; }
+    // Apply Daily Greed multiplier + Rogue T5 bonus shards on top.
+    if (dailyShardMult !== 1) shardsAwarded = Math.round(shardsAwarded * dailyShardMult);
+    shardsAwarded += masteryBonusShards;
     setEndState({ cleared, reason, score: breakdown.total, isNewBest, shards: shardsAwarded });
     try {
       // Server-truth flags. Default to the optimistic value so legacy
