@@ -16,7 +16,9 @@ import { usePwaInstall } from '@/hooks/usePwaInstall';
 import dhMonogram from '@/assets/dh-monogram.png';
 import { formatDistanceToNow, format, isPast, isToday, isTomorrow, isThisWeek } from 'date-fns';
 import { useActivityFeedUpdates, useDraftListUpdates } from '@/hooks/useRealtimeSubscription';
-import { useCurrentSeason, useSeasonStandings, useSeasonEntries, getSeasonDraftTarget } from '@/hooks/useDraftSeasons';
+import { useCurrentSeason, useSeasonStandings, useSeasonEntries, getSeasonDraftTarget, usePlayoffMatchByDraftIds } from '@/hooks/useDraftSeasons';
+import { PlayoffBadge } from '@/components/draft/PlayoffBadge';
+import { getPlayoffGameLabel } from '@/lib/playoffStyle';
 
 const MODULE_ICONS: Record<string, any> = {
   bracket_pool: Trophy,
@@ -65,6 +67,8 @@ export default function DashboardPage() {
   const { season } = useCurrentSeason();
   const { standings } = useSeasonStandings(season?.id);
   const { entries: seasonEntries } = useSeasonEntries(season?.id);
+  const playoffEntryDraftIds = seasonEntries.filter(e => e.is_playoff).map(e => e.draft_id);
+  const playoffMatchByDraft = usePlayoffMatchByDraftIds(playoffEntryDraftIds);
   const [pools, setPools] = useState<any[]>([]);
   const [rankings, setRankings] = useState<any[]>([]);
   const [polls, setPolls] = useState<any[]>([]);
@@ -739,20 +743,43 @@ export default function DashboardPage() {
               {visibleDrafts.slice(0, 3).map((d: any, i: number) => {
                 const isYourTurn = d.status === 'in_progress' && d.current_pick_user_id === user?.id;
                 const someoneElseTurn = d.status === 'in_progress' && d.current_pick_user_id && d.current_pick_user_id !== user?.id;
+                const playoffMatch = playoffMatchByDraft.get(d.id);
+                const isPlayoff = !!playoffMatch;
                 return (
                   <motion.div key={d.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 + i * 0.04 }}>
                     <Link to={`/drafts/${d.id}`} className="block group">
-                      <div className={cn("glass-card p-3.5 transition-all duration-200 group-hover:border-gold/15", isYourTurn && "draft-your-turn")}>
+                      <div
+                        className={cn("glass-card p-3.5 transition-all duration-200 group-hover:border-gold/15 relative overflow-hidden", isYourTurn && "draft-your-turn", isPlayoff && "arena-edge")}
+                        style={isPlayoff ? {
+                          borderLeft: '3px solid hsl(45 93% 52%)',
+                          background: 'linear-gradient(135deg, hsl(45 93% 52% / 0.06), transparent 60%), hsl(var(--card))',
+                          boxShadow: '0 0 16px -4px hsl(45 93% 52% / 0.22)',
+                        } : undefined}
+                      >
                         <div className="flex items-center gap-3 relative z-10">
-                          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{
+                          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={isPlayoff ? {
+                            background: 'linear-gradient(135deg, hsl(45 93% 52% / 0.28), hsl(38 92% 50% / 0.10))',
+                            boxShadow: '0 0 8px hsl(45 93% 52% / 0.25)',
+                          } : {
                             background: d.status === 'completed' ? 'hsl(var(--muted) / 0.5)' : 'linear-gradient(135deg, hsl(var(--gold) / 0.15), hsl(var(--gold) / 0.04))',
                           }}>
-                            <Bookmark className={cn("w-4 h-4", d.status === 'completed' ? "text-muted-foreground/60" : "")} style={d.status !== 'completed' ? { color: 'hsl(var(--gold))' } : {}} />
+                            {isPlayoff ? (
+                              <Trophy className="w-4 h-4" style={{ color: 'hsl(45 93% 52%)' }} strokeWidth={2.5} />
+                            ) : (
+                              <Bookmark className={cn("w-4 h-4", d.status === 'completed' ? "text-muted-foreground/60" : "")} style={d.status !== 'completed' ? { color: 'hsl(var(--gold))' } : {}} />
+                            )}
                           </div>
                           <div className="min-w-0 flex-1">
+                            {isPlayoff && (
+                              <div className="mb-0.5">
+                                <PlayoffBadge round={playoffMatch.round} matchNumber={playoffMatch.match_number} size="xs" />
+                              </div>
+                            )}
                             <h3 className="font-bold text-[13px] truncate tracking-tight">{d.topic}</h3>
                             <p className="text-[10px] text-muted-foreground/70 font-medium">
-                              {d.num_rounds} rounds • {d.status === 'in_progress' ? 'In Progress' : d.status === 'setup' ? 'Setup' : 'Complete'}
+                              {isPlayoff
+                                ? `${getPlayoffGameLabel(playoffMatch.round, playoffMatch.match_number)} • ${d.status === 'in_progress' ? 'Live' : d.status === 'setup' ? 'Setup' : 'Complete'}`
+                                : `${d.num_rounds} rounds • ${d.status === 'in_progress' ? 'In Progress' : d.status === 'setup' ? 'Setup' : 'Complete'}`}
                             </p>
                             {someoneElseTurn && (
                               <p className="text-[10px] font-semibold mt-0.5 flex items-center gap-1" style={{ color: 'hsl(var(--success))' }}>
@@ -762,12 +789,20 @@ export default function DashboardPage() {
                             )}
                           </div>
                           <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <span className={cn(
-                              "status-pill",
-                              isYourTurn ? '' :
-                              d.status === 'in_progress' ? 'bg-success/10 text-success' :
-                              d.status === 'setup' ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
-                            )} style={isYourTurn ? { background: 'hsl(var(--gold))', color: 'hsl(var(--background))' } : undefined}>
+                            <span
+                              className={cn(
+                                "status-pill",
+                                isYourTurn ? '' :
+                                isPlayoff ? '' :
+                                d.status === 'in_progress' ? 'bg-success/10 text-success' :
+                                d.status === 'setup' ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
+                              )}
+                              style={
+                                isYourTurn ? { background: 'hsl(var(--gold))', color: 'hsl(var(--background))' } :
+                                isPlayoff ? { background: 'hsl(45 93% 52% / 0.15)', color: 'hsl(45 93% 52%)', border: '1px solid hsl(45 93% 52% / 0.35)' } :
+                                undefined
+                              }
+                            >
                               {isYourTurn ? 'Your turn' : d.status === 'in_progress' ? 'Live' : d.status === 'setup' ? 'Setup' : 'Complete'}
                             </span>
                             {d.status !== 'in_progress' && d.status !== 'setup' ? (

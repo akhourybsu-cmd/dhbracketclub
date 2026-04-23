@@ -57,6 +57,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { PlayoffHeaderBanner } from '@/components/draft/PlayoffHeaderBanner';
+import { PlayoffBadge } from '@/components/draft/PlayoffBadge';
+import { getPlayoffRoundShort } from '@/lib/playoffStyle';
 
 interface Participant {
   id: string;
@@ -756,12 +759,20 @@ export default function DraftDetailPage() {
                 <RefreshCw className={cn("w-4 h-4", enriching && "animate-spin")} />
               </button>
             )}
-            <span className={cn(
-              "status-pill flex-shrink-0",
-              isSetup && 'bg-muted text-muted-foreground',
-              isInProgress && 'bg-success/10 text-success',
-              isDraftComplete && 'bg-primary/10 text-primary',
-            )}>
+            <span
+              className={cn(
+                "status-pill flex-shrink-0",
+                !isPlayoffDraft && isSetup && 'bg-muted text-muted-foreground',
+                !isPlayoffDraft && isInProgress && 'bg-success/10 text-success',
+                !isPlayoffDraft && isDraftComplete && 'bg-primary/10 text-primary',
+              )}
+              style={isPlayoffDraft ? {
+                background: 'hsl(45 93% 52% / 0.18)',
+                color: 'hsl(45 93% 52%)',
+                border: '1px solid hsl(45 93% 52% / 0.4)',
+              } : undefined}
+            >
+              {isPlayoffDraft && playoffMatch ? `${getPlayoffRoundShort(playoffMatch.round)} · ` : ''}
               {isSetup ? 'Setup' : isInProgress && !isDraftComplete ? 'In Progress' : 'Complete'}
             </span>
             {canManage && (
@@ -817,8 +828,21 @@ export default function DraftDetailPage() {
           </div>
         </div>
 
-        {/* Season badge / commissioner action */}
-        {seasonEntry ? (
+        {/* Playoff banner (replaces simple Season Draft pill for playoff drafts) */}
+        {isPlayoffDraft && playoffMatch ? (
+          <div className="mt-3">
+            <PlayoffHeaderBanner
+              round={playoffMatch.round}
+              matchNumber={playoffMatch.match_number}
+              seasonName={season?.name || season?.season_label || null}
+              userAName={participants.find(p => p.user_id === playoffMatch.user_a)?.profiles?.display_name || null}
+              userBName={participants.find(p => p.user_id === playoffMatch.user_b)?.profiles?.display_name || null}
+              finalsWins={finalsSeriesWins}
+              userA={playoffMatch.user_a}
+              userB={playoffMatch.user_b}
+            />
+          </div>
+        ) : seasonEntry ? (
           <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded-lg" style={{ background: 'hsl(var(--gold) / 0.08)', border: '1px solid hsl(var(--gold) / 0.15)' }}>
             <Award className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(var(--gold))' }} />
             <span className="text-[11px] font-bold" style={{ color: 'hsl(var(--gold))' }}>Season Draft #{seasonEntry.week_number}</span>
@@ -926,11 +950,23 @@ export default function DraftDetailPage() {
           <PickAnnouncement pick={announcement} />
 
           {/* Current turn banner */}
-          <div className={cn(
-            "glass-card p-4 mb-5 text-center",
-            isMyTurn && "arena-edge"
-          )}>
+          <div
+            className={cn("glass-card p-4 mb-5 text-center", (isMyTurn || isPlayoffDraft) && "arena-edge")}
+            style={isPlayoffDraft ? {
+              borderLeft: '3px solid hsl(45 93% 52%)',
+              background: 'linear-gradient(135deg, hsl(45 93% 52% / 0.06), transparent 60%), hsl(var(--card))',
+              boxShadow: '0 0 18px -4px hsl(45 93% 52% / 0.25)',
+            } : undefined}
+          >
             <div className="relative z-10">
+              {isPlayoffDraft && playoffMatch && (
+                <div className="flex items-center justify-center gap-1.5 mb-1.5">
+                  <PlayoffBadge round={playoffMatch.round} matchNumber={playoffMatch.match_number} size="xs" />
+                  <span className="text-[9px] font-extrabold uppercase tracking-[0.2em]" style={{ color: 'hsl(45 93% 52%)' }}>
+                    Tournament Match
+                  </span>
+                </div>
+              )}
               {isMyTurn ? (
                 <>
                   <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'hsl(var(--gold))' }}>Your Turn</p>
