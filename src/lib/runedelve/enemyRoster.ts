@@ -286,6 +286,65 @@ const CHAPTER_3: RosterEntry[] = [
     chapter: 3, tier: 5, emoji: '🐉', baseHp: 240, baseDamage: 12,
     notes: 'Hard mini-boss profile. Used at boss-rule milestones.',
   },
+  // ── Expansion drop (10 new) — Chapter 3 layered threats ───────────────────
+  {
+    id: 'void_acolyte', name: 'Void Acolyte', family: 'corrupted', role: 'caster',
+    chapter: 3, tier: 4, emoji: '🌌', baseHp: 125, baseDamage: 9,
+    notes: 'Telegraph-friendly caster.',
+  },
+  {
+    id: 'wraith_lord', name: 'Wraith Lord', family: 'undead', role: 'corrupter',
+    chapter: 3, tier: 5, emoji: '👤', baseHp: 135, baseDamage: 8,
+    ability: 'corrupt_tile', abilityCooldown: 3,
+    telegraphLabel: 'Lording rot…',
+    notes: 'Faster-cycle Wraith for late game.',
+  },
+  {
+    id: 'sundered_titan', name: 'Sundered Titan', family: 'cave', role: 'tank',
+    chapter: 3, tier: 5, emoji: '⛰️', baseHp: 220, baseDamage: 8,
+    notes: 'Massive HP pool with restrained DPS.',
+  },
+  {
+    id: 'void_stalker', name: 'Void Stalker', family: 'corrupted', role: 'striker',
+    chapter: 3, tier: 5, emoji: '🥷', baseHp: 90, baseDamage: 13,
+    notes: 'Glass cannon — even faster than the Assassin.',
+  },
+  {
+    id: 'dread_summoner', name: 'Dread Summoner', family: 'undead', role: 'summoner',
+    chapter: 3, tier: 5, emoji: '☠️', baseHp: 110, baseDamage: 6,
+    ability: 'summon_minion', abilityCooldown: 6,
+    telegraphLabel: 'Calling the dread…',
+    notes: 'Echo of Bone Summoner with longer cooldown.',
+  },
+  {
+    id: 'arcane_warden', name: 'Arcane Warden', family: 'magical', role: 'defender',
+    chapter: 3, tier: 4, emoji: '🪬', baseHp: 130, baseDamage: 7,
+    ability: 'shield_self', abilityCooldown: 3,
+    telegraphLabel: 'Weaving wards…',
+    notes: 'Frequent self-shield, low DPS.',
+  },
+  {
+    id: 'bone_juggernaut', name: 'Bone Juggernaut', family: 'undead', role: 'tank',
+    chapter: 3, tier: 5, emoji: '🦴', baseHp: 200, baseDamage: 9,
+    notes: 'Pure stat tank for the late game.',
+  },
+  {
+    id: 'void_seer', name: 'Void Seer', family: 'corrupted', role: 'support',
+    chapter: 3, tier: 4, emoji: '🔮', baseHp: 100, baseDamage: 5,
+    ability: 'heal_ally', abilityCooldown: 4,
+    telegraphLabel: 'Seeing a mend…',
+    notes: 'Heals corrupted allies on a tight cadence.',
+  },
+  {
+    id: 'gloom_wisp', name: 'Gloom Wisp', family: 'magical', role: 'swarm',
+    chapter: 3, tier: 4, emoji: '🌫️', baseHp: 55, baseDamage: 6,
+    notes: 'Late-game swarm filler.',
+  },
+  {
+    id: 'vault_revenant', name: 'Vault Revenant', family: 'undead', role: 'striker',
+    chapter: 3, tier: 5, emoji: '⚰️', baseHp: 110, baseDamage: 11,
+    notes: 'Rounds out the Chapter-3 striker pool.',
+  },
 ];
 
 export const ENEMY_ROSTER: RosterEntry[] = [...CHAPTER_1, ...CHAPTER_2, ...CHAPTER_3];
