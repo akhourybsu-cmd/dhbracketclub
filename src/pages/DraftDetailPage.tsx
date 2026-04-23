@@ -950,11 +950,23 @@ export default function DraftDetailPage() {
           <PickAnnouncement pick={announcement} />
 
           {/* Current turn banner */}
-          <div className={cn(
-            "glass-card p-4 mb-5 text-center",
-            isMyTurn && "arena-edge"
-          )}>
+          <div
+            className={cn("glass-card p-4 mb-5 text-center", (isMyTurn || isPlayoffDraft) && "arena-edge")}
+            style={isPlayoffDraft ? {
+              borderLeft: '3px solid hsl(45 93% 52%)',
+              background: 'linear-gradient(135deg, hsl(45 93% 52% / 0.06), transparent 60%), hsl(var(--card))',
+              boxShadow: '0 0 18px -4px hsl(45 93% 52% / 0.25)',
+            } : undefined}
+          >
             <div className="relative z-10">
+              {isPlayoffDraft && playoffMatch && (
+                <div className="flex items-center justify-center gap-1.5 mb-1.5">
+                  <PlayoffBadge round={playoffMatch.round} matchNumber={playoffMatch.match_number} size="xs" />
+                  <span className="text-[9px] font-extrabold uppercase tracking-[0.2em]" style={{ color: 'hsl(45 93% 52%)' }}>
+                    Tournament Match
+                  </span>
+                </div>
+              )}
               {isMyTurn ? (
                 <>
                   <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'hsl(var(--gold))' }}>Your Turn</p>
