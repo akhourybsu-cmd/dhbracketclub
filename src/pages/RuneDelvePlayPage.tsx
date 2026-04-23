@@ -567,7 +567,13 @@ export default function RuneDelvePlayPage() {
   const objType = level.objective_type as ObjectiveType;
 
   const handleChain = (chain: Cell[]) => {
-    if (!isValidChain(grid, chain, seals)) return;
+    if (!isValidChain(grid, chain, seals, eclipse)) return;
+    // Daily Overcharge caps chain length at 5.
+    const chainCap = isDailyMode ? dailyChainCap(dailyMods) : 0;
+    if (chainCap > 0 && chain.length > chainCap) {
+      toast('⚡ Overcharge limits chains to 5', { duration: 1400 });
+      return;
+    }
     const type = grid[chain[0].r][chain[0].c];
     // Tiered chain bonus: 6=heavy strike (no free turn), 7=+30% & free turn,
     // 8+=+40% & free turn. Only ONE free turn per enemy cycle.
