@@ -1597,6 +1597,38 @@ export default function RuneDelvePlayPage() {
         }
       } catch { /* bestiary write is best-effort */ }
 
+      // ── Quests: report progress for this run (best-effort, never throws) ─
+      try {
+        const enemyKills = Array.from(defeatedArchetypesRef.current.values()).reduce((a, b) => a + b, 0);
+        const bossKills = Array.from(defeatedArchetypesRef.current.entries())
+          .filter(([id]) => rosterById(id)?.tier === 'boss')
+          .reduce((sum, [, n]) => sum + n, 0);
+        const longestChain = chainsThisFight; // proxy — best available without deeper plumbing
+        const heroClass = hero?.class;
+        const events = [
+          { type: 'enemies_defeated' as const, amount: enemyKills, heroClass },
+          { type: 'longest_chain' as const, amount: 0, heroClass, meta: { chainLength: longestChain } },
+          { type: 'total_score' as const, amount: breakdown.total, heroClass },
+        ];
+        if (cleared) {
+          events.push({ type: 'levels_cleared' as const, amount: 1, heroClass });
+          events.push({ type: 'class_run_complete' as const, amount: 1, heroClass });
+          events.push({ type: 'high_level_clears' as const, amount: 1, heroClass, meta: { levelNumber: level.level_number } });
+          if (final.hp >= final.maxHp) {
+            events.push({ type: 'no_damage_clear' as const, amount: 1, heroClass });
+          }
+        }
+        if (bossKills > 0) {
+          events.push({ type: 'bosses_defeated' as const, amount: bossKills, heroClass, meta: { isBoss: true } });
+        }
+        if (shardsAwarded > 0) {
+          events.push({ type: 'shards_earned' as const, amount: shardsAwarded, heroClass });
+        }
+        for (const e of events) {
+          await reportQuestProgress(e as never);
+        }
+      } catch (err) { console.warn('[quests] progress report failed', err); }
+
       // ── Daily Challenge: submit run, surface star + bonus rewards ────────
       if (isDailyMode && hero) {
         try {
