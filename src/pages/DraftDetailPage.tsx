@@ -759,12 +759,20 @@ export default function DraftDetailPage() {
                 <RefreshCw className={cn("w-4 h-4", enriching && "animate-spin")} />
               </button>
             )}
-            <span className={cn(
-              "status-pill flex-shrink-0",
-              isSetup && 'bg-muted text-muted-foreground',
-              isInProgress && 'bg-success/10 text-success',
-              isDraftComplete && 'bg-primary/10 text-primary',
-            )}>
+            <span
+              className={cn(
+                "status-pill flex-shrink-0",
+                !isPlayoffDraft && isSetup && 'bg-muted text-muted-foreground',
+                !isPlayoffDraft && isInProgress && 'bg-success/10 text-success',
+                !isPlayoffDraft && isDraftComplete && 'bg-primary/10 text-primary',
+              )}
+              style={isPlayoffDraft ? {
+                background: 'hsl(45 93% 52% / 0.18)',
+                color: 'hsl(45 93% 52%)',
+                border: '1px solid hsl(45 93% 52% / 0.4)',
+              } : undefined}
+            >
+              {isPlayoffDraft && playoffMatch ? `${getPlayoffRoundShort(playoffMatch.round)} · ` : ''}
               {isSetup ? 'Setup' : isInProgress && !isDraftComplete ? 'In Progress' : 'Complete'}
             </span>
             {canManage && (
