@@ -16,6 +16,17 @@ export interface DraftSeason {
   playoff_weeks: number;
   best_of: number;
   commissioner_user_id: string | null;
+  champion_user_id?: string | null;
+  runner_up_user_id?: string | null;
+  third_place_user_id?: string | null;
+  regular_season_champion_user_id?: string | null;
+  archived_at?: string | null;
+  summary?: {
+    finalized_at?: string;
+    series_score?: Record<string, number>;
+    finals?: Array<{ game: number; winner: string; draft_id: string | null }>;
+    third_place_match_id?: string | null;
+  } | null;
 }
 
 export interface SeasonStanding {
@@ -632,3 +643,43 @@ async function renumberSeasonEntries(seasonId: string) {
     }
   }
 }
+
+/** Fetch a single season by id. */
+export function useSeasonById(seasonId: string | undefined) {
+  const [season, setSeason] = useState<DraftSeason | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    if (!seasonId) { setLoading(false); return; }
+    (async () => {
+      const { data } = await supabase
+        .from('draft_seasons' as any)
+        .select('*')
+        .eq('id', seasonId)
+        .maybeSingle();
+      setSeason((data as unknown as DraftSeason) ?? null);
+      setLoading(false);
+    })();
+  }, [seasonId]);
+  return { season, loading };
+}
+
+/** Fetch display profile rows for a list of user ids. */
+export function useProfilesByIds(ids: Array<string | null | undefined>) {
+  const key = Array.from(new Set(ids.filter(Boolean) as string[])).sort().join(',');
+  const [map, setMap] = useState<Map<string, { display_name: string; avatar_url: string | null }>>(new Map());
+  useEffect(() => {
+    if (!key) { setMap(new Map()); return; }
+    const idArr = key.split(',');
+    (async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, display_name, avatar_url')
+        .in('id', idArr);
+      const m = new Map<string, { display_name: string; avatar_url: string | null }>();
+      (data || []).forEach((p: any) => m.set(p.id, { display_name: p.display_name, avatar_url: p.avatar_url }));
+      setMap(m);
+    })();
+  }, [key]);
+  return map;
+}
+

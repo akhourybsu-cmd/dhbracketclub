@@ -1,0 +1,174 @@
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Trophy, ArrowLeft, ChevronRight, Archive, Sparkles, Calendar } from 'lucide-react';
+import { format } from 'date-fns';
+import { useAllSeasons, useProfilesByIds, type DraftSeason } from '@/hooks/useDraftSeasons';
+import { cn } from '@/lib/utils';
+
+const STATUS_PRESET: Record<string, { label: string; cls: string; live: boolean }> = {
+  upcoming: { label: 'Upcoming', cls: 'bg-muted text-muted-foreground', live: false },
+  regular_season: { label: 'Active', cls: 'bg-success/15 text-success border border-success/20', live: true },
+  playoffs: { label: 'Playoffs Live', cls: 'bg-gold/15 text-gold border border-gold/20', live: true },
+  complete: { label: 'Complete', cls: 'bg-primary/10 text-primary', live: false },
+};
+
+export default function SeasonsArchivePage() {
+  const { seasons, loading } = useAllSeasons();
+
+  const championIds = seasons.map(s => s.champion_user_id ?? null);
+  const profileMap = useProfilesByIds(championIds);
+
+  const active = seasons.filter(s => s.status === 'regular_season' || s.status === 'playoffs');
+  const upcoming = seasons.filter(s => s.status === 'upcoming');
+  const archived = seasons.filter(s => s.status === 'complete');
+
+  return (
+    <div className="pb-6">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-4">
+        <Link to="/drafts" className="w-9 h-9 rounded-xl bg-muted/40 flex items-center justify-center btn-press">
+          <ArrowLeft className="w-4 h-4" />
+        </Link>
+        <div className="page-header mb-0 flex-1">
+          <div
+            className="page-header-icon"
+            style={{
+              background: 'linear-gradient(135deg, hsl(var(--gold) / 0.2), hsl(var(--gold) / 0.05))',
+              boxShadow: '0 0 12px hsl(var(--gold) / 0.15)',
+            }}
+          >
+            <Archive className="w-5 h-5" style={{ color: 'hsl(var(--gold))' }} />
+          </div>
+          <div>
+            <h1 className="page-header-title">Seasons</h1>
+            <p className="page-header-subtitle">Trophy room & archive</p>
+          </div>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="space-y-2.5">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="glass-card p-5">
+              <div className="h-4 rounded-lg w-1/3 mb-2.5 skeleton-shimmer" />
+              <div className="h-3 rounded-lg w-1/2 skeleton-shimmer" />
+            </div>
+          ))}
+        </div>
+      ) : seasons.length === 0 ? (
+        <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} className="empty-state">
+          <div
+            className="empty-state-icon"
+            style={{ background: 'linear-gradient(135deg, hsl(var(--gold) / 0.12), hsl(var(--gold) / 0.04))' }}
+          >
+            <Trophy className="w-7 h-7" style={{ color: 'hsl(var(--gold) / 0.6)' }} />
+          </div>
+          <p className="empty-state-title">No seasons yet</p>
+          <p className="empty-state-desc">Once a season runs, it'll appear here.</p>
+        </motion.div>
+      ) : (
+        <div className="space-y-5">
+          {(active.length > 0 || upcoming.length > 0) && (
+            <Section title="Active" icon={<Sparkles className="w-3.5 h-3.5" style={{ color: 'hsl(var(--gold))' }} />}>
+              {[...active, ...upcoming].map((s, i) => (
+                <SeasonCard key={s.id} season={s} index={i} profileMap={profileMap} />
+              ))}
+            </Section>
+          )}
+
+          {archived.length > 0 && (
+            <Section title="Archive" icon={<Archive className="w-3.5 h-3.5 text-muted-foreground/70" />}>
+              {archived.map((s, i) => (
+                <SeasonCard key={s.id} season={s} index={i} profileMap={profileMap} archived />
+              ))}
+            </Section>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 mb-2 px-1">
+        {icon}
+        <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/70">{title}</h2>
+      </div>
+      <div className="space-y-2">{children}</div>
+    </div>
+  );
+}
+
+function SeasonCard({
+  season,
+  index,
+  profileMap,
+  archived = false,
+}: {
+  season: DraftSeason;
+  index: number;
+  profileMap: Map<string, { display_name: string; avatar_url: string | null }>;
+  archived?: boolean;
+}) {
+  const st = STATUS_PRESET[season.status] || STATUS_PRESET.upcoming;
+  const champion = season.champion_user_id ? profileMap.get(season.champion_user_id) : null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.04 + index * 0.04 }}
+    >
+      <Link to={`/drafts/seasons/${season.id}`} className="block group">
+        <div
+          className={cn(
+            'glass-card p-4 hover-lift cursor-pointer relative overflow-hidden',
+            !archived && 'border-gold/15'
+          )}
+          style={
+            !archived
+              ? {
+                  background:
+                    'linear-gradient(135deg, hsl(var(--gold) / 0.05), transparent 60%), hsl(var(--card))',
+                  borderLeft: '3px solid hsl(var(--gold))',
+                }
+              : { borderLeft: '3px solid hsl(var(--border))' }
+          }
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-extrabold text-[14px] truncate">{season.name}</h3>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/70 font-medium">
+                <Calendar className="w-2.5 h-2.5" />
+                <span>
+                  {format(new Date(season.starts_at), 'MMM yyyy')} —{' '}
+                  {format(new Date(season.ends_at), 'MMM yyyy')}
+                </span>
+              </div>
+              {champion && archived && (
+                <div className="flex items-center gap-1 mt-1.5">
+                  <Trophy className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />
+                  <span className="text-[11px] font-bold" style={{ color: 'hsl(var(--gold))' }}>
+                    {champion.display_name}
+                  </span>
+                  <span className="text-[9px] text-muted-foreground/60 font-medium">champion</span>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <span className={cn('status-pill flex items-center gap-1 text-[9px]', st.cls)}>
+                {st.live && <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />}
+                {st.label}
+              </span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground/60 group-hover:text-muted-foreground transition-all" />
+            </div>
+          </div>
+        </div>
+      </Link>
+    </motion.div>
+  );
+}

@@ -1813,35 +1813,61 @@ export default function CompetePage() {
             ) : season ? (
               <>
                 <SeasonHeaderCard season={season} entries={entries} />
-                {isCommissioner && <CommissionerPanel season={season} entries={entries} onUpdate={handleSeasonUpdate} />}
-                <NextDraftCard entries={entries} totalDrafts={totalDrafts} />
-                <StandingsCard standings={standings} userId={user?.id} />
-                <PlayoffControlCenter
-                  season={season}
-                  matches={matches}
-                  standings={standings}
-                  userId={user?.id}
-                  onUpdate={handleSeasonUpdate}
-                />
-                <PlayoffPicture standings={standings} matches={matches} seasonId={season?.id} />
-                <SeasonDraftHistory entries={entries} totalDrafts={totalDrafts} />
-                <LifetimeStatsCard userId={user?.id} />
+                {season.status === 'complete' ? (
+                  <>
+                    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+                      <Link to={`/drafts/seasons/${season.id}`}>
+                        <div className="glass-card p-4 flex items-center gap-3 border-gold/15 hover-lift" style={{
+                          background: 'linear-gradient(135deg, hsl(var(--gold) / 0.08), transparent 60%), hsl(var(--card))',
+                          borderLeft: '3px solid hsl(var(--gold))',
+                        }}>
+                          <Trophy className="w-5 h-5 flex-shrink-0" style={{ color: 'hsl(var(--gold))' }} />
+                          <div className="flex-1">
+                            <p className="text-[13px] font-extrabold">Season Complete</p>
+                            <p className="text-[10px] text-muted-foreground/70 mt-0.5">View the full archive & podium</p>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-muted-foreground/60" />
+                        </div>
+                      </Link>
+                    </motion.div>
+                    <StandingsCard standings={standings} userId={user?.id} />
+                    <LifetimeStatsCard userId={user?.id} />
+                  </>
+                ) : (
+                  <>
+                    {isCommissioner && <CommissionerPanel season={season} entries={entries} onUpdate={handleSeasonUpdate} />}
+                    <NextDraftCard entries={entries} totalDrafts={totalDrafts} />
+                    <StandingsCard standings={standings} userId={user?.id} />
+                    <PlayoffControlCenter
+                      season={season}
+                      matches={matches}
+                      standings={standings}
+                      userId={user?.id}
+                      onUpdate={handleSeasonUpdate}
+                    />
+                    <PlayoffPicture standings={standings} matches={matches} seasonId={season?.id} />
+                    <SeasonDraftHistory entries={entries} totalDrafts={totalDrafts} />
+                    <LifetimeStatsCard userId={user?.id} />
+                  </>
+                )}
 
                 <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
                   <div className="glass-card p-3 bg-card/60 flex gap-2">
-                    <Link to="/drafts" className="flex-1">
+                    <Link to="/drafts/seasons" className="flex-1">
                       <button className="w-full h-9 rounded-lg bg-muted/50 text-[11px] font-bold text-foreground/80 transition-colors flex items-center justify-center gap-1.5 btn-press">
-                        All Drafts <ChevronRight className="w-3 h-3" />
+                        Seasons Archive <ChevronRight className="w-3 h-3" />
                       </button>
                     </Link>
-                    <Link to="/drafts/create">
-                      <button className="h-9 px-4 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1.5 btn-press" style={{
-                        background: 'hsl(var(--gold) / 0.15)',
-                        color: 'hsl(var(--gold))',
-                      }}>
-                        <Plus className="w-3 h-3" /> New Draft
-                      </button>
-                    </Link>
+                    {season.status !== 'complete' && (
+                      <Link to="/drafts/create">
+                        <button className="h-9 px-4 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1.5 btn-press" style={{
+                          background: 'hsl(var(--gold) / 0.15)',
+                          color: 'hsl(var(--gold))',
+                        }}>
+                          <Plus className="w-3 h-3" /> New Draft
+                        </button>
+                      </Link>
+                    )}
                   </div>
                 </motion.div>
               </>
