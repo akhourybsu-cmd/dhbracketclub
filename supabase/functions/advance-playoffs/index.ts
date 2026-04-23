@@ -278,10 +278,50 @@ Deno.serve(async (req) => {
       const seriesWinner = players.find(p => (winCount[p] || 0) >= 2);
 
       if (seriesWinner) {
-        // Series clinched. Mark season complete (idempotent).
+        // Series clinched. Mark season complete + finalize archive fields (idempotent).
         if (season.status !== "complete") {
-          await supabase.from("draft_seasons").update({ status: "complete" }).eq("id", seasonId);
-          log.push(`season complete, champion ${seriesWinner}`);
+          // Champion = series winner. Runner-up = the other finalist.
+          const championId = seriesWinner;
+          const runnerUpId = championId === players[0] ? players[1] : players[0];
+
+          // Third place winner (Bo1) — may not exist if not yet played.
+          const tp = thirdPlaceMatches.find((m: any) => m.status === "complete");
+          const thirdPlaceId = tp?.winner_user_id ?? null;
+
+          // Regular-season champion = top of standings.
+          const { data: regChamp } = await supabase
+            .from("draft_season_standings").select("user_id")
+            .eq("season_id", seasonId)
+            .order("season_points", { ascending: false })
+            .order("wins", { ascending: false })
+            .order("podiums", { ascending: false })
+            .order("avg_finish", { ascending: true })
+            .limit(1).maybeSingle();
+
+          // Compose a small summary blob with finals breakdown for the archive.
+          const finalsBreakdown = finalMatches
+            .filter((m: any) => m.status === "complete")
+            .map((m: any) => ({
+              game: m.match_number,
+              winner: m.winner_user_id,
+              draft_id: m.draft_id,
+            }));
+
+          await supabase.from("draft_seasons").update({
+            status: "complete",
+            champion_user_id: championId,
+            runner_up_user_id: runnerUpId,
+            third_place_user_id: thirdPlaceId,
+            regular_season_champion_user_id: (regChamp as any)?.user_id ?? null,
+            archived_at: new Date().toISOString(),
+            summary: {
+              finalized_at: new Date().toISOString(),
+              series_score: { [championId]: winCount[championId] || 0, [runnerUpId]: winCount[runnerUpId] || 0 },
+              finals: finalsBreakdown,
+              third_place_match_id: tp?.id ?? null,
+            },
+          }).eq("id", seasonId);
+          log.push(`season finalized, champion ${championId}, runner-up ${runnerUpId}, 3rd ${thirdPlaceId ?? "n/a"}`);
         }
       } else if (completedFinals.length === finalMatches.length) {
         // No clinch yet AND all created finals are done → create next game
