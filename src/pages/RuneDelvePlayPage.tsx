@@ -1536,6 +1536,14 @@ export default function RuneDelvePlayPage() {
             duration: 6000,
           });
         }
+        // ── Class Mastery: celebratory toast when a new tier just unlocked.
+        const newMastery = masteryUnlockedAt(hero.class, prevClassLevel, newClassLevel);
+        if (newMastery) {
+          toast.success(`🌟 Mastery Unlocked — ${newMastery.name}`, {
+            description: `${newMastery.summary} · Tier ${newMastery.tier} · ${hero.class} Lv ${newMastery.unlockLevel}`,
+            duration: 7000,
+          });
+        }
       }
 
       // ── Award Rune Shards & track failure curve ─────────────────────────
