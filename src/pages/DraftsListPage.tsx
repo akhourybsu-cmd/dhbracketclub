@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Bookmark, Plus, ArrowRight, Users, Play, Trophy, Award, Target } from 'lucide-react';
+import { Bookmark, Plus, ArrowRight, Users, Play, Trophy, Award, Target, Archive } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { getDerivedDraftTurn } from '@/lib/draftTurn';
@@ -165,11 +165,18 @@ export default function DraftsListPage() {
             <p className="page-header-subtitle">Snake drafts & picks</p>
           </div>
         </div>
-        <Link to="/drafts/create">
-          <Button size="sm" className="gap-1.5 rounded-lg font-bold btn-press">
-            <Plus className="w-4 h-4" /> Create
-          </Button>
-        </Link>
+        <div className="flex items-center gap-1.5">
+          <Link to="/drafts/seasons">
+            <Button size="sm" variant="outline" className="gap-1.5 rounded-lg font-bold btn-press">
+              <Archive className="w-3.5 h-3.5" /> Seasons
+            </Button>
+          </Link>
+          <Link to="/drafts/create">
+            <Button size="sm" className="gap-1.5 rounded-lg font-bold btn-press">
+              <Plus className="w-4 h-4" /> Create
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Cumulative Draft Stats */}
