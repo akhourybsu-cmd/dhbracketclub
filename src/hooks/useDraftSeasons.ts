@@ -552,6 +552,34 @@ export async function startPlayoffMatch(matchId: string, topic: string) {
   return data as { ok: boolean; draft_id: string };
 }
 
+/** Bulk lookup: playoff match metadata for a set of draft IDs. Used to render
+ *  tournament chrome on draft list/dashboard rows in a single query. */
+export function usePlayoffMatchByDraftIds(draftIds: string[]) {
+  const [matchByDraft, setMatchByDraft] = useState<Map<string, PlayoffMatch>>(new Map());
+  const key = draftIds.slice().sort().join(',');
+
+  useEffect(() => {
+    if (!draftIds.length) { setMatchByDraft(new Map()); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('draft_playoff_matches' as any)
+        .select('*')
+        .in('draft_id', draftIds);
+      if (cancelled) return;
+      const map = new Map<string, PlayoffMatch>();
+      ((data || []) as unknown as PlayoffMatch[]).forEach(m => {
+        if (m.draft_id) map.set(m.draft_id, m);
+      });
+      setMatchByDraft(map);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  return matchByDraft;
+}
+
 /** Live subscription to playoff matches for a season — re-fetches whenever any row changes. */
 export function usePlayoffMatchesLive(seasonId: string | undefined) {
   const [matches, setMatches] = useState<PlayoffMatch[]>([]);
