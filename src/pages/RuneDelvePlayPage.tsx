@@ -64,6 +64,7 @@ import { buildInitialEclipse, type EclipseSet } from '@/lib/runedelve/eclipseTil
 import { secondaryMet, secondaryShort, secondaryLabel, type SecondaryObjective } from '@/lib/runedelve/layeredGoals';
 import { getBossRule, type BossRuleId } from '@/lib/runedelve/bossRules';
 import { useTodayDaily, useSubmitDailyRun } from '@/hooks/useDailyChallenge';
+import { useReportQuestProgress } from '@/hooks/useQuests';
 import { dailyLevelFor } from '@/lib/runedelve/dailyChallenge';
 import {
   dailyDamageMultiplier,
