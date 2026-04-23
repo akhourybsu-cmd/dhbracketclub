@@ -2833,6 +2833,56 @@ export type Database = {
           },
         ]
       }
+      rune_delve_active_quests: {
+        Row: {
+          claimed_at: string | null
+          created_at: string
+          id: string
+          period_key: string
+          progress: number
+          quest_id: string
+          scope: Database["public"]["Enums"]["rd_quest_scope"]
+          status: Database["public"]["Enums"]["rd_quest_status"]
+          target_value: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          created_at?: string
+          id?: string
+          period_key: string
+          progress?: number
+          quest_id: string
+          scope: Database["public"]["Enums"]["rd_quest_scope"]
+          status?: Database["public"]["Enums"]["rd_quest_status"]
+          target_value: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          claimed_at?: string | null
+          created_at?: string
+          id?: string
+          period_key?: string
+          progress?: number
+          quest_id?: string
+          scope?: Database["public"]["Enums"]["rd_quest_scope"]
+          status?: Database["public"]["Enums"]["rd_quest_status"]
+          target_value?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rune_delve_active_quests_quest_id_fkey"
+            columns: ["quest_id"]
+            isOneToOne: false
+            referencedRelation: "rune_delve_quest_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rune_delve_bestiary: {
         Row: {
           archetype_id: string
@@ -3199,6 +3249,51 @@ export type Database = {
           total_levels_cleared?: number
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      rune_delve_quest_definitions: {
+        Row: {
+          created_at: string
+          description: string
+          hero_class: string | null
+          id: string
+          is_personal: boolean
+          objective_type: string
+          scope: Database["public"]["Enums"]["rd_quest_scope"]
+          shard_reward: number
+          target_value: number
+          title: string
+          weight: number
+          xp_reward: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          hero_class?: string | null
+          id: string
+          is_personal?: boolean
+          objective_type: string
+          scope: Database["public"]["Enums"]["rd_quest_scope"]
+          shard_reward?: number
+          target_value?: number
+          title: string
+          weight?: number
+          xp_reward?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          hero_class?: string | null
+          id?: string
+          is_personal?: boolean
+          objective_type?: string
+          scope?: Database["public"]["Enums"]["rd_quest_scope"]
+          shard_reward?: number
+          target_value?: number
+          title?: string
+          weight?: number
+          xp_reward?: number
         }
         Relationships: []
       }
@@ -3693,6 +3788,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      rd_quest_scope: "daily" | "weekly"
+      rd_quest_status: "active" | "completed" | "claimed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3821,6 +3918,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      rd_quest_scope: ["daily", "weekly"],
+      rd_quest_status: ["active", "completed", "claimed"],
     },
   },
 } as const
