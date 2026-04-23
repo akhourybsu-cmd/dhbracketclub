@@ -238,32 +238,67 @@ export default function DraftsListPage() {
             const count = participantCounts.get(d.id) || 0;
             const sc = statusConfig[d.status] || statusConfig.setup;
             const winner = draftWinners.get(d.id);
+            const playoffMatch = playoffMatchByDraft.get(d.id);
+            const isPlayoff = !!playoffMatch;
             return (
               <motion.div key={d.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 + i * 0.04 }}>
                 <Link to={`/drafts/${d.id}`} className="block group">
-                  <div className="glass-card p-4 hover-lift cursor-pointer">
+                  <div
+                    className={cn("glass-card p-4 hover-lift cursor-pointer relative overflow-hidden", isPlayoff && "arena-edge")}
+                    style={isPlayoff ? {
+                      borderLeft: '3px solid hsl(45 93% 52%)',
+                      background: 'linear-gradient(135deg, hsl(45 93% 52% / 0.06), transparent 60%), hsl(var(--card))',
+                      boxShadow: '0 0 18px -4px hsl(45 93% 52% / 0.25)',
+                    } : undefined}
+                  >
+                    {isPlayoff && (
+                      <div
+                        className="absolute -right-2 -top-2 text-3xl opacity-10 select-none pointer-events-none"
+                        aria-hidden
+                      >
+                        ✦
+                      </div>
+                    )}
                     <div className="flex items-center justify-between relative z-10">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={isPlayoff ? {
+                          background: 'linear-gradient(135deg, hsl(45 93% 52% / 0.28), hsl(38 92% 50% / 0.10))',
+                          boxShadow: '0 0 10px hsl(45 93% 52% / 0.25)',
+                        } : {
                           background: 'linear-gradient(135deg, hsl(var(--gold) / 0.15), hsl(var(--gold) / 0.04))',
                         }}>
-                          <Bookmark className="w-5 h-5" style={{ color: 'hsl(var(--gold))' }} />
+                          {isPlayoff ? (
+                            <Trophy className="w-5 h-5" style={{ color: 'hsl(45 93% 52%)' }} strokeWidth={2.5} />
+                          ) : (
+                            <Bookmark className="w-5 h-5" style={{ color: 'hsl(var(--gold))' }} />
+                          )}
                         </div>
                         <div className="min-w-0">
+                          {isPlayoff && (
+                            <div className="mb-0.5">
+                              <PlayoffBadge round={playoffMatch!.round} matchNumber={playoffMatch!.match_number} size="xs" />
+                            </div>
+                          )}
                           <h3 className="font-bold text-sm truncate">{d.topic}</h3>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-[10px] text-muted-foreground/70 font-medium">
-                              {d.num_rounds} rounds
-                            </span>
+                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                            {isPlayoff ? (
+                              <span className="text-[10px] font-bold tracking-wide" style={{ color: 'hsl(45 93% 52%)' }}>
+                                {getPlayoffGameLabel(playoffMatch!.round, playoffMatch!.match_number)}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground/70 font-medium">
+                                {d.num_rounds} rounds
+                              </span>
+                            )}
                             <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/15" />
                             <span className="text-[10px] text-muted-foreground/70 flex items-center gap-0.5 font-medium">
                               <Users className="w-2.5 h-2.5" /> {count}
                             </span>
-                            {seasonDraftIds.has(d.id) && (
-                              <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/15" />
-                            )}
-                            {seasonDraftIds.has(d.id) && (
-                              <span className="text-[9px] font-bold px-1 py-0.5 rounded" style={{ background: 'hsl(var(--gold) / 0.12)', color: 'hsl(var(--gold))' }}>S</span>
+                            {seasonDraftIds.has(d.id) && !isPlayoff && (
+                              <>
+                                <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/15" />
+                                <span className="text-[9px] font-bold px-1 py-0.5 rounded" style={{ background: 'hsl(var(--gold) / 0.12)', color: 'hsl(var(--gold))' }}>S</span>
+                              </>
                             )}
                             {winner && (
                               <>
@@ -282,7 +317,14 @@ export default function DraftsListPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <span className={cn("status-pill", sc.cls)}>
+                        <span
+                          className={cn("status-pill", isPlayoff ? '' : sc.cls)}
+                          style={isPlayoff ? {
+                            background: 'hsl(45 93% 52% / 0.15)',
+                            color: 'hsl(45 93% 52%)',
+                            border: '1px solid hsl(45 93% 52% / 0.35)',
+                          } : undefined}
+                        >
                           {d.status === 'in_progress' && <Play className="w-2.5 h-2.5 mr-0.5" />}
                           {sc.label}
                         </span>
