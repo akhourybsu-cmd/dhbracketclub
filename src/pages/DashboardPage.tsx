@@ -67,6 +67,8 @@ export default function DashboardPage() {
   const { season } = useCurrentSeason();
   const { standings } = useSeasonStandings(season?.id);
   const { entries: seasonEntries } = useSeasonEntries(season?.id);
+  const playoffEntryDraftIds = seasonEntries.filter(e => e.is_playoff).map(e => e.draft_id);
+  const playoffMatchByDraft = usePlayoffMatchByDraftIds(playoffEntryDraftIds);
   const [pools, setPools] = useState<any[]>([]);
   const [rankings, setRankings] = useState<any[]>([]);
   const [polls, setPolls] = useState<any[]>([]);
