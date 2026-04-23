@@ -39,6 +39,8 @@ const PollDetailPage = lazy(() => import("./pages/PollDetailPage"));
 const DraftsListPage = lazy(() => import("./pages/DraftsListPage"));
 const CreateDraftPage = lazy(() => import("./pages/CreateDraftPage"));
 const DraftDetailPage = lazy(() => import("./pages/DraftDetailPage"));
+const SeasonsArchivePage = lazy(() => import("./pages/SeasonsArchivePage"));
+const SeasonArchiveDetailPage = lazy(() => import("./pages/SeasonArchiveDetailPage"));
 const ChatPage = lazy(() => import("./pages/ChatPage"));
 const EventsPage = lazy(() => import("./pages/EventsPage"));
 const EventDetailPage = lazy(() => import("./pages/EventDetailPage"));
@@ -169,6 +171,8 @@ function AnimatedRoutes() {
 
         {/* Drafts module */}
         <Route path="/drafts" element={<ProtectedPage><DraftsListPage /></ProtectedPage>} />
+        <Route path="/drafts/seasons" element={<ProtectedPage><SeasonsArchivePage /></ProtectedPage>} />
+        <Route path="/drafts/seasons/:seasonId" element={<ProtectedPage><SeasonArchiveDetailPage /></ProtectedPage>} />
         <Route path="/drafts/create" element={<ProtectedPage><CreateDraftPage /></ProtectedPage>} />
         <Route path="/drafts/:draftId" element={<ProtectedPage><DraftDetailPage /></ProtectedPage>} />
 
