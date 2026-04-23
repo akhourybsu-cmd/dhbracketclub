@@ -79,7 +79,24 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Guard: season must be in playoffs (or already complete for late re-runs)
+    const { data: season } = await supabase
+      .from("draft_seasons")
+      .select("status, name, season_label")
+      .eq("id", match.season_id)
+      .single();
+    if (!season || (season.status !== "playoffs" && season.status !== "complete")) {
+      return new Response(JSON.stringify({ error: "Season is not in playoffs yet" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const trimmedTopic = topic.trim().slice(0, 200);
+    if (trimmedTopic.length < 3) {
+      return new Response(JSON.stringify({ error: "Topic must be at least 3 characters" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Create competition
     const { data: comp, error: cErr } = await supabase
