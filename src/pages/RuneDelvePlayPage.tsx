@@ -364,6 +364,12 @@ export default function RuneDelvePlayPage() {
     }
     setSeals(initialSeals);
     setCorruption(buildInitialCorruption(level.generation_seed, corruptionActive, level.level_number, initialSeals));
+    setShift(buildInitialShift(level.generation_seed, shiftingActive));
+    setLinkedPairs(buildInitialPairs(level.generation_seed, linkedPairsActive, initialSeals));
+    setEclipse(buildInitialEclipse(level.generation_seed, eclipseActive, initialSeals));
+    setChainsThisFight(0);
+    setBonusShardsFromMastery(0);
+    setTotalManaSpent(0);
     // Name → archetype-id fallback for legacy levels seeded before the roster system.
     const resolveArchetype = (e: any): string | undefined => {
       if (e.archetypeId) return e.archetypeId;
