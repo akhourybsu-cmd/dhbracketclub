@@ -6,6 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Every playoff draft uses the same round count regardless of round (QF/SF/Final/Bronze).
+const PLAYOFF_DRAFT_ROUNDS = 5;
+
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -98,7 +101,7 @@ Deno.serve(async (req) => {
       .insert({
         competition_id: comp.id,
         topic: trimmedTopic,
-        num_rounds: 5,
+        num_rounds: PLAYOFF_DRAFT_ROUNDS,
         status: "setup",
         created_by: callerId,
       })
