@@ -202,90 +202,60 @@ export default function RuneDelveHomePage() {
         </div>
       </motion.div>
 
-      {/* Daily Challenge — single attempt per UTC day, modifier-stacked twist on the campaign. */}
-      {(() => {
-        const playedToday = !!myDailyRun;
-        const stars = myDailyRun?.stars ?? 0;
-        const modIcons = today.modifiers.map(id => getDailyModifier(id)).filter(Boolean);
-        return (
-          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+      {/* TODAY — daily ritual: Daily Challenge + Quests, side-by-side compact */}
+      <Section label="Today" />
+      <div className="grid grid-cols-2 gap-2">
+        {(() => {
+          const playedToday = !!myDailyRun;
+          const stars = myDailyRun?.stars ?? 0;
+          return (
             <Link to="/rune-delve/daily" className="block">
               <div
-                className="glass-card p-4 btn-press relative overflow-hidden"
+                className="glass-card p-3 btn-press h-full flex flex-col"
                 style={{
                   background: 'linear-gradient(135deg, hsl(var(--accent) / 0.14), hsl(var(--gold) / 0.08))',
                   borderColor: 'hsl(var(--accent) / 0.35)',
                 }}
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <Calendar className="w-4 h-4 text-accent" />
-                  <span className="font-rd-display text-[11px] font-extrabold tracking-[0.18em] text-accent uppercase">Daily Challenge</span>
-                  {playedToday && (
-                    <span className="ml-auto text-[10px] font-extrabold text-foreground/70 tabular-nums">
-                      {'⭐'.repeat(stars)}{stars === 0 && '—'}
-                    </span>
-                  )}
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-accent" />
+                  <span className="font-rd-display text-[10px] font-extrabold tracking-[0.16em] text-accent uppercase">Daily</span>
+                  <ChevronRight className="w-3.5 h-3.5 ml-auto text-accent/70" />
                 </div>
-                <p className="text-[12px] font-extrabold text-foreground mb-1">
-                  {playedToday ? 'Run completed · Come back tomorrow' : 'A fresh trial awaits'}
+                <p className="text-[11px] font-extrabold text-foreground leading-tight">
+                  {playedToday ? `Done ${'⭐'.repeat(stars) || '—'}` : 'Fresh trial'}
                 </p>
-                <div className="flex items-center gap-1.5 flex-wrap mb-2">
-                  {modIcons.map(m => (
-                    <span
-                      key={m!.id}
-                      className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-foreground/5 border border-foreground/10"
-                      title={m!.rule}
-                    >
-                      {m!.icon} {m!.name}
-                    </span>
-                  ))}
-                </div>
-                <div className="flex items-center gap-3 text-[10px] font-extrabold text-foreground/70">
-                  <span className="flex items-center gap-1">
-                    <Flame className="w-3 h-3 text-gold" />
-                    {dailyStreak?.current_streak ?? 0}-day streak
-                  </span>
-                  <span>·</span>
-                  <span>L{today.levelNumber}</span>
-                  <ChevronRight className="w-3.5 h-3.5 ml-auto text-accent" />
-                </div>
+                <p className="text-[10px] font-extrabold text-foreground/70 mt-0.5 flex items-center gap-1">
+                  <Flame className="w-3 h-3 text-gold" />
+                  {dailyStreak?.current_streak ?? 0}-day · L{today.levelNumber}
+                </p>
               </div>
             </Link>
-          </motion.div>
-        );
-      })()}
+          );
+        })()}
 
-      {/* Quests — daily + weekly objectives with bonus shard rewards. */}
-      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
         <Link to="/rune-delve/quests" className="block">
           <div
-            className="glass-card p-4 btn-press relative overflow-hidden"
+            className="glass-card p-3 btn-press h-full flex flex-col"
             style={{
               background: 'linear-gradient(135deg, hsl(var(--primary) / 0.10), hsl(var(--accent) / 0.08))',
               borderColor: 'hsl(var(--primary) / 0.25)',
             }}
           >
-            <div className="flex items-center gap-2 mb-1.5">
-              <Target className="w-4 h-4 text-primary" />
-              <span className="font-rd-display text-[11px] font-extrabold tracking-[0.18em] text-primary uppercase">Quests</span>
-              {questSummary.claimable > 0 && (
-                <span className="ml-auto text-[10px] font-extrabold px-1.5 py-0.5 rounded-md bg-gold/20 text-gold tabular-nums">
-                  {questSummary.claimable} ready to claim
-                </span>
-              )}
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Target className="w-3.5 h-3.5 text-primary" />
+              <span className="font-rd-display text-[10px] font-extrabold tracking-[0.16em] text-primary uppercase">Quests</span>
+              <ChevronRight className="w-3.5 h-3.5 ml-auto text-primary/70" />
             </div>
-            <p className="text-[12px] font-extrabold text-foreground mb-0.5">
-              {questSummary.claimable > 0
-                ? `Tap to claim your bonus shards`
-                : `${questSummary.total} active · 3 daily + 3 weekly`}
+            <p className="text-[11px] font-extrabold text-foreground leading-tight">
+              {questSummary.claimable > 0 ? `${questSummary.claimable} ready` : `${questSummary.total} active`}
             </p>
-            <div className="flex items-center gap-2 text-[10px] font-extrabold text-foreground/70">
-              <span>Earn bonus 💎 shards by completing objectives</span>
-              <ChevronRight className="w-3.5 h-3.5 ml-auto text-primary" />
-            </div>
+            <p className="text-[10px] font-extrabold text-foreground/70 mt-0.5">
+              {questSummary.claimable > 0 ? 'Tap to claim 💎' : 'Daily + weekly'}
+            </p>
           </div>
         </Link>
-      </motion.div>
+      </div>
 
       {/* Hero snapshot */}
       <Link to="/rune-delve/hero" className="block">
