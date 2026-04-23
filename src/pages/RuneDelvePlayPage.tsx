@@ -58,8 +58,37 @@ import {
   emptyCorruption,
   type CorruptionState,
 } from '@/lib/runedelve/corruptedTiles';
+import { buildInitialShift, applyShift, type ShiftState } from '@/lib/runedelve/shiftingRunes';
+import { buildInitialPairs, pairsTriggeredByChain, consumePairs, type LinkedPairsState } from '@/lib/runedelve/linkedPairs';
+import { buildInitialEclipse, type EclipseSet } from '@/lib/runedelve/eclipseTiles';
 import { secondaryMet, secondaryShort, secondaryLabel, type SecondaryObjective } from '@/lib/runedelve/layeredGoals';
 import { getBossRule, type BossRuleId } from '@/lib/runedelve/bossRules';
+import { useTodayDaily, useSubmitDailyRun } from '@/hooks/useDailyChallenge';
+import { dailyLevelFor } from '@/lib/runedelve/dailyChallenge';
+import {
+  dailyDamageMultiplier,
+  dailyMaxHpMultiplier,
+  dailyHpDrainPerTurn,
+  dailyChainCap,
+  dailyManaRefundPerChain,
+  dailyTurnLimitDelta,
+  dailyShardMultiplier,
+  dailyEnemyHpMultiplier,
+  dailyIroncladDamageMult,
+  dailyReflectivePct,
+} from '@/lib/runedelve/dailyModifierEffects';
+import { getActiveMasteries, masteryUnlockedAt } from '@/lib/runedelve/classMastery';
+import {
+  getMasteryStartingMana,
+  getMasteryManaCap,
+  getMasteryChainDamageMult,
+  isLastStandActive,
+  getMasteryBlueChainHeal,
+  getMasteryShardsPerChain,
+  getMasteryOpeningHeal,
+  getMasteryShieldBonus,
+  shouldMasteryRefundMana,
+} from '@/lib/runedelve/masteryEffects';
 import { Crown, Target } from 'lucide-react';
 import { RuneBoard } from '@/components/runedelve/RuneBoard';
 import { EnemyDisplay } from '@/components/runedelve/EnemyDisplay';
