@@ -1219,9 +1219,43 @@ export default function DraftDetailPage() {
 
           {/* Pick history — enriched cards */}
           {picks.length > 0 && (
-            <div className="glass-card overflow-hidden">
-              <div className="px-4 py-3 border-b border-border/25">
-                <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-wider">Pick History</p>
+            <div
+              className="overflow-hidden rounded-2xl"
+              style={
+                isPlayoffDraft
+                  ? {
+                      background: 'linear-gradient(180deg, hsl(var(--card)), hsl(var(--card) / 0.92))',
+                      border: '1px solid hsl(45 93% 52% / 0.22)',
+                      boxShadow: '0 6px 24px -12px hsl(45 93% 52% / 0.28)',
+                    }
+                  : undefined
+              }
+            >
+              <div
+                className={cn(
+                  'px-4 py-3 flex items-center justify-between gap-2',
+                  !isPlayoffDraft && 'border-b border-border/25',
+                )}
+                style={
+                  isPlayoffDraft
+                    ? { borderBottom: '1px solid hsl(45 93% 52% / 0.18)' }
+                    : undefined
+                }
+              >
+                <div className="flex items-center gap-1.5">
+                  {isPlayoffDraft && (
+                    <Trophy className="w-3 h-3" style={{ color: 'hsl(45 93% 52%)' }} strokeWidth={2.5} />
+                  )}
+                  <p
+                    className="text-[11px] font-extrabold uppercase tracking-[0.18em]"
+                    style={isPlayoffDraft ? { color: 'hsl(45 93% 52%)' } : undefined}
+                  >
+                    {isPlayoffDraft ? 'Battle Timeline' : 'Pick History'}
+                  </p>
+                </div>
+                <span className="font-mono text-[10px] font-extrabold tabular-nums text-muted-foreground/70">
+                  {picks.length} {picks.length === 1 ? 'pick' : 'picks'}
+                </span>
               </div>
               <div className="divide-y divide-border/20 max-h-96 overflow-y-auto">
                 <AnimatePresence initial={false}>
