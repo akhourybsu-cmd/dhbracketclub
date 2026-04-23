@@ -368,6 +368,7 @@ export default function RuneDelveHomePage() {
       </div>
 
       <HowToPlaySheet open={helpOpen} onOpenChange={setHelpOpen} heroClass={hero.class} />
+      <CodexSheet open={codexOpen} onOpenChange={setCodexOpen} />
     </div>
   );
 }
