@@ -16,10 +16,13 @@ export function cellKey(c: Cell): string {
 
 // Validate a proposed chain: all cells share the same rune type and form a contiguous path of adjacents.
 // When `seals` is provided, sealed cells can never be part of a chain.
-export function isValidChain(grid: RuneType[][], chain: Cell[], seals?: Set<string>): boolean {
+// When `eclipse` is provided, the FIRST cell of a chain cannot be eclipsed
+// (Eclipse Tiles mechanic — band L56-L65). Eclipsed cells may extend a chain.
+export function isValidChain(grid: RuneType[][], chain: Cell[], seals?: Set<string>, eclipse?: Set<string>): boolean {
   if (chain.length < 3) return false;
   const type = grid[chain[0].r]?.[chain[0].c];
   if (!type) return false;
+  if (eclipse?.has(cellKey(chain[0]))) return false;
   for (let i = 0; i < chain.length; i++) {
     const cur = chain[i];
     if (seals?.has(cellKey(cur))) return false;

@@ -20,6 +20,12 @@ interface Props {
   corrupted?: boolean;
   /** Source of corruption (spreads each turn). Implies corrupted. */
   corruptionSource?: boolean;
+  /** Eclipse Tiles — dimmed, can't START a chain (extends ok). */
+  eclipsed?: boolean;
+  /** Linked Pairs — shows a chain icon overlay. */
+  linked?: boolean;
+  /** Shifting Runes — column drifts down each turn. */
+  shifting?: boolean;
   size?: number;
   onPointerDown?: (e: React.PointerEvent) => void;
   onPointerEnter?: (e: React.PointerEvent) => void;
@@ -27,7 +33,7 @@ interface Props {
   dataC: number;
 }
 
-export function RuneCell({ type, selected, invalid, sealed, corrupted, corruptionSource, size = 56, onPointerDown, onPointerEnter, dataR, dataC }: Props) {
+export function RuneCell({ type, selected, invalid, sealed, corrupted, corruptionSource, eclipsed, linked, shifting, size = 56, onPointerDown, onPointerEnter, dataR, dataC }: Props) {
   const meta = RUNE_META[type];
   return (
     <div
@@ -43,6 +49,8 @@ export function RuneCell({ type, selected, invalid, sealed, corrupted, corruptio
         invalid && 'opacity-50',
         sealed && 'rd-tile-sealed',
         corrupted && !sealed && 'rd-tile-corrupted',
+        eclipsed && !sealed && 'opacity-60',
+        shifting && !sealed && 'ring-1 ring-inset ring-primary/40',
       )}
       style={{
         width: size,
@@ -61,6 +69,8 @@ export function RuneCell({ type, selected, invalid, sealed, corrupted, corruptio
         sealed ? `Sealed ${meta.label} rune`
         : corruptionSource ? `Corruption source on ${meta.label} rune`
         : corrupted ? `Corrupted ${meta.label} rune`
+        : eclipsed ? `Eclipsed ${meta.label} rune (cannot start chain)`
+        : linked ? `Linked ${meta.label} rune`
         : `${meta.label} rune`
       }
     >
@@ -97,6 +107,15 @@ export function RuneCell({ type, selected, invalid, sealed, corrupted, corruptio
             >
               {corruptionSource ? '☠️' : '🦠'}
             </span>
+          )}
+          {linked && !corrupted && (
+            <span className="absolute top-0.5 right-0.5 text-[10px] opacity-90 leading-none pointer-events-none" aria-hidden>🔗</span>
+          )}
+          {eclipsed && !corrupted && !linked && (
+            <span className="absolute top-0.5 right-0.5 text-[10px] opacity-90 leading-none pointer-events-none" aria-hidden>🌑</span>
+          )}
+          {shifting && !corrupted && (
+            <span className="absolute bottom-0.5 right-0.5 text-[9px] opacity-70 leading-none pointer-events-none" aria-hidden>🌬️</span>
           )}
         </>
       )}
