@@ -34,6 +34,9 @@ import {
   getTelegraphReadyEarly,
   getSealedTilesSpeedup,
   thornsRelicMultiplier,
+  getForeseerBonusTurns,
+  getVoidPactHpCost,
+  tryPhoenixHeart,
   type ActiveRelics,
 } from '@/lib/runedelve/relicEffects';
 import { MAX_MANA } from '@/lib/runedelve/combatEngine';
@@ -129,6 +132,8 @@ export default function RuneDelvePlayPage() {
   const [endState, setEndState] = useState<null | { cleared: boolean; reason: 'cleared' | 'defeated' | 'timeout'; score: number; isNewBest: boolean; shards: number; improvedChain?: boolean; improvedTurns?: boolean; improvedHp?: boolean; firstClear?: boolean }>(null);
   // Counter (not boolean) — Last Stand at R5 grants 2 saves per run.
   const [lastStandUsed, setLastStandUsed] = useState(0);
+  // Phoenix Heart — single-use full revive per run, separate from Last Stand.
+  const [phoenixUsed, setPhoenixUsed] = useState(false);
   // Bonus-move rebalance: only one free turn per enemy cycle. Resets whenever
   // the enemy phase actually runs (i.e. a non-bonus chain or ability resolves).
   const [bonusUsedThisCycle, setBonusUsedThisCycle] = useState(false);
