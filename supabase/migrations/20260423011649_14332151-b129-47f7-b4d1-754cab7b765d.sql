@@ -1,0 +1,1 @@
+UPDATE public.drafts SET num_rounds = 3 WHERE id IN (SELECT draft_id FROM public.draft_season_entries WHERE is_playoff = true AND draft_id IS NOT NULL) AND status IN ('setup', 'in_progress');

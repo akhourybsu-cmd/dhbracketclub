@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 // Every playoff draft uses the same round count regardless of round (QF/SF/Final/Bronze).
-const PLAYOFF_DRAFT_ROUNDS = 5;
+const PLAYOFF_DRAFT_ROUNDS = 3;
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
