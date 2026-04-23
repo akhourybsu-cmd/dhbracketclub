@@ -22,12 +22,21 @@ function hydrateLegacy(row: RuneDelveLevel): RuneDelveLevel {
   const needsModifiers = Object.keys(storedMods).length === 0;
   const needsBossUpgrade = expectedKind && !storedKind;
   const needsWaves = !storedWaves;
-  if (!needsBossUpgrade && !needsWaves && !needsEnemyConfig && !needsModifiers) return row;
+  // For ANY boss level, also overlay turn_limit so balance tuning to the
+  // turnLimitFor() formula auto-applies to legacy DB rows persisted with the
+  // pre-rebalance numbers (e.g., L25 was seeded with turn_limit=11 before the
+  // mid-boss +4 bump landed). Generator is deterministic per level number, so
+  // overlaying is safe.
+  const turnLimitDrift = expectedKind != null && row.turn_limit !== undefined;
+  if (!needsBossUpgrade && !needsWaves && !needsEnemyConfig && !needsModifiers && !turnLimitDrift) return row;
   const def = generateLevel(row.level_number);
   return {
     ...row,
     // Treat empty enemy_config as "missing" — overlay generator output regardless of boss status.
     enemy_config: (needsBossUpgrade || needsEnemyConfig) ? def.enemy_config : row.enemy_config,
+    // For boss levels, always trust the generator's turn_limit so balance
+    // patches don't require a DB migration to take effect.
+    turn_limit: expectedKind != null ? def.turn_limit : row.turn_limit,
     modifiers: {
       ...storedMods,
       ...def.modifiers,
