@@ -2,11 +2,19 @@
 // Rune Delve campaign. Each mechanic has a stable id, a compact icon, a short
 // label, and a one-line rule that's safe to render on a small phone screen.
 //
-// Mechanics are introduced in 25-level bands and become part of the
+// Mechanics are introduced in level bands and become part of the
 // deterministic level definition (see levelGenerator.ts).
+//
+// V2 (post-L31 freshness pass): we tightened the cadence to insert three new
+// "board variety" mechanics into the L31-75 dead zone (Shifting / Linked /
+// Eclipse) and shifted the threat/hazard bands later so the campaign keeps a
+// steady drip of new ideas through L100.
 
 export type MechanicId =
   | 'sealed_tiles'
+  | 'shifting_runes'
+  | 'linked_pairs'
+  | 'eclipse_tiles'
   | 'telegraphed_attacks'
   | 'corrupted_tiles'
   | 'multi_objective'
@@ -36,7 +44,34 @@ export const MECHANICS: Record<MechanicId, MechanicDef> = {
     icon: '🔒',
     oneLiner: 'Sealed runes can\'t be chained. Match a rune next to a seal to break it.',
     introLevel: 26,
-    bandEnd: 50,
+    bandEnd: 35,
+  },
+  shifting_runes: {
+    id: 'shifting_runes',
+    name: 'Shifting Runes',
+    family: 'Board',
+    icon: '🌬️',
+    oneLiner: 'One column drifts down by 1 each turn. Plan around the slide.',
+    introLevel: 36,
+    bandEnd: 45,
+  },
+  linked_pairs: {
+    id: 'linked_pairs',
+    name: 'Linked Pairs',
+    family: 'Board',
+    icon: '🔗',
+    oneLiner: 'Some runes are linked. Match one — its twin clears too.',
+    introLevel: 46,
+    bandEnd: 55,
+  },
+  eclipse_tiles: {
+    id: 'eclipse_tiles',
+    name: 'Eclipse Tiles',
+    family: 'Board',
+    icon: '🌑',
+    oneLiner: 'Dimmed runes can\'t START a chain but extend one normally.',
+    introLevel: 56,
+    bandEnd: 65,
   },
   telegraphed_attacks: {
     id: 'telegraphed_attacks',
@@ -44,8 +79,8 @@ export const MECHANICS: Record<MechanicId, MechanicDef> = {
     family: 'Threat',
     icon: '⚠️',
     oneLiner: 'Enemies show their next move. Stop them before it lands.',
-    introLevel: 51,
-    bandEnd: 75,
+    introLevel: 66,
+    bandEnd: 80,
   },
   corrupted_tiles: {
     id: 'corrupted_tiles',
@@ -53,7 +88,7 @@ export const MECHANICS: Record<MechanicId, MechanicDef> = {
     family: 'Hazard',
     icon: '☠️',
     oneLiner: 'Corruption spreads each turn. Clear the source or be overrun.',
-    introLevel: 76,
+    introLevel: 81,
     bandEnd: 100,
   },
   multi_objective: {
@@ -87,8 +122,13 @@ export const MECHANICS: Record<MechanicId, MechanicDef> = {
   },
 };
 
+// Order matters — bands are processed in this order to determine which one a
+// level "lives in" (the last band whose introLevel ≤ level).
 export const MECHANIC_LIST: MechanicDef[] = [
   MECHANICS.sealed_tiles,
+  MECHANICS.shifting_runes,
+  MECHANICS.linked_pairs,
+  MECHANICS.eclipse_tiles,
   MECHANICS.telegraphed_attacks,
   MECHANICS.corrupted_tiles,
   MECHANICS.multi_objective,
