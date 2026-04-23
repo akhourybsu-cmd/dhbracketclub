@@ -76,8 +76,9 @@ import {
   dailyEnemyHpMultiplier,
   dailyIroncladDamageMult,
   dailyReflectivePct,
+  dailyHidesForesight,
 } from '@/lib/runedelve/dailyModifierEffects';
-import { getActiveMasteries, masteryUnlockedAt } from '@/lib/runedelve/classMastery';
+import { getActiveMasteries, masteryUnlockedAt, getMasteryDef } from '@/lib/runedelve/classMastery';
 import {
   getMasteryStartingMana,
   getMasteryManaCap,
@@ -388,20 +389,32 @@ export default function RuneDelvePlayPage() {
       ability: e.ability, abilityCooldown: e.abilityCooldown, abilityCooldownMax: e.abilityCooldownMax ?? e.abilityCooldown,
       telegraphLabel: e.telegraphLabel, tier: e.tier,
     }));
+    // Daily Fogged suppresses all foresight-style effects (Foreseer's Lens
+    // turn bonus + telegraph early-reveal + spawn previews are hidden).
+    const foggedActive = isDailyMode && dailyHidesForesight(dailyMods);
     if (telegraphActive) {
       enemies = applyInitialIntents(enemies, level.generation_seed, level.level_number);
       // Foresight: reveal telegraphed intents N turns earlier by ticking
-      // each enemy's intent down at run start.
-      const earlyTurns = getTelegraphReadyEarly(relics);
+      // each enemy's intent down at run start. Suppressed under Fogged.
+      const earlyTurns = foggedActive ? 0 : getTelegraphReadyEarly(relics);
       if (earlyTurns > 0) {
         enemies = enemies.map(e => (
           e.intent != null ? { ...e, intent: Math.max(1, e.intent - earlyTurns) } : e
         ));
       }
     }
+    // Daily Greed: enemies enter with +25% HP.
+    const enemyHpMult = isDailyMode ? dailyEnemyHpMultiplier(dailyMods) : 1;
+    if (enemyHpMult !== 1) {
+      enemies = enemies.map(e => ({
+        ...e,
+        hp: Math.max(1, Math.round(e.hp * enemyHpMult)),
+        maxHp: Math.max(1, Math.round((e.maxHp ?? e.hp) * enemyHpMult)),
+      }));
+    }
     // Apply pre-run relic effects: starting mana + starting shield, plus
-    // Foreseer's Lens (+ turns/level) and Void Pact (-maxHp, applied below).
-    const bonusTurns = getForeseerBonusTurns(relics);
+    // Foreseer's Lens (+ turns/level — suppressed by Fogged) and Void Pact.
+    const bonusTurns = foggedActive ? 0 : getForeseerBonusTurns(relics);
     const dailyTurnDelta = isDailyMode ? dailyTurnLimitDelta(dailyMods) : 0;
     const initial = initialCombat(enemies, Math.max(3, level.turn_limit + bonusTurns + dailyTurnDelta));
     // Mastery: starting mana bonus (Mage T1) layered on top of relic effects.
@@ -1367,6 +1380,7 @@ export default function RuneDelvePlayPage() {
     // Daily Greed multiplies shard reward; bonus shards from Rogue T5 mastery
     // get added on top after the base computation.
     const dailyShardMult = isDailyMode ? dailyShardMultiplier(dailyMods) : 1;
+    const masteryBonusShards = bonusShardsFromMastery;
     try {
       if (cleared) {
         const breakdownShards = computeClearShards({
