@@ -99,7 +99,7 @@ export function useActiveQuests() {
       if (missing.length > 0) {
         const { data: inserted, error: insErr } = await supabase
           .from('rune_delve_active_quests' as never)
-          .insert(missing)
+          .insert(missing as never)
           .select('*');
         if (insErr) throw insErr;
         existingRows.push(...((inserted ?? []) as unknown as ActiveQuest[]));
@@ -159,10 +159,10 @@ export function useReportQuestProgress() {
 
     if (updates.length === 0) return;
 
-    await Promise.all(updates.map(u =>
+      await Promise.all(updates.map(u =>
       supabase
         .from('rune_delve_active_quests' as never)
-        .update({ progress: u.nextProgress, status: u.nowComplete ? 'completed' : 'active' })
+        .update({ progress: u.nextProgress, status: u.nowComplete ? 'completed' : 'active' } as never)
         .eq('id', u.id)
         .then(({ error }) => {
           if (error) console.warn('[quest-progress] update failed', error);
@@ -200,7 +200,7 @@ export function useClaimQuest() {
       // Mark claimed first (race-safe — second claim returns 0 rows).
       const { data, error } = await supabase
         .from('rune_delve_active_quests' as never)
-        .update({ status: 'claimed', claimed_at: new Date().toISOString() })
+        .update({ status: 'claimed', claimed_at: new Date().toISOString() } as never)
         .eq('id', quest.id)
         .eq('status', 'completed')
         .select('id');
