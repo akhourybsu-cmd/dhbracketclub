@@ -34,6 +34,10 @@ export default function RuneDelveHomePage() {
   const [picking, setPicking] = useState<HeroClass | null>(null);
   const [heroName, setHeroName] = useState('');
   const [helpOpen, setHelpOpen] = useState(false);
+  const [codexOpen, setCodexOpen] = useState(false);
+  const today = useTodayDaily();
+  const { data: myDailyRun } = useMyDailyRun();
+  const { data: dailyStreak } = useMyDailyStreak();
 
   // First-visit auto-open of help sheet.
   useEffect(() => {
