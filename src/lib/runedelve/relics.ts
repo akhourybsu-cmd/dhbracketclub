@@ -36,6 +36,9 @@ export const RELIC_CATALOG: RelicDef[] = [
   { id: 'quickstep',        name: 'Quickstep',         category: 'tempo',     tier: 1, cost: 110, icon: '👣', description: 'First chain each run counts as +1 length.' },
   { id: 'shrine_ward',      name: 'Shrine Ward',       category: 'objective', tier: 1, cost: 130, icon: '🕯️', description: 'Boss & elite damage to you reduced 10% on turn 1.' },
   { id: 'wanderers_compass',name: "Wanderer's Compass",category: 'objective', tier: 1, cost: 150, icon: '🧭', description: '+15% Rune Shards from this run.' },
+  // NEW T1
+  { id: 'mirror_shard',     name: 'Mirror Shard',      category: 'offense',   tier: 1, cost: 140, icon: '🪞', description: 'Every 2nd chain each run deals +30% extra damage (red) or echoes its effect by 30% (others).' },
+  { id: 'brambleward',      name: 'Brambleward',       category: 'survival',  tier: 1, cost: 130, icon: '🌵', description: 'Shield Thorns reflect +15% more damage. Stacks with Spiked Aegis.' },
 
   // ── Tier 2 — mechanic-aware (chapter 2+) ──────────────────────────────
   { id: 'crimson_tide',     name: 'Crimson Tide',      category: 'offense',   tier: 2, cost: 280, icon: '🩸', description: 'Every 5th red chain deals +75% damage.' },
@@ -46,6 +49,9 @@ export const RELIC_CATALOG: RelicDef[] = [
   { id: 'foresight',        name: 'Foresight',         category: 'objective', tier: 2, cost: 350, icon: '👁️', description: 'Telegraphed enemy intents reveal 1 turn earlier.' },
   { id: 'bulwark',          name: 'Bulwark',           category: 'survival',  tier: 2, cost: 320, icon: '🪨', description: 'Gold chains grant +1 shield turn.' },
   { id: 'spiked_aegis',     name: 'Spiked Aegis',      category: 'survival',  tier: 2, cost: 340, icon: '🌵', description: 'Shield reflects more damage back at attackers (+10% / +20% / +35%).' },
+  // NEW T2
+  { id: 'vampiric_sigil',   name: 'Vampiric Sigil',    category: 'survival',  tier: 2, cost: 360, icon: '🧛', description: 'Heal 20% of red-chain damage dealt back as HP.' },
+  { id: 'rune_echo',        name: 'Rune Echo',         category: 'tempo',     tier: 2, cost: 340, icon: '🌀', description: 'Every 4th chain repeats its effect at 50% strength.' },
 
   // ── Tier 3 — specialised synergy (chapter 3+) ─────────────────────────
   { id: 'executioners_mark',name: "Executioner's Mark",category: 'offense',   tier: 3, cost: 600, icon: '🎯', description: '+30% damage vs enemies below 25% HP.' },
@@ -53,6 +59,10 @@ export const RELIC_CATALOG: RelicDef[] = [
   { id: 'bloodbond',        name: 'Bloodbond',         category: 'survival',  tier: 3, cost: 700, icon: '❤️', description: 'Killing an enemy heals 4 HP.' },
   { id: 'desperate_surge',  name: 'Desperate Surge',   category: 'tempo',     tier: 3, cost: 600, icon: '💢', description: 'Below 30% HP: red chains deal +25% damage.' },
   { id: 'cracked_crown',    name: 'Cracked Crown',     category: 'objective', tier: 3, cost: 750, icon: '👑', description: 'Boss-rule damage modifiers softened by 15%.' },
+  // NEW T3
+  { id: 'foreseers_lens',   name: "Foreseer's Lens",   category: 'objective', tier: 3, cost: 700, icon: '🔮', description: 'Gain +1 turn on every level. Higher ranks add more.' },
+  { id: 'void_pact',        name: 'Void Pact',         category: 'offense',   tier: 3, cost: 800, icon: '🌌', description: 'Sacrifice 10 max HP. All chains deal +20% effect.' },
+  { id: 'phoenix_heart',    name: 'Phoenix Heart',     category: 'survival',  tier: 3, cost: 850, icon: '🔥', description: 'Once per run, on lethal damage, revive at 50% HP.' },
 ];
 
 export const RELIC_BY_ID: Record<string, RelicDef> = Object.fromEntries(RELIC_CATALOG.map(r => [r.id, r]));
@@ -144,6 +154,15 @@ export const RANK_EFFECTS: Record<string, RankTable> = {
   shrine_ward:       [0.90, 0.88, 0.86, 0.84, 0.82], // damage multiplier (lower = better)
   wanderers_compass: [1.15, 1.18, 1.21, 1.24, 1.27],
   cracked_crown:     [0.85, 0.83, 0.81, 0.79, 0.77], // boss soften (lower = better)
+
+  // ── New relics ─────────────────────────────────────────────────────────
+  mirror_shard:      [1.30, 1.35, 1.40, 1.45, 1.50], // bonus mult on every 2nd chain
+  brambleward:       [1.15, 1.20, 1.25, 1.32, 1.40], // extra thorns multiplier
+  vampiric_sigil:    [0.20, 0.24, 0.28, 0.32, 0.40], // lifesteal % of red dmg
+  rune_echo:         [0.50, 0.55, 0.60, 0.70, 0.80], // echo strength on every 4th chain
+  foreseers_lens:    [1,    1,    2,    2,    3   ], // bonus turns per level
+  void_pact:         [1.20, 1.24, 1.28, 1.34, 1.40], // damage mult on all chains
+  phoenix_heart:     [0.50, 0.55, 0.60, 0.70, 0.80], // revive HP fraction of maxHp
 };
 
 export function clampRank(rank: number | null | undefined): number {

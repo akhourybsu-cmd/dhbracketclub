@@ -26,6 +26,8 @@ export interface RunSnapshot {
   corruption: { cells: string[]; sources: string[] };
   log: CombatLogEntry[];
   lastStandUsed: number;
+  /** Phoenix Heart single-use revive flag (optional for back-compat). */
+  phoenixUsed?: boolean;
   bonusUsedThisCycle: boolean;
   redChainCount: number;
   chainCountTotal: number;
@@ -53,6 +55,7 @@ export interface BuildSnapshotInput {
   corruption: CorruptionState;
   log: CombatLogEntry[];
   lastStandUsed: number;
+  phoenixUsed?: boolean;
   bonusUsedThisCycle: boolean;
   redChainCount: number;
   chainCountTotal: number;
@@ -79,6 +82,7 @@ export function buildSnapshot(input: BuildSnapshotInput): RunSnapshot {
     },
     log: input.log,
     lastStandUsed: input.lastStandUsed,
+    phoenixUsed: input.phoenixUsed ?? false,
     bonusUsedThisCycle: input.bonusUsedThisCycle,
     redChainCount: input.redChainCount,
     chainCountTotal: input.chainCountTotal,

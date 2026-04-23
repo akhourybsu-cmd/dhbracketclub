@@ -34,6 +34,9 @@ import {
   getTelegraphReadyEarly,
   getSealedTilesSpeedup,
   thornsRelicMultiplier,
+  getForeseerBonusTurns,
+  getVoidPactHpCost,
+  tryPhoenixHeart,
   type ActiveRelics,
 } from '@/lib/runedelve/relicEffects';
 import { MAX_MANA } from '@/lib/runedelve/combatEngine';
@@ -129,6 +132,8 @@ export default function RuneDelvePlayPage() {
   const [endState, setEndState] = useState<null | { cleared: boolean; reason: 'cleared' | 'defeated' | 'timeout'; score: number; isNewBest: boolean; shards: number; improvedChain?: boolean; improvedTurns?: boolean; improvedHp?: boolean; firstClear?: boolean }>(null);
   // Counter (not boolean) — Last Stand at R5 grants 2 saves per run.
   const [lastStandUsed, setLastStandUsed] = useState(0);
+  // Phoenix Heart — single-use full revive per run, separate from Last Stand.
+  const [phoenixUsed, setPhoenixUsed] = useState(false);
   // Bonus-move rebalance: only one free turn per enemy cycle. Resets whenever
   // the enemy phase actually runs (i.e. a non-bonus chain or ability resolves).
   const [bonusUsedThisCycle, setBonusUsedThisCycle] = useState(false);
@@ -271,6 +276,7 @@ export default function RuneDelvePlayPage() {
         });
         setLog(snap.log);
         setLastStandUsed(snap.lastStandUsed);
+        setPhoenixUsed(snap.phoenixUsed ?? false);
         setBonusUsedThisCycle(snap.bonusUsedThisCycle);
         setRedChainCount(snap.redChainCount);
         setChainCountTotal(snap.chainCountTotal);
@@ -330,13 +336,21 @@ export default function RuneDelvePlayPage() {
         ));
       }
     }
-    // Apply pre-run relic effects: starting mana + starting shield.
-    const initial = initialCombat(enemies, level.turn_limit);
+    // Apply pre-run relic effects: starting mana + starting shield, plus
+    // Foreseer's Lens (+ turns/level) and Void Pact (-maxHp, applied below).
+    const bonusTurns = getForeseerBonusTurns(relics);
+    const initial = initialCombat(enemies, level.turn_limit + bonusTurns);
     initial.mana = Math.min(MAX_MANA, initial.mana + getStartingMana(relics));
     initial.shieldTurns = Math.max(initial.shieldTurns, getStartingShieldTurns(relics));
+    const voidCost = getVoidPactHpCost(relics);
+    if (voidCost > 0) {
+      initial.maxHp = Math.max(10, initial.maxHp - voidCost);
+      initial.hp = Math.min(initial.hp, initial.maxHp);
+    }
     setCombat(initial);
     setActiveRelicsSnapshot(relics);
     setLastStandUsed(0);
+    setPhoenixUsed(false);
     setRedChainCount(0);
     setChainCountTotal(0);
     setAbilityUsedCount(0);
@@ -365,6 +379,7 @@ export default function RuneDelvePlayPage() {
       corruption,
       log,
       lastStandUsed,
+      phoenixUsed,
       bonusUsedThisCycle,
       redChainCount,
       chainCountTotal,
@@ -394,7 +409,7 @@ export default function RuneDelvePlayPage() {
         levelNumber: level.level_number,
         generationSeed: level.generation_seed,
         grid, combat, seals, corruption, log,
-        lastStandUsed, bonusUsedThisCycle, redChainCount, chainCountTotal,
+        lastStandUsed, phoenixUsed, bonusUsedThisCycle, redChainCount, chainCountTotal,
         abilityUsedCount, corruptCleansedCount,
         defeatedArchetypes: defeatedArchetypesRef.current,
         wavesSpawned: wavesSpawnedRef.current,
@@ -538,6 +553,7 @@ export default function RuneDelvePlayPage() {
       isFirstChainOfRun,
       hpRatio: combat.hp / Math.max(1, combat.maxHp),
       enemyHpRatioBeforeHit: enemyHpRatio,
+      chainNumberThisRun: chainCountTotal + 1,
     });
     // Momentum (rogue): chain bonus threshold drops from 5 → 4.
     const rogueBonusThreshold = hero.class === 'rogue' && has(relics, 'momentum') ? 4 : 5;
@@ -651,6 +667,49 @@ export default function RuneDelvePlayPage() {
             }
           }
         }
+      }
+    }
+    // ── Vampiric Sigil — heal % of red damage dealt ──────────────────────
+    if (type === 'red' && chainMods.lifestealPctOfDamage > 0 && resolution.damageDealt > 0) {
+      const lifesteal = Math.round(resolution.damageDealt * chainMods.lifestealPctOfDamage);
+      const applied = Math.min(lifesteal, next.maxHp - next.hp);
+      if (applied > 0) {
+        next.hp += applied;
+        resolution.hpHealed += applied;
+      }
+    }
+    // ── Rune Echo — repeat the chain's effect at echoMult strength ──────
+    if (chainMods.echoMult > 0) {
+      const m = chainMods.echoMult;
+      if (type === 'red' && resolution.damageDealt > 0) {
+        const echoDmg = Math.round(resolution.damageDealt * m);
+        const target = next.enemies.find(e => e.hp > 0)
+          ?? next.enemies.find(e => resolution.enemyKills.includes(e.id));
+        if (target && echoDmg > 0) {
+          const applied = Math.min(echoDmg, Math.max(target.hp, 0));
+          if (applied > 0) {
+            target.hp -= applied;
+            resolution.damageDealt += applied;
+            next.totalDamage += applied;
+            if (target.hp <= 0 && !resolution.enemyKills.includes(target.id)) {
+              next.enemiesDefeated += 1;
+              resolution.enemyKills.push(target.id);
+            }
+          }
+        }
+      } else if (type === 'green' && resolution.hpHealed > 0) {
+        const echoHeal = Math.round(resolution.hpHealed * m);
+        const applied = Math.min(echoHeal, next.maxHp - next.hp);
+        if (applied > 0) { next.hp += applied; resolution.hpHealed += applied; }
+      } else if (type === 'blue' && resolution.manaGained > 0) {
+        const echoMana = Math.max(1, Math.round(resolution.manaGained * m));
+        const before = next.mana;
+        next.mana = Math.min(MAX_MANA, next.mana + echoMana);
+        resolution.manaGained += next.mana - before;
+      } else if (type === 'gold' && resolution.guardGained > 0) {
+        const echoTurns = Math.max(1, Math.round(resolution.guardGained * m));
+        next.shieldTurns += echoTurns;
+        resolution.guardGained += echoTurns;
       }
     }
     if (resolution.enemyKills.length) setFlashId(resolution.enemyKills[0]);
@@ -890,6 +949,17 @@ export default function RuneDelvePlayPage() {
         setLastStandUsed(c => c + 1);
         toast.success('💔 Last Stand! Survived at 1 HP', { duration: 1800 });
         turnLogs.push({ kind: 'laststand', text: 'Last Stand! You survived at 1 HP' });
+      }
+    }
+    // Relic: Phoenix Heart — full revive at 50%+ maxHp once per run. Runs
+    // AFTER Last Stand so the cheap save fires first when both are equipped.
+    if (afterEnemies.hp <= 0) {
+      const reviveHp = tryPhoenixHeart(relics, afterEnemies.maxHp, phoenixUsed);
+      if (reviveHp != null) {
+        afterEnemies = { ...afterEnemies, hp: reviveHp };
+        setPhoenixUsed(true);
+        toast.success(`🔥 Phoenix Heart! Revived at ${reviveHp} HP`, { duration: 2200 });
+        turnLogs.push({ kind: 'laststand', text: `Phoenix Heart blazed — revived at ${reviveHp} HP` });
       }
     }
 

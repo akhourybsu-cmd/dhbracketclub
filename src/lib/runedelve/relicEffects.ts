@@ -65,6 +65,8 @@ export interface ChainContext {
   isFirstChainOfRun: boolean;
   hpRatio: number;                // 0..1 hero hp / maxHp
   enemyHpRatioBeforeHit: number;  // 0..1 of the targeted enemy
+  /** Total chains made this run INCLUDING the current one (1-indexed). */
+  chainNumberThisRun?: number;
 }
 
 export interface ChainMods {
@@ -73,11 +75,16 @@ export interface ChainMods {
   bonusHealFlat: number;          // extra HP to heal
   bonusShieldTurns: number;       // extra shield turns to add (gold)
   effectiveLengthBonus: number;   // adds to length AFTER the chain
+  /** % of red-chain damage to lifesteal back as HP (0 = none). */
+  lifestealPctOfDamage: number;
+  /** Echo multiplier 0..1 — applied as a 2nd resolution of this chain at this strength. */
+  echoMult: number;
 }
 
 const noop: ChainMods = {
   bonusDamageMult: 1, bonusManaFlat: 0, bonusHealFlat: 0,
   bonusShieldTurns: 0, effectiveLengthBonus: 0,
+  lifestealPctOfDamage: 0, echoMult: 0,
 };
 
 export function computeChainMods(a: ActiveRelics, ctx: ChainContext): ChainMods {
@@ -95,6 +102,9 @@ export function computeChainMods(a: ActiveRelics, ctx: ChainContext): ChainMods 
     }
     if (has(a, 'desperate_surge') && ctx.hpRatio < 0.3) {
       m.bonusDamageMult *= effectValue('desperate_surge', rankOf(a, 'desperate_surge'));
+    }
+    if (has(a, 'vampiric_sigil')) {
+      m.lifestealPctOfDamage = effectValue('vampiric_sigil', rankOf(a, 'vampiric_sigil'));
     }
   }
   if (ctx.chainType === 'blue') {
@@ -116,6 +126,36 @@ export function computeChainMods(a: ActiveRelics, ctx: ChainContext): ChainMods 
   }
   if (has(a, 'quickstep') && ctx.isFirstChainOfRun) {
     m.effectiveLengthBonus += Math.round(effectValue('quickstep', rankOf(a, 'quickstep')));
+  }
+  // Mirror Shard — every 2nd chain (1-indexed: 2, 4, 6, ...) gets a bump.
+  // For red chains this is extra damage; for non-red it's extra effect via
+  // length bonus so heal/mana/shield also scale.
+  const chainNum = ctx.chainNumberThisRun ?? 0;
+  if (has(a, 'mirror_shard') && chainNum > 0 && chainNum % 2 === 0) {
+    const mult = effectValue('mirror_shard', rankOf(a, 'mirror_shard'));
+    if (ctx.chainType === 'red') {
+      m.bonusDamageMult *= mult;
+    } else {
+      // mult is 1.30..1.50 — translate the "+X%" portion into bonus length steps.
+      // e.g. 1.30 → +1 length-equivalent; 1.50 → +2.
+      const extra = Math.max(1, Math.round((mult - 1) * 4));
+      m.effectiveLengthBonus += extra;
+    }
+  }
+  // Rune Echo — every 4th chain (4, 8, 12, ...) echoes its effect.
+  if (has(a, 'rune_echo') && chainNum > 0 && chainNum % 4 === 0) {
+    m.echoMult = effectValue('rune_echo', rankOf(a, 'rune_echo'));
+  }
+  // Void Pact — universal +X% to chain effect.
+  if (has(a, 'void_pact')) {
+    const mult = effectValue('void_pact', rankOf(a, 'void_pact'));
+    if (ctx.chainType === 'red') {
+      m.bonusDamageMult *= mult;
+    } else {
+      // Translate to length steps so heal/mana/shield benefit too.
+      const extra = Math.max(1, Math.round((mult - 1) * 4));
+      m.effectiveLengthBonus += extra;
+    }
   }
 
   return m;
@@ -176,8 +216,36 @@ export function momentumScoreBonusMult(a: ActiveRelics, longestChain: number): n
   return effectValue('momentum', rankOf(a, 'momentum'));
 }
 
-// ── Spiked Aegis (extra Thorns multiplier on shielded hits) ─────────────
+// ── Spiked Aegis + Brambleward (extra Thorns multiplier on shielded hits) ─
+// Both relics compose multiplicatively on top of the class base thorns rate.
 export function thornsRelicMultiplier(a: ActiveRelics): number {
-  if (!has(a, 'spiked_aegis')) return 1;
-  return effectValue('spiked_aegis', rankOf(a, 'spiked_aegis'));
+  let mult = 1;
+  if (has(a, 'spiked_aegis')) mult *= effectValue('spiked_aegis', rankOf(a, 'spiked_aegis'));
+  if (has(a, 'brambleward')) mult *= effectValue('brambleward', rankOf(a, 'brambleward'));
+  return mult;
+}
+
+// ── Foreseer's Lens — bonus turns added to every level's turn limit ──────
+export function getForeseerBonusTurns(a: ActiveRelics): number {
+  if (!has(a, 'foreseers_lens')) return 0;
+  return Math.round(effectValue('foreseers_lens', rankOf(a, 'foreseers_lens')));
+}
+
+// ── Void Pact — sacrifice max HP at run start in exchange for damage mult.
+// Returns the flat HP to subtract from both maxHp and starting hp.
+export function getVoidPactHpCost(a: ActiveRelics): number {
+  if (!has(a, 'void_pact')) return 0;
+  return 10;
+}
+
+// ── Phoenix Heart — full revive once per run on lethal damage. Returns the
+// HP to revive at, or null if not equipped / already used.
+export function tryPhoenixHeart(
+  a: ActiveRelics,
+  maxHp: number,
+  alreadyUsed: boolean,
+): number | null {
+  if (!has(a, 'phoenix_heart') || alreadyUsed) return null;
+  const frac = effectValue('phoenix_heart', rankOf(a, 'phoenix_heart'));
+  return Math.max(1, Math.round(maxHp * frac));
 }
