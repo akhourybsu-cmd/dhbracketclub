@@ -172,6 +172,9 @@ export function RuneBoard({ grid, disabled, onChainComplete, seals, corruptedCel
               const isSealed = seals?.has(k) ?? false;
               const isCorrupted = corruptedCells?.has(k) ?? false;
               const isSource = corruptionSources?.has(k) ?? false;
+              const isEclipsed = eclipsedCells?.has(k) ?? false;
+              const isLinked = linkedCells?.has(k) ?? false;
+              const isShifting = (shiftingColumn ?? -1) === c;
               return (
                 <RuneCell
                   key={`${r}-${c}`}
@@ -183,6 +186,9 @@ export function RuneBoard({ grid, disabled, onChainComplete, seals, corruptedCel
                   sealed={isSealed}
                   corrupted={isCorrupted}
                   corruptionSource={isSource}
+                  eclipsed={isEclipsed}
+                  linked={isLinked}
+                  shifting={isShifting}
                   onPointerDown={handlePointerDown(r, c)}
                 />
               );
