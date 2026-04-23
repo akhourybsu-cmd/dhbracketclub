@@ -1220,6 +1220,14 @@ export default function RuneDelvePlayPage() {
           : `Reinforcements arrive! +${nextWave.reinforcement_turns ?? 2} turns granted.`,
       });
     }
+    // ── Daily Inferno: lose flat HP per turn (skipped on bonus moves). ──
+    if (isDailyMode && !grantsBonusMove) {
+      const drain = dailyHpDrainPerTurn(dailyMods);
+      if (drain > 0) {
+        afterEnemies.hp = Math.max(0, afterEnemies.hp - drain);
+        turnLogs.push({ kind: 'corruption', text: '🔥 Inferno burns', amount: drain });
+      }
+    }
     setCombat(postWave);
     pushLogs(turnLogs);
 
