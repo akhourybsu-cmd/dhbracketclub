@@ -59,7 +59,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { PlayoffHeaderBanner } from '@/components/draft/PlayoffHeaderBanner';
 import { PlayoffBadge } from '@/components/draft/PlayoffBadge';
-import { getPlayoffRoundShort } from '@/lib/playoffStyle';
+import { PlayoffMatchupHero } from '@/components/draft/PlayoffMatchupHero';
+import { getPlayoffRoundShort, getPlayoffRoundName } from '@/lib/playoffStyle';
 
 interface Participant {
   id: string;
@@ -715,167 +716,261 @@ export default function DraftDetailPage() {
         <ArrowLeft /> Back to Drafts
       </Link>
 
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            {editing ? (
-              <div className="flex items-center gap-2">
-                <Input
-                  value={editTopic}
-                  onChange={(e) => setEditTopic(e.target.value)}
-                  className="form-input text-lg font-extrabold"
-                  autoFocus
-                />
-                <Button size="sm" onClick={handleSaveEdit} disabled={saving} className="shrink-0">
-                  {saving ? '…' : 'Save'}
-                </Button>
-                <button onClick={() => { setEditing(false); setEditTopic(draft.topic); }} className="p-1.5 text-muted-foreground hover:text-foreground">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <h1 className="text-[1.4rem] font-extrabold tracking-tight leading-tight">{draft.topic}</h1>
-            )}
-            <p className="text-[11px] text-muted-foreground/60 font-medium mt-1">
-              by {draft.profiles?.display_name} • {draft.num_rounds} rounds
-              {draft.category && (
-                <span className="ml-1.5 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider"
-                  style={{ background: 'hsl(var(--primary) / 0.1)', color: 'hsl(var(--primary))' }}>
-                  <Sparkles className="w-2.5 h-2.5" />{draft.category}
-                </span>
-              )}
-            </p>
-          </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <ShareButton contentType="draft" contentId={draftId!} title={draft.topic} />
-            {canManage && picks.length > 0 && (
-              <button
-                onClick={handleReEnrich}
-                disabled={enriching}
-                className="p-2 rounded-lg text-muted-foreground/60 hover:text-primary transition-colors disabled:opacity-40"
-                title="Re-enrich picks"
-              >
-                <RefreshCw className={cn("w-4 h-4", enriching && "animate-spin")} />
-              </button>
-            )}
-            <span
-              className={cn(
-                "status-pill flex-shrink-0",
-                !isPlayoffDraft && isSetup && 'bg-muted text-muted-foreground',
-                !isPlayoffDraft && isInProgress && 'bg-success/10 text-success',
-                !isPlayoffDraft && isDraftComplete && 'bg-primary/10 text-primary',
-              )}
-              style={isPlayoffDraft ? {
-                background: 'hsl(45 93% 52% / 0.18)',
-                color: 'hsl(45 93% 52%)',
-                border: '1px solid hsl(45 93% 52% / 0.4)',
-              } : undefined}
-            >
-              {isPlayoffDraft && playoffMatch ? `${getPlayoffRoundShort(playoffMatch.round)} · ` : ''}
-              {isSetup ? 'Setup' : isInProgress && !isDraftComplete ? 'In Progress' : 'Complete'}
-            </span>
-            {canManage && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="p-1.5 rounded-lg text-muted-foreground/60 hover:text-foreground transition-colors">
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setEditing(true)}>
-                    <Pencil className="w-3.5 h-3.5 mr-2" /> Edit Topic
-                  </DropdownMenuItem>
-                  {isCommissioner && seasonEntry && (
-                    <DropdownMenuItem onClick={async () => {
-                      setSeasonActionBusy(true);
-                      try {
-                        await removeDraftFromSeason(draftId!);
-                        await recalculateSeasonStandings(season!.id);
-                        toast.success('Removed from season');
-                        refetchSeasonEntries();
-                      } catch (err: any) { toast.error(err.message); }
-                      finally { setSeasonActionBusy(false); }
-                    }}>
-                      <X className="w-3.5 h-3.5 mr-2" /> Remove from Season
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem onClick={() => setShowDeleteDialog(true)} className="text-destructive focus:text-destructive">
-                    <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete Draft
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 mt-3">
-          <div className="stat-card py-2 flex-1">
-            <Users className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />
-            <span className="stat-value text-xs">{participants.length}</span>
-            <span className="stat-label">Players</span>
-          </div>
-          <div className="stat-card py-2 flex-1">
-            <Bookmark className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />
-            <span className="stat-value text-xs">{picks.length}</span>
-            <span className="stat-label">Picks</span>
-          </div>
-          <div className="stat-card py-2 flex-1">
-            <Trophy className="w-3 h-3 text-primary" />
-            <span className="stat-value text-xs">{currentRound > draft.num_rounds ? draft.num_rounds : currentRound}</span>
-
-            <span className="stat-label">Round</span>
-          </div>
-        </div>
-
-        {/* Playoff banner (replaces simple Season Draft pill for playoff drafts) */}
-        {isPlayoffDraft && playoffMatch ? (
-          <div className="mt-3">
-            <PlayoffHeaderBanner
+      {/* Header — playoff drafts get a premium matchup hero */}
+      {isPlayoffDraft && playoffMatch ? (
+        (() => {
+          const playerA = participants.find(p => p.user_id === playoffMatch.user_a);
+          const playerB = participants.find(p => p.user_id === playoffMatch.user_b);
+          const aPicks = picks.filter(p => p.user_id === playoffMatch.user_a).length;
+          const bPicks = picks.filter(p => p.user_id === playoffMatch.user_b).length;
+          const totalExpected = participants.length * (draft?.num_rounds || 1);
+          return (
+            <PlayoffMatchupHero
               round={playoffMatch.round}
               matchNumber={playoffMatch.match_number}
               seasonName={season?.name || season?.season_label || null}
-              userAName={participants.find(p => p.user_id === playoffMatch.user_a)?.profiles?.display_name || null}
-              userBName={participants.find(p => p.user_id === playoffMatch.user_b)?.profiles?.display_name || null}
+              topic={draft.topic}
+              status={isSetup ? 'setup' : isDraftComplete ? 'complete' : 'in_progress'}
+              isMyTurn={isMyTurn}
+              isParticipant={isParticipant}
+              currentPickerUserId={derivedTurn.current_pick_user_id}
+              currentRound={currentRound}
+              totalRounds={draft.num_rounds}
+              totalPicksMade={picks.length}
+              totalPicksExpected={totalExpected}
+              playerA={{
+                userId: playoffMatch.user_a,
+                name: playerA?.profiles?.display_name || null,
+                seed: playoffMatch.seed_a,
+                picksMade: aPicks,
+              }}
+              playerB={{
+                userId: playoffMatch.user_b,
+                name: playerB?.profiles?.display_name || null,
+                seed: playoffMatch.seed_b,
+                picksMade: bPicks,
+              }}
               finalsWins={finalsSeriesWins}
-              userA={playoffMatch.user_a}
-              userB={playoffMatch.user_b}
+              canEditTopic={canManage && !editing}
+              onEditTopic={() => setEditing(true)}
+              shareSlot={<ShareButton contentType="draft" contentId={draftId!} title={draft.topic} />}
+              refreshSlot={
+                canManage && picks.length > 0 ? (
+                  <button
+                    onClick={handleReEnrich}
+                    disabled={enriching}
+                    className="p-1.5 rounded-md text-muted-foreground/60 hover:text-primary transition-colors disabled:opacity-40"
+                    title="Re-enrich picks"
+                    aria-label="Re-enrich picks"
+                  >
+                    <RefreshCw className={cn('w-4 h-4', enriching && 'animate-spin')} />
+                  </button>
+                ) : null
+              }
+              menuSlot={
+                canManage ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        className="p-1.5 rounded-md text-muted-foreground/60 hover:text-foreground transition-colors"
+                        aria-label="More actions"
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setEditing(true)}>
+                        <Pencil className="w-3.5 h-3.5 mr-2" /> Edit Topic
+                      </DropdownMenuItem>
+                      {isCommissioner && seasonEntry && (
+                        <DropdownMenuItem
+                          onClick={async () => {
+                            setSeasonActionBusy(true);
+                            try {
+                              await removeDraftFromSeason(draftId!);
+                              await recalculateSeasonStandings(season!.id);
+                              toast.success('Removed from season');
+                              refetchSeasonEntries();
+                            } catch (err: any) { toast.error(err.message); }
+                            finally { setSeasonActionBusy(false); }
+                          }}
+                        >
+                          <X className="w-3.5 h-3.5 mr-2" /> Remove from Season
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem onClick={() => setShowDeleteDialog(true)} className="text-destructive focus:text-destructive">
+                        <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete Draft
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null
+              }
             />
+          );
+        })()
+      ) : (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              {editing ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={editTopic}
+                    onChange={(e) => setEditTopic(e.target.value)}
+                    className="form-input text-lg font-extrabold"
+                    autoFocus
+                  />
+                  <Button size="sm" onClick={handleSaveEdit} disabled={saving} className="shrink-0">
+                    {saving ? '…' : 'Save'}
+                  </Button>
+                  <button onClick={() => { setEditing(false); setEditTopic(draft.topic); }} className="p-1.5 text-muted-foreground hover:text-foreground">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <h1 className="text-[1.4rem] font-extrabold tracking-tight leading-tight">{draft.topic}</h1>
+              )}
+              <p className="text-[11px] text-muted-foreground/60 font-medium mt-1">
+                by {draft.profiles?.display_name} • {draft.num_rounds} rounds
+                {draft.category && (
+                  <span className="ml-1.5 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider"
+                    style={{ background: 'hsl(var(--primary) / 0.1)', color: 'hsl(var(--primary))' }}>
+                    <Sparkles className="w-2.5 h-2.5" />{draft.category}
+                  </span>
+                )}
+              </p>
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <ShareButton contentType="draft" contentId={draftId!} title={draft.topic} />
+              {canManage && picks.length > 0 && (
+                <button
+                  onClick={handleReEnrich}
+                  disabled={enriching}
+                  className="p-2 rounded-lg text-muted-foreground/60 hover:text-primary transition-colors disabled:opacity-40"
+                  title="Re-enrich picks"
+                >
+                  <RefreshCw className={cn("w-4 h-4", enriching && "animate-spin")} />
+                </button>
+              )}
+              <span
+                className={cn(
+                  "status-pill flex-shrink-0",
+                  isSetup && 'bg-muted text-muted-foreground',
+                  isInProgress && 'bg-success/10 text-success',
+                  isDraftComplete && 'bg-primary/10 text-primary',
+                )}
+              >
+                {isSetup ? 'Setup' : isInProgress && !isDraftComplete ? 'In Progress' : 'Complete'}
+              </span>
+              {canManage && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="p-1.5 rounded-lg text-muted-foreground/60 hover:text-foreground transition-colors">
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setEditing(true)}>
+                      <Pencil className="w-3.5 h-3.5 mr-2" /> Edit Topic
+                    </DropdownMenuItem>
+                    {isCommissioner && seasonEntry && (
+                      <DropdownMenuItem onClick={async () => {
+                        setSeasonActionBusy(true);
+                        try {
+                          await removeDraftFromSeason(draftId!);
+                          await recalculateSeasonStandings(season!.id);
+                          toast.success('Removed from season');
+                          refetchSeasonEntries();
+                        } catch (err: any) { toast.error(err.message); }
+                        finally { setSeasonActionBusy(false); }
+                      }}>
+                        <X className="w-3.5 h-3.5 mr-2" /> Remove from Season
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={() => setShowDeleteDialog(true)} className="text-destructive focus:text-destructive">
+                      <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete Draft
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
           </div>
-        ) : seasonEntry ? (
-          <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded-lg" style={{ background: 'hsl(var(--gold) / 0.08)', border: '1px solid hsl(var(--gold) / 0.15)' }}>
-            <Award className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(var(--gold))' }} />
-            <span className="text-[11px] font-bold" style={{ color: 'hsl(var(--gold))' }}>Season Draft #{seasonEntry.week_number}</span>
-          </div>
-        ) : isCommissioner && season ? (
-          <button
-            onClick={async () => {
-              setSeasonActionBusy(true);
-              try {
-                const num = await addDraftToSeason(season.id, draftId!);
-                await recalculateSeasonStandings(season.id);
-                toast.success(`Added as Season Draft #${num}`);
-                refetchSeasonEntries();
-              } catch (err: any) { toast.error(err.message); }
-              finally { setSeasonActionBusy(false); }
-            }}
-            disabled={seasonActionBusy}
-            className="flex items-center gap-2 mt-2 px-3 py-2 rounded-lg text-[11px] font-bold transition-colors btn-press w-full justify-center"
-            style={{ background: 'hsl(var(--gold) / 0.1)', color: 'hsl(var(--gold))', border: '1px dashed hsl(var(--gold) / 0.3)' }}
-          >
-            <Award className="w-4 h-4" /> {seasonActionBusy ? 'Adding…' : 'Add to Season'}
-          </button>
-        ) : null}
 
-        {!isParticipant && user && (
-          <div className="flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full self-start bg-muted/40 border border-border/40">
-            <span className="text-[11px]">👁</span>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              {isPlayoffDraft ? 'Spectating Playoff Match' : 'Spectating'}
-            </span>
+          <div className="flex items-center gap-2 mt-3">
+            <div className="stat-card py-2 flex-1">
+              <Users className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />
+              <span className="stat-value text-xs">{participants.length}</span>
+              <span className="stat-label">Players</span>
+            </div>
+            <div className="stat-card py-2 flex-1">
+              <Bookmark className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />
+              <span className="stat-value text-xs">{picks.length}</span>
+              <span className="stat-label">Picks</span>
+            </div>
+            <div className="stat-card py-2 flex-1">
+              <Trophy className="w-3 h-3 text-primary" />
+              <span className="stat-value text-xs">{currentRound > draft.num_rounds ? draft.num_rounds : currentRound}</span>
+              <span className="stat-label">Round</span>
+            </div>
           </div>
-        )}
-      </motion.div>
+
+          {seasonEntry ? (
+            <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded-lg" style={{ background: 'hsl(var(--gold) / 0.08)', border: '1px solid hsl(var(--gold) / 0.15)' }}>
+              <Award className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(var(--gold))' }} />
+              <span className="text-[11px] font-bold" style={{ color: 'hsl(var(--gold))' }}>Season Draft #{seasonEntry.week_number}</span>
+            </div>
+          ) : isCommissioner && season ? (
+            <button
+              onClick={async () => {
+                setSeasonActionBusy(true);
+                try {
+                  const num = await addDraftToSeason(season.id, draftId!);
+                  await recalculateSeasonStandings(season.id);
+                  toast.success(`Added as Season Draft #${num}`);
+                  refetchSeasonEntries();
+                } catch (err: any) { toast.error(err.message); }
+                finally { setSeasonActionBusy(false); }
+              }}
+              disabled={seasonActionBusy}
+              className="flex items-center gap-2 mt-2 px-3 py-2 rounded-lg text-[11px] font-bold transition-colors btn-press w-full justify-center"
+              style={{ background: 'hsl(var(--gold) / 0.1)', color: 'hsl(var(--gold))', border: '1px dashed hsl(var(--gold) / 0.3)' }}
+            >
+              <Award className="w-4 h-4" /> {seasonActionBusy ? 'Adding…' : 'Add to Season'}
+            </button>
+          ) : null}
+
+          {!isParticipant && user && (
+            <div className="flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full self-start bg-muted/40 border border-border/40">
+              <span className="text-[11px]">👁</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Spectating
+              </span>
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {/* Inline topic editor for playoff drafts (hero pencil opens this) */}
+      {isPlayoffDraft && editing && (
+        <div className="flex items-center gap-2 mb-4 px-1">
+          <Input
+            value={editTopic}
+            onChange={(e) => setEditTopic(e.target.value)}
+            className="form-input text-sm font-extrabold"
+            autoFocus
+          />
+          <Button size="sm" onClick={handleSaveEdit} disabled={saving} className="shrink-0">
+            {saving ? '…' : 'Save'}
+          </Button>
+          <button
+            onClick={() => { setEditing(false); setEditTopic(draft.topic); }}
+            className="p-1.5 text-muted-foreground hover:text-foreground"
+            aria-label="Cancel edit"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Enrichment loading state */}
       {enriching && (
@@ -950,41 +1045,95 @@ export default function DraftDetailPage() {
           <PickAnnouncement pick={announcement} />
 
           {/* Current turn banner */}
-          <div
-            className={cn("glass-card p-4 mb-5 text-center", (isMyTurn || isPlayoffDraft) && "arena-edge")}
-            style={isPlayoffDraft ? {
-              borderLeft: '3px solid hsl(45 93% 52%)',
-              background: 'linear-gradient(135deg, hsl(45 93% 52% / 0.06), transparent 60%), hsl(var(--card))',
-              boxShadow: '0 0 18px -4px hsl(45 93% 52% / 0.25)',
-            } : undefined}
-          >
-            <div className="relative z-10">
-              {isPlayoffDraft && playoffMatch && (
+          {isPlayoffDraft ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 220, damping: 22 }}
+              className="relative overflow-hidden rounded-2xl mb-5"
+              style={{
+                background: isMyTurn
+                  ? 'radial-gradient(120% 100% at 50% 0%, hsl(45 93% 52% / 0.22), transparent 60%), hsl(var(--card))'
+                  : 'linear-gradient(180deg, hsl(var(--card)), hsl(var(--card) / 0.9))',
+                border: isMyTurn ? '1px solid hsl(45 93% 52% / 0.55)' : '1px solid hsl(var(--border))',
+                boxShadow: isMyTurn
+                  ? '0 0 28px -6px hsl(45 93% 52% / 0.55), inset 0 1px 0 hsl(45 93% 52% / 0.25)'
+                  : '0 4px 16px -8px hsl(0 0% 0% / 0.3)',
+              }}
+            >
+              {isMyTurn && (
+                <div
+                  className="absolute inset-x-0 top-0 h-px animate-pulse"
+                  style={{ background: 'linear-gradient(90deg, transparent, hsl(45 93% 52%), transparent)' }}
+                />
+              )}
+              <div className="relative px-4 py-3.5 text-center">
                 <div className="flex items-center justify-center gap-1.5 mb-1.5">
-                  <PlayoffBadge round={playoffMatch.round} matchNumber={playoffMatch.match_number} size="xs" />
-                  <span className="text-[9px] font-extrabold uppercase tracking-[0.2em]" style={{ color: 'hsl(45 93% 52%)' }}>
-                    Tournament Match
+                  <span
+                    className={cn(
+                      'inline-flex items-center gap-1 px-1.5 py-[3px] rounded-full text-[9px] font-extrabold uppercase tracking-[0.2em]',
+                      isMyTurn ? '' : 'text-muted-foreground/70',
+                    )}
+                    style={
+                      isMyTurn
+                        ? { background: 'hsl(45 93% 52% / 0.2)', color: 'hsl(45 93% 52%)', border: '1px solid hsl(45 93% 52% / 0.5)' }
+                        : { background: 'hsl(var(--muted) / 0.5)' }
+                    }
+                  >
+                    {isMyTurn && (
+                      <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'hsl(45 93% 52%)', boxShadow: '0 0 6px hsl(45 93% 52%)' }} />
+                    )}
+                    On the Clock
                   </span>
                 </div>
-              )}
-              {isMyTurn ? (
-                <>
-                  <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'hsl(var(--gold))' }}>Your Turn</p>
-                   <p className="text-[13px] font-bold">Round {currentRound} • Pick #{currentPickNumber}</p>
-                   <OnTheClockTimer
-                     lastPickAt={picks.length > 0 ? (picks[picks.length - 1] as any)?.picked_at : null}
-                     draftStartedAt={draft?.updated_at}
-                   />
-                 </>
-               ) : (
-                 <>
-                   <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 mb-1">Waiting for</p>
-                   <p className="text-[13px] font-bold">{currentPicker?.profiles?.display_name || 'Unknown'}</p>
-                   <p className="text-[10px] text-muted-foreground/60 mt-0.5">Round {currentRound} • Pick #{currentPickNumber}</p>
-                </>
-              )}
+                {isMyTurn ? (
+                  <>
+                    <p className="text-[20px] font-extrabold tracking-tight leading-tight" style={{ color: 'hsl(45 93% 52%)' }}>
+                      It's your pick
+                    </p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 mt-0.5">
+                      Round {currentRound} · Pick #{currentPickNumber}
+                    </p>
+                    <OnTheClockTimer
+                      lastPickAt={picks.length > 0 ? (picks[picks.length - 1] as any)?.picked_at : null}
+                      draftStartedAt={draft?.updated_at}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 mb-0.5">Waiting on</p>
+                    <p className="text-[17px] font-extrabold tracking-tight leading-tight">
+                      {currentPicker?.profiles?.display_name || 'Unknown'}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-wider mt-0.5">
+                      Round {currentRound} · Pick #{currentPickNumber}
+                    </p>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          ) : (
+            <div className={cn('glass-card p-4 mb-5 text-center', isMyTurn && 'arena-edge')}>
+              <div className="relative z-10">
+                {isMyTurn ? (
+                  <>
+                    <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'hsl(var(--gold))' }}>Your Turn</p>
+                    <p className="text-[13px] font-bold">Round {currentRound} • Pick #{currentPickNumber}</p>
+                    <OnTheClockTimer
+                      lastPickAt={picks.length > 0 ? (picks[picks.length - 1] as any)?.picked_at : null}
+                      draftStartedAt={draft?.updated_at}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 mb-1">Waiting for</p>
+                    <p className="text-[13px] font-bold">{currentPicker?.profiles?.display_name || 'Unknown'}</p>
+                    <p className="text-[10px] text-muted-foreground/60 mt-0.5">Round {currentRound} • Pick #{currentPickNumber}</p>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Pick input */}
           {isMyTurn && (
@@ -1070,9 +1219,43 @@ export default function DraftDetailPage() {
 
           {/* Pick history — enriched cards */}
           {picks.length > 0 && (
-            <div className="glass-card overflow-hidden">
-              <div className="px-4 py-3 border-b border-border/25">
-                <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-wider">Pick History</p>
+            <div
+              className="overflow-hidden rounded-2xl"
+              style={
+                isPlayoffDraft
+                  ? {
+                      background: 'linear-gradient(180deg, hsl(var(--card)), hsl(var(--card) / 0.92))',
+                      border: '1px solid hsl(45 93% 52% / 0.22)',
+                      boxShadow: '0 6px 24px -12px hsl(45 93% 52% / 0.28)',
+                    }
+                  : undefined
+              }
+            >
+              <div
+                className={cn(
+                  'px-4 py-3 flex items-center justify-between gap-2',
+                  !isPlayoffDraft && 'border-b border-border/25',
+                )}
+                style={
+                  isPlayoffDraft
+                    ? { borderBottom: '1px solid hsl(45 93% 52% / 0.18)' }
+                    : undefined
+                }
+              >
+                <div className="flex items-center gap-1.5">
+                  {isPlayoffDraft && (
+                    <Trophy className="w-3 h-3" style={{ color: 'hsl(45 93% 52%)' }} strokeWidth={2.5} />
+                  )}
+                  <p
+                    className="text-[11px] font-extrabold uppercase tracking-[0.18em]"
+                    style={isPlayoffDraft ? { color: 'hsl(45 93% 52%)' } : undefined}
+                  >
+                    {isPlayoffDraft ? 'Battle Timeline' : 'Pick History'}
+                  </p>
+                </div>
+                <span className="font-mono text-[10px] font-extrabold tabular-nums text-muted-foreground/70">
+                  {picks.length} {picks.length === 1 ? 'pick' : 'picks'}
+                </span>
               </div>
               <div className="divide-y divide-border/20 max-h-96 overflow-y-auto">
                 <AnimatePresence initial={false}>
