@@ -1045,41 +1045,95 @@ export default function DraftDetailPage() {
           <PickAnnouncement pick={announcement} />
 
           {/* Current turn banner */}
-          <div
-            className={cn("glass-card p-4 mb-5 text-center", (isMyTurn || isPlayoffDraft) && "arena-edge")}
-            style={isPlayoffDraft ? {
-              borderLeft: '3px solid hsl(45 93% 52%)',
-              background: 'linear-gradient(135deg, hsl(45 93% 52% / 0.06), transparent 60%), hsl(var(--card))',
-              boxShadow: '0 0 18px -4px hsl(45 93% 52% / 0.25)',
-            } : undefined}
-          >
-            <div className="relative z-10">
-              {isPlayoffDraft && playoffMatch && (
+          {isPlayoffDraft ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 220, damping: 22 }}
+              className="relative overflow-hidden rounded-2xl mb-5"
+              style={{
+                background: isMyTurn
+                  ? 'radial-gradient(120% 100% at 50% 0%, hsl(45 93% 52% / 0.22), transparent 60%), hsl(var(--card))'
+                  : 'linear-gradient(180deg, hsl(var(--card)), hsl(var(--card) / 0.9))',
+                border: isMyTurn ? '1px solid hsl(45 93% 52% / 0.55)' : '1px solid hsl(var(--border))',
+                boxShadow: isMyTurn
+                  ? '0 0 28px -6px hsl(45 93% 52% / 0.55), inset 0 1px 0 hsl(45 93% 52% / 0.25)'
+                  : '0 4px 16px -8px hsl(0 0% 0% / 0.3)',
+              }}
+            >
+              {isMyTurn && (
+                <div
+                  className="absolute inset-x-0 top-0 h-px animate-pulse"
+                  style={{ background: 'linear-gradient(90deg, transparent, hsl(45 93% 52%), transparent)' }}
+                />
+              )}
+              <div className="relative px-4 py-3.5 text-center">
                 <div className="flex items-center justify-center gap-1.5 mb-1.5">
-                  <PlayoffBadge round={playoffMatch.round} matchNumber={playoffMatch.match_number} size="xs" />
-                  <span className="text-[9px] font-extrabold uppercase tracking-[0.2em]" style={{ color: 'hsl(45 93% 52%)' }}>
-                    Tournament Match
+                  <span
+                    className={cn(
+                      'inline-flex items-center gap-1 px-1.5 py-[3px] rounded-full text-[9px] font-extrabold uppercase tracking-[0.2em]',
+                      isMyTurn ? '' : 'text-muted-foreground/70',
+                    )}
+                    style={
+                      isMyTurn
+                        ? { background: 'hsl(45 93% 52% / 0.2)', color: 'hsl(45 93% 52%)', border: '1px solid hsl(45 93% 52% / 0.5)' }
+                        : { background: 'hsl(var(--muted) / 0.5)' }
+                    }
+                  >
+                    {isMyTurn && (
+                      <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'hsl(45 93% 52%)', boxShadow: '0 0 6px hsl(45 93% 52%)' }} />
+                    )}
+                    On the Clock
                   </span>
                 </div>
-              )}
-              {isMyTurn ? (
-                <>
-                  <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'hsl(var(--gold))' }}>Your Turn</p>
-                   <p className="text-[13px] font-bold">Round {currentRound} • Pick #{currentPickNumber}</p>
-                   <OnTheClockTimer
-                     lastPickAt={picks.length > 0 ? (picks[picks.length - 1] as any)?.picked_at : null}
-                     draftStartedAt={draft?.updated_at}
-                   />
-                 </>
-               ) : (
-                 <>
-                   <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 mb-1">Waiting for</p>
-                   <p className="text-[13px] font-bold">{currentPicker?.profiles?.display_name || 'Unknown'}</p>
-                   <p className="text-[10px] text-muted-foreground/60 mt-0.5">Round {currentRound} • Pick #{currentPickNumber}</p>
-                </>
-              )}
+                {isMyTurn ? (
+                  <>
+                    <p className="text-[20px] font-extrabold tracking-tight leading-tight" style={{ color: 'hsl(45 93% 52%)' }}>
+                      It's your pick
+                    </p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 mt-0.5">
+                      Round {currentRound} · Pick #{currentPickNumber}
+                    </p>
+                    <OnTheClockTimer
+                      lastPickAt={picks.length > 0 ? (picks[picks.length - 1] as any)?.picked_at : null}
+                      draftStartedAt={draft?.updated_at}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 mb-0.5">Waiting on</p>
+                    <p className="text-[17px] font-extrabold tracking-tight leading-tight">
+                      {currentPicker?.profiles?.display_name || 'Unknown'}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-wider mt-0.5">
+                      Round {currentRound} · Pick #{currentPickNumber}
+                    </p>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          ) : (
+            <div className={cn('glass-card p-4 mb-5 text-center', isMyTurn && 'arena-edge')}>
+              <div className="relative z-10">
+                {isMyTurn ? (
+                  <>
+                    <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'hsl(var(--gold))' }}>Your Turn</p>
+                    <p className="text-[13px] font-bold">Round {currentRound} • Pick #{currentPickNumber}</p>
+                    <OnTheClockTimer
+                      lastPickAt={picks.length > 0 ? (picks[picks.length - 1] as any)?.picked_at : null}
+                      draftStartedAt={draft?.updated_at}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 mb-1">Waiting for</p>
+                    <p className="text-[13px] font-bold">{currentPicker?.profiles?.display_name || 'Unknown'}</p>
+                    <p className="text-[10px] text-muted-foreground/60 mt-0.5">Round {currentRound} • Pick #{currentPickNumber}</p>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Pick input */}
           {isMyTurn && (
