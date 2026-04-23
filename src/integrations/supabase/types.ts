@@ -2908,6 +2908,78 @@ export type Database = {
         }
         Relationships: []
       }
+      rune_delve_daily_runs: {
+        Row: {
+          completed_at: string
+          created_at: string
+          daily_date: string
+          dungeon_cleared: boolean
+          hero_class: string
+          id: string
+          modifiers: Json
+          score: number
+          stars: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          created_at?: string
+          daily_date: string
+          dungeon_cleared?: boolean
+          hero_class: string
+          id?: string
+          modifiers?: Json
+          score?: number
+          stars?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          created_at?: string
+          daily_date?: string
+          dungeon_cleared?: boolean
+          hero_class?: string
+          id?: string
+          modifiers?: Json
+          score?: number
+          stars?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      rune_delve_daily_streaks: {
+        Row: {
+          best_streak: number
+          created_at: string
+          current_streak: number
+          last_completed_date: string | null
+          lifetime_clears: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          best_streak?: number
+          created_at?: string
+          current_streak?: number
+          last_completed_date?: string | null
+          lifetime_clears?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          best_streak?: number
+          created_at?: string
+          current_streak?: number
+          last_completed_date?: string | null
+          lifetime_clears?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       rune_delve_dungeons: {
         Row: {
           created_at: string
