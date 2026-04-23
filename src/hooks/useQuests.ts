@@ -65,17 +65,45 @@ export function useActiveQuests() {
 
       const existingRows = (existing ?? []) as unknown as ActiveQuest[];
 
-      // Roll the expected set for each scope and ensure rows exist.
-      const rollFor = (scope: QuestScope, periodKey: string) => rollQuestSet({
-        defs,
-        scope,
-        periodKey,
-        userId: user.id,
-        heroClass: hero?.class ?? null,
-      });
+      // Pull RECENT history for anti-repeat: last 5 daily periods + last 3
+      // weekly periods. Any quest the player saw in those windows is
+      // excluded from the new roll, guaranteeing fresh objectives every
+      // period (until the catalog cycles back).
+      const { data: recent } = await supabase
+        .from('rune_delve_active_quests' as never)
+        .select('quest_id, scope, period_key')
+        .eq('user_id', user.id)
+        .neq('period_key', dailyKey)
+        .neq('period_key', weeklyKey)
+        .order('period_key', { ascending: false })
+        .limit(50);
 
-      const desiredDaily = rollFor('daily', dailyKey);
-      const desiredWeekly = rollFor('weekly', weeklyKey);
+      const recentRows = (recent ?? []) as unknown as Array<{ quest_id: string; scope: QuestScope; period_key: string }>;
+      const recentDailyPeriods = new Set<string>();
+      const recentWeeklyPeriods = new Set<string>();
+      const recentDailyIds = new Set<string>();
+      const recentWeeklyIds = new Set<string>();
+      for (const r of recentRows) {
+        if (r.scope === 'daily' && recentDailyPeriods.size < 5) {
+          recentDailyPeriods.add(r.period_key);
+          recentDailyIds.add(r.quest_id);
+        } else if (r.scope === 'weekly' && recentWeeklyPeriods.size < 3) {
+          recentWeeklyPeriods.add(r.period_key);
+          recentWeeklyIds.add(r.quest_id);
+        }
+      }
+
+      // Roll the expected set for each scope and ensure rows exist.
+      const desiredDaily = rollQuestSet({
+        defs, scope: 'daily', periodKey: dailyKey,
+        userId: user.id, heroClass: hero?.class ?? null,
+        recentlyUsedIds: recentDailyIds,
+      });
+      const desiredWeekly = rollQuestSet({
+        defs, scope: 'weekly', periodKey: weeklyKey,
+        userId: user.id, heroClass: hero?.class ?? null,
+        recentlyUsedIds: recentWeeklyIds,
+      });
 
       const missing: Array<Omit<ActiveQuest, 'id' | 'definition'>> = [];
       const ensure = (def: QuestDefinition, periodKey: string) => {
