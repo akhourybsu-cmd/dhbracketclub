@@ -127,7 +127,16 @@ export default function RuneDelvePlayPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { levelNumber: levelParam } = useParams<{ levelNumber: string }>();
-  const levelNumber = Math.max(1, parseInt(levelParam ?? '1', 10) || 1);
+  const [searchParams] = useSearchParams();
+  const isDailyMode = searchParams.get('daily') === '1';
+  const today = useTodayDaily();
+  const submitDaily = useSubmitDailyRun();
+  // In daily mode, force the level number to today's daily level (URL param
+  // is ignored — preserves "everyone faces the same trial today").
+  const levelNumber = isDailyMode
+    ? today.levelNumber
+    : Math.max(1, parseInt(levelParam ?? '1', 10) || 1);
+  const dailyMods = isDailyMode ? today.modifiers : [];
 
   const { user } = useAuth();
   const { data: hero } = useRuneDelveHero();
