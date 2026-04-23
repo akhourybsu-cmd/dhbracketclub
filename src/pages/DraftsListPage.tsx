@@ -23,6 +23,8 @@ export default function DraftsListPage() {
   const { season } = useCurrentSeason();
   const { entries: seasonEntries } = useSeasonEntries(season?.id);
   const seasonDraftIds = new Set(seasonEntries.map(e => e.draft_id));
+  const playoffDraftIds = seasonEntries.filter(e => e.is_playoff).map(e => e.draft_id);
+  const playoffMatchByDraft = usePlayoffMatchByDraftIds(playoffDraftIds);
 
   const fetchDrafts = useCallback(async () => {
     if (!user) return;
