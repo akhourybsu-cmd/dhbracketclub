@@ -92,6 +92,11 @@ function hashSeed(s: string): number {
  * Pick the daily quest set for a given period: 2 shared + 1 personal.
  * Deterministic per (period_key, user_id) so the same player gets the same
  * roll on every device.
+ *
+ * `recentlyUsedIds` is an optional set of quest definition ids that were
+ * active in recent prior periods — we exclude them from this roll to
+ * guarantee fresh quests every period. If the exclusion would starve the
+ * pool below the desired count, we relax it (full catalog reopens).
  */
 export function rollQuestSet(opts: {
   defs: QuestDefinition[];
@@ -99,11 +104,20 @@ export function rollQuestSet(opts: {
   periodKey: string;
   userId: string;
   heroClass: HeroClass | null;
+  recentlyUsedIds?: Set<string>;
 }): QuestDefinition[] {
-  const { defs, scope, periodKey, userId, heroClass } = opts;
+  const { defs, scope, periodKey, userId, heroClass, recentlyUsedIds } = opts;
   const scoped = defs.filter(d => d.scope === scope);
-  const shared = scoped.filter(d => !d.is_personal);
-  const personal = scoped.filter(d => d.is_personal && (!d.hero_class || d.hero_class === heroClass));
+  const filterRecent = <T extends { id: string }>(arr: T[], minNeeded: number): T[] => {
+    if (!recentlyUsedIds || recentlyUsedIds.size === 0) return arr;
+    const filtered = arr.filter(d => !recentlyUsedIds.has(d.id));
+    return filtered.length >= minNeeded ? filtered : arr;
+  };
+
+  const sharedAll = scoped.filter(d => !d.is_personal);
+  const personalAll = scoped.filter(d => d.is_personal && (!d.hero_class || d.hero_class === heroClass));
+  const shared = filterRecent(sharedAll, 2);
+  const personal = filterRecent(personalAll, 1);
 
   const sharedRng = mulberry32(hashSeed(`${scope}:${periodKey}:shared`));
   const personalRng = mulberry32(hashSeed(`${scope}:${periodKey}:${userId}`));
