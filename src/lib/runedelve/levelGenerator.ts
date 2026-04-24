@@ -135,7 +135,9 @@ function enemyCountFor(level: number, rng: () => number): number {
 const EARLY_HP_CAP = 110;
 // Mid-band cap so a single Stone-Golem/Slime roll can't double the encounter
 // HP budget in the L26-50 brick-wall band.
-const MID_HP_CAP = 180;
+const MID_HP_CAP = 150;
+// Late-band cap (L51-100) — same idea but loosened so chapter-2 still bites.
+const LATE_HP_CAP = 220;
 
 // (HP/damage scaling lives below — single RosterEntry-based implementation.)
 
