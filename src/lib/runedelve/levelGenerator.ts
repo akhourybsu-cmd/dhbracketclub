@@ -125,7 +125,8 @@ function enemyCountFor(level: number, rng: () => number): number {
   if (level <= 15) return 2;                       // tutorial-friendly Chapter 1 opener
   if (level <= 25) return rng() < 0.6 ? 2 : 3;     // 60/40 split — gentle introduction
   if (level <= 40) return rng() < 0.45 ? 2 : 3;    // 45/55 — softer post-tutorial ramp
-  if (level <= 75) return 3;
+  if (level <= 60) return rng() < 0.30 ? 2 : 3;    // mostly 3, occasional 2
+  if (level <= 100) return 3;
   return 3 + rngInt(rng, 2);                       // 3-4
 }
 
