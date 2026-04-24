@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { LogOut, User, Volume2, VolumeX, BarChart3, MessageCircle, CalendarDays, MessageSquareText, Trophy, Bookmark, Zap, Sun, Moon, Bell, BellOff, Camera, Loader2, RefreshCw, Settings, ShieldCheck } from 'lucide-react';
+import { LogOut, User, Volume2, VolumeX, BarChart3, MessageCircle, CalendarDays, MessageSquareText, Trophy, Bookmark, Zap, Sun, Moon, Bell, BellOff, Camera, Loader2, RefreshCw, Settings, ShieldCheck, KeyRound, Eye, EyeOff, Copy } from 'lucide-react';
 import { nukeAndReload } from '@/lib/forceUpdate';
 import { useTheme } from 'next-themes';
 import { motion } from 'framer-motion';
