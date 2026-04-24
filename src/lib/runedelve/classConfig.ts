@@ -17,7 +17,7 @@ export const CLASS_LIST: ClassDef[] = [
     name: 'Warrior',
     emoji: '⚔️',
     color: 'destructive',
-    passive: 'Red chains deal +25% damage',
+    passive: 'Red chains deal +30% damage',
     abilityName: 'Cleave',
     abilityDesc: 'Damage all enemies (40 dmg)',
     abilityCost: 3,

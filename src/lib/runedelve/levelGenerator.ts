@@ -107,10 +107,10 @@ function seedFor(level: number): number {
 function turnLimitFor(level: number): number {
   const base = (() => {
     if (level <= 15) return 12;
-    if (level <= 25) return 11;
-    if (level <= 50) return 10;
-    if (level <= 100) return 9;
-    return 8;
+    if (level <= 25) return 12;
+    if (level <= 50) return 12;
+    if (level <= 100) return 11;
+    return 10;
   })();
   const kind = bossKindForLevel(level);
   if (kind === 'mid')     return base + 4;
@@ -123,15 +123,22 @@ function turnLimitFor(level: number): number {
 // a 2.5× HP spike vs L13. We now keep 2 enemies through L15, then ramp.
 function enemyCountFor(level: number, rng: () => number): number {
   if (level <= 15) return 2;                       // tutorial-friendly Chapter 1 opener
-  if (level <= 22) return rng() < 0.6 ? 2 : 3;     // 60/40 split — gentle introduction
-  if (level <= 30) return rng() < 0.35 ? 2 : 3;    // 35/65 — mostly 3
-  if (level <= 75) return 3;
+  if (level <= 25) return rng() < 0.6 ? 2 : 3;     // 60/40 split — gentle introduction
+  if (level <= 40) return rng() < 0.45 ? 2 : 3;    // 45/55 — softer post-tutorial ramp
+  if (level <= 60) return rng() < 0.30 ? 2 : 3;    // mostly 3, occasional 2
+  if (level <= 100) return 3;
   return 3 + rngInt(rng, 2);                       // 3-4
 }
 
 // Per-template HP cap on early levels — keep the L14-15 area from rolling a
-// triple-Slime/Stone-Golem wall before the player has any relics.
+// triple-Slime/Stone-Golem wall before the player has any relics. Extended
+// through L25 (Rebalance v3) since the Chapter-1 player has limited tools.
 const EARLY_HP_CAP = 110;
+// Mid-band cap so a single Stone-Golem/Slime roll can't double the encounter
+// HP budget in the L26-50 brick-wall band.
+const MID_HP_CAP = 130;
+// Late-band cap (L51-100) — same idea but loosened so chapter-2 still bites.
+const LATE_HP_CAP = 160;
 
 // (HP/damage scaling lives below — single RosterEntry-based implementation.)
 
@@ -165,15 +172,19 @@ function pickTemplate(level: number, rng: () => number): RosterEntry {
   return pool[rngInt(rng, pool.length)];
 }
 
-// Per-archetype scaling — same curve as before but reads from RosterEntry.
+// Per-archetype scaling — Rebalance v3 (post L30 brick-wall fix).
+// Old curve made enemies 3× base HP by L50, with a 10% damage menace bump
+// L31-50. Monte Carlo: 0% clears L34-60 across all classes vs a ~250 dmg
+// budget. New curve targets 50-65% Balanced verdict, capping enemy HP scaling
+// to roughly 1.7× by L50 and 2.3× by L100 so a 4-chain rogue/cleric run can
+// still close the kill window.
 function scaleEnemy(base: RosterEntry, level: number) {
-  const hpRate  = level <= 25 ? 0.03  : 0.04;
-  const dmgRate = level <= 25 ? 0.02  : 0.025;
-  const hpMul   = 1 + (level - 1) * hpRate;
-  let dmgMul   = 1 + (level - 1) * dmgRate;
-  // Late Chapter 1 menace pass — ability enemies are softer by design,
-  // so add a gentle damage bump in the 31-50 band so fights bite back.
-  if (level >= 31 && level <= 50) dmgMul *= 1.10;
+  const hpMul = level <= 25
+    ? 1 + (level - 1) * 0.025
+    : 1 + (24 * 0.025) + (level - 25) * 0.010;
+  const dmgMul = level <= 25
+    ? 1 + (level - 1) * 0.012
+    : 1 + (24 * 0.012) + (level - 25) * 0.006;
   return {
     hp: Math.round(base.baseHp * hpMul),
     damage: Math.max(base.baseDamage, Math.round(base.baseDamage * dmgMul)),
@@ -205,8 +216,12 @@ function buildEnemy(
   const { isElite = false, bossKind = null, idPrefix = 'e' } = opts;
   let { hp, damage } = scaleEnemy(template, level);
   const isFinalBossSlot = bossKind != null;
-  if (level <= 18 && !isElite && !isFinalBossSlot) {
+  if (level <= 25 && !isElite && !isFinalBossSlot) {
     hp = Math.min(hp, EARLY_HP_CAP);
+  } else if (level <= 50 && !isElite && !isFinalBossSlot) {
+    hp = Math.min(hp, MID_HP_CAP);
+  } else if (level <= 100 && !isElite && !isFinalBossSlot) {
+    hp = Math.min(hp, LATE_HP_CAP);
   }
   if (isElite) {
     hp = Math.round(hp * 1.6);
