@@ -123,8 +123,8 @@ function turnLimitFor(level: number): number {
 // a 2.5× HP spike vs L13. We now keep 2 enemies through L15, then ramp.
 function enemyCountFor(level: number, rng: () => number): number {
   if (level <= 15) return 2;                       // tutorial-friendly Chapter 1 opener
-  if (level <= 22) return rng() < 0.6 ? 2 : 3;     // 60/40 split — gentle introduction
-  if (level <= 30) return rng() < 0.35 ? 2 : 3;    // 35/65 — mostly 3
+  if (level <= 25) return rng() < 0.6 ? 2 : 3;     // 60/40 split — gentle introduction
+  if (level <= 40) return rng() < 0.45 ? 2 : 3;    // 45/55 — softer post-tutorial ramp
   if (level <= 75) return 3;
   return 3 + rngInt(rng, 2);                       // 3-4
 }
@@ -133,9 +133,9 @@ function enemyCountFor(level: number, rng: () => number): number {
 // triple-Slime/Stone-Golem wall before the player has any relics. Extended
 // through L25 (Rebalance v3) since the Chapter-1 player has limited tools.
 const EARLY_HP_CAP = 110;
-// A second, looser cap for the L26-50 band so a single roll can't double the
-// encounter HP budget. Keeps the post-tutorial ramp survivable.
-const MID_HP_CAP = 240;
+// Mid-band cap so a single Stone-Golem/Slime roll can't double the encounter
+// HP budget in the L26-50 brick-wall band.
+const MID_HP_CAP = 180;
 
 // (HP/damage scaling lives below — single RosterEntry-based implementation.)
 
