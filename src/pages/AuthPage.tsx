@@ -12,7 +12,7 @@ import { KeyRound, Sparkles, LogIn } from 'lucide-react';
 import dhMonogram from '@/assets/dh-monogram.png';
 import { getAndClearIntendedDestination } from '@/lib/share';
 
-type Mode = 'signin' | 'invite' | 'request';
+type Mode = 'signin' | 'join' | 'request';
 
 export default function AuthPage() {
   const { user } = useAuth();
@@ -21,7 +21,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [inviteCode, setInviteCode] = useState('');
+  const [clubPassword, setClubPassword] = useState('');
   const [proposedClubName, setProposedClubName] = useState('');
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,16 +30,6 @@ export default function AuthPage() {
     const redirect = getAndClearIntendedDestination();
     return <Navigate to={redirect || '/dashboard'} replace />;
   }
-
-  const lookupInviteCode = async (code: string): Promise<{ id: string; club_id: string } | null> => {
-    const { data, error } = await (supabase as any)
-      .from('invite_codes')
-      .select('id, is_active, club_id')
-      .eq('code', code.trim().toUpperCase())
-      .maybeSingle();
-    if (error || !data || !data.is_active) return null;
-    return { id: data.id, club_id: data.club_id };
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,15 +44,9 @@ export default function AuthPage() {
         return;
       }
 
-      if (mode === 'invite') {
-        if (!inviteCode.trim()) {
-          toast.error('Invite code required');
-          setLoading(false);
-          return;
-        }
-        const codeRow = await lookupInviteCode(inviteCode);
-        if (!codeRow) {
-          toast.error('Invalid or expired invite code');
+      if (mode === 'join') {
+        if (!clubPassword.trim()) {
+          toast.error('Club password required');
           setLoading(false);
           return;
         }
@@ -76,14 +60,23 @@ export default function AuthPage() {
         });
         if (error) throw error;
         const newUserId = signUpData.user?.id;
-        if (newUserId && codeRow.club_id) {
-          await (supabase as any).from('club_members').insert({
-            club_id: codeRow.club_id,
-            user_id: newUserId,
-            role: 'member',
-          });
+        if (!newUserId) {
+          toast.success('Check your email to verify, then sign in to finish joining.');
+          sessionStorage.setItem('pending_club_password', clubPassword.trim());
+          return;
         }
-        toast.success("You're in. Check your email to verify.");
+        // Try to enroll now (works when auto-confirm is on / session exists)
+        const { error: joinErr } = await (supabase as any).rpc('join_club_with_password', {
+          _password: clubPassword.trim(),
+          _user_id: newUserId,
+        });
+        if (joinErr) {
+          // If session isn't ready, stash for first sign-in
+          sessionStorage.setItem('pending_club_password', clubPassword.trim());
+          toast.success('Account created. Verify your email and sign in to join your club.');
+        } else {
+          toast.success("You're in. Check your email to verify.");
+        }
         return;
       }
 
