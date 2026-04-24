@@ -320,8 +320,8 @@ export default function AuthPage() {
           {mode === 'signin' ? (
             <>
               New here?{' '}
-              <button onClick={() => setMode('invite')} className="text-primary hover:underline font-bold">
-                Use an invite code
+              <button onClick={() => setMode('join')} className="text-primary hover:underline font-bold">
+                Use a club password
               </button>{' '}
               or{' '}
               <button onClick={() => setMode('request')} className="text-primary hover:underline font-bold">
