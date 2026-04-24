@@ -826,9 +826,14 @@ export default function RuneDelvePlayPage() {
         }
       }
     }
-    // ── Mastery: Mage T2 — blue chains heal a flat 2 HP. ─────────────────
-    if (type === 'blue') {
-      const blueHeal = getMasteryBlueChainHeal(activeMasteries);
+    // ── Mastery: Rogue T1 Gilded Eye — track gold runes for end-of-run score.
+    if (type === 'gold') {
+      setGoldRunesCleared(g => g + chain.length);
+    }
+    // Combat-log line for any rogue crit that just fired (Opening / Quickblade).
+    if (critFired) {
+      turnLogs.push({ kind: 'info', text: `🗡️ Critical strike! Chain ×${chain.length} hits hard.` });
+    }
       if (blueHeal > 0) {
         const applied = Math.min(blueHeal, next.maxHp - next.hp);
         if (applied > 0) {
