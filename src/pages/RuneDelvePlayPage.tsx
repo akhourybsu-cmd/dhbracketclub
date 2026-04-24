@@ -1363,7 +1363,7 @@ export default function RuneDelvePlayPage() {
     // mana after useAbility() consumes it so the cast still resolves normally.
     const isFreeCast = abilityFreeFirstUse(relics, abilityUsedCount);
     const manaBefore = combat.mana;
-    const { next, ok } = useAbility(combat, hero.class, bossRule);
+    const { next, ok } = useAbility(combat, hero.class, bossRule, activeMasteries);
     if (!ok) {
       toast.info('Ability not ready — fill mana orbs first.');
       return;
@@ -1394,10 +1394,20 @@ export default function RuneDelvePlayPage() {
     toast.success('✨ Ability — free action!', { duration: 1200 });
 
     // First Light: refund the mana that useAbility() just spent.
-    const finalNext: CombatState = isFreeCast ? { ...next, mana: manaBefore } : next;
+    let finalNext: CombatState = isFreeCast ? { ...next, mana: manaBefore } : next;
     if (isFreeCast) {
       turnLogs.push({ kind: 'info', text: '🌅 First Light — mana refunded' });
       toast.success('🌅 First Light — free!', { duration: 1100 });
+    }
+    // ── Mastery: Mage T5 Overflow — every 4th mana spent refunds 1.
+    // Only counts mana that was actually paid (not free casts).
+    if (!isFreeCast) {
+      const newSpent = totalManaSpent + MAX_MANA;
+      setTotalManaSpent(newSpent);
+      if (shouldMasteryRefundMana(activeMasteries, newSpent) && finalNext.mana < MAX_MANA) {
+        finalNext = { ...finalNext, mana: Math.min(MAX_MANA, finalNext.mana + 1) };
+        turnLogs.push({ kind: 'mana', text: '🌀 Overflow refunded mana', amount: 1 });
+      }
     }
     setAbilityUsedCount(c => c + 1);
 
