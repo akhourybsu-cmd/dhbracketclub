@@ -28,6 +28,8 @@ export default function ProfilePage() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+  const [clubPwd, setClubPwd] = useState<string | null>(null);
+  const [showClubPwd, setShowClubPwd] = useState(false);
   const { play, soundEnabled, toggleSound } = useSoundEffect();
   const { isSupported: pushSupported, isSubscribed: pushSubscribed, loading: pushLoading, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe } = usePushNotifications();
   const [stats, setStats] = useState({ polls: 0, rankings: 0, events: 0, messages: 0, drafts: 0, draftPoints: 0, draftWins: 0 });
