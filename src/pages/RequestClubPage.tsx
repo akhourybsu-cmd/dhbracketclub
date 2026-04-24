@@ -29,17 +29,43 @@ export default function RequestClubPage() {
 
   useEffect(() => {
     if (!user) { setLoading(false); return; }
-    (supabase as any)
-      .from('club_requests')
-      .select('id, proposed_name, reason, status, review_notes, created_at')
-      .eq('requested_by', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }: any) => {
-        if (data) setExistingRequest(data);
+    (async () => {
+      const { data } = await (supabase as any)
+        .from('club_requests')
+        .select('id, proposed_name, reason, status, review_notes, created_at')
+        .eq('requested_by', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (data) {
+        setExistingRequest(data);
+        sessionStorage.removeItem('pending_club_request');
         setLoading(false);
-      });
+        return;
+      }
+
+      // Auto-submit a stashed request from the signup flow
+      const stashed = sessionStorage.getItem('pending_club_request');
+      if (stashed) {
+        try {
+          const { proposed_name, reason: stashedReason } = JSON.parse(stashed);
+          const { data: created, error } = await (supabase as any)
+            .from('club_requests')
+            .insert({ requested_by: user.id, proposed_name, reason: stashedReason })
+            .select()
+            .maybeSingle();
+          sessionStorage.removeItem('pending_club_request');
+          if (!error && created) {
+            setExistingRequest(created);
+            toast.success('Your club request was submitted!');
+          }
+        } catch {
+          sessionStorage.removeItem('pending_club_request');
+        }
+      }
+      setLoading(false);
+    })();
   }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
