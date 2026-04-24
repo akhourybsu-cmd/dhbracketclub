@@ -90,7 +90,15 @@ import {
   getMasteryOpeningHeal,
   getMasteryShieldBonus,
   shouldMasteryRefundMana,
+  getMasteryHpPerChapter,
+  getMasteryGoldScoreBonus,
+  getMasteryOpeningCritMult,
+  getMasteryChainCritChance,
+  hasMasteryAegis,
+  hasMasteryPanicShield,
+  reviveBurstActive,
 } from '@/lib/runedelve/masteryEffects';
+import { chapterFor } from '@/lib/runedelve/levelGenerator';
 import { Crown, Target } from 'lucide-react';
 import { RuneBoard } from '@/components/runedelve/RuneBoard';
 import { EnemyDisplay } from '@/components/runedelve/EnemyDisplay';
@@ -188,6 +196,12 @@ export default function RuneDelvePlayPage() {
   const [bonusShardsFromMastery, setBonusShardsFromMastery] = useState(0);
   // Track lifetime mana spent for Mage Overflow mastery refund cadence.
   const [totalManaSpent, setTotalManaSpent] = useState(0);
+  // Rogue T1 Gilded Eye — count gold runes cleared across the run.
+  const [goldRunesCleared, setGoldRunesCleared] = useState(0);
+  // Warrior T4 Brace + Cleric T5 Aegis are one-shot per run. Refs avoid
+  // re-render churn — they're read inside event handlers, never in JSX.
+  const braceFiredRef = useRef(false);
+  const aegisFiredRef = useRef(false);
 
   // Per-run defeat ledger keyed by archetypeId. Submitted to the Bestiary on
   // run-end. Mini-boss / boss kills get tracked under variant ids
@@ -418,7 +432,15 @@ export default function RuneDelvePlayPage() {
     // Foreseer's Lens (+ turns/level — suppressed by Fogged) and Void Pact.
     const bonusTurns = foggedActive ? 0 : getForeseerBonusTurns(relics);
     const dailyTurnDelta = isDailyMode ? dailyTurnLimitDelta(dailyMods) : 0;
-    const initial = initialCombat(enemies, Math.max(3, level.turn_limit + bonusTurns + dailyTurnDelta));
+    // Mastery: Warrior T2 — +1 max HP per chapter cleared (chapters are 1..N
+    // where the first chapter is 1, so this also nudges chapter-1 by +1).
+    const chapterIdx = chapterFor(level.level_number);
+    const chapterHpBonus = getMasteryHpPerChapter(activeMasteries) * Math.max(0, chapterIdx);
+    const initial = initialCombat(
+      enemies,
+      Math.max(3, level.turn_limit + bonusTurns + dailyTurnDelta),
+      { bonusMaxHp: chapterHpBonus },
+    );
     // Mastery: starting mana bonus (Mage T1) layered on top of relic effects.
     initial.mana = Math.min(MAX_MANA, initial.mana + getStartingMana(relics) + getMasteryStartingMana(activeMasteries));
     initial.shieldTurns = Math.max(initial.shieldTurns, getStartingShieldTurns(relics));
@@ -443,6 +465,11 @@ export default function RuneDelvePlayPage() {
     setCorruptCleansedCount(0);
     setBonusUsedThisCycle(false);
     setRngTick(0);
+    setBonusShardsFromMastery(0);
+    setTotalManaSpent(0);
+    setGoldRunesCleared(0);
+    braceFiredRef.current = false;
+    aegisFiredRef.current = false;
     defeatedArchetypesRef.current = new Map();
     wavesSpawnedRef.current = 0;
     setLog([{ id: nextLogId(), kind: 'info', text: `You enter Level ${level.level_number}. The runes hum.` }]);
@@ -764,12 +791,19 @@ export default function RuneDelvePlayPage() {
     // ── Daily + Mastery damage compounding (red chains only) ─────────────
     // Stacks multiplicatively on top of the tier multiplier so power-builds
     // really feel powerful. Mastery T5 Last Stand also kicks in below 20% HP.
+    let critFired = false;
     if (type === 'red' && resolution.damageDealt > 0) {
       let extraMult = 1;
       if (isDailyMode) extraMult *= dailyDamageMultiplier(dailyMods, type);
       if (isDailyMode) extraMult *= dailyIroncladDamageMult(dailyMods, chain.length);
       extraMult *= getMasteryChainDamageMult(activeMasteries, type);
       if (isLastStandActive(activeMasteries, combat.hp, combat.maxHp)) extraMult *= 1.5;
+      // ── Mastery: Rogue T2 Opening Strike — first chain of run crits ×1.5.
+      const openCrit = getMasteryOpeningCritMult(activeMasteries, chainsThisFight);
+      if (openCrit > 1) { extraMult *= openCrit; critFired = true; }
+      // ── Mastery: Rogue T4 Quickblade — chains 4+ have a 10% crit chance.
+      const critChance = getMasteryChainCritChance(activeMasteries, chain.length);
+      if (critChance > 0 && Math.random() < critChance) { extraMult *= 1.5; critFired = true; }
       if (extraMult !== 1) {
         const baseDmg = resolution.damageDealt;
         const boostedDmg = Math.round(baseDmg * extraMult);
@@ -791,6 +825,14 @@ export default function RuneDelvePlayPage() {
           }
         }
       }
+    }
+    // ── Mastery: Rogue T1 Gilded Eye — track gold runes for end-of-run score.
+    if (type === 'gold') {
+      setGoldRunesCleared(g => g + chain.length);
+    }
+    // Toast the rogue crit (turnLogs isn't yet allocated at this point).
+    if (critFired) {
+      toast.success(`🗡️ Critical strike! Chain ×${chain.length}`, { duration: 1100 });
     }
     // ── Mastery: Mage T2 — blue chains heal a flat 2 HP. ─────────────────
     if (type === 'blue') {
@@ -1121,6 +1163,15 @@ export default function RuneDelvePlayPage() {
       if (mitigated > 0) turnLogs.push({ kind: 'mitigated', text: 'Your guard absorbed the blow', amount: mitigated });
     }
 
+    // ── Mastery: Cleric T5 Eternal Aegis — once per run, block a fatal hit.
+    // Runs BEFORE the relic Last Stand / Phoenix saves so the cheap free
+    // mastery save burns first; relics can still bail you out next time.
+    if (afterEnemies.hp <= 0 && hasMasteryAegis(activeMasteries) && !aegisFiredRef.current) {
+      afterEnemies = { ...afterEnemies, hp: 1 };
+      aegisFiredRef.current = true;
+      toast.success('🛡️ Aegis blocked the killing blow!', { duration: 1800 });
+      turnLogs.push({ kind: 'laststand', text: 'Eternal Aegis — fatal hit blocked!' });
+    }
     // Relic: Last Stand — survive lethal at 1 HP. R1–R4: 1 use; R5: 2 uses.
     if (afterEnemies.hp <= 0) {
       const ls = tryLastStand(relics, afterEnemies.hp, lastStandUsed);
@@ -1151,6 +1202,54 @@ export default function RuneDelvePlayPage() {
       afterEnemies = { ...afterEnemies, hp: healed.hp };
       const gained = afterEnemies.hp - beforeHeal;
       if (gained > 0) turnLogs.push({ kind: 'heal', text: 'Bloodbond drew vigor from the slain', amount: gained });
+    }
+
+    // ── Mastery: Warrior T4 Brace — first time HP drops below 25% in a run,
+    // gain a 2-turn shield. Single-use; only fires when player is still alive.
+    if (
+      hasMasteryPanicShield(activeMasteries) &&
+      !braceFiredRef.current &&
+      afterEnemies.hp > 0 &&
+      afterEnemies.hp / Math.max(1, afterEnemies.maxHp) < 0.25
+    ) {
+      afterEnemies = { ...afterEnemies, shieldTurns: Math.max(afterEnemies.shieldTurns, 2) };
+      braceFiredRef.current = true;
+      toast.success('🛡️ Brace! 2-turn shield', { duration: 1500 });
+      turnLogs.push({ kind: 'shield', text: 'Brace — your guard surged at the brink', amount: 2 });
+    }
+    // ── Mastery: Cleric T4 Resurgent Light — if any relic/aegis revive
+    // happened this turn, scorch up to 2 targetable enemies for 25 dmg each.
+    const revivedThisTurn = hpBefore > 0 && (afterEnemies as any).__resurgentChecked !== true && (
+      // hp went to 0 then was restored above (Aegis / Last Stand / Phoenix).
+      // Detect via "hp now positive AND we know a save may have fired".
+      // We approximate by checking hp > 0 alongside the lethal-incoming case.
+      (rawIncoming > 0 && hpBefore - rawIncoming <= 0 && afterEnemies.hp > 0) ||
+      aegisFiredRef.current && afterEnemies.hp === 1
+    );
+    if (revivedThisTurn && reviveBurstActive(activeMasteries)) {
+      // Mark so a later pass doesn't double-trigger.
+      (afterEnemies as any).__resurgentChecked = true;
+      const targets = afterEnemies.enemies.filter(e => e.hp > 0).slice(0, 2);
+      if (targets.length > 0) {
+        afterEnemies = {
+          ...afterEnemies,
+          enemies: afterEnemies.enemies.map(e => {
+            if (!targets.find(t => t.id === e.id)) return e;
+            const applied = Math.min(25, e.hp);
+            return { ...e, hp: e.hp - applied };
+          }),
+        };
+        // Recount kills to keep enemiesDefeated honest.
+        const newKills = targets.filter(t => {
+          const live = afterEnemies.enemies.find(e => e.id === t.id);
+          return live && live.hp <= 0;
+        }).length;
+        if (newKills > 0) {
+          afterEnemies.enemiesDefeated += newKills;
+          afterEnemies.totalDamage += 25 * newKills;
+        }
+        turnLogs.push({ kind: 'ability', text: '✨ Resurgent Light scorched the closest foes', amount: 25 });
+      }
     }
 
     // ── Linked Pairs (L46+) — clearing one cell triggers its twin too. ──
@@ -1264,7 +1363,7 @@ export default function RuneDelvePlayPage() {
     // mana after useAbility() consumes it so the cast still resolves normally.
     const isFreeCast = abilityFreeFirstUse(relics, abilityUsedCount);
     const manaBefore = combat.mana;
-    const { next, ok } = useAbility(combat, hero.class, bossRule);
+    const { next, ok } = useAbility(combat, hero.class, bossRule, activeMasteries);
     if (!ok) {
       toast.info('Ability not ready — fill mana orbs first.');
       return;
@@ -1295,10 +1394,20 @@ export default function RuneDelvePlayPage() {
     toast.success('✨ Ability — free action!', { duration: 1200 });
 
     // First Light: refund the mana that useAbility() just spent.
-    const finalNext: CombatState = isFreeCast ? { ...next, mana: manaBefore } : next;
+    let finalNext: CombatState = isFreeCast ? { ...next, mana: manaBefore } : next;
     if (isFreeCast) {
       turnLogs.push({ kind: 'info', text: '🌅 First Light — mana refunded' });
       toast.success('🌅 First Light — free!', { duration: 1100 });
+    }
+    // ── Mastery: Mage T5 Overflow — every 4th mana spent refunds 1.
+    // Only counts mana that was actually paid (not free casts).
+    if (!isFreeCast) {
+      const newSpent = totalManaSpent + MAX_MANA;
+      setTotalManaSpent(newSpent);
+      if (shouldMasteryRefundMana(activeMasteries, newSpent) && finalNext.mana < MAX_MANA) {
+        finalNext = { ...finalNext, mana: Math.min(MAX_MANA, finalNext.mana + 1) };
+        turnLogs.push({ kind: 'mana', text: '🌀 Overflow refunded mana', amount: 1 });
+      }
     }
     setAbilityUsedCount(c => c + 1);
 
@@ -1362,9 +1471,11 @@ export default function RuneDelvePlayPage() {
     });
     // Momentum: scale final score when longest chain >= 4.
     const momentumMult = momentumScoreBonusMult(relicsForFinal, final.longestChain);
+    // Mastery: Rogue T1 Gilded Eye — +2 score per gold rune cleared.
+    const goldEyeBonus = getMasteryGoldScoreBonus(activeMasteries, goldRunesCleared);
     const breakdown = momentumMult > 1
-      ? { ...rawBreakdown, total: Math.round(rawBreakdown.total * momentumMult) }
-      : rawBreakdown;
+      ? { ...rawBreakdown, total: Math.round(rawBreakdown.total * momentumMult) + goldEyeBonus }
+      : { ...rawBreakdown, total: rawBreakdown.total + goldEyeBonus };
     const xp = xpForRun(breakdown.total, cleared);
     const reason: 'cleared' | 'defeated' | 'timeout' = cleared ? 'cleared' : final.hp <= 0 ? 'defeated' : 'timeout';
     // OPTIMISTIC isNewBest — used only for the immediate end-state card. The

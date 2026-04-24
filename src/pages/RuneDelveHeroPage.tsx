@@ -14,6 +14,7 @@ import {
   titleLadderFor,
   type HeroClass,
 } from '@/lib/runedelve/classConfig';
+import { MASTERY_TIERS, nextMasteryFor } from '@/lib/runedelve/classMastery';
 import { ClassBadge } from '@/components/runedelve/ClassBadge';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -138,6 +139,74 @@ export default function RuneDelveHeroPage() {
         <p className="text-[12px] text-foreground/85 mb-1"><span className="font-extrabold text-foreground">Passive:</span> {cls.passive}</p>
         <p className="text-[12px] text-foreground/85"><span className="font-extrabold text-foreground">Ability:</span> {cls.abilityName} — {cls.abilityDesc}</p>
       </div>
+
+      {/* ── Class Masteries — perks unlocked by leveling this class ──── */}
+      {(() => {
+        const tiers = MASTERY_TIERS[hero.class];
+        const unlockedCount = tiers.filter(t => activeLevel >= t.unlockLevel).length;
+        const next = nextMasteryFor(hero.class, activeLevel);
+        return (
+          <div className="glass-card p-4 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="font-rd-display font-extrabold text-[14px] flex items-center gap-1.5 tracking-wide">
+                <Sparkles className="w-3.5 h-3.5 text-primary" /> Class Masteries
+              </h3>
+              <span className="text-[10px] font-mono font-bold tabular-nums text-muted-foreground">
+                {unlockedCount}/{tiers.length}
+              </span>
+            </div>
+            {/* 5-segment progress strip */}
+            <div className="flex gap-1">
+              {tiers.map(t => {
+                const u = activeLevel >= t.unlockLevel;
+                return (
+                  <div
+                    key={t.id}
+                    className={cn(
+                      'h-1.5 flex-1 rounded-full',
+                      u ? 'bg-primary' : 'bg-muted/50',
+                    )}
+                  />
+                );
+              })}
+            </div>
+            {next ? (
+              <p className="text-[10px] text-muted-foreground">
+                Next: <span className="font-bold text-foreground">{next.name}</span> at Lv {next.unlockLevel}
+              </p>
+            ) : (
+              <p className="text-[10px] font-bold" style={{ color: 'hsl(var(--gold))' }}>
+                ✦ All masteries unlocked
+              </p>
+            )}
+            <div className="space-y-1.5 pt-1">
+              {tiers.map(t => {
+                const u = activeLevel >= t.unlockLevel;
+                return (
+                  <div
+                    key={t.id}
+                    className={cn(
+                      'flex items-start gap-2 px-2 py-1.5 rounded-lg',
+                      u ? 'bg-primary/5 border border-primary/20' : 'opacity-55',
+                    )}
+                  >
+                    <div className="shrink-0 mt-0.5">
+                      {u ? <Check className="w-3 h-3 text-primary" /> : <Lock className="w-3 h-3 text-muted-foreground" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="font-extrabold text-[11px]">T{t.tier} · {t.name}</p>
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Lv {t.unlockLevel}</span>
+                      </div>
+                      <p className="text-[10.5px] text-foreground/80 leading-snug">{t.summary}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Per-class progression ladder ─────────────────────────────── */}
       <div className="glass-card p-4 space-y-2">

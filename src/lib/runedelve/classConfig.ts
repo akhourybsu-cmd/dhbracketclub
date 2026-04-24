@@ -37,7 +37,7 @@ export const CLASS_LIST: ClassDef[] = [
     name: 'Rogue',
     emoji: '🗡️',
     color: 'gold',
-    passive: 'Chains of 5+ grant +50% score',
+    passive: 'Chains of 5+ grant +15% run score',
     abilityName: 'Shadowstep',
     abilityDesc: 'Next attack: +100% dmg & score',
     abilityCost: 3,
