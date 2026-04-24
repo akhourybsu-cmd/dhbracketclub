@@ -1,0 +1,114 @@
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+
+export type Club = {
+  id: string;
+  name: string;
+  slug: string;
+  accent_color: string; // HSL parts e.g. "152 72% 46%"
+  logo_url: string | null;
+  owner_admin_id: string | null;
+  status: string;
+};
+
+export type ClubMembership = {
+  club_id: string;
+  role: 'admin' | 'member';
+};
+
+interface ClubContextType {
+  club: Club | null;
+  membership: ClubMembership | null;
+  loading: boolean;
+  isClubAdmin: boolean;
+  isPlatformOwner: boolean;
+  refresh: () => Promise<void>;
+}
+
+const ClubContext = createContext<ClubContextType>({
+  club: null,
+  membership: null,
+  loading: true,
+  isClubAdmin: false,
+  isPlatformOwner: false,
+  refresh: async () => {},
+});
+
+export const useClub = () => useContext(ClubContext);
+
+export function ClubProvider({ children }: { children: ReactNode }) {
+  const { user, loading: authLoading } = useAuth();
+  const [club, setClub] = useState<Club | null>(null);
+  const [membership, setMembership] = useState<ClubMembership | null>(null);
+  const [isPlatformOwner, setIsPlatformOwner] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    if (!user) {
+      setClub(null);
+      setMembership(null);
+      setIsPlatformOwner(false);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const [{ data: m }, { data: roleRow }] = await Promise.all([
+        (supabase as any)
+          .from('club_members')
+          .select('club_id, role, clubs:club_id(id, name, slug, accent_color, logo_url, owner_admin_id, status)')
+          .eq('user_id', user.id)
+          .maybeSingle(),
+        (supabase as any)
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'owner')
+          .maybeSingle(),
+      ]);
+      setIsPlatformOwner(!!roleRow);
+      if (m?.clubs) {
+        setClub(m.clubs as Club);
+        setMembership({ club_id: m.club_id, role: m.role });
+      } else {
+        setClub(null);
+        setMembership(null);
+      }
+    } catch (err) {
+      console.error('[ClubContext] load failed', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    void load();
+  }, [authLoading, load]);
+
+  // Inject the club's accent color as a CSS variable on the root element
+  useEffect(() => {
+    const root = document.documentElement;
+    if (club?.accent_color) {
+      root.style.setProperty('--club-accent', club.accent_color);
+    } else {
+      root.style.setProperty('--club-accent', '152 72% 46%'); // emerald fallback
+    }
+  }, [club]);
+
+  return (
+    <ClubContext.Provider
+      value={{
+        club,
+        membership,
+        loading,
+        isClubAdmin: membership?.role === 'admin',
+        isPlatformOwner,
+        refresh: load,
+      }}
+    >
+      {children}
+    </ClubContext.Provider>
+  );
+}
