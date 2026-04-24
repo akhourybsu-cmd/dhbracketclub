@@ -1,99 +1,134 @@
-# Bestiary Boss Tracking + Roster Expansion
 
-Two-part content + data drop: make sure mini-boss and boss kills correctly populate the Bestiary (including past runs), then triple the enemy variety with 10 fresh archetypes per chapter.
 
----
+# Multi-Club (Multi-Tenant) Platform
 
-## Part 1 — Mini-boss & boss tracking (forward + retroactive)
+Transform DH Club from a single shared group into a platform where **Alex provisions isolated clubs**, each with their own admin, members, invite code, branding, and fully separate data — Drafts, Seasons, Chat, Events, Lockbox, RuneDelve scores, Posts, Lore, everything.
 
-### Status check
-Forward-tracking already works: `recordKill()` in `RuneDelvePlayPage.tsx` correctly appends `__mini` / `__boss` suffixes to the archetype id when the slain enemy carries a `tier` flag, and the Bestiary page renders all variants from `BESTIARY_ROSTER`. DB confirms one `shadow_imp__boss` row exists from a recent run.
+## Concept
 
-What's missing: **historical runs were logged before variant tracking shipped**, so every boss/mini-boss kill prior to this week is credited only to the base archetype.
+```text
+┌─────────────────── Platform (Alex = Owner) ──────────────────┐
+│                                                              │
+│   ┌── Club: "DH Club" ──┐  ┌── Club: "Smith Fam" ──┐         │
+│   │ admin: Alex         │  │ admin: Maria          │         │
+│   │ code: DH-2026       │  │ code: SMITH-25        │         │
+│   │ accent: emerald     │  │ accent: amber         │         │
+│   │ • drafts            │  │ • drafts              │         │
+│   │ • seasons           │  │ • seasons             │         │
+│   │ • #channels         │  │ • #channels           │         │
+│   │ • events / lockbox  │  │ • events / lockbox    │         │
+│   │ • runedelve scores  │  │ • runedelve scores    │         │
+│   └─────────────────────┘  └───────────────────────┘         │
+│                                                              │
+│   Club Requests Inbox → Alex approves → club created         │
+└──────────────────────────────────────────────────────────────┘
+```
 
-### Backfill approach
-Use the per-run `rune_delve_runs` table (which preserves `level_number`, `dungeon_cleared`, `enemies_defeated`, `user_id`) plus the deterministic `bossKindForLevel()` rule to credit one variant kill per cleared boss-tier level:
+Decisions locked in: **everything club-scoped**, **one club per account**, **Alex approves all club requests**, **each club has its own name + accent color**.
 
-- For every `rune_delve_runs` row where `dungeon_cleared = true` AND `bossKindForLevel(level_number)` is `'mini'` / `'mid'` / `'chapter'`, insert/upsert a single defeat into the variant id (`__mini` for `mini`; `__boss` for `mid` and `chapter`, since both render as the gold-ringed "Boss" variant in the journal).
-- The base archetype is recovered by re-running `generateLevel(level_number)` (deterministic seed) and reading `enemies[final_slot].archetypeId`. Both wave-1 mid bosses and wave-2 chapter bosses are handled — the chapter-boss archetype lives in the wave-2 enemy list.
-- Aggregate across runs per `(user_id, variant_id)` so a player who cleared L25 three times gets `defeat_count = 3` on `<base>__boss`.
-- `first_defeated_at` / `last_defeated_at` use the run's `completed_at`; `highest_level_defeated` is the max `level_number` seen.
+## What gets built
 
-### Implementation
-- **One-time migration script** (TypeScript edge function, invoked once): reads all completed runs, runs the deterministic generator for each cleared boss level, builds the variant defeat ledger, and upserts into `rune_delve_bestiary`. Idempotent — re-running it only ever updates counts to the recomputed totals (using `ON CONFLICT (user_id, archetype_id)`).
-- **Pre-flight constraint check**: confirm the `rune_delve_bestiary` table has a unique constraint on `(user_id, archetype_id)`. If not, add it via migration first so the upsert is safe.
-- **Retroactive toast already exists** — `RuneDelveBestiaryPage` shows a one-time "We added X foes from your earlier runs" toast keyed by `localStorage`; resetting that key forces it to re-fire after the backfill.
+### 1. Data model (migration)
 
----
+New tables:
+- **`clubs`** — `id, name, slug, accent_color, logo_url, owner_admin_id, created_at, status`
+- **`club_requests`** — `id, requested_by, proposed_name, reason, status (pending/approved/rejected), reviewed_by, reviewed_at`
+- **`club_members`** — `club_id, user_id, role (admin/member), joined_at` (UNIQUE on user_id → enforces one-club-per-account)
 
-## Part 2 — 30 new enemy archetypes (10 per chapter)
+Existing tables get a `club_id uuid NOT NULL` column added (with a backfill to the existing "DH Club" club for all current rows):
+- drafts, draft_participants, draft_picks, draft_results, draft_seasons, draft_season_entries, draft_season_standings, draft_playoff_matches, draft_pick_disputes
+- channels, channel_categories, messages, message_reactions, message_link_previews, channel_read_states
+- events, event_rsvps, event_comments
+- posts, post_comments, reactions
+- polls, poll_options, poll_votes, rankings, ranking_items, ranking_submissions, ranking_submission_entries
+- lore_entries, lore_contributions, lore_reactions
+- lockbox_weeks, lockbox_locks, lockbox_attempts, lockbox_guesses, lockbox_scores
+- rune_delve_runs, rune_delve_heroes, rune_delve_progress, rune_delve_class_progress, rune_delve_daily_runs, rune_delve_daily_streaks, rune_delve_wallet, rune_delve_loadouts, rune_delve_bestiary, rune_delve_relic_unlocks, rune_delve_active_quests, rune_delve_failure_rewards
+- activity_feed, push_subscriptions, notification_preferences
+- invite_codes (codes are now tied to a club)
 
-Every new enemy follows the existing rubric in `enemyRoster.ts`: pick a family + role, set HP/damage in the role's stat band, slot it into a chapter + tier, and only attach an `ability` when the role calls for it. Most additions stay ability-less so the board doesn't feel spammy. Each gets a flavour line in `bestiary.ts` so the journal entry reads cleanly.
+Tables that stay global (read-only reference data): `nfl_teams`, `nfl_games`, `nfl_weeks`, `nfl_seasons`, `rune_delve_levels`, `rune_delve_dungeons`, `rune_delve_quest_definitions`, `item_enrichments`, `provider_configs`.
 
-### Chapter 1 — Ember Caves (10 new — readable, iconic)
-Focus: tier 1-2, no abilities (Chapter 1 ability gate stays in place). Adds variety to the mook pool so L1-30 stops repeating the same five faces.
+### 2. RLS — isolation guarantee
 
-| ID | Name | Family | Role | Tier | Notes |
-|---|---|---|---|---|---|
-| `ember_rat` | Ember Rat | beast | swarm | 1 | Pack filler under bats |
-| `tunnel_kobold` | Tunnel Kobold | cultist | striker | 1 | Knife-and-grin variant of Goblin Scout |
-| `cave_lizard` | Cave Lizard | beast | striker | 1 | Mid-band biter |
-| `mossback_toad` | Mossback Toad | beast | tank | 2 | Wet-noodle alt to Ember Slime |
-| `lantern_moth` | Lantern Moth | magical | swarm | 1 | Glowing nuisance, very low HP |
-| `goblin_brute` | Goblin Brute | cultist | tank | 2 | Heavier Goblin profile |
-| `cave_crab` | Cave Crab | cave | defender | 2 | Naturally tough shell, low DPS |
-| `ember_pup` | Ember Pup | beast | striker | 2 | Quick chomp; pairs with bats |
-| `dust_wisp` | Dust Wisp | magical | swarm | 1 | Tiny HP, lowest damage in pool |
-| `feral_imp` | Feral Imp | magical | striker | 2 | Tier-2 striker bridge to Ch.2 |
+New security-definer helpers:
+- `current_user_club_id()` → returns the club_id from `club_members` for `auth.uid()`
+- `is_club_admin(_user uuid, _club uuid)` → boolean
+- `is_platform_owner(_user uuid)` → checks `user_roles.role = 'owner'` (Alex)
 
-### Chapter 2 — Crystal Hollow (10 new — tactical, some ability bearers)
-Focus: tier 2-4, sprinkle of abilities (heal/shield/seal/corrupt) consistent with Chapter 2 themes. Adds replay variety in the L51-100 band.
+Every club-scoped table's RLS policies get rewritten to require `club_id = current_user_club_id()` for SELECT/INSERT/UPDATE/DELETE. Platform owner bypasses everywhere. This is the security backbone — no code path can leak data across clubs.
 
-| ID | Name | Family | Role | Tier | Ability | Notes |
-|---|---|---|---|---|---|---|
-| `frost_acolyte` | Frost Acolyte | cultist | caster | 3 | — | Mid-tier caster, no ability |
-| `bone_archer` | Bone Archer | undead | striker | 3 | — | Glass-cannon ranged feel |
-| `crystal_construct` | Crystal Construct | cave | tank | 4 | — | Stone-Golem sibling |
-| `glacial_imp` | Glacial Imp | magical | striker | 3 | — | Frosty Shadow-Imp echo |
-| `cult_seer` | Cult Seer | cultist | support | 3 | `shield_self` (cd 5) | Self-wards, lower threat than Warden |
-| `revenant_thrall` | Revenant Thrall | undead | swarm | 2 | — | Pack filler in Ch.2 |
-| `hollow_shrieker` | Hollow Shrieker | undead | support | 3 | `heal_ally` (cd 5) | Heals like Chanter, longer cd |
-| `quartz_serpent` | Quartz Serpent | beast | striker | 4 | — | Late-Ch.2 mid-striker |
-| `frost_warden` | Frost Warden | undead | defender | 4 | `shield_self` (cd 4) | Heavy variant Cursed-Knight pre-echo |
-| `whisper_witch` | Whisper Witch | cultist | corrupter | 4 | `corrupt_tile` (cd 4) | Slower-cycle Wraith echo |
+### 3. Club lifecycle flows
 
-### Chapter 3 — Shattered Vault (10 new — layered, dangerous)
-Focus: tier 4-5, mix of abilities and pure stat threats. Bolsters the L101+ pool, reduces "Cursed Knight again" fatigue.
+**Request a club** (public, on `/auth` page after sign-in or via "Start a Club" CTA on landing):
+- New screen: `RequestClubPage` — proposed name, short reason, submit. Creates `club_requests` row.
+- User sees a pending state: "Your request is under review."
 
-| ID | Name | Family | Role | Tier | Ability | Notes |
-|---|---|---|---|---|---|---|
-| `void_acolyte` | Void Acolyte | corrupted | caster | 4 | — | Telegraph-friendly caster |
-| `wraith_lord` | Wraith Lord | undead | corrupter | 5 | `corrupt_tile` (cd 3) | Faster-cycle Wraith |
-| `sundered_titan` | Sundered Titan | cave | tank | 5 | — | Massive HP pool, low DPS |
-| `void_stalker` | Void Stalker | corrupted | striker | 5 | — | Glass cannon, faster than Assassin |
-| `dread_summoner` | Dread Summoner | undead | summoner | 5 | `summon_minion` (cd 6) | Echo of Bone Summoner, longer cd |
-| `arcane_warden` | Arcane Warden | magical | defender | 4 | `shield_self` (cd 3) | Frequent self-shield, low DPS |
-| `bone_juggernaut` | Bone Juggernaut | undead | tank | 5 | — | Pure stat tank for late game |
-| `void_seer` | Void Seer | corrupted | support | 4 | `heal_ally` (cd 4) | Heals corrupted allies |
-| `gloom_wisp` | Gloom Wisp | magical | swarm | 4 | — | Late-game swarm filler |
-| `vault_revenant` | Vault Revenant | undead | striker | 5 | — | Rounds out Ch.3 striker pool |
+**Owner approval** (Alex only, `/admin/clubs`):
+- New screen: `AdminClubsPage` — list of pending requests, approve/reject. Approving creates the `club`, makes the requester its admin in `club_members`, generates a unique invite code, transitions user to active.
 
-### Auto-generated mini/boss variants
-The existing `BESTIARY_ROSTER` builder already auto-generates `__mini` and `__boss` variants for every base archetype except `minion`. Adding 30 new bases automatically yields **60 new variant entries**, bringing the bestiary from ~48 entries to ~138 total — without any extra wiring.
+**Sign-up flow** (`AuthPage`):
+- Invite code lookup now resolves to a specific club. On successful signup, `club_members` row is inserted automatically.
+- Users without a club land on a "Request a club or enter a code" splash.
 
-### Generator integration
-- `rosterPoolForLevel()` and `rosterPoolForLevelAllowingNextChapter()` already filter by `chapter <= chapter && tier <= maxTier`, so new entries appear in the picker the moment they're added — no generator changes needed.
-- The Chapter-1 ability gate (`level <= 30 → filter out abilities`) protects the new Ch.2 ability bearers from showing up too early.
-- Flavour text additions to `ARCHETYPE_FLAVOR` so each new entry has a Bestiary detail line; ability blurbs reuse existing entries in `ABILITY_BLURB`.
+**Club admin panel** (`/club/settings`, club admin only):
+- Edit club name, accent color, upload logo
+- Manage invite codes (generate, deactivate)
+- Member list + remove member
+- Transfer admin role
 
----
+### 4. Club context + branding
 
-## Files touched
+- New `ClubContext` provider wrapping `AuthContext` — exposes `currentClub` (id, name, accent_color, logo_url) and `isClubAdmin`.
+- App shell injects the club's accent color as a CSS variable (`--club-accent`) at the root, used by `AppLayout`, `Dashboard` hero, season aesthetic, and key buttons. Emerald/charcoal base remains; the accent swaps.
+- Header/dashboard show club name + logo instead of hardcoded "DH Club" / DH monogram. DH monogram becomes the platform-level fallback only.
 
-- `src/lib/runedelve/enemyRoster.ts` — append 30 new entries across CHAPTER_1/2/3 arrays.
-- `src/lib/runedelve/bestiary.ts` — add 30 new flavour-text entries to `ARCHETYPE_FLAVOR`.
-- `supabase/migrations/<new>_bestiary_unique_constraint.sql` — ensure unique `(user_id, archetype_id)` index for safe upsert (only if missing).
-- `supabase/functions/backfill-bestiary-variants/index.ts` — one-shot edge function: reads `rune_delve_runs`, replays `generateLevel()` for cleared boss levels, upserts variant kills.
-- Manual invocation note: I'll call the edge function once after deploy via `supabase--curl_edge_functions`. Idempotent, so safe to re-run.
+### 5. UI updates
 
-No changes to Bestiary UI, hooks, generator, or combat engine — purely additive data + a one-time backfill.
+- **Dashboard** — hero shows club name & logo, "Welcome to {clubName}".
+- **Profile** — adds "Your Club" section with name, role (Admin/Member), and "Leave Club" (members) / "Manage Club" (admins).
+- **Landing page** — adds discreet "Start your own club" CTA leading to request form.
+- **Admin Hub** — Alex's existing AdminHub gains a "Clubs" tab linking to club approval queue + roster.
+- **Empty states** — when a club is brand-new, every module shows a fresh "No drafts yet — create the first one" state cleanly (no leakage from other clubs).
+
+### 6. Edge function updates
+
+All edge functions that read/write club-scoped tables need a club_id check:
+- `advance-playoffs`, `start-playoff-match`, `suggest-playoff-topics`, `enrich-draft-picks`, `rate-draft`, `check-draft-pick`, `finalize-lockbox-day`, `lockbox-daily-reminder`, `score-nfl-week`, `sync-nfl-week`, `send-push-notification`
+- They derive `club_id` from the row they're operating on (e.g. draft → club_id) and only act within that club. Cron-driven functions (lockbox finalizer, lockbox reminder) loop per club.
+
+### 7. Data backfill
+
+One-time migration:
+- Insert "DH Club" into `clubs` with Alex as admin, accent emerald, existing invite codes attached.
+- Backfill `club_id = '<dh-club-uuid>'` on every existing row across all club-scoped tables.
+- Insert every existing user into `club_members` for DH Club.
+- Make `club_id` `NOT NULL` after backfill.
+
+## Mobile-first considerations
+
+- Club switcher is **not** needed (one-club-per-account decision).
+- Club name + logo replace DH branding in headers — designed for phone widths first.
+- Request flow and admin approval queue are full-screen mobile cards, not tables.
+- Accent color applied via a single CSS variable so existing components stay clean.
+
+## What stays the same
+
+- DH Club itself keeps all its data, members, drafts, seasons, channels — nothing is lost.
+- Single-group architectural memory note will be updated to reflect multi-tenant model.
+- Draft scoring, playoff logic, lockbox rules, RuneDelve mechanics — untouched.
+- Visual identity (Emerald & Charcoal base, Arena aesthetic) — untouched, accent layered on top.
+
+## Risks & call-outs
+
+- This is the **largest schema change to date** (~30 tables, all RLS rewritten). Will be done in one migration with backfill, but I'll stage policies carefully to avoid lockouts.
+- One-club-per-account means if you ever want to be in multiple clubs, we'd need a follow-up migration to drop the unique constraint and add a switcher.
+- Realtime channels (chat, presence) will subscribe with a `club_id` filter so cross-club chatter never crosses streams.
+- RuneDelve leaderboards become per-club — global comparisons disappear by design.
+
+## Files (high level)
+
+**New**: migration (clubs/club_members/club_requests + club_id columns + RLS rewrites + backfill), `src/contexts/ClubContext.tsx`, `src/pages/RequestClubPage.tsx`, `src/pages/ClubSettingsPage.tsx`, `src/pages/admin/AdminClubsPage.tsx`, `src/hooks/useCurrentClub.ts`.
+
+**Edited**: `AuthPage`, `AppLayout`, `DashboardPage`, `ProfilePage`, `AdminHub`, `LandingPage`, all edge functions touching club-scoped tables, all hooks that read those tables (most queries get implicit club scoping via RLS, so most code changes are minimal beyond the context provider + branding).
+
