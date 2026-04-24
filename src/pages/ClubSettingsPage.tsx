@@ -40,15 +40,22 @@ export default function ClubSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [codes, setCodes] = useState<InviteCode[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [clubPassword, setClubPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(true);
+  const [savingPassword, setSavingPassword] = useState(false);
 
   const loadAll = useCallback(async () => {
     if (!club) return;
-    const [{ data: c }, { data: m }] = await Promise.all([
+    const [{ data: c }, { data: m }, { data: pwd }] = await Promise.all([
       (supabase as any).from('invite_codes').select('id, code, is_active, used_at').eq('club_id', club.id).order('created_at', { ascending: false }),
       (supabase as any).from('club_members').select('id, user_id, role, joined_at, profile:user_id(display_name, avatar_url)').eq('club_id', club.id).order('joined_at', { ascending: true }),
+      (supabase as any).rpc('get_club_password', { _club_id: club.id }),
     ]);
     if (c) setCodes(c as InviteCode[]);
     if (m) setMembers(m as Member[]);
+    setClubPassword((pwd as string | null) ?? '');
+    setPasswordVisible(club.password_visible ?? true);
   }, [club]);
 
   useEffect(() => {
@@ -74,6 +81,46 @@ export default function ClubSettingsPage() {
     await refresh();
   };
 
+  const saveClubPassword = async () => {
+    const trimmed = clubPassword.trim();
+    if (trimmed.length < 4) {
+      toast.error('Password must be at least 4 characters');
+      return;
+    }
+    setSavingPassword(true);
+    const { error } = await (supabase as any)
+      .from('clubs')
+      .update({ join_password: trimmed })
+      .eq('id', club.id);
+    setSavingPassword(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Club password updated');
+    await refresh();
+  };
+
+  const togglePasswordVisible = async (next: boolean) => {
+    setPasswordVisible(next);
+    const { error } = await (supabase as any)
+      .from('clubs')
+      .update({ password_visible: next })
+      .eq('id', club.id);
+    if (error) {
+      setPasswordVisible(!next);
+      toast.error(error.message);
+      return;
+    }
+    await refresh();
+  };
+
+  const generateRandomPassword = () => {
+    const adjectives = ['amber', 'azure', 'crimson', 'silver', 'jade', 'cobalt', 'ember', 'frost'];
+    const nouns = ['falcon', 'tiger', 'comet', 'horizon', 'summit', 'echo', 'cipher', 'arrow'];
+    const num = Math.floor(Math.random() * 90 + 10);
+    const generated = `${adjectives[Math.floor(Math.random() * adjectives.length)]}-${nouns[Math.floor(Math.random() * nouns.length)]}-${num}`;
+    setClubPassword(generated);
+    setShowPassword(true);
+  };
+
   const generateCode = async () => {
     const base = club.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'CLUB';
     const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -91,6 +138,12 @@ export default function ClubSettingsPage() {
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);
     toast.success(`Copied ${code}`);
+  };
+
+  const copyPassword = () => {
+    if (!clubPassword) return;
+    navigator.clipboard.writeText(clubPassword);
+    toast.success('Password copied');
   };
 
   return (
