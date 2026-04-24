@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes, Navigate, useLocation } from "react-route
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ClubProvider } from "@/contexts/ClubContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/AppLayout";
 import { PageTransition } from "@/components/PageTransition";
@@ -72,6 +73,9 @@ const RuneDelveArmoryPage = lazy(() => import("./pages/RuneDelveArmoryPage"));
 const RuneDelveBestiaryPage = lazy(() => import("./pages/RuneDelveBestiaryPage"));
 const RuneDelveDailyPage = lazy(() => import("./pages/RuneDelveDailyPage"));
 const RuneDelveQuestsPage = lazy(() => import("./pages/RuneDelveQuestsPage"));
+const RequestClubPage = lazy(() => import("./pages/RequestClubPage"));
+const AdminClubsPage = lazy(() => import("./pages/AdminClubsPage"));
+const ClubSettingsPage = lazy(() => import("./pages/ClubSettingsPage"));
 import { RuneDelveLayout } from "./components/runedelve/RuneDelveLayout";
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -205,6 +209,12 @@ function AnimatedRoutes() {
         <Route path="/rune-delve/simulator" element={<ProtectedPage><RuneDelveSimulatorPage /></ProtectedPage>} />
 
         <Route path="/profile" element={<ProtectedPage><ProfilePage /></ProtectedPage>} />
+
+        {/* Clubs (multi-tenant) */}
+        <Route path="/club/request" element={<ProtectedRoute><Suspense fallback={<PageFallback />}><RequestClubPage /></Suspense></ProtectedRoute>} />
+        <Route path="/club/settings" element={<ProtectedPage><ClubSettingsPage /></ProtectedPage>} />
+        <Route path="/admin/clubs" element={<ProtectedPage><AdminClubsPage /></ProtectedPage>} />
+
         <Route path="*" element={<Suspense fallback={<PageFallback />}><NotFound /></Suspense>} />
       </Routes>
     </AnimatePresence>
@@ -220,12 +230,14 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
       <AuthProvider>
-        <TooltipProvider>
-          <Sonner />
-          <BrowserRouter>
-            <AppWithUpdate />
-          </BrowserRouter>
-        </TooltipProvider>
+        <ClubProvider>
+          <TooltipProvider>
+            <Sonner />
+            <BrowserRouter>
+              <AppWithUpdate />
+            </BrowserRouter>
+          </TooltipProvider>
+        </ClubProvider>
       </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>

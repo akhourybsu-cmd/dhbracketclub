@@ -79,6 +79,18 @@ export default function LandingPage() {
           >
             Invite only
           </motion.p>
+
+          {/* Start your own club */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 1.2 }}
+            className="mt-10 pt-6 border-t border-border/30"
+          >
+            <Link to="/auth" className="text-[11px] text-muted-foreground/60 hover:text-primary transition-colors">
+              Want your own circle? <span className="font-semibold underline-offset-2 underline">Request a club →</span>
+            </Link>
+          </motion.div>
         </motion.div>
       </main>
 

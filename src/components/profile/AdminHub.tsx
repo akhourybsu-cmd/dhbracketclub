@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, Activity, RefreshCw, Trophy, Bookmark, Bell, ChevronRight, Loader2, Swords } from 'lucide-react';
+import { Shield, Activity, RefreshCw, Trophy, Bookmark, Bell, ChevronRight, Loader2, Swords, Building2 } from 'lucide-react';
+import { useClub } from '@/contexts/ClubContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
@@ -190,6 +191,7 @@ function UpdateDiagnostics({ buildId }: { buildId: string }) {
 
 export default function AdminHub() {
   const { user } = useAuth();
+  const { isPlatformOwner } = useClub();
   const { isSubscribed, subscribe } = usePushNotifications();
   const { play } = useSoundEffect();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
@@ -251,6 +253,7 @@ export default function AdminHub() {
   const appManagement: Tool[] = [
     { icon: Activity, label: 'Sync Runs & Logs', description: 'Bracket sync, game updates, audit trail', to: '/admin', iconColor: 'gold' },
     { icon: RefreshCw, label: 'Force Refresh App', description: 'Clear cache & pull latest build', onClick: handleForceRefresh, loading: refreshing, iconColor: 'primary' },
+    ...(isPlatformOwner ? [{ icon: Building2, label: 'Clubs', description: 'Approve requests & manage clubs', to: '/admin/clubs', iconColor: 'gold' } as Tool] : []),
   ];
 
   const competitions: Tool[] = [
