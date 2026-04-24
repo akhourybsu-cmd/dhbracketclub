@@ -90,7 +90,15 @@ import {
   getMasteryOpeningHeal,
   getMasteryShieldBonus,
   shouldMasteryRefundMana,
+  getMasteryHpPerChapter,
+  getMasteryGoldScoreBonus,
+  getMasteryOpeningCritMult,
+  getMasteryChainCritChance,
+  hasMasteryAegis,
+  hasMasteryPanicShield,
+  reviveBurstActive,
 } from '@/lib/runedelve/masteryEffects';
+import { chapterFor } from '@/lib/runedelve/levelGenerator';
 import { Crown, Target } from 'lucide-react';
 import { RuneBoard } from '@/components/runedelve/RuneBoard';
 import { EnemyDisplay } from '@/components/runedelve/EnemyDisplay';
