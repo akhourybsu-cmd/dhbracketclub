@@ -289,7 +289,7 @@ export default function AuthPage() {
               ? 'Loading…'
               : mode === 'signin'
                 ? 'Sign In'
-                : mode === 'invite'
+                : mode === 'join'
                   ? 'Join Club'
                   : 'Submit Request'}
           </Button>
