@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, Activity, RefreshCw, Trophy, Bookmark, Bell, ChevronRight, Loader2, Swords, Building2 } from 'lucide-react';
+import { Shield, Activity, RefreshCw, Trophy, Bookmark, Bell, ChevronRight, Loader2, Swords, Building2, BarChart3 } from 'lucide-react';
 import { useClub } from '@/contexts/ClubContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -261,6 +261,7 @@ export default function AdminHub() {
     { icon: Bookmark, label: 'Drafts Hub', description: 'Manage drafts & league seasons', to: '/drafts', iconColor: 'accent' },
     { icon: Swords, label: 'Rune Delve Analytics', description: 'Per-level stats, cliffs, AI handoff', to: '/rune-delve/analytics', iconColor: 'primary' },
     { icon: Swords, label: 'Rune Delve Playtest Sim', description: 'Stress-test any future level (1-150)', to: '/rune-delve/simulator', iconColor: 'accent' },
+    { icon: BarChart3, label: 'Rune Delve Balance Report', description: 'Full-spectrum audit · sim + live data', to: '/rune-delve/balance', iconColor: 'gold' },
   ];
 
   const diagnostics: Tool[] = [
