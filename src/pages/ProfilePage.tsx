@@ -1,11 +1,13 @@
 import { useEffect, useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useClub } from '@/contexts/ClubContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { LogOut, User, Volume2, VolumeX, BarChart3, MessageCircle, CalendarDays, MessageSquareText, Trophy, Bookmark, Zap, Sun, Moon, Bell, BellOff, Camera, Loader2, RefreshCw } from 'lucide-react';
+import { LogOut, User, Volume2, VolumeX, BarChart3, MessageCircle, CalendarDays, MessageSquareText, Trophy, Bookmark, Zap, Sun, Moon, Bell, BellOff, Camera, Loader2, RefreshCw, Settings, ShieldCheck } from 'lucide-react';
 import { nukeAndReload } from '@/lib/forceUpdate';
 import { useTheme } from 'next-themes';
 import { motion } from 'framer-motion';
@@ -20,6 +22,7 @@ import AdminHub from '@/components/profile/AdminHub';
 export default function ProfilePage() {
   const { theme, setTheme } = useTheme();
   const { user, signOut } = useAuth();
+  const { club, isClubAdmin, isPlatformOwner } = useClub();
   const [displayName, setDisplayName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -215,6 +218,52 @@ export default function ProfilePage() {
           </Button>
         </div>
       </div>
+
+      {/* Your Club */}
+      {club ? (
+        <div className="glass-card p-5 mb-4">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">Your Club</h3>
+          <div className="flex items-center gap-3">
+            {club.logo_url ? (
+              <img src={club.logo_url} alt={club.name} className="w-11 h-11 object-cover rounded-xl" style={{ border: '1px solid hsl(var(--club-accent) / 0.3)' }} />
+            ) : (
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center font-extrabold text-base" style={{
+                background: 'linear-gradient(135deg, hsl(var(--club-accent) / 0.18), hsl(var(--club-accent) / 0.04))',
+                border: '1px solid hsl(var(--club-accent) / 0.25)',
+                color: 'hsl(var(--club-accent))',
+              }}>
+                {club.name[0]?.toUpperCase()}
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-[14px] leading-tight truncate">{club.name}</p>
+              <p className="text-[10px] text-muted-foreground/70 font-semibold uppercase tracking-wider mt-0.5">
+                {isClubAdmin ? 'Admin' : 'Member'}
+              </p>
+            </div>
+            {isClubAdmin && (
+              <Link to="/club/settings">
+                <Button size="sm" variant="ghost" className="h-9 px-3 gap-1.5 text-[11px] font-bold">
+                  <Settings className="w-3.5 h-3.5" /> Manage
+                </Button>
+              </Link>
+            )}
+          </div>
+          {isPlatformOwner && (
+            <Link to="/admin/clubs" className="mt-3 flex items-center gap-2 text-[11px] font-semibold text-primary/85 hover:text-primary">
+              <ShieldCheck className="w-3.5 h-3.5" /> Platform Owner — Review club requests
+            </Link>
+          )}
+        </div>
+      ) : (
+        <div className="glass-card p-5 mb-4">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">Your Club</h3>
+          <p className="text-[12px] text-muted-foreground mb-3">You're not in a club yet.</p>
+          <Link to="/club/request">
+            <Button size="sm" className="w-full h-10 font-bold rounded-xl btn-press text-[12px]">Request a club</Button>
+          </Link>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="glass-card p-5 mb-4">
