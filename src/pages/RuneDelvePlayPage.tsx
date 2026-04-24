@@ -791,12 +791,19 @@ export default function RuneDelvePlayPage() {
     // ── Daily + Mastery damage compounding (red chains only) ─────────────
     // Stacks multiplicatively on top of the tier multiplier so power-builds
     // really feel powerful. Mastery T5 Last Stand also kicks in below 20% HP.
+    let critFired = false;
     if (type === 'red' && resolution.damageDealt > 0) {
       let extraMult = 1;
       if (isDailyMode) extraMult *= dailyDamageMultiplier(dailyMods, type);
       if (isDailyMode) extraMult *= dailyIroncladDamageMult(dailyMods, chain.length);
       extraMult *= getMasteryChainDamageMult(activeMasteries, type);
       if (isLastStandActive(activeMasteries, combat.hp, combat.maxHp)) extraMult *= 1.5;
+      // ── Mastery: Rogue T2 Opening Strike — first chain of run crits ×1.5.
+      const openCrit = getMasteryOpeningCritMult(activeMasteries, chainsThisFight);
+      if (openCrit > 1) { extraMult *= openCrit; critFired = true; }
+      // ── Mastery: Rogue T4 Quickblade — chains 4+ have a 10% crit chance.
+      const critChance = getMasteryChainCritChance(activeMasteries, chain.length);
+      if (critChance > 0 && Math.random() < critChance) { extraMult *= 1.5; critFired = true; }
       if (extraMult !== 1) {
         const baseDmg = resolution.damageDealt;
         const boostedDmg = Math.round(baseDmg * extraMult);
