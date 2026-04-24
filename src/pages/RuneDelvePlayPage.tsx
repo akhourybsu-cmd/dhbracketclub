@@ -834,6 +834,9 @@ export default function RuneDelvePlayPage() {
     if (critFired) {
       turnLogs.push({ kind: 'info', text: `🗡️ Critical strike! Chain ×${chain.length} hits hard.` });
     }
+    // ── Mastery: Mage T2 — blue chains heal a flat 2 HP. ─────────────────
+    if (type === 'blue') {
+      const blueHeal = getMasteryBlueChainHeal(activeMasteries);
       if (blueHeal > 0) {
         const applied = Math.min(blueHeal, next.maxHp - next.hp);
         if (applied > 0) {
