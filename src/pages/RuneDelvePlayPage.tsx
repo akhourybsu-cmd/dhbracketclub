@@ -1471,9 +1471,11 @@ export default function RuneDelvePlayPage() {
     });
     // Momentum: scale final score when longest chain >= 4.
     const momentumMult = momentumScoreBonusMult(relicsForFinal, final.longestChain);
+    // Mastery: Rogue T1 Gilded Eye — +2 score per gold rune cleared.
+    const goldEyeBonus = getMasteryGoldScoreBonus(activeMasteries, goldRunesCleared);
     const breakdown = momentumMult > 1
-      ? { ...rawBreakdown, total: Math.round(rawBreakdown.total * momentumMult) }
-      : rawBreakdown;
+      ? { ...rawBreakdown, total: Math.round(rawBreakdown.total * momentumMult) + goldEyeBonus }
+      : { ...rawBreakdown, total: rawBreakdown.total + goldEyeBonus };
     const xp = xpForRun(breakdown.total, cleared);
     const reason: 'cleared' | 'defeated' | 'timeout' = cleared ? 'cleared' : final.hp <= 0 ? 'defeated' : 'timeout';
     // OPTIMISTIC isNewBest — used only for the immediate end-state card. The
