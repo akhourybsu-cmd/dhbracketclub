@@ -297,9 +297,9 @@ export async function buildBalanceReport(opts: BuildOpts): Promise<BalanceReport
   const bosses: BalanceReport['bosses'] = [];
   for (let lvl = startLevel; lvl <= endLevel; lvl++) {
     const kind = bossKindForLevel(lvl);
-    if (kind === 'none') continue;
+    if (kind === null) continue;
     const ruleId = bossRuleForLevel(lvl);
-    const ruleName = ruleId ? (BOSS_RULES[ruleId]?.name ?? ruleId) : null;
+    const ruleName = ruleId ? (BOSS_RULES[ruleId]?.label ?? ruleId) : null;
     const clears = classes.map(c => simByClass[c].get(lvl)?.clearRate ?? 0);
     const turns = classes.map(c => simByClass[c].get(lvl)?.avgTurnsUsed ?? 0);
     const nd = classes.map(c => simByClass[c].get(lvl)?.nearDeathRate ?? 0);
