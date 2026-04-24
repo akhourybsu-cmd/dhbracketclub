@@ -3833,7 +3833,7 @@ export type Database = {
       toggle_message_pin: { Args: { p_message_id: string }; Returns: undefined }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "moderator" | "user" | "owner"
       rd_quest_scope: "daily" | "weekly"
       rd_quest_status: "active" | "completed" | "claimed"
     }
@@ -3963,7 +3963,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "moderator", "user", "owner"],
       rd_quest_scope: ["daily", "weekly"],
       rd_quest_status: ["active", "completed", "claimed"],
     },
