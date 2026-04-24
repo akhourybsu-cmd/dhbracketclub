@@ -1163,6 +1163,15 @@ export default function RuneDelvePlayPage() {
       if (mitigated > 0) turnLogs.push({ kind: 'mitigated', text: 'Your guard absorbed the blow', amount: mitigated });
     }
 
+    // ── Mastery: Cleric T5 Eternal Aegis — once per run, block a fatal hit.
+    // Runs BEFORE the relic Last Stand / Phoenix saves so the cheap free
+    // mastery save burns first; relics can still bail you out next time.
+    if (afterEnemies.hp <= 0 && hasMasteryAegis(activeMasteries) && !aegisFiredRef.current) {
+      afterEnemies = { ...afterEnemies, hp: 1 };
+      aegisFiredRef.current = true;
+      toast.success('🛡️ Aegis blocked the killing blow!', { duration: 1800 });
+      turnLogs.push({ kind: 'laststand', text: 'Eternal Aegis — fatal hit blocked!' });
+    }
     // Relic: Last Stand — survive lethal at 1 HP. R1–R4: 1 use; R5: 2 uses.
     if (afterEnemies.hp <= 0) {
       const ls = tryLastStand(relics, afterEnemies.hp, lastStandUsed);
