@@ -830,9 +830,9 @@ export default function RuneDelvePlayPage() {
     if (type === 'gold') {
       setGoldRunesCleared(g => g + chain.length);
     }
-    // Combat-log line for any rogue crit that just fired (Opening / Quickblade).
+    // Toast the rogue crit (turnLogs isn't yet allocated at this point).
     if (critFired) {
-      turnLogs.push({ kind: 'info', text: `🗡️ Critical strike! Chain ×${chain.length} hits hard.` });
+      toast.success(`🗡️ Critical strike! Chain ×${chain.length}`, { duration: 1100 });
     }
     // ── Mastery: Mage T2 — blue chains heal a flat 2 HP. ─────────────────
     if (type === 'blue') {
