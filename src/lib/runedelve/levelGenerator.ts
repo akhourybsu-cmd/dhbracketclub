@@ -107,10 +107,10 @@ function seedFor(level: number): number {
 function turnLimitFor(level: number): number {
   const base = (() => {
     if (level <= 15) return 12;
-    if (level <= 25) return 11;
-    if (level <= 50) return 10;
-    if (level <= 100) return 9;
-    return 8;
+    if (level <= 25) return 12;
+    if (level <= 50) return 11;
+    if (level <= 100) return 10;
+    return 9;
   })();
   const kind = bossKindForLevel(level);
   if (kind === 'mid')     return base + 4;
