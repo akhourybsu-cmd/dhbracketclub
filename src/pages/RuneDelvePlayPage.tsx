@@ -432,7 +432,15 @@ export default function RuneDelvePlayPage() {
     // Foreseer's Lens (+ turns/level — suppressed by Fogged) and Void Pact.
     const bonusTurns = foggedActive ? 0 : getForeseerBonusTurns(relics);
     const dailyTurnDelta = isDailyMode ? dailyTurnLimitDelta(dailyMods) : 0;
-    const initial = initialCombat(enemies, Math.max(3, level.turn_limit + bonusTurns + dailyTurnDelta));
+    // Mastery: Warrior T2 — +1 max HP per chapter cleared (chapters are 1..N
+    // where the first chapter is 1, so this also nudges chapter-1 by +1).
+    const chapterIdx = chapterFor(level.level_number);
+    const chapterHpBonus = getMasteryHpPerChapter(activeMasteries) * Math.max(0, chapterIdx);
+    const initial = initialCombat(
+      enemies,
+      Math.max(3, level.turn_limit + bonusTurns + dailyTurnDelta),
+      { bonusMaxHp: chapterHpBonus },
+    );
     // Mastery: starting mana bonus (Mage T1) layered on top of relic effects.
     initial.mana = Math.min(MAX_MANA, initial.mana + getStartingMana(relics) + getMasteryStartingMana(activeMasteries));
     initial.shieldTurns = Math.max(initial.shieldTurns, getStartingShieldTurns(relics));
