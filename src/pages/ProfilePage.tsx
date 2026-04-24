@@ -256,6 +256,16 @@ export default function ProfilePage() {
               <ShieldCheck className="w-3.5 h-3.5" /> Platform Owner — Review club requests
             </Link>
           )}
+
+          {/* Club password (visible to admins always; to members only if admin enabled it) */}
+          <ClubPasswordRow
+            clubId={club.id}
+            isAdmin={isClubAdmin}
+            visible={showClubPwd}
+            setVisible={setShowClubPwd}
+            value={clubPwd}
+            setValue={setClubPwd}
+          />
         </div>
       ) : (
         <div className="glass-card p-5 mb-4">
