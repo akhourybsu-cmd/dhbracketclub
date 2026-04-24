@@ -88,6 +88,12 @@ export function applyChain(
   if (type === 'red') {
     let dmg = length * 8;
     if (cls === 'warrior') dmg = Math.round(dmg * 1.25);
+    // Rebalance v3: rogue/mage/cleric were unable to clear post-L30 encounters
+    // because only warrior had a red-chain damage multiplier. Give the off-classes
+    // a baseline so total run DPS stays inside the encounter HP budget.
+    if (cls === 'mage')   dmg = Math.round(dmg * 1.10);
+    if (cls === 'rogue')  dmg = Math.round(dmg * 1.15);
+    if (cls === 'cleric') dmg = Math.round(dmg * 1.05);
     if (next.shadowstepActive) {
       dmg = Math.round(dmg * 2);
       next.shadowstepActive = false;
