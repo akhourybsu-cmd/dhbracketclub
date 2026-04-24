@@ -3,7 +3,7 @@ import { generateLevel } from '@/lib/runedelve/levelGenerator';
 import { CLASS_LIST } from '@/lib/runedelve/classConfig';
 
 const RUNS = 80;
-const start = 30, end = 75;
+const start = 1, end = 30;
 console.log(`Level | Class    | Win% | AvgTurns | DmgOut | DmgIn | MinHP | Enemies(HP/Dmg) | Turns | BossRule`);
 console.log('-'.repeat(130));
 for (let lvl = start; lvl <= end; lvl++) {
