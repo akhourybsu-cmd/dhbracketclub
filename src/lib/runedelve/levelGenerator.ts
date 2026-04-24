@@ -130,8 +130,12 @@ function enemyCountFor(level: number, rng: () => number): number {
 }
 
 // Per-template HP cap on early levels — keep the L14-15 area from rolling a
-// triple-Slime/Stone-Golem wall before the player has any relics.
+// triple-Slime/Stone-Golem wall before the player has any relics. Extended
+// through L25 (Rebalance v3) since the Chapter-1 player has limited tools.
 const EARLY_HP_CAP = 110;
+// A second, looser cap for the L26-50 band so a single roll can't double the
+// encounter HP budget. Keeps the post-tutorial ramp survivable.
+const MID_HP_CAP = 240;
 
 // (HP/damage scaling lives below — single RosterEntry-based implementation.)
 
@@ -165,15 +169,20 @@ function pickTemplate(level: number, rng: () => number): RosterEntry {
   return pool[rngInt(rng, pool.length)];
 }
 
-// Per-archetype scaling — same curve as before but reads from RosterEntry.
+// Per-archetype scaling — Rebalance v3 (post L30 brick-wall fix).
+// Old curve: 0.04 HP/level + 0.025 dmg/level + 10% L31-50 dmg menace bump
+// pushed enemy HP totals to 600-900 and incoming damage to 140-180/run vs a
+// 100-HP hero with a ~250-280 damage budget. Monte Carlo showed 0% clears
+// L34-60 across all classes. New curve targets a 50-65% Balanced verdict.
 function scaleEnemy(base: RosterEntry, level: number) {
-  const hpRate  = level <= 25 ? 0.03  : 0.04;
-  const dmgRate = level <= 25 ? 0.02  : 0.025;
-  const hpMul   = 1 + (level - 1) * hpRate;
-  let dmgMul   = 1 + (level - 1) * dmgRate;
-  // Late Chapter 1 menace pass — ability enemies are softer by design,
-  // so add a gentle damage bump in the 31-50 band so fights bite back.
-  if (level >= 31 && level <= 50) dmgMul *= 1.10;
+  // Two-band curve: tutorial slope through L25, gentler slope after so the
+  // post-tutorial encounters stay within the player's chain DPS budget.
+  const hpMul = level <= 25
+    ? 1 + (level - 1) * 0.03
+    : 1 + (24 * 0.03) + (level - 25) * 0.018;
+  const dmgMul = level <= 25
+    ? 1 + (level - 1) * 0.02
+    : 1 + (24 * 0.02) + (level - 25) * 0.012;
   return {
     hp: Math.round(base.baseHp * hpMul),
     damage: Math.max(base.baseDamage, Math.round(base.baseDamage * dmgMul)),
