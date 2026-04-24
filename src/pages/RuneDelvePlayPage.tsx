@@ -1204,7 +1204,54 @@ export default function RuneDelvePlayPage() {
       if (gained > 0) turnLogs.push({ kind: 'heal', text: 'Bloodbond drew vigor from the slain', amount: gained });
     }
 
-    // ── Linked Pairs (L46+) — clearing one cell triggers its twin too. ──
+    // ── Mastery: Warrior T4 Brace — first time HP drops below 25% in a run,
+    // gain a 2-turn shield. Single-use; only fires when player is still alive.
+    if (
+      hasMasteryPanicShield(activeMasteries) &&
+      !braceFiredRef.current &&
+      afterEnemies.hp > 0 &&
+      afterEnemies.hp / Math.max(1, afterEnemies.maxHp) < 0.25
+    ) {
+      afterEnemies = { ...afterEnemies, shieldTurns: Math.max(afterEnemies.shieldTurns, 2) };
+      braceFiredRef.current = true;
+      toast.success('🛡️ Brace! 2-turn shield', { duration: 1500 });
+      turnLogs.push({ kind: 'shield', text: 'Brace — your guard surged at the brink', amount: 2 });
+    }
+    // ── Mastery: Cleric T4 Resurgent Light — if any relic/aegis revive
+    // happened this turn, scorch up to 2 targetable enemies for 25 dmg each.
+    const revivedThisTurn = hpBefore > 0 && (afterEnemies as any).__resurgentChecked !== true && (
+      // hp went to 0 then was restored above (Aegis / Last Stand / Phoenix).
+      // Detect via "hp now positive AND we know a save may have fired".
+      // We approximate by checking hp > 0 alongside the lethal-incoming case.
+      (rawIncoming > 0 && hpBefore - rawIncoming <= 0 && afterEnemies.hp > 0) ||
+      aegisFiredRef.current && afterEnemies.hp === 1
+    );
+    if (revivedThisTurn && reviveBurstActive(activeMasteries)) {
+      // Mark so a later pass doesn't double-trigger.
+      (afterEnemies as any).__resurgentChecked = true;
+      const targets = afterEnemies.enemies.filter(e => e.hp > 0).slice(0, 2);
+      if (targets.length > 0) {
+        afterEnemies = {
+          ...afterEnemies,
+          enemies: afterEnemies.enemies.map(e => {
+            if (!targets.find(t => t.id === e.id)) return e;
+            const applied = Math.min(25, e.hp);
+            return { ...e, hp: e.hp - applied };
+          }),
+        };
+        // Recount kills to keep enemiesDefeated honest.
+        const newKills = targets.filter(t => {
+          const live = afterEnemies.enemies.find(e => e.id === t.id);
+          return live && live.hp <= 0;
+        }).length;
+        if (newKills > 0) {
+          afterEnemies.enemiesDefeated += newKills;
+          afterEnemies.totalDamage += 25 * newKills;
+        }
+        turnLogs.push({ kind: 'ability', text: '✨ Resurgent Light scorched the closest foes', amount: 25 });
+      }
+    }
+
     let chainForResolve = chain;
     if (linkedPairsActive && linkedPairs.pairs.size > 0) {
       const triggered = pairsTriggeredByChain(linkedPairs, chain);
