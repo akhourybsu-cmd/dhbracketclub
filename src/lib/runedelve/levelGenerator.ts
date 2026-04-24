@@ -219,6 +219,8 @@ function buildEnemy(
     hp = Math.min(hp, EARLY_HP_CAP);
   } else if (level <= 50 && !isElite && !isFinalBossSlot) {
     hp = Math.min(hp, MID_HP_CAP);
+  } else if (level <= 100 && !isElite && !isFinalBossSlot) {
+    hp = Math.min(hp, LATE_HP_CAP);
   }
   if (isElite) {
     hp = Math.round(hp * 1.6);
