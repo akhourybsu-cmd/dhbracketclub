@@ -151,7 +151,7 @@ export default function AuthPage() {
           />
           <p className="text-xs text-muted-foreground font-semibold">
             {mode === 'signin' && 'Welcome back'}
-            {mode === 'invite' && 'Join an existing club'}
+            {mode === 'join' && 'Join an existing club'}
             {mode === 'request' && 'Start your own club'}
           </p>
         </div>
@@ -160,7 +160,7 @@ export default function AuthPage() {
         <div className="grid grid-cols-3 gap-1.5 mb-4 p-1 rounded-xl bg-muted/30 border border-border/30">
           {([
             { key: 'signin' as Mode, icon: LogIn, label: 'Sign In' },
-            { key: 'invite' as Mode, icon: KeyRound, label: 'Invite' },
+            { key: 'join' as Mode, icon: KeyRound, label: 'Join Club' },
             { key: 'request' as Mode, icon: Sparkles, label: 'Request' },
           ]).map(({ key, icon: Icon, label }) => (
             <button
@@ -181,9 +181,9 @@ export default function AuthPage() {
 
         <form onSubmit={handleSubmit} className="glass-card p-6 space-y-4">
           <AnimatePresence mode="wait" initial={false}>
-            {mode === 'invite' && (
+            {mode === 'join' && (
               <motion.div
-                key="invite-fields"
+                key="join-fields"
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
@@ -191,17 +191,17 @@ export default function AuthPage() {
                 className="space-y-4 overflow-hidden"
               >
                 <div>
-                  <label className="form-label">Invite Code</label>
+                  <label className="form-label">Club Password</label>
                   <Input
                     required
-                    value={inviteCode}
-                    onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                    placeholder="CLUB-XXXX"
-                    className="form-input font-mono tracking-widest text-center"
+                    value={clubPassword}
+                    onChange={(e) => setClubPassword(e.target.value)}
+                    placeholder="The password your club admin gave you"
+                    className="form-input"
                     autoComplete="off"
                   />
                   <p className="text-[11px] text-muted-foreground/80 mt-1.5 px-0.5">
-                    Get this from your club's admin.
+                    Ask your club admin for the club password.
                   </p>
                 </div>
               </motion.div>
