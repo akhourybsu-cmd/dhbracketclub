@@ -564,7 +564,9 @@ function TopicPickerDialog({
             Choose your matchup topic
           </DialogTitle>
           <DialogDescription className="text-[12px]">
-            As the higher seed, you get to pick the topic for this draft.
+            {match.round === 'final' && match.match_number === 2
+              ? 'As the lower seed, you pick the topic for Game 2.'
+              : 'As the higher seed, you get to pick the topic for this draft.'}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2 py-2">
