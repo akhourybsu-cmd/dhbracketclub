@@ -170,19 +170,18 @@ function pickTemplate(level: number, rng: () => number): RosterEntry {
 }
 
 // Per-archetype scaling — Rebalance v3 (post L30 brick-wall fix).
-// Old curve: 0.04 HP/level + 0.025 dmg/level + 10% L31-50 dmg menace bump
-// pushed enemy HP totals to 600-900 and incoming damage to 140-180/run vs a
-// 100-HP hero with a ~250-280 damage budget. Monte Carlo showed 0% clears
-// L34-60 across all classes. New curve targets a 50-65% Balanced verdict.
+// Old curve made enemies 3× base HP by L50, with a 10% damage menace bump
+// L31-50. Monte Carlo: 0% clears L34-60 across all classes vs a ~250 dmg
+// budget. New curve targets 50-65% Balanced verdict, capping enemy HP scaling
+// to roughly 1.7× by L50 and 2.3× by L100 so a 4-chain rogue/cleric run can
+// still close the kill window.
 function scaleEnemy(base: RosterEntry, level: number) {
-  // Two-band curve: tutorial slope through L25, gentler slope after so the
-  // post-tutorial encounters stay within the player's chain DPS budget.
   const hpMul = level <= 25
-    ? 1 + (level - 1) * 0.03
-    : 1 + (24 * 0.03) + (level - 25) * 0.018;
+    ? 1 + (level - 1) * 0.025
+    : 1 + (24 * 0.025) + (level - 25) * 0.012;
   const dmgMul = level <= 25
-    ? 1 + (level - 1) * 0.02
-    : 1 + (24 * 0.02) + (level - 25) * 0.012;
+    ? 1 + (level - 1) * 0.015
+    : 1 + (24 * 0.015) + (level - 25) * 0.008;
   return {
     hp: Math.round(base.baseHp * hpMul),
     damage: Math.max(base.baseDamage, Math.round(base.baseDamage * dmgMul)),
