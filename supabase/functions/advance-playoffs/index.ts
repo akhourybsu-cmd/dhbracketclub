@@ -278,14 +278,30 @@ Deno.serve(async (req) => {
       const seriesWinner = players.find(p => (winCount[p] || 0) >= 2);
 
       if (seriesWinner) {
-        // Series clinched. Mark season complete + finalize archive fields (idempotent).
+        // Series clinched. BUT do not finalize/archive the season until the
+        // 3rd-place match has also completed. Both the championship series AND
+        // the 3rd-place game must be done before the season is archived.
+        const tp = thirdPlaceMatches.find((m: any) => m.status === "complete");
+        const thirdPlaceDone = !!tp;
+        const thirdPlaceExists = thirdPlaceMatches.length > 0;
+
+        if (!thirdPlaceDone) {
+          log.push(
+            thirdPlaceExists
+              ? "finals clinched — waiting on 3rd place match to finish before archiving"
+              : "finals clinched — waiting on 3rd place match to be created/completed before archiving"
+          );
+          return new Response(JSON.stringify({ status: "ok", log }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Both finals series + 3rd place match complete → finalize (idempotent).
         if (season.status !== "complete") {
           // Champion = series winner. Runner-up = the other finalist.
           const championId = seriesWinner;
           const runnerUpId = championId === players[0] ? players[1] : players[0];
 
-          // Third place winner (Bo1) — may not exist if not yet played.
-          const tp = thirdPlaceMatches.find((m: any) => m.status === "complete");
           const thirdPlaceId = tp?.winner_user_id ?? null;
 
           // Regular-season champion = top of standings.
