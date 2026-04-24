@@ -11,6 +11,13 @@ import {
 } from './bossRules';
 import { tickEnemyAbilities, applyArmorToDamage, type AbilityEffect } from './enemyAbilities';
 import type { CombatLogEntry } from '@/components/runedelve/CombatLog';
+import type { MasteryId } from './classMastery';
+import {
+  getMasteryCleaveDamage,
+  getMasterySanctuaryHeal,
+  getMasteryArcChainFraction,
+  shadowstepClearsCooldown,
+} from './masteryEffects';
 
 export interface CombatState {
   hp: number;
@@ -40,10 +47,12 @@ export interface ChainResolution {
 export const MAX_HP = 100;
 export const MAX_MANA = 3;
 
-export function initialCombat(enemies: Enemy[], turns: number): CombatState {
+export function initialCombat(enemies: Enemy[], turns: number, opts?: { bonusMaxHp?: number }): CombatState {
+  const bonus = Math.max(0, opts?.bonusMaxHp ?? 0);
+  const maxHp = MAX_HP + bonus;
   return {
-    hp: MAX_HP,
-    maxHp: MAX_HP,
+    hp: maxHp,
+    maxHp,
     mana: 0,
     shieldTurns: 0,
     shadowstepActive: false,
@@ -301,17 +310,18 @@ export function useAbility(
   state: CombatState,
   cls: HeroClass,
   bossRule: BossRuleId | null = null,
+  activeMasteries: MasteryId[] = [],
 ): { next: CombatState; ok: boolean } {
   if (state.mana < MAX_MANA) return { next: state, ok: false };
   const next: CombatState = { ...state, mana: 0, abilityUsed: true, enemies: state.enemies.map(e => ({ ...e })) };
   const targetable = filterTargetable(bossRule, next.enemies);
   const targetableIds = new Set(targetable.map(e => e.id));
   if (cls === 'warrior') {
-    // Cleave: 40 dmg to all targetable enemies (last_stand can shield the boss).
-    // Enemy armor (from shield_self) softens each cleave hit.
+    // Cleave: 40 dmg to all targetable enemies (50 with Honed Cleave T3).
+    const cleaveDmg = getMasteryCleaveDamage(activeMasteries) ?? 40;
     for (const e of next.enemies) {
       if (e.hp > 0 && targetableIds.has(e.id)) {
-        const applied = Math.min(applyArmorToDamage(e, 40), e.hp);
+        const applied = Math.min(applyArmorToDamage(e, cleaveDmg), e.hp);
         e.hp -= applied;
         next.totalDamage += applied;
         if (e.hp <= 0) next.enemiesDefeated += 1;
@@ -326,10 +336,37 @@ export function useAbility(
       next.totalDamage += applied;
       if (live.hp <= 0) next.enemiesDefeated += 1;
     }
+    // ── Arc Cascade (Mage T3) — chain 30% damage to a 2nd targetable foe.
+    const arcFrac = getMasteryArcChainFraction(activeMasteries);
+    if (arcFrac > 0) {
+      // Re-derive targetable list AFTER the primary hit so a freshly-killed
+      // primary doesn't get the secondary tick.
+      const remaining = filterTargetable(bossRule, next.enemies).filter(e => e.hp > 0);
+      const second = remaining[0];
+      if (second) {
+        const live2 = next.enemies.find(e => e.id === second.id)!;
+        const arcDmg = Math.round(80 * arcFrac);
+        const applied = Math.min(applyArmorToDamage(live2, arcDmg), live2.hp);
+        if (applied > 0) {
+          live2.hp -= applied;
+          next.totalDamage += applied;
+          if (live2.hp <= 0) next.enemiesDefeated += 1;
+        }
+      }
+    }
   } else if (cls === 'rogue') {
     next.shadowstepActive = true;
+    // ── Veilcut (Rogue T3) — also clear one enemy's ability cooldown.
+    if (shadowstepClearsCooldown(activeMasteries)) {
+      const candidate = next.enemies.find(e =>
+        e.hp > 0 && (e.abilityCooldown ?? 0) > 0,
+      );
+      if (candidate) candidate.abilityCooldown = 0;
+    }
   } else if (cls === 'cleric') {
-    const heal = Math.min(30, next.maxHp - next.hp);
+    // Sanctuary: 30 heal (40 with Greater Sanctuary T3).
+    const sanctHeal = getMasterySanctuaryHeal(activeMasteries) ?? 30;
+    const heal = Math.min(sanctHeal, next.maxHp - next.hp);
     next.hp += heal;
     next.shieldTurns = Math.max(next.shieldTurns, 2);
   }
