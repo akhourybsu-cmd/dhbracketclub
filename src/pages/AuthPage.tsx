@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,17 +25,15 @@ export default function AuthPage() {
     return <Navigate to={redirect || '/dashboard'} replace />;
   }
 
-  const validateInviteCode = async (code: string): Promise<boolean> => {
-    const { data, error } = await supabase
+  const lookupInviteCode = async (code: string): Promise<{ id: string; club_id: string } | null> => {
+    const { data, error } = await (supabase as any)
       .from('invite_codes')
-      .select('id, is_active, used_by')
+      .select('id, is_active, club_id')
       .eq('code', code.trim().toUpperCase())
       .maybeSingle();
 
-    if (error || !data) return false;
-    if (!data.is_active) return false;
-    // Allow reusable codes (used_by is null means unclaimed, but we allow reuse)
-    return true;
+    if (error || !data || !data.is_active) return null;
+    return { id: data.id, club_id: data.club_id };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,21 +42,20 @@ export default function AuthPage() {
 
     try {
       if (isSignUp) {
-        // Validate invite code first
         if (!inviteCode.trim()) {
           toast.error('Invite code required');
           setLoading(false);
           return;
         }
 
-        const validCode = await validateInviteCode(inviteCode);
-        if (!validCode) {
+        const codeRow = await lookupInviteCode(inviteCode);
+        if (!codeRow) {
           toast.error('Invalid or expired invite code');
           setLoading(false);
           return;
         }
 
-        const { error } = await supabase.auth.signUp({
+        const { data: signUpData, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -67,7 +64,17 @@ export default function AuthPage() {
           },
         });
         if (error) throw error;
-        toast.success('You\'re in. Check your email to verify.');
+
+        // Auto-attach to the club tied to this invite code
+        const newUserId = signUpData.user?.id;
+        if (newUserId && codeRow.club_id) {
+          await (supabase as any).from('club_members').insert({
+            club_id: codeRow.club_id,
+            user_id: newUserId,
+            role: 'member',
+          });
+        }
+        toast.success("You're in. Check your email to verify.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -187,6 +194,13 @@ export default function AuthPage() {
             {isSignUp ? 'Sign In' : 'Sign Up'}
           </button>
         </p>
+
+        <div className="mt-6 pt-5 border-t border-border/30 text-center">
+          <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/60 font-bold mb-1.5">No invite?</p>
+          <Link to="/club/request" className="text-[12px] text-primary/85 hover:text-primary font-semibold underline-offset-2 hover:underline">
+            Request your own club →
+          </Link>
+        </div>
       </motion.div>
     </div>
   );
