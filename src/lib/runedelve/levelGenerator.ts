@@ -138,7 +138,7 @@ const EARLY_HP_CAP = 110;
 // HP budget in the L26-50 brick-wall band.
 const MID_HP_CAP = 130;
 // Late-band cap (L51-100) — same idea but loosened so chapter-2 still bites.
-const LATE_HP_CAP = 180;
+const LATE_HP_CAP = 160;
 
 // (HP/damage scaling lives below — single RosterEntry-based implementation.)
 
