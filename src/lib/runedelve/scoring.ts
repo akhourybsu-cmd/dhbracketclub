@@ -5,7 +5,7 @@ export interface ScoreInputs {
   turnsRemaining: number;
   longestChain: number;
   cleared: boolean;
-  rogueBonus?: boolean; // applies +50% if rogue and chain>=5 was used
+  rogueBonus?: boolean; // applies +15% to total score if rogue triggered a chain ≥ 5
   /** Band 4: secondary objective satisfied — flat +250 line item. */
   secondaryBonus?: boolean;
 }
@@ -31,7 +31,10 @@ export function calculateScore(i: ScoreInputs): ScoreBreakdown {
   const clearBonus = i.cleared ? 500 : 0;
   const secondaryBonus = i.secondaryBonus ? 250 : 0;
   let total = damage + enemiesPts + hpPts + turnsPts + chainPts + clearBonus + secondaryBonus;
-  const rogueBonus = i.rogueBonus ? Math.round(total * 0.05) : 0;
+  // Rogue's signature: long chains turn the whole run into a payout. +15% is
+  // the sweet spot — meaningful on its own and synergises with Rogue T1/T5
+  // masteries without nuking class balance.
+  const rogueBonus = i.rogueBonus ? Math.round(total * 0.15) : 0;
   total += rogueBonus;
   return { damage, enemiesPts, hpPts, turnsPts, chainPts, clearBonus, rogueBonus, secondaryBonus, total };
 }
