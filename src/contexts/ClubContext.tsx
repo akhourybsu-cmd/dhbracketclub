@@ -54,6 +54,17 @@ export function ClubProvider({ children }: { children: ReactNode }) {
     }
     setLoading(true);
     try {
+      // If a club password was stashed during signup (auto-confirm off path), redeem it now
+      const pendingPwd = typeof window !== 'undefined' ? sessionStorage.getItem('pending_club_password') : null;
+      if (pendingPwd) {
+        sessionStorage.removeItem('pending_club_password');
+        try {
+          await (supabase as any).rpc('join_club_with_password', { _password: pendingPwd, _user_id: user.id });
+        } catch (e) {
+          console.warn('[ClubContext] redeem pending club password failed', e);
+        }
+      }
+
       const [{ data: m }, { data: roleRow }] = await Promise.all([
         (supabase as any)
           .from('club_members')
