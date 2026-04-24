@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useClub } from '@/contexts/ClubContext';
 import { Button } from '@/components/ui/button';
 import {
   Plus, Users, ArrowRight, Trophy, BarChart3, Shield, Download, X, Swords,
@@ -63,6 +64,7 @@ const ACTIVITY_ICONS: Record<string, { icon: any; color: string }> = {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { club } = useClub();
   const { canInstall, install } = usePwaInstall();
   const { season } = useCurrentSeason();
   const { standings } = useSeasonStandings(season?.id);
@@ -390,24 +392,36 @@ export default function DashboardPage() {
         }} />
         <div className="relative z-10">
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <motion.img
-                src={dhMonogram}
-                alt="DH"
-                className="w-9 h-9 object-contain"
-                initial={{ opacity: 0, scale: 0.7 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.05, type: 'spring', damping: 18 }}
-                style={{ filter: 'drop-shadow(0 0 10px hsl(var(--primary) / 0.18))' }}
-              />
+            <div className="flex items-center gap-3 min-w-0">
+              {club?.logo_url ? (
+                <motion.img
+                  src={club.logo_url}
+                  alt={club.name}
+                  className="w-9 h-9 object-cover rounded-xl"
+                  initial={{ opacity: 0, scale: 0.7 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.05, type: 'spring', damping: 18 }}
+                  style={{ filter: 'drop-shadow(0 0 10px hsl(var(--club-accent) / 0.25))' }}
+                />
+              ) : (
+                <motion.img
+                  src={dhMonogram}
+                  alt={club?.name ?? 'DH'}
+                  className="w-9 h-9 object-contain"
+                  initial={{ opacity: 0, scale: 0.7 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.05, type: 'spring', damping: 18 }}
+                  style={{ filter: 'drop-shadow(0 0 10px hsl(var(--club-accent) / 0.18))' }}
+                />
+              )}
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.08 }}
-                className="text-[9px] font-bold uppercase tracking-[0.25em]"
-                style={{ color: 'hsl(var(--primary) / 0.5)' }}
+                className="text-[9px] font-bold uppercase tracking-[0.25em] truncate"
+                style={{ color: 'hsl(var(--club-accent) / 0.65)' }}
               >
-                {getGreeting()}
+                {getGreeting()}{club ? ` · ${club.name}` : ''}
               </motion.p>
             </div>
             <Link to="/profile" className="lg:hidden">
