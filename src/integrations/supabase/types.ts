@@ -17,6 +17,7 @@ export type Database = {
       activity_feed: {
         Row: {
           actor_user_id: string
+          club_id: string
           created_at: string
           event_type: string
           id: string
@@ -26,6 +27,7 @@ export type Database = {
         }
         Insert: {
           actor_user_id: string
+          club_id: string
           created_at?: string
           event_type: string
           id?: string
@@ -35,6 +37,7 @@ export type Database = {
         }
         Update: {
           actor_user_id?: string
+          club_id?: string
           created_at?: string
           event_type?: string
           id?: string
@@ -48,6 +51,13 @@ export type Database = {
             columns: ["actor_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_feed_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
             referencedColumns: ["id"]
           },
         ]
@@ -97,6 +107,7 @@ export type Database = {
       bracket_picks: {
         Row: {
           bracket_id: string
+          club_id: string
           created_at: string
           game_id: string
           id: string
@@ -106,6 +117,7 @@ export type Database = {
         }
         Insert: {
           bracket_id: string
+          club_id: string
           created_at?: string
           game_id: string
           id?: string
@@ -115,6 +127,7 @@ export type Database = {
         }
         Update: {
           bracket_id?: string
+          club_id?: string
           created_at?: string
           game_id?: string
           id?: string
@@ -128,6 +141,13 @@ export type Database = {
             columns: ["bracket_id"]
             isOneToOne: false
             referencedRelation: "brackets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bracket_picks_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
             referencedColumns: ["id"]
           },
           {
@@ -148,6 +168,7 @@ export type Database = {
       }
       brackets: {
         Row: {
+          club_id: string
           created_at: string
           id: string
           pool_id: string
@@ -158,6 +179,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          club_id: string
           created_at?: string
           id?: string
           pool_id: string
@@ -168,6 +190,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          club_id?: string
           created_at?: string
           id?: string
           pool_id?: string
@@ -178,6 +201,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "brackets_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "brackets_pool_id_fkey"
             columns: ["pool_id"]
@@ -196,40 +226,54 @@ export type Database = {
       }
       channel_categories: {
         Row: {
+          club_id: string
           created_at: string
           id: string
           name: string
           position: number
         }
         Insert: {
+          club_id: string
           created_at?: string
           id?: string
           name: string
           position?: number
         }
         Update: {
+          club_id?: string
           created_at?: string
           id?: string
           name?: string
           position?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "channel_categories_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       channel_read_states: {
         Row: {
           channel_id: string
+          club_id: string
           id: string
           last_read_at: string
           user_id: string
         }
         Insert: {
           channel_id: string
+          club_id: string
           id?: string
           last_read_at?: string
           user_id: string
         }
         Update: {
           channel_id?: string
+          club_id?: string
           id?: string
           last_read_at?: string
           user_id?: string
@@ -242,11 +286,19 @@ export type Database = {
             referencedRelation: "channels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "channel_read_states_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
         ]
       }
       channels: {
         Row: {
           category_id: string | null
+          club_id: string
           created_at: string
           created_by: string | null
           description: string | null
@@ -258,6 +310,7 @@ export type Database = {
         }
         Insert: {
           category_id?: string | null
+          club_id: string
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -269,6 +322,7 @@ export type Database = {
         }
         Update: {
           category_id?: string | null
+          club_id?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -287,6 +341,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "channels_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "channels_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -295,8 +356,136 @@ export type Database = {
           },
         ]
       }
+      club_members: {
+        Row: {
+          club_id: string
+          id: string
+          joined_at: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          club_id: string
+          id?: string
+          joined_at?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          club_id?: string
+          id?: string
+          joined_at?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_members_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_requests: {
+        Row: {
+          created_at: string
+          id: string
+          proposed_name: string
+          reason: string | null
+          requested_by: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          proposed_name: string
+          reason?: string | null
+          requested_by: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          proposed_name?: string
+          reason?: string | null
+          requested_by?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clubs: {
+        Row: {
+          accent_color: string
+          created_at: string
+          id: string
+          logo_url: string | null
+          name: string
+          owner_admin_id: string | null
+          slug: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name: string
+          owner_admin_id?: string | null
+          slug: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name?: string
+          owner_admin_id?: string | null
+          slug?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clubs_owner_admin_id_fkey"
+            columns: ["owner_admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       competitions: {
         Row: {
+          club_id: string
           created_at: string
           created_by: string
           description: string | null
@@ -307,6 +496,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          club_id: string
           created_at?: string
           created_by: string
           description?: string | null
@@ -317,6 +507,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          club_id?: string
           created_at?: string
           created_by?: string
           description?: string | null
@@ -328,6 +519,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "competitions_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "competitions_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -338,24 +536,34 @@ export type Database = {
       }
       draft_participants: {
         Row: {
+          club_id: string
           draft_id: string
           id: string
           pick_order: number
           user_id: string
         }
         Insert: {
+          club_id: string
           draft_id: string
           id?: string
           pick_order: number
           user_id: string
         }
         Update: {
+          club_id?: string
           draft_id?: string
           id?: string
           pick_order?: number
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "draft_participants_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "draft_participants_draft_id_fkey"
             columns: ["draft_id"]
@@ -374,6 +582,7 @@ export type Database = {
       }
       draft_pick_disputes: {
         Row: {
+          club_id: string
           created_at: string
           draft_id: string
           id: string
@@ -385,6 +594,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          club_id: string
           created_at?: string
           draft_id: string
           id?: string
@@ -396,6 +606,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          club_id?: string
           created_at?: string
           draft_id?: string
           id?: string
@@ -406,10 +617,19 @@ export type Database = {
           status?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "draft_pick_disputes_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       draft_picks: {
         Row: {
+          club_id: string
           draft_id: string
           id: string
           pick_number: number
@@ -419,6 +639,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          club_id: string
           draft_id: string
           id?: string
           pick_number: number
@@ -428,6 +649,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          club_id?: string
           draft_id?: string
           id?: string
           pick_number?: number
@@ -437,6 +659,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "draft_picks_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "draft_picks_draft_id_fkey"
             columns: ["draft_id"]
@@ -455,6 +684,7 @@ export type Database = {
       }
       draft_playoff_matches: {
         Row: {
+          club_id: string
           created_at: string
           draft_id: string | null
           id: string
@@ -471,6 +701,7 @@ export type Database = {
           winner_user_id: string | null
         }
         Insert: {
+          club_id: string
           created_at?: string
           draft_id?: string | null
           id?: string
@@ -487,6 +718,7 @@ export type Database = {
           winner_user_id?: string | null
         }
         Update: {
+          club_id?: string
           created_at?: string
           draft_id?: string | null
           id?: string
@@ -503,6 +735,13 @@ export type Database = {
           winner_user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "draft_playoff_matches_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "draft_playoff_matches_draft_id_fkey"
             columns: ["draft_id"]
@@ -521,6 +760,7 @@ export type Database = {
       }
       draft_results: {
         Row: {
+          club_id: string
           created_at: string
           draft_id: string
           id: string
@@ -532,6 +772,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          club_id: string
           created_at?: string
           draft_id: string
           id?: string
@@ -543,6 +784,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          club_id?: string
           created_at?: string
           draft_id?: string
           id?: string
@@ -555,6 +797,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "draft_results_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "draft_results_draft_id_fkey"
             columns: ["draft_id"]
             isOneToOne: false
@@ -565,6 +814,7 @@ export type Database = {
       }
       draft_season_entries: {
         Row: {
+          club_id: string
           created_at: string
           draft_id: string
           id: string
@@ -574,6 +824,7 @@ export type Database = {
           week_number: number
         }
         Insert: {
+          club_id: string
           created_at?: string
           draft_id: string
           id?: string
@@ -583,6 +834,7 @@ export type Database = {
           week_number: number
         }
         Update: {
+          club_id?: string
           created_at?: string
           draft_id?: string
           id?: string
@@ -592,6 +844,13 @@ export type Database = {
           week_number?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "draft_season_entries_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "draft_season_entries_draft_id_fkey"
             columns: ["draft_id"]
@@ -613,6 +872,7 @@ export type Database = {
           avg_finish: number
           avg_score: number
           best_score: number
+          club_id: string
           consistency: number
           drafts_played: number
           id: string
@@ -631,6 +891,7 @@ export type Database = {
           avg_finish?: number
           avg_score?: number
           best_score?: number
+          club_id: string
           consistency?: number
           drafts_played?: number
           id?: string
@@ -649,6 +910,7 @@ export type Database = {
           avg_finish?: number
           avg_score?: number
           best_score?: number
+          club_id?: string
           consistency?: number
           drafts_played?: number
           id?: string
@@ -664,6 +926,13 @@ export type Database = {
           worst_score?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "draft_season_standings_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "draft_season_standings_season_id_fkey"
             columns: ["season_id"]
@@ -685,6 +954,7 @@ export type Database = {
           archived_at: string | null
           best_of: number
           champion_user_id: string | null
+          club_id: string
           commissioner_user_id: string | null
           created_at: string
           ends_at: string
@@ -707,6 +977,7 @@ export type Database = {
           archived_at?: string | null
           best_of?: number
           champion_user_id?: string | null
+          club_id: string
           commissioner_user_id?: string | null
           created_at?: string
           ends_at: string
@@ -729,6 +1000,7 @@ export type Database = {
           archived_at?: string | null
           best_of?: number
           champion_user_id?: string | null
+          club_id?: string
           commissioner_user_id?: string | null
           created_at?: string
           ends_at?: string
@@ -753,6 +1025,13 @@ export type Database = {
             columns: ["champion_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draft_seasons_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
             referencedColumns: ["id"]
           },
           {
@@ -788,6 +1067,7 @@ export type Database = {
       drafts: {
         Row: {
           category: string | null
+          club_id: string
           competition_id: string
           created_at: string
           created_by: string
@@ -803,6 +1083,7 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          club_id: string
           competition_id: string
           created_at?: string
           created_by: string
@@ -818,6 +1099,7 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          club_id?: string
           competition_id?: string
           created_at?: string
           created_by?: string
@@ -832,6 +1114,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "drafts_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "drafts_competition_id_fkey"
             columns: ["competition_id"]
@@ -857,6 +1146,7 @@ export type Database = {
       }
       event_comments: {
         Row: {
+          club_id: string
           content: string
           created_at: string
           event_id: string
@@ -864,6 +1154,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          club_id: string
           content: string
           created_at?: string
           event_id: string
@@ -871,6 +1162,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          club_id?: string
           content?: string
           created_at?: string
           event_id?: string
@@ -878,6 +1170,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "event_comments_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "event_comments_event_id_fkey"
             columns: ["event_id"]
@@ -896,6 +1195,7 @@ export type Database = {
       }
       event_rsvps: {
         Row: {
+          club_id: string
           created_at: string
           event_id: string
           id: string
@@ -903,6 +1203,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          club_id: string
           created_at?: string
           event_id: string
           id?: string
@@ -910,6 +1211,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          club_id?: string
           created_at?: string
           event_id?: string
           id?: string
@@ -917,6 +1219,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "event_rsvps_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "event_rsvps_event_id_fkey"
             columns: ["event_id"]
@@ -935,6 +1244,7 @@ export type Database = {
       }
       events: {
         Row: {
+          club_id: string
           created_at: string
           created_by: string
           description: string | null
@@ -947,6 +1257,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          club_id: string
           created_at?: string
           created_by: string
           description?: string | null
@@ -959,6 +1270,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          club_id?: string
           created_at?: string
           created_by?: string
           description?: string | null
@@ -971,6 +1283,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "events_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "events_created_by_fkey"
             columns: ["created_by"]
@@ -1209,6 +1528,7 @@ export type Database = {
       }
       invite_codes: {
         Row: {
+          club_id: string
           code: string
           created_at: string
           id: string
@@ -1217,6 +1537,7 @@ export type Database = {
           used_by: string | null
         }
         Insert: {
+          club_id: string
           code: string
           created_at?: string
           id?: string
@@ -1225,6 +1546,7 @@ export type Database = {
           used_by?: string | null
         }
         Update: {
+          club_id?: string
           code?: string
           created_at?: string
           id?: string
@@ -1232,7 +1554,15 @@ export type Database = {
           used_at?: string | null
           used_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "invite_codes_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       item_enrichments: {
         Row: {
@@ -1288,6 +1618,7 @@ export type Database = {
       lockbox_attempts: {
         Row: {
           attacker_id: string
+          club_id: string
           id: string
           is_solved: boolean
           lock_id: string
@@ -1299,6 +1630,7 @@ export type Database = {
         }
         Insert: {
           attacker_id: string
+          club_id: string
           id?: string
           is_solved?: boolean
           lock_id: string
@@ -1310,6 +1642,7 @@ export type Database = {
         }
         Update: {
           attacker_id?: string
+          club_id?: string
           id?: string
           is_solved?: boolean
           lock_id?: string
@@ -1328,6 +1661,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "lockbox_attempts_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "lockbox_attempts_lock_id_fkey"
             columns: ["lock_id"]
             isOneToOne: false
@@ -1339,6 +1679,7 @@ export type Database = {
       lockbox_guesses: {
         Row: {
           attempt_id: string
+          club_id: string
           correct_position: number
           correct_value: number
           created_at: string
@@ -1349,6 +1690,7 @@ export type Database = {
         }
         Insert: {
           attempt_id: string
+          club_id: string
           correct_position?: number
           correct_value?: number
           created_at?: string
@@ -1359,6 +1701,7 @@ export type Database = {
         }
         Update: {
           attempt_id?: string
+          club_id?: string
           correct_position?: number
           correct_value?: number
           created_at?: string
@@ -1375,10 +1718,18 @@ export type Database = {
             referencedRelation: "lockbox_attempts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "lockbox_guesses_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
         ]
       }
       lockbox_locks: {
         Row: {
+          club_id: string
           color_code: string
           created_at: string
           id: string
@@ -1390,6 +1741,7 @@ export type Database = {
           week_id: string
         }
         Insert: {
+          club_id: string
           color_code: string
           created_at?: string
           id?: string
@@ -1401,6 +1753,7 @@ export type Database = {
           week_id: string
         }
         Update: {
+          club_id?: string
           color_code?: string
           created_at?: string
           id?: string
@@ -1412,6 +1765,13 @@ export type Database = {
           week_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "lockbox_locks_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "lockbox_locks_user_id_fkey"
             columns: ["user_id"]
@@ -1430,6 +1790,7 @@ export type Database = {
       }
       lockbox_scores: {
         Row: {
+          club_id: string
           crack_points: number
           created_at: string
           defense_points: number
@@ -1440,6 +1801,7 @@ export type Database = {
           week_id: string
         }
         Insert: {
+          club_id: string
           crack_points?: number
           created_at?: string
           defense_points?: number
@@ -1450,6 +1812,7 @@ export type Database = {
           week_id: string
         }
         Update: {
+          club_id?: string
           crack_points?: number
           created_at?: string
           defense_points?: number
@@ -1460,6 +1823,13 @@ export type Database = {
           week_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "lockbox_scores_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "lockbox_scores_user_id_fkey"
             columns: ["user_id"]
@@ -1478,6 +1848,7 @@ export type Database = {
       }
       lockbox_weeks: {
         Row: {
+          club_id: string
           created_at: string
           ends_at: string
           id: string
@@ -1487,6 +1858,7 @@ export type Database = {
           year: number
         }
         Insert: {
+          club_id: string
           created_at?: string
           ends_at: string
           id?: string
@@ -1496,6 +1868,7 @@ export type Database = {
           year: number
         }
         Update: {
+          club_id?: string
           created_at?: string
           ends_at?: string
           id?: string
@@ -1504,10 +1877,19 @@ export type Database = {
           week_number?: number
           year?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "lockbox_weeks_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lore_contributions: {
         Row: {
+          club_id: string
           content: string
           created_at: string
           id: string
@@ -1516,6 +1898,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          club_id: string
           content: string
           created_at?: string
           id?: string
@@ -1524,6 +1907,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          club_id?: string
           content?: string
           created_at?: string
           id?: string
@@ -1532,6 +1916,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "lore_contributions_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "lore_contributions_lore_id_fkey"
             columns: ["lore_id"]
@@ -1550,6 +1941,7 @@ export type Database = {
       }
       lore_entries: {
         Row: {
+          club_id: string
           context: string
           created_at: string
           created_by: string
@@ -1565,6 +1957,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          club_id: string
           context: string
           created_at?: string
           created_by: string
@@ -1580,6 +1973,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          club_id?: string
           context?: string
           created_at?: string
           created_by?: string
@@ -1596,6 +1990,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "lore_entries_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "lore_entries_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -1606,6 +2007,7 @@ export type Database = {
       }
       lore_reactions: {
         Row: {
+          club_id: string
           created_at: string
           id: string
           lore_id: string
@@ -1613,6 +2015,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          club_id: string
           created_at?: string
           id?: string
           lore_id: string
@@ -1620,6 +2023,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          club_id?: string
           created_at?: string
           id?: string
           lore_id?: string
@@ -1627,6 +2031,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "lore_reactions_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "lore_reactions_lore_id_fkey"
             columns: ["lore_id"]
@@ -1645,6 +2056,7 @@ export type Database = {
       }
       message_link_previews: {
         Row: {
+          club_id: string
           content_type: string
           created_at: string
           description: string | null
@@ -1659,6 +2071,7 @@ export type Database = {
           url: string
         }
         Insert: {
+          club_id: string
           content_type?: string
           created_at?: string
           description?: string | null
@@ -1673,6 +2086,7 @@ export type Database = {
           url: string
         }
         Update: {
+          club_id?: string
           content_type?: string
           created_at?: string
           description?: string | null
@@ -1688,6 +2102,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "message_link_previews_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "message_link_previews_message_id_fkey"
             columns: ["message_id"]
             isOneToOne: false
@@ -1698,6 +2119,7 @@ export type Database = {
       }
       message_reactions: {
         Row: {
+          club_id: string
           created_at: string
           emoji: string
           id: string
@@ -1705,6 +2127,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          club_id: string
           created_at?: string
           emoji: string
           id?: string
@@ -1712,6 +2135,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          club_id?: string
           created_at?: string
           emoji?: string
           id?: string
@@ -1719,6 +2143,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "message_reactions_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "message_reactions_message_id_fkey"
             columns: ["message_id"]
@@ -1738,6 +2169,7 @@ export type Database = {
       messages: {
         Row: {
           channel_id: string
+          club_id: string
           content: string
           created_at: string
           edited_at: string | null
@@ -1748,6 +2180,7 @@ export type Database = {
         }
         Insert: {
           channel_id: string
+          club_id: string
           content: string
           created_at?: string
           edited_at?: string | null
@@ -1758,6 +2191,7 @@ export type Database = {
         }
         Update: {
           channel_id?: string
+          club_id?: string
           content?: string
           created_at?: string
           edited_at?: string | null
@@ -1772,6 +2206,13 @@ export type Database = {
             columns: ["channel_id"]
             isOneToOne: false
             referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
             referencedColumns: ["id"]
           },
           {
@@ -1879,6 +2320,7 @@ export type Database = {
       }
       nfl_picks: {
         Row: {
+          club_id: string
           created_at: string
           game_id: string
           id: string
@@ -1891,6 +2333,7 @@ export type Database = {
           week_id: string
         }
         Insert: {
+          club_id: string
           created_at?: string
           game_id: string
           id?: string
@@ -1903,6 +2346,7 @@ export type Database = {
           week_id: string
         }
         Update: {
+          club_id?: string
           created_at?: string
           game_id?: string
           id?: string
@@ -1915,6 +2359,13 @@ export type Database = {
           week_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "nfl_picks_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "nfl_picks_game_id_fkey"
             columns: ["game_id"]
@@ -1949,6 +2400,7 @@ export type Database = {
         Row: {
           accuracy: number
           avg_weekly_rank: number | null
+          club_id: string
           id: string
           rank: number | null
           season_id: string
@@ -1961,6 +2413,7 @@ export type Database = {
         Insert: {
           accuracy?: number
           avg_weekly_rank?: number | null
+          club_id: string
           id?: string
           rank?: number | null
           season_id: string
@@ -1973,6 +2426,7 @@ export type Database = {
         Update: {
           accuracy?: number
           avg_weekly_rank?: number | null
+          club_id?: string
           id?: string
           rank?: number | null
           season_id?: string
@@ -1983,6 +2437,13 @@ export type Database = {
           weekly_wins?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "nfl_season_standings_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "nfl_season_standings_season_id_fkey"
             columns: ["season_id"]
@@ -2073,6 +2534,7 @@ export type Database = {
       nfl_tiebreakers: {
         Row: {
           actual_total: number | null
+          club_id: string
           created_at: string
           delta: number | null
           id: string
@@ -2084,6 +2546,7 @@ export type Database = {
         }
         Insert: {
           actual_total?: number | null
+          club_id: string
           created_at?: string
           delta?: number | null
           id?: string
@@ -2095,6 +2558,7 @@ export type Database = {
         }
         Update: {
           actual_total?: number | null
+          club_id?: string
           created_at?: string
           delta?: number | null
           id?: string
@@ -2105,6 +2569,13 @@ export type Database = {
           week_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "nfl_tiebreakers_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "nfl_tiebreakers_season_id_fkey"
             columns: ["season_id"]
@@ -2124,6 +2595,7 @@ export type Database = {
       nfl_weekly_standings: {
         Row: {
           accuracy: number
+          club_id: string
           correct_picks: number
           id: string
           rank: number | null
@@ -2136,6 +2608,7 @@ export type Database = {
         }
         Insert: {
           accuracy?: number
+          club_id: string
           correct_picks?: number
           id?: string
           rank?: number | null
@@ -2148,6 +2621,7 @@ export type Database = {
         }
         Update: {
           accuracy?: number
+          club_id?: string
           correct_picks?: number
           id?: string
           rank?: number | null
@@ -2159,6 +2633,13 @@ export type Database = {
           week_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "nfl_weekly_standings_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "nfl_weekly_standings_season_id_fkey"
             columns: ["season_id"]
@@ -2232,6 +2713,7 @@ export type Database = {
       notification_preferences: {
         Row: {
           chat_messages: boolean
+          club_id: string
           created_at: string
           drafts: boolean
           events: boolean
@@ -2244,6 +2726,7 @@ export type Database = {
         }
         Insert: {
           chat_messages?: boolean
+          club_id: string
           created_at?: string
           drafts?: boolean
           events?: boolean
@@ -2256,6 +2739,7 @@ export type Database = {
         }
         Update: {
           chat_messages?: boolean
+          club_id?: string
           created_at?: string
           drafts?: boolean
           events?: boolean
@@ -2266,28 +2750,46 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       poll_options: {
         Row: {
+          club_id: string
           id: string
           label: string
           poll_id: string
           position: number
         }
         Insert: {
+          club_id: string
           id?: string
           label: string
           poll_id: string
           position?: number
         }
         Update: {
+          club_id?: string
           id?: string
           label?: string
           poll_id?: string
           position?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "poll_options_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "poll_options_poll_id_fkey"
             columns: ["poll_id"]
@@ -2299,6 +2801,7 @@ export type Database = {
       }
       poll_votes: {
         Row: {
+          club_id: string
           created_at: string
           id: string
           option_id: string
@@ -2306,6 +2809,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          club_id: string
           created_at?: string
           id?: string
           option_id: string
@@ -2313,6 +2817,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          club_id?: string
           created_at?: string
           id?: string
           option_id?: string
@@ -2320,6 +2825,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "poll_votes_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "poll_votes_option_id_fkey"
             columns: ["option_id"]
@@ -2346,6 +2858,7 @@ export type Database = {
       polls: {
         Row: {
           closes_at: string | null
+          club_id: string
           competition_id: string
           created_at: string
           created_by: string
@@ -2357,6 +2870,7 @@ export type Database = {
         }
         Insert: {
           closes_at?: string | null
+          club_id: string
           competition_id: string
           created_at?: string
           created_by: string
@@ -2368,6 +2882,7 @@ export type Database = {
         }
         Update: {
           closes_at?: string | null
+          club_id?: string
           competition_id?: string
           created_at?: string
           created_by?: string
@@ -2378,6 +2893,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "polls_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "polls_competition_id_fkey"
             columns: ["competition_id"]
@@ -2396,6 +2918,7 @@ export type Database = {
       }
       pool_members: {
         Row: {
+          club_id: string
           id: string
           joined_at: string
           pool_id: string
@@ -2403,6 +2926,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          club_id: string
           id?: string
           joined_at?: string
           pool_id: string
@@ -2410,6 +2934,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          club_id?: string
           id?: string
           joined_at?: string
           pool_id?: string
@@ -2417,6 +2942,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "pool_members_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pool_members_pool_id_fkey"
             columns: ["pool_id"]
@@ -2436,6 +2968,7 @@ export type Database = {
       pools: {
         Row: {
           allow_late_entries: boolean
+          club_id: string
           created_at: string
           description: string | null
           id: string
@@ -2448,6 +2981,7 @@ export type Database = {
         }
         Insert: {
           allow_late_entries?: boolean
+          club_id: string
           created_at?: string
           description?: string | null
           id?: string
@@ -2460,6 +2994,7 @@ export type Database = {
         }
         Update: {
           allow_late_entries?: boolean
+          club_id?: string
           created_at?: string
           description?: string | null
           id?: string
@@ -2471,6 +3006,13 @@ export type Database = {
           visibility?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "pools_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pools_owner_user_id_fkey"
             columns: ["owner_user_id"]
@@ -2489,6 +3031,7 @@ export type Database = {
       }
       post_comments: {
         Row: {
+          club_id: string
           content: string
           created_at: string
           id: string
@@ -2497,6 +3040,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          club_id: string
           content: string
           created_at?: string
           id?: string
@@ -2505,6 +3049,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          club_id?: string
           content?: string
           created_at?: string
           id?: string
@@ -2513,6 +3058,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "post_comments_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "post_comments_parent_comment_id_fkey"
             columns: ["parent_comment_id"]
@@ -2539,6 +3091,7 @@ export type Database = {
       posts: {
         Row: {
           channel_id: string | null
+          club_id: string
           comments_count: number
           content: string
           created_at: string
@@ -2551,6 +3104,7 @@ export type Database = {
         }
         Insert: {
           channel_id?: string | null
+          club_id: string
           comments_count?: number
           content: string
           created_at?: string
@@ -2563,6 +3117,7 @@ export type Database = {
         }
         Update: {
           channel_id?: string | null
+          club_id?: string
           comments_count?: number
           content?: string
           created_at?: string
@@ -2579,6 +3134,13 @@ export type Database = {
             columns: ["channel_id"]
             isOneToOne: false
             referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
             referencedColumns: ["id"]
           },
           {
@@ -2647,6 +3209,7 @@ export type Database = {
       push_subscriptions: {
         Row: {
           auth: string
+          club_id: string
           created_at: string
           endpoint: string
           id: string
@@ -2655,6 +3218,7 @@ export type Database = {
         }
         Insert: {
           auth: string
+          club_id: string
           created_at?: string
           endpoint: string
           id?: string
@@ -2663,13 +3227,22 @@ export type Database = {
         }
         Update: {
           auth?: string
+          club_id?: string
           created_at?: string
           endpoint?: string
           id?: string
           p256dh?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       push_throttle: {
         Row: {
@@ -2691,6 +3264,7 @@ export type Database = {
       }
       ranking_items: {
         Row: {
+          club_id: string
           id: string
           image_url: string | null
           label: string
@@ -2698,6 +3272,7 @@ export type Database = {
           ranking_id: string
         }
         Insert: {
+          club_id: string
           id?: string
           image_url?: string | null
           label: string
@@ -2705,6 +3280,7 @@ export type Database = {
           ranking_id: string
         }
         Update: {
+          club_id?: string
           id?: string
           image_url?: string | null
           label?: string
@@ -2712,6 +3288,13 @@ export type Database = {
           ranking_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ranking_items_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ranking_items_ranking_id_fkey"
             columns: ["ranking_id"]
@@ -2723,24 +3306,34 @@ export type Database = {
       }
       ranking_submission_entries: {
         Row: {
+          club_id: string
           id: string
           item_id: string
           rank: number
           submission_id: string
         }
         Insert: {
+          club_id: string
           id?: string
           item_id: string
           rank: number
           submission_id: string
         }
         Update: {
+          club_id?: string
           id?: string
           item_id?: string
           rank?: number
           submission_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ranking_submission_entries_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ranking_submission_entries_item_id_fkey"
             columns: ["item_id"]
@@ -2759,24 +3352,34 @@ export type Database = {
       }
       ranking_submissions: {
         Row: {
+          club_id: string
           id: string
           ranking_id: string
           submitted_at: string
           user_id: string
         }
         Insert: {
+          club_id: string
           id?: string
           ranking_id: string
           submitted_at?: string
           user_id: string
         }
         Update: {
+          club_id?: string
           id?: string
           ranking_id?: string
           submitted_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ranking_submissions_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ranking_submissions_ranking_id_fkey"
             columns: ["ranking_id"]
@@ -2796,6 +3399,7 @@ export type Database = {
       rankings: {
         Row: {
           category: string | null
+          club_id: string
           competition_id: string
           created_at: string
           created_by: string
@@ -2807,6 +3411,7 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          club_id: string
           competition_id: string
           created_at?: string
           created_by: string
@@ -2818,6 +3423,7 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          club_id?: string
           competition_id?: string
           created_at?: string
           created_by?: string
@@ -2828,6 +3434,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "rankings_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "rankings_competition_id_fkey"
             columns: ["competition_id"]
@@ -2846,6 +3459,7 @@ export type Database = {
       }
       reactions: {
         Row: {
+          club_id: string
           created_at: string
           id: string
           reaction_type: string
@@ -2854,6 +3468,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          club_id: string
           created_at?: string
           id?: string
           reaction_type: string
@@ -2862,6 +3477,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          club_id?: string
           created_at?: string
           id?: string
           reaction_type?: string
@@ -2870,6 +3486,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "reactions_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "reactions_user_id_fkey"
             columns: ["user_id"]
@@ -2882,6 +3505,7 @@ export type Database = {
       rune_delve_active_quests: {
         Row: {
           claimed_at: string | null
+          club_id: string
           created_at: string
           id: string
           period_key: string
@@ -2895,6 +3519,7 @@ export type Database = {
         }
         Insert: {
           claimed_at?: string | null
+          club_id: string
           created_at?: string
           id?: string
           period_key: string
@@ -2908,6 +3533,7 @@ export type Database = {
         }
         Update: {
           claimed_at?: string | null
+          club_id?: string
           created_at?: string
           id?: string
           period_key?: string
@@ -2921,6 +3547,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "rune_delve_active_quests_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "rune_delve_active_quests_quest_id_fkey"
             columns: ["quest_id"]
             isOneToOne: false
@@ -2932,6 +3565,7 @@ export type Database = {
       rune_delve_bestiary: {
         Row: {
           archetype_id: string
+          club_id: string
           created_at: string
           defeat_count: number
           first_defeated_at: string
@@ -2943,6 +3577,7 @@ export type Database = {
         }
         Insert: {
           archetype_id: string
+          club_id: string
           created_at?: string
           defeat_count?: number
           first_defeated_at?: string
@@ -2954,6 +3589,7 @@ export type Database = {
         }
         Update: {
           archetype_id?: string
+          club_id?: string
           created_at?: string
           defeat_count?: number
           first_defeated_at?: string
@@ -2963,11 +3599,20 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "rune_delve_bestiary_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rune_delve_class_progress: {
         Row: {
           class: string
+          club_id: string
           cosmetic_title: string | null
           created_at: string
           id: string
@@ -2980,6 +3625,7 @@ export type Database = {
         }
         Insert: {
           class: string
+          club_id: string
           cosmetic_title?: string | null
           created_at?: string
           id?: string
@@ -2992,6 +3638,7 @@ export type Database = {
         }
         Update: {
           class?: string
+          club_id?: string
           cosmetic_title?: string | null
           created_at?: string
           id?: string
@@ -3002,10 +3649,19 @@ export type Database = {
           user_id?: string
           xp?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "rune_delve_class_progress_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rune_delve_daily_runs: {
         Row: {
+          club_id: string
           completed_at: string
           created_at: string
           daily_date: string
@@ -3019,6 +3675,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          club_id: string
           completed_at?: string
           created_at?: string
           daily_date: string
@@ -3032,6 +3689,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          club_id?: string
           completed_at?: string
           created_at?: string
           daily_date?: string
@@ -3044,11 +3702,20 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "rune_delve_daily_runs_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rune_delve_daily_streaks: {
         Row: {
           best_streak: number
+          club_id: string
           created_at: string
           current_streak: number
           last_completed_date: string | null
@@ -3058,6 +3725,7 @@ export type Database = {
         }
         Insert: {
           best_streak?: number
+          club_id: string
           created_at?: string
           current_streak?: number
           last_completed_date?: string | null
@@ -3067,6 +3735,7 @@ export type Database = {
         }
         Update: {
           best_streak?: number
+          club_id?: string
           created_at?: string
           current_streak?: number
           last_completed_date?: string | null
@@ -3074,7 +3743,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "rune_delve_daily_streaks_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rune_delve_dungeons: {
         Row: {
@@ -3105,6 +3782,7 @@ export type Database = {
       }
       rune_delve_failure_rewards: {
         Row: {
+          club_id: string
           failure_count: number
           id: string
           last_awarded_at: string
@@ -3112,6 +3790,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          club_id: string
           failure_count?: number
           id?: string
           last_awarded_at?: string
@@ -3119,18 +3798,28 @@ export type Database = {
           user_id: string
         }
         Update: {
+          club_id?: string
           failure_count?: number
           id?: string
           last_awarded_at?: string
           level_number?: number
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "rune_delve_failure_rewards_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rune_delve_heroes: {
         Row: {
           best_streak: number
           class: string
+          club_id: string
           cosmetic_title: string | null
           created_at: string
           current_streak: number
@@ -3147,6 +3836,7 @@ export type Database = {
         Insert: {
           best_streak?: number
           class?: string
+          club_id: string
           cosmetic_title?: string | null
           created_at?: string
           current_streak?: number
@@ -3163,6 +3853,7 @@ export type Database = {
         Update: {
           best_streak?: number
           class?: string
+          club_id?: string
           cosmetic_title?: string | null
           created_at?: string
           current_streak?: number
@@ -3176,7 +3867,15 @@ export type Database = {
           user_id?: string
           xp?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "rune_delve_heroes_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rune_delve_levels: {
         Row: {
@@ -3238,6 +3937,7 @@ export type Database = {
       rune_delve_loadouts: {
         Row: {
           class: string
+          club_id: string
           id: string
           slot_1: string | null
           slot_2: string | null
@@ -3247,6 +3947,7 @@ export type Database = {
         }
         Insert: {
           class: string
+          club_id: string
           id?: string
           slot_1?: string | null
           slot_2?: string | null
@@ -3256,6 +3957,7 @@ export type Database = {
         }
         Update: {
           class?: string
+          club_id?: string
           id?: string
           slot_1?: string | null
           slot_2?: string | null
@@ -3263,10 +3965,19 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "rune_delve_loadouts_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rune_delve_progress: {
         Row: {
+          club_id: string
           created_at: string
           current_chapter: number
           highest_completed_level: number
@@ -3277,6 +3988,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          club_id: string
           created_at?: string
           current_chapter?: number
           highest_completed_level?: number
@@ -3287,6 +3999,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          club_id?: string
           created_at?: string
           current_chapter?: number
           highest_completed_level?: number
@@ -3296,7 +4009,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "rune_delve_progress_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rune_delve_quest_definitions: {
         Row: {
@@ -3347,6 +4068,7 @@ export type Database = {
         Row: {
           acquired_at: string
           acquired_at_level: number
+          club_id: string
           id: string
           rank: number
           relic_id: string
@@ -3355,6 +4077,7 @@ export type Database = {
         Insert: {
           acquired_at?: string
           acquired_at_level?: number
+          club_id: string
           id?: string
           rank?: number
           relic_id: string
@@ -3363,12 +4086,21 @@ export type Database = {
         Update: {
           acquired_at?: string
           acquired_at_level?: number
+          club_id?: string
           id?: string
           rank?: number
           relic_id?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "rune_delve_relic_unlocks_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rune_delve_runs: {
         Row: {
@@ -3377,6 +4109,7 @@ export type Database = {
           best_hp_remaining: number
           best_turns_used: number | null
           clears: number
+          club_id: string
           completed_at: string
           created_at: string
           dungeon_cleared: boolean
@@ -3403,6 +4136,7 @@ export type Database = {
           best_hp_remaining?: number
           best_turns_used?: number | null
           clears?: number
+          club_id: string
           completed_at?: string
           created_at?: string
           dungeon_cleared?: boolean
@@ -3429,6 +4163,7 @@ export type Database = {
           best_hp_remaining?: number
           best_turns_used?: number | null
           clears?: number
+          club_id?: string
           completed_at?: string
           created_at?: string
           dungeon_cleared?: boolean
@@ -3451,6 +4186,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "rune_delve_runs_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "rune_delve_runs_dungeon_id_fkey"
             columns: ["dungeon_id"]
             isOneToOne: false
@@ -3468,6 +4210,7 @@ export type Database = {
       }
       rune_delve_wallet: {
         Row: {
+          club_id: string
           created_at: string
           lifetime_shards_earned: number
           shards: number
@@ -3476,6 +4219,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          club_id: string
           created_at?: string
           lifetime_shards_earned?: number
           shards?: number
@@ -3484,6 +4228,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          club_id?: string
           created_at?: string
           lifetime_shards_earned?: number
           shards?: number
@@ -3491,7 +4236,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "rune_delve_wallet_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scoring_rules: {
         Row: {
@@ -3815,9 +4568,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_user_club_id: { Args: never; Returns: string }
       get_bracket_pool_id: { Args: { _bracket_id: string }; Returns: string }
       is_app_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_club_admin: {
+        Args: { _club: string; _user: string }
+        Returns: boolean
+      }
       is_pick_unlocked: { Args: { _game_id: string }; Returns: boolean }
+      is_platform_owner: { Args: { _user: string }; Returns: boolean }
       is_pool_admin: {
         Args: { _pool_id: string; _user_id: string }
         Returns: boolean
