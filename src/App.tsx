@@ -29,6 +29,7 @@ const LeaderboardPage = lazy(() => import("./pages/LeaderboardPage"));
 const AdminToolsPage = lazy(() => import("./pages/AdminToolsPage"));
 const RuneDelveAnalyticsPage = lazy(() => import("./pages/RuneDelveAnalyticsPage"));
 const RuneDelveSimulatorPage = lazy(() => import("./pages/RuneDelveSimulatorPage"));
+const RuneDelveBalanceReportPage = lazy(() => import("./pages/RuneDelveBalanceReportPage"));
 const GameCenterPage = lazy(() => import("./pages/GameCenterPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
@@ -210,6 +211,7 @@ function AnimatedRoutes() {
         <Route path="/rune-delve/quests" element={<ProtectedPage><RuneDelveLayout><RuneDelveQuestsPage /></RuneDelveLayout></ProtectedPage>} />
         <Route path="/rune-delve/analytics" element={<ProtectedPage><RuneDelveAnalyticsPage /></ProtectedPage>} />
         <Route path="/rune-delve/simulator" element={<ProtectedPage><RuneDelveSimulatorPage /></ProtectedPage>} />
+        <Route path="/rune-delve/balance" element={<ProtectedPage><RuneDelveBalanceReportPage /></ProtectedPage>} />
 
         <Route path="/profile" element={<ProtectedPage><ProfilePage /></ProtectedPage>} />
 
