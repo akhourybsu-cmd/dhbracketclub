@@ -277,7 +277,10 @@ export default function ClubSettingsPage() {
         {/* Invite codes */}
         <section className="glass-card p-5 mb-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground/80">Invite Codes</h2>
+            <div>
+              <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground/80">Legacy Invite Codes</h2>
+              <p className="text-[10px] text-muted-foreground/70 mt-0.5">Optional — most members now join via the club password.</p>
+            </div>
             <button onClick={generateCode} className="text-[11px] font-bold text-primary flex items-center gap-1 btn-press">
               <Plus className="w-3 h-3" /> New
             </button>
