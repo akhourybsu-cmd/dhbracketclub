@@ -5,8 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useClub } from '@/contexts/ClubContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Building2, ArrowLeft, Copy, Plus, Users, Crown } from 'lucide-react';
+import { Building2, ArrowLeft, Copy, Plus, Users, Crown, KeyRound, Eye, EyeOff, RefreshCw } from 'lucide-react';
 
 type InviteCode = {
   id: string;
