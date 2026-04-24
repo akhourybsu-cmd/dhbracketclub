@@ -564,7 +564,9 @@ function TopicPickerDialog({
             Choose your matchup topic
           </DialogTitle>
           <DialogDescription className="text-[12px]">
-            As the higher seed, you get to pick the topic for this draft.
+            {match.round === 'final' && match.match_number === 2
+              ? 'As the lower seed, you pick the topic for Game 2.'
+              : 'As the higher seed, you get to pick the topic for this draft.'}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2 py-2">
@@ -1280,11 +1282,15 @@ function PlayoffControlCenter({
               const aName = getNameByUser(m.user_a);
               const bName = getNameByUser(m.user_b);
 
+              // Finals rotate the picker (G1 higher, G2 lower, G3 higher); other rounds always use higher seed.
+              const isFinalsG2 = m.round === 'final' && m.match_number === 2;
+              const pickerRoleLabel = isFinalsG2 ? 'lower seed' : 'higher seed';
+
               let statusSentence = '';
               if (m.status === 'awaiting_topic') {
                 statusSentence = isPicker
-                  ? 'You\'re the higher seed — choose the draft topic to begin.'
-                  : `Waiting for ${pickerName} (higher seed) to choose a topic.`;
+                  ? `You're the ${pickerRoleLabel} for this game — choose the draft topic to begin.`
+                  : `Waiting for ${pickerName} (${pickerRoleLabel}) to choose a topic.`;
               } else if (m.status === 'in_progress') {
                 statusSentence = 'Draft is live — make your picks before the timer runs out.';
               } else if (m.status === 'pending') {
