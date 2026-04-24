@@ -108,9 +108,9 @@ function turnLimitFor(level: number): number {
   const base = (() => {
     if (level <= 15) return 12;
     if (level <= 25) return 12;
-    if (level <= 50) return 11;
-    if (level <= 100) return 10;
-    return 9;
+    if (level <= 50) return 12;
+    if (level <= 100) return 11;
+    return 10;
   })();
   const kind = bossKindForLevel(level);
   if (kind === 'mid')     return base + 4;
