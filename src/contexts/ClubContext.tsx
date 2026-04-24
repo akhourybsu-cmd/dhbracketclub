@@ -10,6 +10,7 @@ export type Club = {
   logo_url: string | null;
   owner_admin_id: string | null;
   status: string;
+  password_visible: boolean;
 };
 
 export type ClubMembership = {
