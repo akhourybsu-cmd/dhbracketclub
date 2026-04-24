@@ -27,7 +27,7 @@ export type Database = {
         }
         Insert: {
           actor_user_id: string
-          club_id: string
+          club_id?: string
           created_at?: string
           event_type: string
           id?: string
@@ -117,7 +117,7 @@ export type Database = {
         }
         Insert: {
           bracket_id: string
-          club_id: string
+          club_id?: string
           created_at?: string
           game_id: string
           id?: string
@@ -179,7 +179,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           created_at?: string
           id?: string
           pool_id: string
@@ -233,7 +233,7 @@ export type Database = {
           position: number
         }
         Insert: {
-          club_id: string
+          club_id?: string
           created_at?: string
           id?: string
           name: string
@@ -266,7 +266,7 @@ export type Database = {
         }
         Insert: {
           channel_id: string
-          club_id: string
+          club_id?: string
           id?: string
           last_read_at?: string
           user_id: string
@@ -310,7 +310,7 @@ export type Database = {
         }
         Insert: {
           category_id?: string | null
-          club_id: string
+          club_id?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -496,7 +496,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           created_at?: string
           created_by: string
           description?: string | null
@@ -543,7 +543,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           draft_id: string
           id?: string
           pick_order: number
@@ -594,7 +594,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           created_at?: string
           draft_id: string
           id?: string
@@ -639,7 +639,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           draft_id: string
           id?: string
           pick_number: number
@@ -701,7 +701,7 @@ export type Database = {
           winner_user_id: string | null
         }
         Insert: {
-          club_id: string
+          club_id?: string
           created_at?: string
           draft_id?: string | null
           id?: string
@@ -772,7 +772,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           created_at?: string
           draft_id: string
           id?: string
@@ -824,7 +824,7 @@ export type Database = {
           week_number: number
         }
         Insert: {
-          club_id: string
+          club_id?: string
           created_at?: string
           draft_id: string
           id?: string
@@ -891,7 +891,7 @@ export type Database = {
           avg_finish?: number
           avg_score?: number
           best_score?: number
-          club_id: string
+          club_id?: string
           consistency?: number
           drafts_played?: number
           id?: string
@@ -977,7 +977,7 @@ export type Database = {
           archived_at?: string | null
           best_of?: number
           champion_user_id?: string | null
-          club_id: string
+          club_id?: string
           commissioner_user_id?: string | null
           created_at?: string
           ends_at: string
@@ -1083,7 +1083,7 @@ export type Database = {
         }
         Insert: {
           category?: string | null
-          club_id: string
+          club_id?: string
           competition_id: string
           created_at?: string
           created_by: string
@@ -1154,7 +1154,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           content: string
           created_at?: string
           event_id: string
@@ -1203,7 +1203,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           created_at?: string
           event_id: string
           id?: string
@@ -1257,7 +1257,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           created_at?: string
           created_by: string
           description?: string | null
@@ -1537,7 +1537,7 @@ export type Database = {
           used_by: string | null
         }
         Insert: {
-          club_id: string
+          club_id?: string
           code: string
           created_at?: string
           id?: string
@@ -1630,7 +1630,7 @@ export type Database = {
         }
         Insert: {
           attacker_id: string
-          club_id: string
+          club_id?: string
           id?: string
           is_solved?: boolean
           lock_id: string
@@ -1690,7 +1690,7 @@ export type Database = {
         }
         Insert: {
           attempt_id: string
-          club_id: string
+          club_id?: string
           correct_position?: number
           correct_value?: number
           created_at?: string
@@ -1741,7 +1741,7 @@ export type Database = {
           week_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           color_code: string
           created_at?: string
           id?: string
@@ -1801,7 +1801,7 @@ export type Database = {
           week_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           crack_points?: number
           created_at?: string
           defense_points?: number
@@ -1858,7 +1858,7 @@ export type Database = {
           year: number
         }
         Insert: {
-          club_id: string
+          club_id?: string
           created_at?: string
           ends_at: string
           id?: string
@@ -1898,7 +1898,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           content: string
           created_at?: string
           id?: string
@@ -1957,7 +1957,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           context: string
           created_at?: string
           created_by: string
@@ -2015,7 +2015,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           created_at?: string
           id?: string
           lore_id: string
@@ -2071,7 +2071,7 @@ export type Database = {
           url: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           content_type?: string
           created_at?: string
           description?: string | null
@@ -2127,7 +2127,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           created_at?: string
           emoji: string
           id?: string
@@ -2180,7 +2180,7 @@ export type Database = {
         }
         Insert: {
           channel_id: string
-          club_id: string
+          club_id?: string
           content: string
           created_at?: string
           edited_at?: string | null
@@ -2333,7 +2333,7 @@ export type Database = {
           week_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           created_at?: string
           game_id: string
           id?: string
@@ -2413,7 +2413,7 @@ export type Database = {
         Insert: {
           accuracy?: number
           avg_weekly_rank?: number | null
-          club_id: string
+          club_id?: string
           id?: string
           rank?: number | null
           season_id: string
@@ -2546,7 +2546,7 @@ export type Database = {
         }
         Insert: {
           actual_total?: number | null
-          club_id: string
+          club_id?: string
           created_at?: string
           delta?: number | null
           id?: string
@@ -2608,7 +2608,7 @@ export type Database = {
         }
         Insert: {
           accuracy?: number
-          club_id: string
+          club_id?: string
           correct_picks?: number
           id?: string
           rank?: number | null
@@ -2726,7 +2726,7 @@ export type Database = {
         }
         Insert: {
           chat_messages?: boolean
-          club_id: string
+          club_id?: string
           created_at?: string
           drafts?: boolean
           events?: boolean
@@ -2769,7 +2769,7 @@ export type Database = {
           position: number
         }
         Insert: {
-          club_id: string
+          club_id?: string
           id?: string
           label: string
           poll_id: string
@@ -2809,7 +2809,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           created_at?: string
           id?: string
           option_id: string
@@ -2870,7 +2870,7 @@ export type Database = {
         }
         Insert: {
           closes_at?: string | null
-          club_id: string
+          club_id?: string
           competition_id: string
           created_at?: string
           created_by: string
@@ -2926,7 +2926,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           id?: string
           joined_at?: string
           pool_id: string
@@ -2981,7 +2981,7 @@ export type Database = {
         }
         Insert: {
           allow_late_entries?: boolean
-          club_id: string
+          club_id?: string
           created_at?: string
           description?: string | null
           id?: string
@@ -3040,7 +3040,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           content: string
           created_at?: string
           id?: string
@@ -3104,7 +3104,7 @@ export type Database = {
         }
         Insert: {
           channel_id?: string | null
-          club_id: string
+          club_id?: string
           comments_count?: number
           content: string
           created_at?: string
@@ -3218,7 +3218,7 @@ export type Database = {
         }
         Insert: {
           auth: string
-          club_id: string
+          club_id?: string
           created_at?: string
           endpoint: string
           id?: string
@@ -3272,7 +3272,7 @@ export type Database = {
           ranking_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           id?: string
           image_url?: string | null
           label: string
@@ -3313,7 +3313,7 @@ export type Database = {
           submission_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           id?: string
           item_id: string
           rank: number
@@ -3359,7 +3359,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           id?: string
           ranking_id: string
           submitted_at?: string
@@ -3411,7 +3411,7 @@ export type Database = {
         }
         Insert: {
           category?: string | null
-          club_id: string
+          club_id?: string
           competition_id: string
           created_at?: string
           created_by: string
@@ -3468,7 +3468,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           created_at?: string
           id?: string
           reaction_type: string
@@ -3519,7 +3519,7 @@ export type Database = {
         }
         Insert: {
           claimed_at?: string | null
-          club_id: string
+          club_id?: string
           created_at?: string
           id?: string
           period_key: string
@@ -3577,7 +3577,7 @@ export type Database = {
         }
         Insert: {
           archetype_id: string
-          club_id: string
+          club_id?: string
           created_at?: string
           defeat_count?: number
           first_defeated_at?: string
@@ -3625,7 +3625,7 @@ export type Database = {
         }
         Insert: {
           class: string
-          club_id: string
+          club_id?: string
           cosmetic_title?: string | null
           created_at?: string
           id?: string
@@ -3675,7 +3675,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           completed_at?: string
           created_at?: string
           daily_date: string
@@ -3725,7 +3725,7 @@ export type Database = {
         }
         Insert: {
           best_streak?: number
-          club_id: string
+          club_id?: string
           created_at?: string
           current_streak?: number
           last_completed_date?: string | null
@@ -3790,7 +3790,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           failure_count?: number
           id?: string
           last_awarded_at?: string
@@ -3836,7 +3836,7 @@ export type Database = {
         Insert: {
           best_streak?: number
           class?: string
-          club_id: string
+          club_id?: string
           cosmetic_title?: string | null
           created_at?: string
           current_streak?: number
@@ -3947,7 +3947,7 @@ export type Database = {
         }
         Insert: {
           class: string
-          club_id: string
+          club_id?: string
           id?: string
           slot_1?: string | null
           slot_2?: string | null
@@ -3988,7 +3988,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           created_at?: string
           current_chapter?: number
           highest_completed_level?: number
@@ -4077,7 +4077,7 @@ export type Database = {
         Insert: {
           acquired_at?: string
           acquired_at_level?: number
-          club_id: string
+          club_id?: string
           id?: string
           rank?: number
           relic_id: string
@@ -4136,7 +4136,7 @@ export type Database = {
           best_hp_remaining?: number
           best_turns_used?: number | null
           clears?: number
-          club_id: string
+          club_id?: string
           completed_at?: string
           created_at?: string
           dungeon_cleared?: boolean
@@ -4219,7 +4219,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          club_id: string
+          club_id?: string
           created_at?: string
           lifetime_shards_earned?: number
           shards?: number
