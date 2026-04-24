@@ -102,19 +102,26 @@ export default function AuthPage() {
         },
       });
       if (error) throw error;
-      const newUserId = signUpData.user?.id;
-      if (newUserId) {
+
+      // If a session was returned (auto-confirm on), submit the club_request now.
+      // Otherwise, stash it so RequestClubPage can submit it after the user verifies email + signs in.
+      if (signUpData.session?.user?.id) {
         const { error: reqErr } = await (supabase as any).from('club_requests').insert({
-          requested_by: newUserId,
+          requested_by: signUpData.session.user.id,
           proposed_name: proposedClubName.trim(),
           reason: reason.trim() || null,
         });
         if (reqErr) {
-          // account created but request failed — surface clearly
           toast.error(`Account created, but request failed: ${reqErr.message}`);
         } else {
           toast.success('Account created! Your club request is awaiting review.');
         }
+      } else {
+        sessionStorage.setItem(
+          'pending_club_request',
+          JSON.stringify({ proposed_name: proposedClubName.trim(), reason: reason.trim() || null }),
+        );
+        toast.success('Check your email to verify, then sign in — your club request will be submitted automatically.');
       }
     } catch (err: any) {
       toast.error(err.message);
