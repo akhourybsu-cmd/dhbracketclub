@@ -1252,6 +1252,7 @@ export default function RuneDelvePlayPage() {
       }
     }
 
+    // ── Linked Pairs (L46+) — clearing one cell triggers its twin too. ──
     let chainForResolve = chain;
     if (linkedPairsActive && linkedPairs.pairs.size > 0) {
       const triggered = pairsTriggeredByChain(linkedPairs, chain);
