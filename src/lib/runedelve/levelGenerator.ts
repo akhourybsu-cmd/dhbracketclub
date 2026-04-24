@@ -180,10 +180,10 @@ function pickTemplate(level: number, rng: () => number): RosterEntry {
 function scaleEnemy(base: RosterEntry, level: number) {
   const hpMul = level <= 25
     ? 1 + (level - 1) * 0.025
-    : 1 + (24 * 0.025) + (level - 25) * 0.012;
+    : 1 + (24 * 0.025) + (level - 25) * 0.010;
   const dmgMul = level <= 25
-    ? 1 + (level - 1) * 0.015
-    : 1 + (24 * 0.015) + (level - 25) * 0.008;
+    ? 1 + (level - 1) * 0.012
+    : 1 + (24 * 0.012) + (level - 25) * 0.006;
   return {
     hp: Math.round(base.baseHp * hpMul),
     damage: Math.max(base.baseDamage, Math.round(base.baseDamage * dmgMul)),
