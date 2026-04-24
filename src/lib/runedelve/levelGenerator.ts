@@ -214,8 +214,10 @@ function buildEnemy(
   const { isElite = false, bossKind = null, idPrefix = 'e' } = opts;
   let { hp, damage } = scaleEnemy(template, level);
   const isFinalBossSlot = bossKind != null;
-  if (level <= 18 && !isElite && !isFinalBossSlot) {
+  if (level <= 25 && !isElite && !isFinalBossSlot) {
     hp = Math.min(hp, EARLY_HP_CAP);
+  } else if (level <= 50 && !isElite && !isFinalBossSlot) {
+    hp = Math.min(hp, MID_HP_CAP);
   }
   if (isElite) {
     hp = Math.round(hp * 1.6);
