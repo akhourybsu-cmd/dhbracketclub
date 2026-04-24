@@ -12,7 +12,7 @@ import { KeyRound, Sparkles, LogIn } from 'lucide-react';
 import dhMonogram from '@/assets/dh-monogram.png';
 import { getAndClearIntendedDestination } from '@/lib/share';
 
-type Mode = 'signin' | 'invite' | 'request';
+type Mode = 'signin' | 'join' | 'request';
 
 export default function AuthPage() {
   const { user } = useAuth();
@@ -21,7 +21,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [inviteCode, setInviteCode] = useState('');
+  const [clubPassword, setClubPassword] = useState('');
   const [proposedClubName, setProposedClubName] = useState('');
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,16 +30,6 @@ export default function AuthPage() {
     const redirect = getAndClearIntendedDestination();
     return <Navigate to={redirect || '/dashboard'} replace />;
   }
-
-  const lookupInviteCode = async (code: string): Promise<{ id: string; club_id: string } | null> => {
-    const { data, error } = await (supabase as any)
-      .from('invite_codes')
-      .select('id, is_active, club_id')
-      .eq('code', code.trim().toUpperCase())
-      .maybeSingle();
-    if (error || !data || !data.is_active) return null;
-    return { id: data.id, club_id: data.club_id };
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,15 +44,9 @@ export default function AuthPage() {
         return;
       }
 
-      if (mode === 'invite') {
-        if (!inviteCode.trim()) {
-          toast.error('Invite code required');
-          setLoading(false);
-          return;
-        }
-        const codeRow = await lookupInviteCode(inviteCode);
-        if (!codeRow) {
-          toast.error('Invalid or expired invite code');
+      if (mode === 'join') {
+        if (!clubPassword.trim()) {
+          toast.error('Club password required');
           setLoading(false);
           return;
         }
@@ -76,14 +60,23 @@ export default function AuthPage() {
         });
         if (error) throw error;
         const newUserId = signUpData.user?.id;
-        if (newUserId && codeRow.club_id) {
-          await (supabase as any).from('club_members').insert({
-            club_id: codeRow.club_id,
-            user_id: newUserId,
-            role: 'member',
-          });
+        if (!newUserId) {
+          toast.success('Check your email to verify, then sign in to finish joining.');
+          sessionStorage.setItem('pending_club_password', clubPassword.trim());
+          return;
         }
-        toast.success("You're in. Check your email to verify.");
+        // Try to enroll now (works when auto-confirm is on / session exists)
+        const { error: joinErr } = await (supabase as any).rpc('join_club_with_password', {
+          _password: clubPassword.trim(),
+          _user_id: newUserId,
+        });
+        if (joinErr) {
+          // If session isn't ready, stash for first sign-in
+          sessionStorage.setItem('pending_club_password', clubPassword.trim());
+          toast.success('Account created. Verify your email and sign in to join your club.');
+        } else {
+          toast.success("You're in. Check your email to verify.");
+        }
         return;
       }
 
@@ -158,7 +151,7 @@ export default function AuthPage() {
           />
           <p className="text-xs text-muted-foreground font-semibold">
             {mode === 'signin' && 'Welcome back'}
-            {mode === 'invite' && 'Join an existing club'}
+            {mode === 'join' && 'Join an existing club'}
             {mode === 'request' && 'Start your own club'}
           </p>
         </div>
@@ -167,7 +160,7 @@ export default function AuthPage() {
         <div className="grid grid-cols-3 gap-1.5 mb-4 p-1 rounded-xl bg-muted/30 border border-border/30">
           {([
             { key: 'signin' as Mode, icon: LogIn, label: 'Sign In' },
-            { key: 'invite' as Mode, icon: KeyRound, label: 'Invite' },
+            { key: 'join' as Mode, icon: KeyRound, label: 'Join Club' },
             { key: 'request' as Mode, icon: Sparkles, label: 'Request' },
           ]).map(({ key, icon: Icon, label }) => (
             <button
@@ -188,9 +181,9 @@ export default function AuthPage() {
 
         <form onSubmit={handleSubmit} className="glass-card p-6 space-y-4">
           <AnimatePresence mode="wait" initial={false}>
-            {mode === 'invite' && (
+            {mode === 'join' && (
               <motion.div
-                key="invite-fields"
+                key="join-fields"
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
@@ -198,17 +191,17 @@ export default function AuthPage() {
                 className="space-y-4 overflow-hidden"
               >
                 <div>
-                  <label className="form-label">Invite Code</label>
+                  <label className="form-label">Club Password</label>
                   <Input
                     required
-                    value={inviteCode}
-                    onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                    placeholder="CLUB-XXXX"
-                    className="form-input font-mono tracking-widest text-center"
+                    value={clubPassword}
+                    onChange={(e) => setClubPassword(e.target.value)}
+                    placeholder="The password your club admin gave you"
+                    className="form-input"
                     autoComplete="off"
                   />
                   <p className="text-[11px] text-muted-foreground/80 mt-1.5 px-0.5">
-                    Get this from your club's admin.
+                    Ask your club admin for the club password.
                   </p>
                 </div>
               </motion.div>
@@ -296,7 +289,7 @@ export default function AuthPage() {
               ? 'Loading…'
               : mode === 'signin'
                 ? 'Sign In'
-                : mode === 'invite'
+                : mode === 'join'
                   ? 'Join Club'
                   : 'Submit Request'}
           </Button>
@@ -327,8 +320,8 @@ export default function AuthPage() {
           {mode === 'signin' ? (
             <>
               New here?{' '}
-              <button onClick={() => setMode('invite')} className="text-primary hover:underline font-bold">
-                Use an invite code
+              <button onClick={() => setMode('join')} className="text-primary hover:underline font-bold">
+                Use a club password
               </button>{' '}
               or{' '}
               <button onClick={() => setMode('request')} className="text-primary hover:underline font-bold">

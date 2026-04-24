@@ -444,9 +444,11 @@ export type Database = {
           accent_color: string
           created_at: string
           id: string
+          join_password: string | null
           logo_url: string | null
           name: string
           owner_admin_id: string | null
+          password_visible: boolean
           slug: string
           status: string
           updated_at: string
@@ -455,9 +457,11 @@ export type Database = {
           accent_color?: string
           created_at?: string
           id?: string
+          join_password?: string | null
           logo_url?: string | null
           name: string
           owner_admin_id?: string | null
+          password_visible?: boolean
           slug: string
           status?: string
           updated_at?: string
@@ -466,9 +470,11 @@ export type Database = {
           accent_color?: string
           created_at?: string
           id?: string
+          join_password?: string | null
           logo_url?: string | null
           name?: string
           owner_admin_id?: string | null
+          password_visible?: boolean
           slug?: string
           status?: string
           updated_at?: string
@@ -4570,6 +4576,7 @@ export type Database = {
     Functions: {
       current_user_club_id: { Args: never; Returns: string }
       get_bracket_pool_id: { Args: { _bracket_id: string }; Returns: string }
+      get_club_password: { Args: { _club_id: string }; Returns: string }
       is_app_admin: { Args: { _user_id: string }; Returns: boolean }
       is_club_admin: {
         Args: { _club: string; _user: string }
@@ -4584,6 +4591,10 @@ export type Database = {
       is_pool_member: {
         Args: { _pool_id: string; _user_id: string }
         Returns: boolean
+      }
+      join_club_with_password: {
+        Args: { _password: string; _user_id: string }
+        Returns: string
       }
       recompute_nfl_week_status: {
         Args: { _week_id: string }

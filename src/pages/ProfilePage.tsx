@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { LogOut, User, Volume2, VolumeX, BarChart3, MessageCircle, CalendarDays, MessageSquareText, Trophy, Bookmark, Zap, Sun, Moon, Bell, BellOff, Camera, Loader2, RefreshCw, Settings, ShieldCheck } from 'lucide-react';
+import { LogOut, User, Volume2, VolumeX, BarChart3, MessageCircle, CalendarDays, MessageSquareText, Trophy, Bookmark, Zap, Sun, Moon, Bell, BellOff, Camera, Loader2, RefreshCw, Settings, ShieldCheck, KeyRound, Eye, EyeOff, Copy } from 'lucide-react';
 import { nukeAndReload } from '@/lib/forceUpdate';
 import { useTheme } from 'next-themes';
 import { motion } from 'framer-motion';
@@ -28,6 +28,8 @@ export default function ProfilePage() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+  const [clubPwd, setClubPwd] = useState<string | null>(null);
+  const [showClubPwd, setShowClubPwd] = useState(false);
   const { play, soundEnabled, toggleSound } = useSoundEffect();
   const { isSupported: pushSupported, isSubscribed: pushSubscribed, loading: pushLoading, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe } = usePushNotifications();
   const [stats, setStats] = useState({ polls: 0, rankings: 0, events: 0, messages: 0, drafts: 0, draftPoints: 0, draftWins: 0 });
@@ -254,6 +256,16 @@ export default function ProfilePage() {
               <ShieldCheck className="w-3.5 h-3.5" /> Platform Owner — Review club requests
             </Link>
           )}
+
+          {/* Club password (visible to admins always; to members only if admin enabled it) */}
+          <ClubPasswordRow
+            clubId={club.id}
+            isAdmin={isClubAdmin}
+            visible={showClubPwd}
+            setVisible={setShowClubPwd}
+            value={clubPwd}
+            setValue={setClubPwd}
+          />
         </div>
       ) : (
         <div className="glass-card p-5 mb-4">
@@ -453,5 +465,67 @@ export default function ProfilePage() {
         <LogOut className="w-3.5 h-3.5" /> Sign Out
       </button>
     </motion.div>
+  );
+}
+
+function ClubPasswordRow({
+  clubId, isAdmin, visible, setVisible, value, setValue,
+}: {
+  clubId: string;
+  isAdmin: boolean;
+  visible: boolean;
+  setVisible: (v: boolean) => void;
+  value: string | null;
+  setValue: (v: string | null) => void;
+}) {
+  useEffect(() => {
+    let cancelled = false;
+    (supabase as any).rpc('get_club_password', { _club_id: clubId }).then(({ data }: any) => {
+      if (!cancelled) setValue((data as string | null) ?? null);
+    });
+    return () => { cancelled = true; };
+  }, [clubId, setValue]);
+
+  if (value === null) {
+    // Either not set yet, or hidden by admin and viewer is a member
+    if (!isAdmin) return null;
+    return (
+      <div className="mt-3 pt-3 border-t border-border/30">
+        <Link to="/club/settings" className="flex items-center gap-2 text-[11px] font-semibold" style={{ color: 'hsl(var(--gold))' }}>
+          <KeyRound className="w-3.5 h-3.5" /> Set your club password
+        </Link>
+      </div>
+    );
+  }
+
+  const copy = () => {
+    navigator.clipboard.writeText(value);
+    toast.success('Password copied');
+  };
+
+  return (
+    <div className="mt-3 pt-3 border-t border-border/30">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 flex items-center gap-1.5">
+          <KeyRound className="w-3 h-3" /> Club Password
+        </p>
+        <button
+          type="button"
+          onClick={() => setVisible(!visible)}
+          className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 btn-press"
+        >
+          {visible ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+          {visible ? 'Hide' : 'Show'}
+        </button>
+      </div>
+      <div className="flex items-center gap-2 bg-muted/20 rounded-lg px-3 py-2">
+        <code className="flex-1 font-mono text-sm font-semibold tracking-wide truncate">
+          {visible ? value : '•'.repeat(Math.min(value.length, 12))}
+        </code>
+        <button onClick={copy} className="p-1 rounded-md hover:bg-muted/40 btn-press" aria-label="Copy">
+          <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+        </button>
+      </div>
+    </div>
   );
 }

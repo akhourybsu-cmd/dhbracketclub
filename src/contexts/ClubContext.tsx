@@ -10,6 +10,7 @@ export type Club = {
   logo_url: string | null;
   owner_admin_id: string | null;
   status: string;
+  password_visible: boolean;
 };
 
 export type ClubMembership = {
@@ -54,10 +55,21 @@ export function ClubProvider({ children }: { children: ReactNode }) {
     }
     setLoading(true);
     try {
+      // If a club password was stashed during signup (auto-confirm off path), redeem it now
+      const pendingPwd = typeof window !== 'undefined' ? sessionStorage.getItem('pending_club_password') : null;
+      if (pendingPwd) {
+        sessionStorage.removeItem('pending_club_password');
+        try {
+          await (supabase as any).rpc('join_club_with_password', { _password: pendingPwd, _user_id: user.id });
+        } catch (e) {
+          console.warn('[ClubContext] redeem pending club password failed', e);
+        }
+      }
+
       const [{ data: m }, { data: roleRow }] = await Promise.all([
         (supabase as any)
           .from('club_members')
-          .select('club_id, role, clubs:club_id(id, name, slug, accent_color, logo_url, owner_admin_id, status)')
+          .select('club_id, role, clubs:club_id(id, name, slug, accent_color, logo_url, owner_admin_id, status, password_visible)')
           .eq('user_id', user.id)
           .maybeSingle(),
         (supabase as any)
