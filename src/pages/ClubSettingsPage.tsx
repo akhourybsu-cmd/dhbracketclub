@@ -201,6 +201,79 @@ export default function ClubSettingsPage() {
           </Button>
         </section>
 
+        {/* Club Password — replaces invite codes for new signups */}
+        <section
+          className="glass-card p-5 mb-4 space-y-4"
+          style={!clubPassword ? { borderColor: 'hsl(var(--gold) / 0.4)', boxShadow: '0 0 0 1px hsl(var(--gold) / 0.18)' } : undefined}
+        >
+          <div className="flex items-center justify-between">
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground/80 flex items-center gap-1.5">
+              <KeyRound className="w-3 h-3" /> Club Password
+            </h2>
+            {clubPassword && (
+              <button
+                type="button"
+                onClick={() => setShowPassword((s) => !s)}
+                className="text-[11px] font-bold text-muted-foreground hover:text-foreground flex items-center gap-1 btn-press"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                {showPassword ? 'Hide' : 'Show'}
+              </button>
+            )}
+          </div>
+
+          {!clubPassword && (
+            <p className="text-xs leading-relaxed" style={{ color: 'hsl(var(--gold))' }}>
+              Set a club password before sharing your club. New members will type this to join.
+            </p>
+          )}
+
+          <div className="flex gap-2">
+            <Input
+              type={showPassword ? 'text' : 'password'}
+              value={clubPassword}
+              onChange={(e) => setClubPassword(e.target.value)}
+              placeholder="Choose a memorable phrase"
+              className="form-input flex-1"
+              autoComplete="off"
+            />
+            <button
+              type="button"
+              onClick={generateRandomPassword}
+              className="px-3 rounded-lg bg-muted/30 hover:bg-muted/50 btn-press flex items-center justify-center"
+              aria-label="Generate random password"
+              title="Generate random"
+            >
+              <RefreshCw className="w-4 h-4 text-muted-foreground" />
+            </button>
+            {clubPassword && (
+              <button
+                type="button"
+                onClick={copyPassword}
+                className="px-3 rounded-lg bg-muted/30 hover:bg-muted/50 btn-press flex items-center justify-center"
+                aria-label="Copy password"
+              >
+                <Copy className="w-4 h-4 text-muted-foreground" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between gap-3 bg-muted/20 rounded-lg p-3">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold">Visible to members</p>
+              <p className="text-[11px] text-muted-foreground/80 mt-0.5 leading-relaxed">
+                When on, members can see the password in their profile.
+              </p>
+            </div>
+            <Switch checked={passwordVisible} onCheckedChange={togglePasswordVisible} />
+          </div>
+
+          <Button onClick={saveClubPassword} disabled={savingPassword} className="w-full h-11 font-bold rounded-xl btn-press">
+            {savingPassword ? 'Saving…' : clubPassword ? 'Update Password' : 'Set Password'}
+          </Button>
+        </section>
+
         {/* Invite codes */}
         <section className="glass-card p-5 mb-4 space-y-3">
           <div className="flex items-center justify-between">
