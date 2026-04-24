@@ -465,6 +465,11 @@ export default function RuneDelvePlayPage() {
     setCorruptCleansedCount(0);
     setBonusUsedThisCycle(false);
     setRngTick(0);
+    setBonusShardsFromMastery(0);
+    setTotalManaSpent(0);
+    setGoldRunesCleared(0);
+    braceFiredRef.current = false;
+    aegisFiredRef.current = false;
     defeatedArchetypesRef.current = new Map();
     wavesSpawnedRef.current = 0;
     setLog([{ id: nextLogId(), kind: 'info', text: `You enter Level ${level.level_number}. The runes hum.` }]);
