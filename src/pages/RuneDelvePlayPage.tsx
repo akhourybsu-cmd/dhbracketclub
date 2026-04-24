@@ -196,6 +196,12 @@ export default function RuneDelvePlayPage() {
   const [bonusShardsFromMastery, setBonusShardsFromMastery] = useState(0);
   // Track lifetime mana spent for Mage Overflow mastery refund cadence.
   const [totalManaSpent, setTotalManaSpent] = useState(0);
+  // Rogue T1 Gilded Eye — count gold runes cleared across the run.
+  const [goldRunesCleared, setGoldRunesCleared] = useState(0);
+  // Warrior T4 Brace + Cleric T5 Aegis are one-shot per run. Refs avoid
+  // re-render churn — they're read inside event handlers, never in JSX.
+  const braceFiredRef = useRef(false);
+  const aegisFiredRef = useRef(false);
 
   // Per-run defeat ledger keyed by archetypeId. Submitted to the Bestiary on
   // run-end. Mini-boss / boss kills get tracked under variant ids
