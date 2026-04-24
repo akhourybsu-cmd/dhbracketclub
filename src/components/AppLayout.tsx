@@ -8,6 +8,7 @@ import dhMonogram from '@/assets/dh-monogram.png';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useClub } from '@/contexts/ClubContext';
 
 const navItems = [
   { path: '/dashboard', label: 'Home', icon: LayoutDashboard },
@@ -42,6 +43,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const { play } = useSoundEffect();
   const { user } = useAuth();
+  const { club } = useClub();
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const lastFetchAtRef = useRef<number>(0);
@@ -172,10 +174,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
       }}>
         <div className="px-6 pt-7 pb-8">
           <div className="flex items-center gap-3 mb-1.5">
-            <img src={dhMonogram} alt="DH" className="w-12 h-12 object-contain drop-shadow-lg" style={{ filter: 'drop-shadow(0 0 10px hsl(var(--primary) / 0.25))' }} />
-            <div>
-              <h1 className="text-base font-extrabold tracking-tight leading-none">
-                <span className="gradient-text">DH</span>
+            {club?.logo_url ? (
+              <img src={club.logo_url} alt={club.name} className="w-12 h-12 object-cover rounded-xl drop-shadow-lg" style={{ filter: 'drop-shadow(0 0 10px hsl(var(--club-accent) / 0.3))' }} />
+            ) : (
+              <img src={dhMonogram} alt="DH" className="w-12 h-12 object-contain drop-shadow-lg" style={{ filter: 'drop-shadow(0 0 10px hsl(var(--club-accent) / 0.25))' }} />
+            )}
+            <div className="min-w-0">
+              <h1 className="text-base font-extrabold tracking-tight leading-none truncate">
+                <span className="gradient-text">{club?.name ?? 'DH'}</span>
               </h1>
               <p className="text-[8px] text-muted-foreground/70 font-bold uppercase tracking-[0.2em] mt-0.5">Compete With Your Crew</p>
             </div>

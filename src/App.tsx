@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ClubProvider } from "@/contexts/ClubContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ClubGate } from "@/components/ClubGate";
 import { AppLayout } from "@/components/AppLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { AnimatePresence } from "framer-motion";
@@ -101,13 +102,15 @@ function PageFallback() {
 
 const ProtectedPage = ({ children }: { children: React.ReactNode }) => (
   <ProtectedRoute>
-    <AppLayout>
-      <PageTransition>
-        <Suspense fallback={<PageFallback />}>
-          {children}
-        </Suspense>
-      </PageTransition>
-    </AppLayout>
+    <ClubGate>
+      <AppLayout>
+        <PageTransition>
+          <Suspense fallback={<PageFallback />}>
+            {children}
+          </Suspense>
+        </PageTransition>
+      </AppLayout>
+    </ClubGate>
   </ProtectedRoute>
 );
 
