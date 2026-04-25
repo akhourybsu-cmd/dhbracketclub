@@ -105,12 +105,18 @@ function seedFor(level: number): number {
 // mathematically unwinnable per Monte Carlo. Mini-bosses keep the band
 // budget — the +60% HP bump is still survivable inside the same window.
 function turnLimitFor(level: number): number {
+  // Rebalance v4: a flat 13-turn floor across every band, rising to 14 in
+  // L1-50 where players are still learning class patterns. Monte Carlo
+  // (20 runs/level/class across L10-150) showed the previous 10-turn
+  // deep-band budget left non-Mage classes mathematically locked out of the
+  // kill window even with perfect play. The new baseline gives every class
+  // room for one mistake-recovery cycle without trivialising the early game.
   const base = (() => {
-    if (level <= 15) return 12;
-    if (level <= 25) return 12;
-    if (level <= 50) return 12;
-    if (level <= 100) return 11;
-    return 10;
+    if (level <= 15) return 14;
+    if (level <= 25) return 14;
+    if (level <= 50) return 14;
+    if (level <= 100) return 13;
+    return 13;
   })();
   const kind = bossKindForLevel(level);
   if (kind === 'mid')     return base + 4;
