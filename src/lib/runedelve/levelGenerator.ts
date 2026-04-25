@@ -132,8 +132,10 @@ function enemyCountFor(level: number, rng: () => number): number {
   if (level <= 25) return rng() < 0.6 ? 2 : 3;     // 60/40 split — gentle introduction
   if (level <= 40) return rng() < 0.45 ? 2 : 3;    // 45/55 — softer post-tutorial ramp
   if (level <= 60) return rng() < 0.30 ? 2 : 3;    // mostly 3, occasional 2
-  if (level <= 100) return 3;
-  return 3 + rngInt(rng, 2);                       // 3-4
+  // Rebalance v5: cap deep-band enemy count at 3. Prior 3-4 spike combined
+  // with deep-band HP scaling created encounters past 600 effective HP that
+  // no class could close inside the turn budget.
+  return 3;
 }
 
 // Per-template HP cap on early levels — keep the L14-15 area from rolling a
