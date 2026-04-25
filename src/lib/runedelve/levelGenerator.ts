@@ -119,8 +119,12 @@ function turnLimitFor(level: number): number {
     return 13;
   })();
   const kind = bossKindForLevel(level);
+  if (kind === 'mini')    return base + 2;
   if (kind === 'mid')     return base + 4;
   if (kind === 'chapter') return base + 5;
+  // Levels with reinforcement waves (deep band, every 20) need extra turns
+  // to handle the extra HP pool — without this they're mathematically unwinnable.
+  if (hasSecondWave(level)) return base + 3;
   return base;
 }
 
