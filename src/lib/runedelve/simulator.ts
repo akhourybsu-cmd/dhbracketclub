@@ -195,7 +195,7 @@ function runOne(level: LevelDefinition, cls: HeroClass, runSeed: number): SimRun
       const wantHeal = cls === 'cleric' && state.hp / state.maxHp < 0.6;
       const wantNuke = cls !== 'cleric' || wantHeal;
       if (wantNuke) {
-        const r = useAbility(state, cls, bossRule);
+        const r = useAbility(state, cls, bossRule, [], level.level_number);
         if (r.ok) state = r.next;
       }
     }
@@ -211,7 +211,7 @@ function runOne(level: LevelDefinition, cls: HeroClass, runSeed: number): SimRun
       continue;
     }
 
-    const { next } = applyChain(state, chain.type, chain.cells.length, cls, bossRule);
+    const { next } = applyChain(state, chain.type, chain.cells.length, cls, bossRule, 5, level.level_number);
     state = next;
     grid = resolveBoard(grid, chain.cells, rng);
 
