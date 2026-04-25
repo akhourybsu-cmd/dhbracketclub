@@ -76,6 +76,7 @@ export function applyChain(
   cls: HeroClass,
   bossRule: BossRuleId | null = null,
   rogueBonusThreshold = 5,
+  level = 1,
 ): { next: CombatState; resolution: ChainResolution } {
   const next: CombatState = { ...state, enemies: state.enemies.map(e => ({ ...e })) };
   const resolution: ChainResolution = {
@@ -85,15 +86,22 @@ export function applyChain(
   };
   next.longestChain = Math.max(next.longestChain, length);
 
+  // Rebalance v5b — depth scalar pushes harder past L100 to keep deep band
+  // clearable for non-Mage classes. L150 lands at ~2.10×.
+  const depthMul = (() => {
+    if (level <= 25) return 1.00;
+    if (level <= 50) return 1.00 + (level - 25) * 0.008;   // 1.00 → 1.20
+    if (level <= 100) return 1.20 + (level - 50) * 0.008;  // 1.20 → 1.60
+    return 1.60 + (level - 100) * 0.010;                    // 1.60 → 2.10
+  })();
+
   if (type === 'red') {
     let dmg = length * 8;
     if (cls === 'warrior') dmg = Math.round(dmg * 1.30);
-    // Rebalance v3: rogue/mage/cleric were unable to clear post-L30 encounters
-    // because only warrior had a red-chain damage multiplier. Give the off-classes
-    // a baseline so total run DPS stays inside the encounter HP budget.
-    if (cls === 'mage')   dmg = Math.round(dmg * 1.15);
-    if (cls === 'rogue')  dmg = Math.round(dmg * 1.25);
-    if (cls === 'cleric') dmg = Math.round(dmg * 1.10);
+    if (cls === 'mage')    dmg = Math.round(dmg * 1.20);
+    if (cls === 'rogue')   dmg = Math.round(dmg * 1.40);
+    if (cls === 'cleric')  dmg = Math.round(dmg * 1.45);
+    dmg = Math.round(dmg * depthMul);
     if (next.shadowstepActive) {
       dmg = Math.round(dmg * 2);
       next.shadowstepActive = false;
@@ -317,14 +325,22 @@ export function useAbility(
   cls: HeroClass,
   bossRule: BossRuleId | null = null,
   activeMasteries: MasteryId[] = [],
+  level = 1,
 ): { next: CombatState; ok: boolean } {
   if (state.mana < MAX_MANA) return { next: state, ok: false };
   const next: CombatState = { ...state, mana: 0, abilityUsed: true, enemies: state.enemies.map(e => ({ ...e })) };
   const targetable = filterTargetable(bossRule, next.enemies);
   const targetableIds = new Set(targetable.map(e => e.id));
+  // Mirror the chain-damage depth scalar so abilities scale with the campaign.
+  const depthMul = (() => {
+    if (level <= 25) return 1.00;
+    if (level <= 50) return 1.00 + (level - 25) * 0.008;
+    if (level <= 100) return 1.20 + (level - 50) * 0.008;
+    return 1.60 + (level - 100) * 0.010;
+  })();
   if (cls === 'warrior') {
     // Cleave: 40 dmg to all targetable enemies (50 with Honed Cleave T3).
-    const cleaveDmg = getMasteryCleaveDamage(activeMasteries) ?? 40;
+    const cleaveDmg = Math.round((getMasteryCleaveDamage(activeMasteries) ?? 40) * depthMul);
     for (const e of next.enemies) {
       if (e.hp > 0 && targetableIds.has(e.id)) {
         const applied = Math.min(applyArmorToDamage(e, cleaveDmg), e.hp);
@@ -334,10 +350,11 @@ export function useAbility(
       }
     }
   } else if (cls === 'mage') {
+    const arcBaseDmg = Math.round(80 * depthMul);
     const t = targetable[0];
     if (t) {
       const live = next.enemies.find(e => e.id === t.id)!;
-      const applied = Math.min(applyArmorToDamage(live, 80), live.hp);
+      const applied = Math.min(applyArmorToDamage(live, arcBaseDmg), live.hp);
       live.hp -= applied;
       next.totalDamage += applied;
       if (live.hp <= 0) next.enemiesDefeated += 1;
@@ -345,13 +362,11 @@ export function useAbility(
     // ── Arc Cascade (Mage T3) — chain 30% damage to a 2nd targetable foe.
     const arcFrac = getMasteryArcChainFraction(activeMasteries);
     if (arcFrac > 0) {
-      // Re-derive targetable list AFTER the primary hit so a freshly-killed
-      // primary doesn't get the secondary tick.
       const remaining = filterTargetable(bossRule, next.enemies).filter(e => e.hp > 0);
       const second = remaining[0];
       if (second) {
         const live2 = next.enemies.find(e => e.id === second.id)!;
-        const arcDmg = Math.round(80 * arcFrac);
+        const arcDmg = Math.round(arcBaseDmg * arcFrac);
         const applied = Math.min(applyArmorToDamage(live2, arcDmg), live2.hp);
         if (applied > 0) {
           live2.hp -= applied;

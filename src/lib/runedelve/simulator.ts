@@ -190,14 +190,12 @@ function runOne(level: LevelDefinition, cls: HeroClass, runSeed: number): SimRun
       return finalize(state, verdict.cleared);
     }
 
-    // Fire ability when full mana + still have targets (Cleric heals when wounded only).
+    // Fire ability when full mana + still have targets. Cleric still
+    // prioritises Sanctuary on heal-pressure, but no longer hoards mana
+    // when at full HP — the shield component is valuable on every cast.
     if (state.mana >= 3 && state.enemies.some(e => e.hp > 0)) {
-      const wantHeal = cls === 'cleric' && state.hp / state.maxHp < 0.6;
-      const wantNuke = cls !== 'cleric' || wantHeal;
-      if (wantNuke) {
-        const r = useAbility(state, cls, bossRule);
-        if (r.ok) state = r.next;
-      }
+      const r = useAbility(state, cls, bossRule, [], level.level_number);
+      if (r.ok) state = r.next;
     }
 
     const chain = pickBestChain(grid, state, cls);
@@ -211,7 +209,7 @@ function runOne(level: LevelDefinition, cls: HeroClass, runSeed: number): SimRun
       continue;
     }
 
-    const { next } = applyChain(state, chain.type, chain.cells.length, cls, bossRule);
+    const { next } = applyChain(state, chain.type, chain.cells.length, cls, bossRule, 5, level.level_number);
     state = next;
     grid = resolveBoard(grid, chain.cells, rng);
 

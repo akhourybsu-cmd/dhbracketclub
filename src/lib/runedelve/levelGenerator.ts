@@ -119,8 +119,14 @@ function turnLimitFor(level: number): number {
     return 13;
   })();
   const kind = bossKindForLevel(level);
+  if (kind === 'mini')    return base + 2;
   if (kind === 'mid')     return base + 4;
   if (kind === 'chapter') return base + 5;
+  // Levels with reinforcement waves (deep band, every 20) need extra turns
+  // to handle the extra HP pool — without this they're mathematically unwinnable.
+  // Inline check (mirrors hasSecondWave) to avoid TDZ on the function.
+  const hasWave = level === 50 || level === 100 || level === 150 || (level >= 60 && level % 20 === 0 && level > 24);
+  if (hasWave) return base + 3;
   return base;
 }
 
@@ -132,8 +138,10 @@ function enemyCountFor(level: number, rng: () => number): number {
   if (level <= 25) return rng() < 0.6 ? 2 : 3;     // 60/40 split — gentle introduction
   if (level <= 40) return rng() < 0.45 ? 2 : 3;    // 45/55 — softer post-tutorial ramp
   if (level <= 60) return rng() < 0.30 ? 2 : 3;    // mostly 3, occasional 2
-  if (level <= 100) return 3;
-  return 3 + rngInt(rng, 2);                       // 3-4
+  // Rebalance v5: cap deep-band enemy count at 3. Prior 3-4 spike combined
+  // with deep-band HP scaling created encounters past 600 effective HP that
+  // no class could close inside the turn budget.
+  return 3;
 }
 
 // Per-template HP cap on early levels — keep the L14-15 area from rolling a
@@ -144,7 +152,11 @@ const EARLY_HP_CAP = 110;
 // HP budget in the L26-50 brick-wall band.
 const MID_HP_CAP = 130;
 // Late-band cap (L51-100) — same idea but loosened so chapter-2 still bites.
-const LATE_HP_CAP = 160;
+const LATE_HP_CAP = 150;
+// Deep-band cap (L101-150) — Rebalance v5: prior uncapped scaling pushed
+// triple-Stone-Golem rolls past 220 HP each, gating the deep band even for
+// Mage. Cap keeps boss/elite slots untouched while taming mook variance.
+const DEEP_HP_CAP = 170;
 
 // (HP/damage scaling lives below — single RosterEntry-based implementation.)
 
@@ -184,13 +196,22 @@ function pickTemplate(level: number, rng: () => number): RosterEntry {
 // budget. New curve targets 50-65% Balanced verdict, capping enemy HP scaling
 // to roughly 1.7× by L50 and 2.3× by L100 so a 4-chain rogue/cleric run can
 // still close the kill window.
+// Rebalance v5 — flatten HP curve past L50 so deep bands are clearable.
+// Old: 1.0 → 1.6 (L25) → 1.85 (L50) → 2.35 (L100) → 2.85 (L150)
+// New: 1.0 → 1.6 (L25) → 1.80 (L50) → 2.05 (L100) → 2.30 (L150)
+// Damage curve is ALSO flattened in the deep band — incoming pressure now
+// scales mainly through enemy count + boss rules, not raw per-hit numbers.
 function scaleEnemy(base: RosterEntry, level: number) {
-  const hpMul = level <= 25
-    ? 1 + (level - 1) * 0.025
-    : 1 + (24 * 0.025) + (level - 25) * 0.010;
-  const dmgMul = level <= 25
-    ? 1 + (level - 1) * 0.012
-    : 1 + (24 * 0.012) + (level - 25) * 0.006;
+  const hpMul = (() => {
+    if (level <= 25) return 1 + (level - 1) * 0.025;
+    if (level <= 50) return 1 + 24 * 0.025 + (level - 25) * 0.008;
+    return 1 + 24 * 0.025 + 25 * 0.008 + (level - 50) * 0.005;
+  })();
+  const dmgMul = (() => {
+    if (level <= 25) return 1 + (level - 1) * 0.012;
+    if (level <= 50) return 1 + 24 * 0.012 + (level - 25) * 0.006;
+    return 1 + 24 * 0.012 + 25 * 0.006 + (level - 50) * 0.003;
+  })();
   return {
     hp: Math.round(base.baseHp * hpMul),
     damage: Math.max(base.baseDamage, Math.round(base.baseDamage * dmgMul)),
@@ -228,6 +249,8 @@ function buildEnemy(
     hp = Math.min(hp, MID_HP_CAP);
   } else if (level <= 100 && !isElite && !isFinalBossSlot) {
     hp = Math.min(hp, LATE_HP_CAP);
+  } else if (!isElite && !isFinalBossSlot) {
+    hp = Math.min(hp, DEEP_HP_CAP);
   }
   if (isElite) {
     hp = Math.round(hp * 1.6);
