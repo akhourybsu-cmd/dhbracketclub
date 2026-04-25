@@ -676,7 +676,7 @@ export default function RuneDelvePlayPage() {
     });
     // Momentum (rogue): chain bonus threshold drops from 5 → 4.
     const rogueBonusThreshold = hero.class === 'rogue' && has(relics, 'momentum') ? 4 : 5;
-    const { next, resolution } = applyChain(combat, type, chain.length, hero.class, bossRule, rogueBonusThreshold);
+    const { next, resolution } = applyChain(combat, type, chain.length, hero.class, bossRule, rogueBonusThreshold, level.level_number);
     // Apply relic damage multiplier for red chains (composes with tier mult).
     if (type === 'red' && chainMods.bonusDamageMult > 1 && resolution.damageDealt > 0) {
       const baseDmg = resolution.damageDealt;
@@ -1363,7 +1363,7 @@ export default function RuneDelvePlayPage() {
     // mana after useAbility() consumes it so the cast still resolves normally.
     const isFreeCast = abilityFreeFirstUse(relics, abilityUsedCount);
     const manaBefore = combat.mana;
-    const { next, ok } = useAbility(combat, hero.class, bossRule, activeMasteries);
+    const { next, ok } = useAbility(combat, hero.class, bossRule, activeMasteries, level.level_number);
     if (!ok) {
       toast.info('Ability not ready — fill mana orbs first.');
       return;
