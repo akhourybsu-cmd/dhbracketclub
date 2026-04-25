@@ -87,24 +87,25 @@ export function applyChain(
   next.longestChain = Math.max(next.longestChain, length);
 
   // Rebalance v5 — depth damage scalar so player DPS keeps pace with the
-  // enemy-HP curve in chapters 2 & 3. Cap at 1.55× by L150 so early levels
-  // are unaffected and late levels become survivable for every class.
+  // enemy-HP curve in chapters 2 & 3. Tuned so L150 reaches ~1.85× to keep
+  // every class viable in the deep band per Monte Carlo.
   const depthMul = (() => {
     if (level <= 25) return 1.00;
-    if (level <= 50) return 1.00 + (level - 25) * 0.006;   // 1.00 → 1.15
-    if (level <= 100) return 1.15 + (level - 50) * 0.005;  // 1.15 → 1.40
-    return 1.40 + (level - 100) * 0.003;                    // 1.40 → 1.55
+    if (level <= 50) return 1.00 + (level - 25) * 0.008;   // 1.00 → 1.20
+    if (level <= 100) return 1.20 + (level - 50) * 0.006;  // 1.20 → 1.50
+    return 1.50 + (level - 100) * 0.007;                    // 1.50 → 1.85
   })();
 
   if (type === 'red') {
     let dmg = length * 8;
     if (cls === 'warrior') dmg = Math.round(dmg * 1.30);
-    // Rebalance v3: rogue/mage/cleric were unable to clear post-L30 encounters
-    // because only warrior had a red-chain damage multiplier. Give the off-classes
-    // a baseline so total run DPS stays inside the encounter HP budget.
-    if (cls === 'mage')   dmg = Math.round(dmg * 1.15);
-    if (cls === 'rogue')  dmg = Math.round(dmg * 1.25);
-    if (cls === 'cleric') dmg = Math.round(dmg * 1.10);
+    // Rebalance v5: give every class meaningful red-chain throughput so
+    // late-band kill windows are reachable without relying on a single
+    // class fantasy. Mage/cleric still trail warrior — they have ability
+    // burst (mage) and sustain (cleric) to compensate.
+    if (cls === 'mage')   dmg = Math.round(dmg * 1.20);
+    if (cls === 'rogue')  dmg = Math.round(dmg * 1.35);
+    if (cls === 'cleric') dmg = Math.round(dmg * 1.20);
     dmg = Math.round(dmg * depthMul);
     if (next.shadowstepActive) {
       dmg = Math.round(dmg * 2);
@@ -338,9 +339,9 @@ export function useAbility(
   // Mirror the chain-damage depth scalar so abilities scale with the campaign.
   const depthMul = (() => {
     if (level <= 25) return 1.00;
-    if (level <= 50) return 1.00 + (level - 25) * 0.006;
-    if (level <= 100) return 1.15 + (level - 50) * 0.005;
-    return 1.40 + (level - 100) * 0.003;
+    if (level <= 50) return 1.00 + (level - 25) * 0.008;
+    if (level <= 100) return 1.20 + (level - 50) * 0.006;
+    return 1.50 + (level - 100) * 0.007;
   })();
   if (cls === 'warrior') {
     // Cleave: 40 dmg to all targetable enemies (50 with Honed Cleave T3).
