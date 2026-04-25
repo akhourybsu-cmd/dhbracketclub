@@ -86,26 +86,21 @@ export function applyChain(
   };
   next.longestChain = Math.max(next.longestChain, length);
 
-  // Rebalance v5 — depth damage scalar so player DPS keeps pace with the
-  // enemy-HP curve in chapters 2 & 3. Tuned so L150 reaches ~1.85× to keep
-  // every class viable in the deep band per Monte Carlo.
+  // Rebalance v5b — depth scalar pushes harder past L100 to keep deep band
+  // clearable for non-Mage classes. L150 lands at ~2.10×.
   const depthMul = (() => {
     if (level <= 25) return 1.00;
     if (level <= 50) return 1.00 + (level - 25) * 0.008;   // 1.00 → 1.20
-    if (level <= 100) return 1.20 + (level - 50) * 0.006;  // 1.20 → 1.50
-    return 1.50 + (level - 100) * 0.007;                    // 1.50 → 1.85
+    if (level <= 100) return 1.20 + (level - 50) * 0.008;  // 1.20 → 1.60
+    return 1.60 + (level - 100) * 0.010;                    // 1.60 → 2.10
   })();
 
   if (type === 'red') {
     let dmg = length * 8;
     if (cls === 'warrior') dmg = Math.round(dmg * 1.30);
-    // Rebalance v5: give every class meaningful red-chain throughput so
-    // late-band kill windows are reachable without relying on a single
-    // class fantasy. Mage/cleric still trail warrior — they have ability
-    // burst (mage) and sustain (cleric) to compensate.
-    if (cls === 'mage')   dmg = Math.round(dmg * 1.20);
-    if (cls === 'rogue')  dmg = Math.round(dmg * 1.35);
-    if (cls === 'cleric') dmg = Math.round(dmg * 1.20);
+    if (cls === 'mage')    dmg = Math.round(dmg * 1.20);
+    if (cls === 'rogue')   dmg = Math.round(dmg * 1.40);
+    if (cls === 'cleric')  dmg = Math.round(dmg * 1.30);
     dmg = Math.round(dmg * depthMul);
     if (next.shadowstepActive) {
       dmg = Math.round(dmg * 2);
@@ -340,8 +335,8 @@ export function useAbility(
   const depthMul = (() => {
     if (level <= 25) return 1.00;
     if (level <= 50) return 1.00 + (level - 25) * 0.008;
-    if (level <= 100) return 1.20 + (level - 50) * 0.006;
-    return 1.50 + (level - 100) * 0.007;
+    if (level <= 100) return 1.20 + (level - 50) * 0.008;
+    return 1.60 + (level - 100) * 0.010;
   })();
   if (cls === 'warrior') {
     // Cleave: 40 dmg to all targetable enemies (50 with Honed Cleave T3).
