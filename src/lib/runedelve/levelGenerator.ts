@@ -124,7 +124,9 @@ function turnLimitFor(level: number): number {
   if (kind === 'chapter') return base + 5;
   // Levels with reinforcement waves (deep band, every 20) need extra turns
   // to handle the extra HP pool — without this they're mathematically unwinnable.
-  if (hasSecondWave(level)) return base + 3;
+  // Inline check (mirrors hasSecondWave) to avoid TDZ on the function.
+  const hasWave = level === 50 || level === 100 || level === 150 || (level >= 60 && level % 20 === 0 && level > 24);
+  if (hasWave) return base + 3;
   return base;
 }
 
