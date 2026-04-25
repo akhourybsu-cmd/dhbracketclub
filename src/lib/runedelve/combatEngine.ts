@@ -100,7 +100,7 @@ export function applyChain(
     if (cls === 'warrior') dmg = Math.round(dmg * 1.30);
     if (cls === 'mage')    dmg = Math.round(dmg * 1.20);
     if (cls === 'rogue')   dmg = Math.round(dmg * 1.40);
-    if (cls === 'cleric')  dmg = Math.round(dmg * 1.30);
+    if (cls === 'cleric')  dmg = Math.round(dmg * 1.45);
     dmg = Math.round(dmg * depthMul);
     if (next.shadowstepActive) {
       dmg = Math.round(dmg * 2);
