@@ -329,14 +329,22 @@ export function useAbility(
   cls: HeroClass,
   bossRule: BossRuleId | null = null,
   activeMasteries: MasteryId[] = [],
+  level = 1,
 ): { next: CombatState; ok: boolean } {
   if (state.mana < MAX_MANA) return { next: state, ok: false };
   const next: CombatState = { ...state, mana: 0, abilityUsed: true, enemies: state.enemies.map(e => ({ ...e })) };
   const targetable = filterTargetable(bossRule, next.enemies);
   const targetableIds = new Set(targetable.map(e => e.id));
+  // Mirror the chain-damage depth scalar so abilities scale with the campaign.
+  const depthMul = (() => {
+    if (level <= 25) return 1.00;
+    if (level <= 50) return 1.00 + (level - 25) * 0.006;
+    if (level <= 100) return 1.15 + (level - 50) * 0.005;
+    return 1.40 + (level - 100) * 0.003;
+  })();
   if (cls === 'warrior') {
     // Cleave: 40 dmg to all targetable enemies (50 with Honed Cleave T3).
-    const cleaveDmg = getMasteryCleaveDamage(activeMasteries) ?? 40;
+    const cleaveDmg = Math.round((getMasteryCleaveDamage(activeMasteries) ?? 40) * depthMul);
     for (const e of next.enemies) {
       if (e.hp > 0 && targetableIds.has(e.id)) {
         const applied = Math.min(applyArmorToDamage(e, cleaveDmg), e.hp);
@@ -346,10 +354,11 @@ export function useAbility(
       }
     }
   } else if (cls === 'mage') {
+    const arcBaseDmg = Math.round(80 * depthMul);
     const t = targetable[0];
     if (t) {
       const live = next.enemies.find(e => e.id === t.id)!;
-      const applied = Math.min(applyArmorToDamage(live, 80), live.hp);
+      const applied = Math.min(applyArmorToDamage(live, arcBaseDmg), live.hp);
       live.hp -= applied;
       next.totalDamage += applied;
       if (live.hp <= 0) next.enemiesDefeated += 1;
@@ -357,13 +366,11 @@ export function useAbility(
     // ── Arc Cascade (Mage T3) — chain 30% damage to a 2nd targetable foe.
     const arcFrac = getMasteryArcChainFraction(activeMasteries);
     if (arcFrac > 0) {
-      // Re-derive targetable list AFTER the primary hit so a freshly-killed
-      // primary doesn't get the secondary tick.
       const remaining = filterTargetable(bossRule, next.enemies).filter(e => e.hp > 0);
       const second = remaining[0];
       if (second) {
         const live2 = next.enemies.find(e => e.id === second.id)!;
-        const arcDmg = Math.round(80 * arcFrac);
+        const arcDmg = Math.round(arcBaseDmg * arcFrac);
         const applied = Math.min(applyArmorToDamage(live2, arcDmg), live2.hp);
         if (applied > 0) {
           live2.hp -= applied;
