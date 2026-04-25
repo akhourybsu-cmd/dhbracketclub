@@ -144,11 +144,11 @@ const EARLY_HP_CAP = 110;
 // HP budget in the L26-50 brick-wall band.
 const MID_HP_CAP = 130;
 // Late-band cap (L51-100) — same idea but loosened so chapter-2 still bites.
-const LATE_HP_CAP = 155;
+const LATE_HP_CAP = 150;
 // Deep-band cap (L101-150) — Rebalance v5: prior uncapped scaling pushed
 // triple-Stone-Golem rolls past 220 HP each, gating the deep band even for
 // Mage. Cap keeps boss/elite slots untouched while taming mook variance.
-const DEEP_HP_CAP = 180;
+const DEEP_HP_CAP = 170;
 
 // (HP/damage scaling lives below — single RosterEntry-based implementation.)
 
