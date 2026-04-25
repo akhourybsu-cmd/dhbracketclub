@@ -76,6 +76,7 @@ export function applyChain(
   cls: HeroClass,
   bossRule: BossRuleId | null = null,
   rogueBonusThreshold = 5,
+  level = 1,
 ): { next: CombatState; resolution: ChainResolution } {
   const next: CombatState = { ...state, enemies: state.enemies.map(e => ({ ...e })) };
   const resolution: ChainResolution = {
@@ -84,6 +85,16 @@ export function applyChain(
     enemyKills: [],
   };
   next.longestChain = Math.max(next.longestChain, length);
+
+  // Rebalance v5 — depth damage scalar so player DPS keeps pace with the
+  // enemy-HP curve in chapters 2 & 3. Cap at 1.55× by L150 so early levels
+  // are unaffected and late levels become survivable for every class.
+  const depthMul = (() => {
+    if (level <= 25) return 1.00;
+    if (level <= 50) return 1.00 + (level - 25) * 0.006;   // 1.00 → 1.15
+    if (level <= 100) return 1.15 + (level - 50) * 0.005;  // 1.15 → 1.40
+    return 1.40 + (level - 100) * 0.003;                    // 1.40 → 1.55
+  })();
 
   if (type === 'red') {
     let dmg = length * 8;
@@ -94,6 +105,7 @@ export function applyChain(
     if (cls === 'mage')   dmg = Math.round(dmg * 1.15);
     if (cls === 'rogue')  dmg = Math.round(dmg * 1.25);
     if (cls === 'cleric') dmg = Math.round(dmg * 1.10);
+    dmg = Math.round(dmg * depthMul);
     if (next.shadowstepActive) {
       dmg = Math.round(dmg * 2);
       next.shadowstepActive = false;
