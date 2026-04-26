@@ -72,12 +72,18 @@ export default function RuneDelveResultsPage() {
     return () => clearTimeout(t);
   }, [level?.id, queryClient, levelNumber]);
 
+  const { play: rdSfx } = useRuneDelveSfx();
+
   useEffect(() => {
     if (run?.dungeon_cleared) {
       setShowConfetti(true);
+      rdSfx('victory');
       const t = setTimeout(() => setShowConfetti(false), 2500);
       return () => clearTimeout(t);
+    } else if (run && !run.dungeon_cleared) {
+      rdSfx('defeat');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [run?.dungeon_cleared]);
 
   // If the level row is still "transient" (not seeded in DB by an admin yet),
