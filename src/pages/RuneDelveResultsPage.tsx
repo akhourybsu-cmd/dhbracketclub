@@ -212,16 +212,22 @@ export default function RuneDelveResultsPage() {
         )}
         <p className="text-3xl mb-1">{outcome.emoji}</p>
         <p className="rd-title text-[14px] font-extrabold uppercase tracking-[0.18em] text-foreground/90 mb-1">{outcome.label}</p>
-        <p className="font-mono text-4xl font-extrabold tabular-nums mb-2" style={{ color: 'hsl(var(--gold))' }}>
-          {run.score.toLocaleString()}
-        </p>
+        <CountUp
+          value={run.score}
+          duration={1100}
+          delay={250}
+          format={(n) => n.toLocaleString()}
+          className="font-mono text-4xl font-extrabold tabular-nums mb-2 inline-block"
+          style={{ color: 'hsl(var(--gold))' }}
+        />
         {run.dungeon_cleared && (
           <div className="flex items-center justify-center gap-1 mt-2">
             {[1,2,3].map(s => (
-              <Star
+              <StarReveal
                 key={s}
-                className={cn('w-6 h-6', s <= stars ? 'fill-current' : 'opacity-30')}
-                style={{ color: 'hsl(var(--gold))' }}
+                index={s}
+                lit={s <= stars}
+                onLit={() => rdSfx('star.earned', { index: s - 1 })}
               />
             ))}
           </div>
