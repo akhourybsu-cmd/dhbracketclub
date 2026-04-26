@@ -1567,6 +1567,7 @@ export default function RuneDelvePlayPage() {
     if (dailyShardMult !== 1) shardsAwarded = Math.round(shardsAwarded * dailyShardMult);
     shardsAwarded += masteryBonusShards;
     setEndState({ cleared, reason, score: breakdown.total, isNewBest, shards: shardsAwarded });
+    rdSfx(cleared ? 'victory' : 'defeat');
     try {
       // Server-truth flags. Default to the optimistic value so legacy
       // (transient-level) submissions still award XP correctly.
