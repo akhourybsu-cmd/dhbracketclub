@@ -1,0 +1,1 @@
+DELETE FROM public.rune_delve_levels WHERE level_number = 36;
