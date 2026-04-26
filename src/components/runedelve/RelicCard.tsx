@@ -122,7 +122,9 @@ export function RelicCard({ relic, state, shards, rank, onClick, disabled }: Pro
             T{relic.tier}
           </span>
         </div>
-        <p className="text-[11px] text-muted-foreground leading-snug">{relic.description}</p>
+        <p className="text-[11px] text-muted-foreground leading-snug">
+          {describeRelicAtRank(relic, isOwnedLike ? curRank : 1)}
+        </p>
         {isOwnedLike && (
           <div className="flex items-center gap-1 mt-1.5" aria-label={`Rank ${curRank} of ${MAX_RANK}`}>
             {Array.from({ length: MAX_RANK }).map((_, i) => {
