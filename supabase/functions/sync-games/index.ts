@@ -1841,10 +1841,7 @@ async function orchestrate(db: SupabaseClient, req: SyncRequest, userId: string,
         result = { ...resultsOnly, standings: autoStandings };
         break;
       }
-      case "recalculateStandings": {
-        result = await recalculateStandingsForTournament(db, req.tournamentId, syncRunId, req.poolId, "manual");
-        break;
-      }
+      // Note: "recalculateStandings" is handled in the early-return block above (line ~1801).
       case "runFullSync": {
         const metaResult = provider.fetchTournamentMeta
           ? await syncTournamentMetadata(db, provider, config, req.tournamentId, syncRunId)
