@@ -650,19 +650,20 @@ export default function RuneDelvePlayPage() {
       fxTarget = findHudRect('shield') ?? findHudRect('hp');
     }
     fxQ.trigger({ kind: 'rune', rune: type, length: chain.length, tier: fxTier, target: fxTarget });
-    // Audio + camera-feel beats per rune type.
+    // Themed audio + camera-feel beats per rune type.
     if (type === 'red') {
-      playSound('error');
+      rdSfx('rune.fire.red');
       if (chain.length >= 4) triggerCamShake(chain.length >= 6 ? 8 : 6);
     } else if (type === 'green') {
-      playSound('success');
+      rdSfx('rune.fire.green');
       window.setTimeout(pulseHpGlow, 520);
     } else if (type === 'gold') {
-      playSound('achievement');
+      rdSfx('rune.fire.gold');
     } else if (type === 'blue') {
-      playSound('ping');
+      rdSfx('rune.fire.blue');
     }
-    if (chain.length >= 8) playSound('achievement');
+    if (chain.length >= 8) rdSfx('chain.epic');
+    else if (chain.length >= 6) rdSfx('chain.bonus');
     // Snapshot relics for this run (falls back to live for first chain).
     const relics = activeRelicsSnapshot ?? activeRelics;
     // Per-chain counters BEFORE applying — drives Ember Edge / Crimson Tide / Quickstep.
