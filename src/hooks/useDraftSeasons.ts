@@ -96,34 +96,33 @@ export function useCurrentSeason() {
   const [season, setSeason] = useState<DraftSeason | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      // Get active season (regular_season or playoffs), or most recent upcoming
-      const { data } = await supabase
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    // Get active season (regular_season or playoffs), or most recent upcoming
+    const { data } = await supabase
+      .from('draft_seasons' as any)
+      .select('*')
+      .in('status', ['regular_season', 'playoffs'])
+      .order('starts_at', { ascending: false })
+      .limit(1);
+
+    if (data && data.length > 0) {
+      setSeason(data[0] as unknown as DraftSeason);
+    } else {
+      // fallback: most recent season
+      const { data: fallback } = await supabase
         .from('draft_seasons' as any)
         .select('*')
-        .in('status', ['regular_season', 'playoffs'])
         .order('starts_at', { ascending: false })
         .limit(1);
-
-      if (data && data.length > 0) {
-        setSeason(data[0] as unknown as DraftSeason);
-      } else {
-        // fallback: most recent season
-        const { data: fallback } = await supabase
-          .from('draft_seasons' as any)
-          .select('*')
-          .order('starts_at', { ascending: false })
-          .limit(1);
-        if (fallback && fallback.length > 0) {
-          setSeason(fallback[0] as unknown as DraftSeason);
-        }
-      }
-      setLoading(false);
-    })();
+      setSeason(fallback && fallback.length > 0 ? (fallback[0] as unknown as DraftSeason) : null);
+    }
+    setLoading(false);
   }, []);
 
-  return { season, loading };
+  useEffect(() => { refetch(); }, [refetch]);
+
+  return { season, loading, refetch };
 }
 
 export function useSeasonStandings(seasonId: string | undefined) {
@@ -432,6 +431,15 @@ export async function createSeason(params: {
 
   if (error) throw error;
   return data;
+}
+
+/** Set the commissioner on a season (admin / commissioner-only via RLS). */
+export async function setSeasonCommissioner(seasonId: string, userId: string) {
+  const { error } = await supabase
+    .from('draft_seasons' as any)
+    .update({ commissioner_user_id: userId } as any)
+    .eq('id', seasonId);
+  if (error) throw error;
 }
 
 /** Assign a draft to the current season (draft_number = sequential position) */
