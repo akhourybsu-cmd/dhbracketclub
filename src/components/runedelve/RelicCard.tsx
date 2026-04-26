@@ -1,6 +1,6 @@
 import { Lock, Check, Sparkles, ArrowUp } from 'lucide-react';
 import type { RelicDef } from '@/lib/runedelve/relics';
-import { CATEGORY_META, MAX_RANK, rankCost } from '@/lib/runedelve/relics';
+import { CATEGORY_META, MAX_RANK, rankCost, describeRelicAtRank } from '@/lib/runedelve/relics';
 import { cn } from '@/lib/utils';
 
 interface Props {
