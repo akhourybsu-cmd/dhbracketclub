@@ -37,6 +37,7 @@ import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Loader2, Sparkles, RefreshCw } from 'lucide-react';
 import runedelveEmblem from '@/assets/runedelve-emblem.png';
+import { StartNextSeasonSheet } from '@/components/draft/StartNextSeasonSheet';
 
 /* ── Lockbox card (unchanged) ── */
 function LockboxCompeteCard() {
