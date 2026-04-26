@@ -1163,12 +1163,45 @@ export default function RuneDelvePlayPage() {
     const hpLost = Math.max(0, hpBefore - afterEnemies.hp);
     if (hpLost > 0) {
       turnLogs.push({ kind: 'taken', text: 'Enemies retaliated', amount: hpLost });
+      setHurtFlashKey(k => k + 1);
+      rdSfx('hero.hurt');
+      floaters.addAt(playRootRef.current?.querySelector('[data-fx-target="hp"]'), { kind: 'damage', text: String(hpLost) });
     } else if (next.enemies.some(e => e.hp > 0) && rawIncoming > 0) {
       turnLogs.push({ kind: 'info', text: 'You weathered the assault' });
     }
     if (hadShield && rawIncoming > hpLost) {
       const mitigated = rawIncoming - hpLost;
       if (mitigated > 0) turnLogs.push({ kind: 'mitigated', text: 'Your guard absorbed the blow', amount: mitigated });
+    }
+    // Floating numbers for chain effects (heal / mana / shield) so the player
+    // sees the reward land on the relevant HUD chip.
+    if (resolution.hpHealed > 0) {
+      floaters.addAt(playRootRef.current?.querySelector('[data-fx-target="hp"]'), { kind: 'heal', text: String(resolution.hpHealed) });
+      setHealFlashKey(k => k + 1);
+      rdSfx('hero.heal');
+    }
+    if (resolution.manaGained > 0) {
+      floaters.addAt(playRootRef.current?.querySelector('[data-fx-target="mana"]'), { kind: 'mana', text: String(resolution.manaGained) });
+      rdSfx('mana.gain', { index: resolution.manaGained });
+    }
+    if (resolution.guardGained > 0) {
+      floaters.addAt(playRootRef.current?.querySelector('[data-fx-target="shield"]') ?? playRootRef.current?.querySelector('[data-fx-target="hp"]'), { kind: 'shield', text: String(resolution.guardGained) });
+      rdSfx('shield.up');
+    }
+    // Damage numbers + enemy hit/die cues per kill in this chain.
+    if (resolution.damageDealt > 0) {
+      const targetEnemy = combat.enemies.find(e => resolution.enemyKills[0] ? e.id === resolution.enemyKills[0] : e.hp > 0);
+      const targetEl = targetEnemy ? playRootRef.current?.querySelector(`[data-enemy-id="${targetEnemy.id}"]`) : null;
+      floaters.addAt(targetEl, { kind: 'damage', text: String(resolution.damageDealt) });
+      rdSfx('enemy.hit');
+    }
+    for (const killId of resolution.enemyKills) {
+      const killed = combat.enemies.find(e => e.id === killId);
+      rdSfx(killed?.tier === 'boss' ? 'boss.roar' : 'enemy.die');
+    }
+    // Mana orbs filled to ready → ability ready cue
+    if (next.mana >= MAX_MANA && combat.mana < MAX_MANA) {
+      rdSfx('ability.ready');
     }
 
     // ── Mastery: Cleric T5 Eternal Aegis — once per run, block a fatal hit.
