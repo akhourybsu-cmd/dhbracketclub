@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { getSoundSettings, type SoundCategory } from './useSoundSettings';
 
 /**
  * Themed RuneDelve sound family.
@@ -8,9 +9,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  * ADSR envelope, FM bell, filter sweep) so each cue has a *signature*
  * timbre rather than the generic ping/beep used in the broader app.
  *
- * Reuses the same global toggle key as `useSoundEffect` so the existing
- * sound on/off control naturally turns these off too. Always silent if
- * the user prefers reduced motion (treated as "low-stim" preference).
+ * Honours the central `useSoundSettings` store: master toggle, per-category
+ * mute (ui / combat / rewards / ambient), and haptics independence.
  *
  * Mobile haptics are emitted alongside cues where it adds tactile value.
  */
