@@ -1260,11 +1260,292 @@
   50%      { filter: drop-shadow(0 0 12px hsl(var(--gold))); }
 }
 
+/* ─────────────────────────────────────────────────────────────────
+   Game-feel polish utilities (Rune Delve menus + cards)
+   ───────────────────────────────────────────────────────────────── */
+
+/* Premium tactile press: scale + radial ripple from the press point.
+   Set --rd-ripple-x / --rd-ripple-y on the element from JS to animate. */
+.rd-mode .rd-btn-juice {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition: transform 120ms cubic-bezier(.2,.8,.2,1), box-shadow 200ms ease-out, filter 200ms ease-out;
+}
+.rd-mode .rd-btn-juice:active {
+  transform: scale(0.965);
+}
+.rd-mode .rd-btn-juice::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at var(--rd-ripple-x, 50%) var(--rd-ripple-y, 50%),
+    hsl(var(--rd-arcane) / 0.55) 0%,
+    transparent 60%
+  );
+  opacity: 0;
+  transition: opacity 180ms ease-out;
+  mix-blend-mode: screen;
+  z-index: 0;
+}
+.rd-mode .rd-btn-juice.is-rippling::after {
+  animation: rd-ripple 480ms ease-out;
+}
+@keyframes rd-ripple {
+  0%   { opacity: 0.85; transform: scale(0.6); }
+  100% { opacity: 0;    transform: scale(1.4); }
+}
+@media (hover: hover) and (pointer: fine) {
+  .rd-mode .rd-btn-juice:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 22px -8px hsl(var(--rd-arcane) / 0.55);
+    filter: brightness(1.04);
+  }
+}
+
+/* Periodic shimmer sweep across primary CTAs (4s loop, gentle). */
+.rd-mode .rd-shimmer {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.rd-mode .rd-shimmer::before {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0;
+  left: -40%;
+  width: 35%;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    hsl(0 0% 100% / 0.18) 50%,
+    transparent 100%
+  );
+  transform: skewX(-18deg);
+  animation: rd-shimmer-sweep 4.6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+@keyframes rd-shimmer-sweep {
+  0%, 30%  { left: -40%; opacity: 0; }
+  40%      { opacity: 1; }
+  70%      { left: 130%; opacity: 0; }
+  100%     { left: 130%; opacity: 0; }
+}
+
+/* Subtle "breathing" idle motion (enemies, hero portrait, idle cards). */
+.rd-mode .rd-breath {
+  animation: rd-breath 2.6s ease-in-out infinite;
+  will-change: transform;
+}
+.rd-mode .rd-breath-slow {
+  animation: rd-breath 4.2s ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes rd-breath {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-2px) scale(1.018); }
+}
+
+/* Floating ember loop (Daily card flame, etc.). */
+.rd-mode .rd-flicker {
+  animation: rd-flicker 1.6s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+@keyframes rd-flicker {
+  0%, 100% { transform: scale(1) rotate(-2deg);   filter: brightness(1); }
+  50%      { transform: scale(1.1) rotate(2deg);  filter: brightness(1.2); }
+}
+
+/* Boss aura halo. */
+.rd-mode .rd-aura-boss {
+  position: relative;
+}
+.rd-mode .rd-aura-boss::before {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, hsl(var(--gold) / 0.45), transparent 65%);
+  filter: blur(6px);
+  animation: rd-aura-pulse 2.4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+@keyframes rd-aura-pulse {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50%      { opacity: 0.8;  transform: scale(1.08); }
+}
+
+/* Screen-edge red flash on hero hit (mounted full-screen). */
+.rd-mode .rd-screen-flash {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 70;
+  opacity: 0;
+  background: radial-gradient(
+    ellipse 80% 60% at 50% 50%,
+    transparent 45%,
+    hsl(var(--destructive) / 0.55) 100%
+  );
+  mix-blend-mode: screen;
+}
+.rd-mode .rd-screen-flash.is-on {
+  animation: rd-screen-flash 360ms ease-out;
+}
+@keyframes rd-screen-flash {
+  0%   { opacity: 0; }
+  20%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Heal screen glow (green, softer). */
+.rd-mode .rd-screen-flash.is-heal {
+  background: radial-gradient(
+    ellipse 80% 60% at 50% 50%,
+    transparent 50%,
+    hsl(var(--success) / 0.4) 100%
+  );
+}
+
+/* Ambient sparkle pip on a rune cell. */
+.rd-mode .rd-sparkle {
+  position: absolute;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: hsl(0 0% 100%);
+  box-shadow: 0 0 8px hsl(var(--rd-arcane));
+  pointer-events: none;
+  animation: rd-sparkle 800ms ease-out forwards;
+}
+@keyframes rd-sparkle {
+  0%   { opacity: 0; transform: scale(0.4); }
+  30%  { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.4) translateY(-8px); }
+}
+
+/* Floating combat number (damage / heal / mana). */
+.rd-mode .rd-floater {
+  position: absolute;
+  pointer-events: none;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px hsl(0 0% 0% / 0.7);
+  animation: rd-floater 900ms cubic-bezier(.2,.8,.2,1) forwards;
+}
+@keyframes rd-floater {
+  0%   { opacity: 0; transform: translate(-50%, 0) scale(0.7); }
+  20%  { opacity: 1; transform: translate(-50%, -10px) scale(1.1); }
+  100% { opacity: 0; transform: translate(-50%, -42px) scale(1); }
+}
+
+/* Star-pop reveal (results screen). */
+.rd-mode .rd-star-pop {
+  animation: rd-star-pop 520ms cubic-bezier(.2,.9,.2,1) backwards;
+  transform-origin: center;
+}
+@keyframes rd-star-pop {
+  0%   { opacity: 0; transform: scale(0.2) rotate(-45deg); filter: drop-shadow(0 0 0 hsl(var(--gold))); }
+  60%  { opacity: 1; transform: scale(1.25) rotate(8deg);   filter: drop-shadow(0 0 14px hsl(var(--gold))); }
+  100% { opacity: 1; transform: scale(1) rotate(0);         filter: drop-shadow(0 0 6px hsl(var(--gold) / 0.6)); }
+}
+
+/* Level-up burst on hero card. */
+.rd-mode .rd-levelup-burst {
+  animation: rd-levelup-burst 1.2s ease-out forwards;
+}
+@keyframes rd-levelup-burst {
+  0%   { opacity: 0; transform: scale(0.5); filter: blur(8px); }
+  20%  { opacity: 1; transform: scale(1.15); filter: blur(0); }
+  70%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.05); }
+}
+
+/* You-are-here pulse on Level Map current pip. */
+.rd-mode .rd-here-pulse {
+  position: relative;
+}
+.rd-mode .rd-here-pulse::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  border: 2px solid hsl(var(--primary));
+  animation: rd-here-pulse 1.6s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes rd-here-pulse {
+  0%   { opacity: 0.9; transform: scale(0.96); }
+  100% { opacity: 0;   transform: scale(1.35); }
+}
+
+/* List entrance stagger (cards/rows fade-up). */
+.rd-mode .rd-stagger > * {
+  opacity: 0;
+  animation: rd-stagger-in 380ms cubic-bezier(.2,.8,.2,1) forwards;
+}
+.rd-mode .rd-stagger > *:nth-child(1) { animation-delay: 30ms; }
+.rd-mode .rd-stagger > *:nth-child(2) { animation-delay: 80ms; }
+.rd-mode .rd-stagger > *:nth-child(3) { animation-delay: 130ms; }
+.rd-mode .rd-stagger > *:nth-child(4) { animation-delay: 180ms; }
+.rd-mode .rd-stagger > *:nth-child(5) { animation-delay: 230ms; }
+.rd-mode .rd-stagger > *:nth-child(6) { animation-delay: 280ms; }
+.rd-mode .rd-stagger > *:nth-child(7) { animation-delay: 330ms; }
+.rd-mode .rd-stagger > *:nth-child(8) { animation-delay: 380ms; }
+.rd-mode .rd-stagger > *:nth-child(9) { animation-delay: 430ms; }
+.rd-mode .rd-stagger > *:nth-child(10) { animation-delay: 480ms; }
+.rd-mode .rd-stagger > *:nth-child(n+11) { animation-delay: 520ms; }
+@keyframes rd-stagger-in {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Route wipe (between RuneDelve routes). */
+.rd-mode .rd-route-wipe {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    hsl(var(--rd-arcane) / 0.18) 30%,
+    hsl(var(--rd-ember) / 0.22) 50%,
+    hsl(var(--rd-arcane) / 0.18) 70%,
+    transparent 100%
+  );
+  transform: translateY(-100%);
+  animation: rd-route-wipe 480ms ease-in-out;
+  mix-blend-mode: screen;
+}
+@keyframes rd-route-wipe {
+  0%   { transform: translateY(-100%); }
+  60%  { transform: translateY(0); }
+  100% { transform: translateY(110%); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rd-mode .rd-tile-corrupted { animation: none; }
   .rd-mode .rd-cam-shake,
   .rd-mode [data-fx-hp-glow="on"],
-  .rd-mode .rd-fx-bonus-chip { animation: none !important; }
+  .rd-mode .rd-fx-bonus-chip,
+  .rd-mode .rd-shimmer::before,
+  .rd-mode .rd-breath,
+  .rd-mode .rd-breath-slow,
+  .rd-mode .rd-flicker,
+  .rd-mode .rd-aura-boss::before,
+  .rd-mode .rd-here-pulse::before,
+  .rd-mode .rd-route-wipe,
+  .rd-mode .rd-sparkle { animation: none !important; }
+  .rd-mode .rd-stagger > * { opacity: 1; animation: none !important; }
+  .rd-mode .rd-btn-juice { transition: none !important; }
+  .rd-mode .rd-btn-juice:hover,
+  .rd-mode .rd-btn-juice:active { transform: none !important; }
   /* Combat FX overlay — collapse all motion to a quick fade so the player
      still gets visual confirmation without sweeping animation. */
   .rd-mode [aria-hidden] [style*="position"] { transition: opacity 120ms linear !important; }
