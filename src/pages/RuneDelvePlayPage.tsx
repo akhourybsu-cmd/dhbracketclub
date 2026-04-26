@@ -110,6 +110,9 @@ import { CombatLog, type CombatLogEntry } from '@/components/runedelve/CombatLog
 import { FxLayer } from '@/components/runedelve/fx/FxLayer';
 import { useFxQueue, type FxRect } from '@/hooks/useFxQueue';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
+import { useRuneDelveSfx } from '@/hooks/useRuneDelveSfx';
+import { FloatingNumberLayer, useFloaters } from '@/components/runedelve/fx/FloatingNumber';
+import { ScreenEdgeFlash } from '@/components/runedelve/fx/ScreenEdgeFlash';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   buildSnapshot,
