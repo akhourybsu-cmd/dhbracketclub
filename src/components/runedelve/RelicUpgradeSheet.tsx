@@ -16,6 +16,7 @@ import {
   rankCost,
   effectValue,
   clampRank,
+  describeRelicAtRank,
 } from '@/lib/runedelve/relics';
 import { cn } from '@/lib/utils';
 
