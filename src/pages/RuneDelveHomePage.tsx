@@ -20,12 +20,17 @@ import { useQuestSummary } from '@/hooks/useQuests';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAmbientMusic } from '@/hooks/useAmbientMusic';
 
 const HELP_SEEN_KEY = 'rune_delve_seen_help_v2';
 
 export default function RuneDelveHomePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  // Subtle fantasy ambient bed — only mounts on the home screen, fades out
+  // automatically when the user navigates away. Off by default; user opts
+  // in via Sound Settings (Profile → Sound & Haptics → Music).
+  useAmbientMusic({ enabled: true, volume: 0.05, fadeInSec: 3.5, fadeOutSec: 1.2 });
   const { data: hero, isLoading: heroLoading } = useRuneDelveHero();
   const { data: classTracks } = useAllClassProgress();
   const { data: progress } = useMyProgress();
