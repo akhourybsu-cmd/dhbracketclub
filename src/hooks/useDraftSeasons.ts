@@ -470,11 +470,12 @@ export function useUnassignedDrafts(seasonId: string | undefined) {
   const fetch = useCallback(async () => {
     if (!seasonId) { setLoading(false); return; }
 
-    // Get all draft IDs already in a season entry
+    // Get every draft_id that's been assigned to ANY season (regular or playoff).
+    // A draft can only ever belong to one season — once it's claimed, it's
+    // permanently off the candidate list for every other season.
     const { data: entries } = await supabase
       .from('draft_season_entries' as any)
-      .select('draft_id')
-      .eq('season_id', seasonId);
+      .select('draft_id');
 
     const assignedIds = new Set((entries || []).map((e: any) => e.draft_id));
 
