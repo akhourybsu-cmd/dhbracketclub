@@ -16,6 +16,8 @@ import { RELIC_BY_ID } from '@/lib/runedelve/relics';
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
+import { CountUp } from '@/components/runedelve/fx/CountUp';
+import { useRuneDelveSfx } from '@/hooks/useRuneDelveSfx';
 
 export default function RuneDelveResultsPage() {
   const navigate = useNavigate();
