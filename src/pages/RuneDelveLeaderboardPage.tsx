@@ -23,7 +23,7 @@ export default function RuneDelveLeaderboardPage() {
         <div className="glass-card p-6 text-center text-xs text-muted-foreground">No heroes have delved yet — be the first!</div>
       ) : (
         <div className="glass-card overflow-hidden">
-          <div className="divide-y divide-border/10">
+          <div className="divide-y divide-border/10 rd-stagger">
             {(rows ?? []).map((r) => {
               const isMe = r.user_id === user?.id;
               const heroName = r.hero?.hero_name as string | undefined;

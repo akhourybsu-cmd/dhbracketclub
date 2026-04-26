@@ -184,7 +184,7 @@ export default function RuneDelveBestiaryPage() {
       ) : (
         <motion.div
           layout
-          className="grid grid-cols-3 gap-2"
+          className="grid grid-cols-3 gap-2 rd-stagger"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
         >

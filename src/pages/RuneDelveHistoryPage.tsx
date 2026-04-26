@@ -138,7 +138,7 @@ function LevelsTab() {
   if (cleared.length === 0) return <div className="glass-card p-6 text-center text-xs text-muted-foreground">No levels cleared yet — start your campaign!</div>;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 rd-stagger">
       {cleared.map(r => (
         <Link
           key={r.id}
@@ -203,7 +203,7 @@ function DailyTab() {
         <StatBlock label="3★" value={totals.threeStars} />
         <StatBlock label="Best" value={totals.bestScore.toLocaleString()} mono />
       </div>
-      <div className="space-y-2">
+      <div className="space-y-2 rd-stagger">
         {runs.map(r => (
           <div key={r.id} className="glass-card p-3 flex items-center gap-3">
             <ClassBadge cls={r.hero_class} size="sm" />

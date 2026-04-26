@@ -129,7 +129,7 @@ export default function RuneDelveDailyPage() {
         {(board ?? []).length === 0 ? (
           <p className="text-[11px] text-center text-foreground/75 py-4">Be the first to attempt today's trial.</p>
         ) : (
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 rd-stagger">
             {(board ?? []).slice(0, 10).map(r => (
               <div key={r.id} className="flex items-center gap-2.5 text-[12px]">
                 <span className="w-5 font-mono font-extrabold text-foreground/75">#{r.rank}</span>

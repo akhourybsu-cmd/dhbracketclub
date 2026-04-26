@@ -92,7 +92,7 @@ function QuestSection({
         </h2>
         <span className="ml-auto text-[10px] font-mono text-muted-foreground tabular-nums">{subtitle}</span>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-2 rd-stagger">
         {quests.length === 0 ? (
           <div className="glass-card p-4 text-center text-[11px] text-muted-foreground">
             No active quests — check back next reset.
