@@ -216,11 +216,7 @@ export default function RuneDelveShopPage() {
               ? 'owned'
               : shards >= r.cost ? 'affordable' : 'unaffordable';
             return (
-              <div
-                key={r.id}
-                className="animate-fade-in"
-                style={{ animationDelay: `${Math.min(idx * 35, 280)}ms`, animationFillMode: 'backwards' }}
-              >
+              <div key={r.id}>
                 <RelicCard
                   relic={r}
                   state={state as any}
