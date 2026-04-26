@@ -447,19 +447,24 @@ function haptic(cue: RdSfxCue) {
 /* ─── Public hook ─────────────────────────────────────────────────── */
 
 export function useRuneDelveSfx() {
-  const [enabled, setEnabled] = useState(getStoredSoundPref);
+  const [settings, setSettings] = useState(() => getSoundSettings());
   const lastHoverRef = useRef(0);
 
-  // React to global toggle changes from other tabs / the regular SoundEffect hook.
+  // React to settings changes from other tabs or the settings panel.
   useEffect(() => {
-    const sync = () => setEnabled(getStoredSoundPref());
+    const sync = () => setSettings(getSoundSettings());
     window.addEventListener('storage', sync);
     return () => window.removeEventListener('storage', sync);
   }, []);
 
   const play = useCallback(
     (cue: RdSfxCue, opts: { index?: number; skipHaptic?: boolean } = {}) => {
-      if (!enabled) return;
+      // Re-read so settings changed in this tab take effect immediately.
+      const s = getSoundSettings();
+      const cat = categoryFor(cue);
+      const soundOk = s.master && s.categories[cat];
+      const hapticOk = s.master && s.haptics;
+      if (!soundOk && !hapticOk) return;
       // Honour reduced-motion as a low-stim preference for sound too.
       if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
       // Throttle hover cue so it never machine-guns.
@@ -468,11 +473,14 @@ export function useRuneDelveSfx() {
         if (now - lastHoverRef.current < HOVER_COOLDOWN_MS) return;
         lastHoverRef.current = now;
       }
-      try { playCue(cue, opts.index ?? 0); } catch { /* never break gameplay over audio */ }
-      if (!opts.skipHaptic) haptic(cue);
+      if (soundOk) {
+        try { playCue(cue, opts.index ?? 0); } catch { /* never break gameplay over audio */ }
+      }
+      if (hapticOk && !opts.skipHaptic) haptic(cue);
     },
-    [enabled],
+    [settings],
   );
 
-  return { play, enabled };
+  return { play, enabled: settings.master };
 }
+
