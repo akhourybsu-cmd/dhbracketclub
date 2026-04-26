@@ -1397,7 +1397,7 @@ export default function RuneDelvePlayPage() {
       const firstAlive = combat.enemies.find(e => e.hp > 0);
       const target = firstAlive ? findEnemyRect(firstAlive.id) : undefined;
       fxQ.trigger({ kind: 'ability', cls: hero.class, target });
-      playSound('achievement');
+      rdSfx(`ability.cast.${hero.class}` as any);
       if (hero.class === 'warrior') triggerCamShake(8);
     }
     // First Light: first N ability casts skip the mana cost. We restore the
