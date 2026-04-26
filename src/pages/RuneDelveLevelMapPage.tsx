@@ -89,7 +89,7 @@ export default function RuneDelveLevelMapPage() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-2 rd-stagger" key={`ch-${chapter}`}>
           {levels.map(lvl => {
             const isUnlocked = lvl.level_number <= highestUnlocked;
             const isCleared  = lvl.level_number <= highestCompleted;
@@ -172,8 +172,8 @@ export default function RuneDelveLevelMapPage() {
                 <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Lv</span>
                 <span className={cn(
                   'text-xl font-extrabold tabular-nums leading-none',
-                  isCurrent && 'text-primary',
-                  milestone && !isCleared && isUnlocked && 'text-gold',
+                  isCurrent && 'text-primary rd-breath',
+                  milestone && !isCleared && isUnlocked && 'text-gold rd-breath-slow',
                 )}>{lvl.level_number}</span>
                 <div className="flex gap-0.5 mt-0.5">
                   {Array.from({ length: 5 }).map((_, i) => (
@@ -204,7 +204,7 @@ export default function RuneDelveLevelMapPage() {
       {progress && progress.highest_unlocked_level > 0 && (
         <button
           onClick={() => navigate(`/rune-delve/play/${progress.highest_unlocked_level}`)}
-          className="w-full h-12 rounded-xl font-extrabold text-sm btn-press flex items-center justify-center gap-2"
+          className="rd-btn-juice rd-shimmer w-full h-12 rounded-xl font-extrabold text-sm btn-press flex items-center justify-center gap-2"
           style={{
             background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)))',
             color: 'white',

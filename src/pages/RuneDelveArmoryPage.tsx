@@ -14,6 +14,7 @@ import { LoadoutSlot } from '@/components/runedelve/LoadoutSlot';
 import { RelicCard } from '@/components/runedelve/RelicCard';
 import { ShardBalance } from '@/components/runedelve/ShardBalance';
 import { cn } from '@/lib/utils';
+import { useRuneDelveSfx } from '@/hooks/useRuneDelveSfx';
 
 export default function RuneDelveArmoryPage() {
   const { data: hero } = useRuneDelveHero();
@@ -21,6 +22,7 @@ export default function RuneDelveArmoryPage() {
   const { data: owned } = useRelicCollection();
   const { data: tracks } = useAllClassProgress();
   const updateLoadout = useUpdateLoadout();
+  const { play: rdSfx } = useRuneDelveSfx();
 
   const [activeClass, setActiveClass] = useState<HeroClass | null>(null);
   const cls = activeClass ?? hero?.class ?? 'warrior';
@@ -48,16 +50,19 @@ export default function RuneDelveArmoryPage() {
     if (equipped.includes(relicId)) {
       // already equipped — unequip
       const newSlots = equipped.map(s => s === relicId ? null : s);
+      rdSfx('ui.tap');
       await save(newSlots);
       return;
     }
     const firstEmpty = equipped.findIndex((s, i) => s === null && i < slotsUnlocked);
     if (firstEmpty === -1) {
+      rdSfx('rune.invalid');
       toast.error('All slots are full — tap an equipped relic to unequip first.');
       return;
     }
     const newSlots = [...equipped];
     newSlots[firstEmpty] = relicId;
+    rdSfx('relic.equip');
     await save(newSlots);
   };
 
@@ -162,7 +167,7 @@ export default function RuneDelveArmoryPage() {
             </div>
           </Link>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2 rd-stagger" key={`owned-${cls}`}>
             {ownedRelics.map(r => {
               const isEquipped = equipped.includes(r.id);
               return (
