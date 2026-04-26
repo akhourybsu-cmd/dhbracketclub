@@ -2,6 +2,7 @@ import { Sparkles } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
+import { useRuneDelveSfx } from '@/hooks/useRuneDelveSfx';
 import { useRuneWallet, useSpendShards } from '@/hooks/useRuneShards';
 import { useRelicCollection, useUnlockRelic, useUpgradeRelic } from '@/hooks/useRelicCollection';
 import { useMyProgress } from '@/hooks/useRuneDelveCampaign';
@@ -34,6 +35,7 @@ export default function RuneDelveShopPage() {
   const unlock = useUnlockRelic();
   const upgrade = useUpgradeRelic();
   const sfx = useSoundEffect();
+  const { play: rdSfx } = useRuneDelveSfx();
 
   const [tier, setTier] = useState<RelicTier>(1);
   const [cat, setCat] = useState<RelicCategory | 'all'>('all');
@@ -70,6 +72,8 @@ export default function RuneDelveShopPage() {
       await spend.mutateAsync(r.cost);
       await unlock.mutateAsync({ relic_id: relicId, level: hero?.level ?? 1 });
       sfx.play('achievement');
+      rdSfx('relic.equip');
+      rdSfx('shards.shower');
       toast.success(`✨ Unlocked ${r.name}`, { description: 'Equip it from the Armory' });
     } catch (e: any) {
       toast.error(e?.message ?? 'Could not unlock relic');
@@ -100,6 +104,7 @@ export default function RuneDelveShopPage() {
       await spend.mutateAsync(cost);
       await upgrade.mutateAsync({ relic_id: upgradeRelic.id, expected_rank: curRank });
       sfx.play('success');
+      rdSfx('levelup.fanfare');
       toast.success(`⬆️ ${upgradeRelic.name} → R${curRank + 1}`);
       setUpgradeRelic(null);
     } catch (e: any) {
@@ -203,7 +208,7 @@ export default function RuneDelveShopPage() {
 
       {/* Relic list */}
       {tierUnlocked(tier) && (
-        <div className="space-y-2.5" key={`${tier}-${cat}`}>
+        <div className="space-y-2.5 rd-stagger" key={`${tier}-${cat}`}>
           {visible.map((r, idx) => {
             const ownedAlready = ownedMap.has(r.id);
             const rank = ownedMap.get(r.id);
