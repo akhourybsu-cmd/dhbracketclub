@@ -36,10 +36,6 @@ export function StartNextSeasonSheet({ open, onOpenChange, previousSeason, onCre
   const defaults = useMemo(() => suggestedDefaults(previousSeason), [previousSeason]);
 
   const [name, setName] = useState(defaults.name);
-  const [year, setYear] = useState<number>(defaults.year);
-  const [seasonLabel, setSeasonLabel] = useState<typeof defaults.seasonLabel>(defaults.seasonLabel);
-  const [startsAt, setStartsAt] = useState(defaults.startsAt);
-  const [endsAt, setEndsAt] = useState(defaults.endsAt);
   const [regularSeasonDrafts, setRegularSeasonDrafts] = useState<number>(defaults.regularSeasonDrafts);
   const [bestOf, setBestOf] = useState<number>(defaults.bestOf);
   const [busy, setBusy] = useState(false);
@@ -48,10 +44,6 @@ export function StartNextSeasonSheet({ open, onOpenChange, previousSeason, onCre
   useEffect(() => {
     if (open) {
       setName(defaults.name);
-      setYear(defaults.year);
-      setSeasonLabel(defaults.seasonLabel);
-      setStartsAt(defaults.startsAt);
-      setEndsAt(defaults.endsAt);
       setRegularSeasonDrafts(defaults.regularSeasonDrafts);
       setBestOf(defaults.bestOf);
     }
@@ -59,18 +51,22 @@ export function StartNextSeasonSheet({ open, onOpenChange, previousSeason, onCre
 
   const handleSubmit = async () => {
     if (!name.trim()) { toast.error('Season name required'); return; }
-    if (!startsAt || !endsAt) { toast.error('Start and end dates required'); return; }
-    if (new Date(endsAt) <= new Date(startsAt)) { toast.error('End date must be after start date'); return; }
     if (regularSeasonDrafts < 1 || regularSeasonDrafts > 50) { toast.error('Drafts must be between 1 and 50'); return; }
 
     setBusy(true);
     try {
+      // Seasons progress by completed-draft count, not calendar dates.
+      // We still satisfy NOT NULL schema columns with structural placeholders.
+      const now = new Date();
+      const farFuture = new Date(now);
+      farFuture.setFullYear(farFuture.getFullYear() + 1);
+
       const created: any = await createSeason({
         name: name.trim(),
-        year,
-        seasonLabel,
-        startsAt: new Date(startsAt).toISOString(),
-        endsAt: new Date(endsAt).toISOString(),
+        year: now.getFullYear(),
+        seasonLabel: previousSeason.season_label || 'spring',
+        startsAt: now.toISOString(),
+        endsAt: farFuture.toISOString(),
         regularSeasonDrafts,
         bestOf,
       });
