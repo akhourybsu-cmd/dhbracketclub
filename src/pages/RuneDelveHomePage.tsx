@@ -184,7 +184,7 @@ export default function RuneDelveHomePage() {
 
           <button
             onClick={() => navigate(`/rune-delve/play/${currentLevel}`)}
-            className="w-full h-12 rounded-xl font-extrabold text-sm btn-press flex items-center justify-center gap-2"
+            className="rd-btn-juice rd-shimmer w-full h-12 rounded-xl font-extrabold text-sm btn-press flex items-center justify-center gap-2"
             style={{
               background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)))',
               color: 'white',
