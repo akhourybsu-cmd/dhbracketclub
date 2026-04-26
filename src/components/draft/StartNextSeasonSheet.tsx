@@ -140,61 +140,17 @@ export function StartNextSeasonSheet({ open, onOpenChange, previousSeason, onCre
             />
           </div>
 
-          {/* Season label + year */}
-          <div className="grid grid-cols-[1fr_92px] gap-2.5">
-            <div className="space-y-1.5">
-              <Label className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground/70">
-                Season
-              </Label>
-              <div className="grid grid-cols-4 gap-1.5">
-                {LABELS.map(l => (
-                  <button
-                    key={l.key}
-                    onClick={() => setSeasonLabel(l.key)}
-                    className={cn(
-                      'h-11 rounded-xl text-[10px] font-extrabold transition-all flex flex-col items-center justify-center gap-0.5 btn-press',
-                      seasonLabel === l.key
-                        ? 'bg-gold/15 border border-gold/40 text-gold'
-                        : 'bg-muted/40 border border-transparent text-muted-foreground hover:bg-muted/60'
-                    )}
-                    style={seasonLabel === l.key ? { color: 'hsl(var(--gold))' } : undefined}
-                  >
-                    <span className="text-[14px] leading-none">{l.emoji}</span>
-                    <span>{l.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground/70">
-                Year
-              </Label>
-              <Input
-                type="number"
-                value={year}
-                onChange={e => setYear(parseInt(e.target.value, 10) || year)}
-                className="h-11 text-[14px] font-bold tabular-nums text-center"
-              />
-            </div>
+          {/* Progression note (no dates — driven by draft count) */}
+          <div
+            className="rounded-xl p-3 flex items-start gap-2.5"
+            style={{ background: 'hsl(var(--muted) / 0.4)', border: '1px solid hsl(var(--border) / 0.5)' }}
+          >
+            <Sparkles className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-muted-foreground" />
+            <p className="text-[11px] font-semibold leading-snug text-muted-foreground">
+              Seasons advance automatically when all regular-season drafts complete — no calendar dates required.
+            </p>
           </div>
 
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-2.5">
-            <div className="space-y-1.5">
-              <Label className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground/70 flex items-center gap-1">
-                <Calendar className="w-3 h-3" /> Starts
-              </Label>
-              <Input type="date" value={startsAt} onChange={e => setStartsAt(e.target.value)} className="h-11 text-[13px] font-bold" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground/70 flex items-center gap-1">
-                <Calendar className="w-3 h-3" /> Ends
-              </Label>
-              <Input type="date" value={endsAt} onChange={e => setEndsAt(e.target.value)} className="h-11 text-[13px] font-bold" />
-            </div>
-          </div>
-
-          {/* Drafts + best-of */}
           <div className="grid grid-cols-2 gap-2.5">
             <div className="space-y-1.5">
               <Label className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground/70 flex items-center gap-1">
