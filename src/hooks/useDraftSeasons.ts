@@ -433,6 +433,15 @@ export async function createSeason(params: {
   return data;
 }
 
+/** Set the commissioner on a season (admin / commissioner-only via RLS). */
+export async function setSeasonCommissioner(seasonId: string, userId: string) {
+  const { error } = await supabase
+    .from('draft_seasons' as any)
+    .update({ commissioner_user_id: userId } as any)
+    .eq('id', seasonId);
+  if (error) throw error;
+}
+
 /** Assign a draft to the current season (draft_number = sequential position) */
 export async function assignDraftToSeason(seasonId: string, draftId: string, draftNumber: number, isPlayoff = false) {
   const { error } = await supabase
