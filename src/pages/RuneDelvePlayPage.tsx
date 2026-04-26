@@ -1833,6 +1833,8 @@ export default function RuneDelvePlayPage() {
     <div ref={playRootRef} className="space-y-2 pb-2 relative">
       {/* Cinematic combat FX overlay — chains, abilities, tier flourishes. */}
       <FxLayer queue={fxQ.queue} onComplete={fxQ.complete} />
+      <FloatingNumberLayer floaters={floaters.floaters} onComplete={floaters.complete} />
+      <ScreenEdgeFlash hurtKey={hurtFlashKey} healKey={healFlashKey} />
       {/* Compact combined HUD: turn counter + objective on a single row */}
       <div
         className="rd-carved rounded-xl px-3 py-2 flex items-center gap-2"
