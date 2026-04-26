@@ -177,3 +177,106 @@ export function effectValue(relicId: string, rank: number): number {
   if (!table) return 1;
   return table[clampRank(rank) - 1];
 }
+
+// ─── Rank-aware descriptions ──────────────────────────────────────────────
+// Builds a description string that reflects the relic's *current rank*
+// values, so cards in the Armory and Shop show what the player actually has
+// (or will get on next purchase) — not just the R1 baseline copy.
+
+function pctBonus(mult: number): number {
+  // 1.50 → 50, 1.75 → 75, etc. (rounded)
+  return Math.round((mult - 1) * 100);
+}
+
+function pctReduction(mult: number): number {
+  // 0.90 → 10, 0.85 → 15, etc.
+  return Math.round((1 - mult) * 100);
+}
+
+function turnsLabel(n: number): string {
+  return `${n} turn${n === 1 ? '' : 's'}`;
+}
+
+/** Produces a rank-aware description string for a relic.
+ *  Falls back to the static description if the relic has no rank table or
+ *  no rank-aware template. */
+export function describeRelicAtRank(relic: RelicDef, rank: number): string {
+  const r = clampRank(rank);
+  const v = RANK_EFFECTS[relic.id]?.[r - 1];
+  if (v == null) return relic.description;
+
+  switch (relic.id) {
+    // Offense — % red-chain damage on first chain
+    case 'ember_edge':
+      return `First red chain each run deals +${pctBonus(v)}% damage.`;
+    case 'crimson_tide':
+      return `Every 5th red chain deals +${pctBonus(v)}% damage.`;
+    case 'executioners_mark':
+      return `+${pctBonus(v)}% damage vs enemies below 25% HP.`;
+    case 'desperate_surge':
+      return `Below 30% HP: red chains deal +${pctBonus(v)}% damage.`;
+    case 'momentum':
+      return `Rogue's chain bonus threshold becomes 4+ (was 5+). Other classes: chains of 4+ score +${pctBonus(v)}%.`;
+    case 'mirror_shard':
+      return `Every 2nd chain each run deals +${pctBonus(v)}% extra damage (red) or echoes its effect by ${pctBonus(v)}% (others).`;
+    case 'void_pact':
+      return `Sacrifice 10 max HP. All chains deal +${pctBonus(v)}% effect.`;
+
+    // Mana
+    case 'aether_spark':
+      return `Start each run with ${Math.round(v)} mana.`;
+    case 'sapphire_flow':
+      return `Blue chains grant +${Math.round(v)} mana on chains of 4+.`;
+    case 'first_light': {
+      const n = Math.round(v);
+      return `First ${n} class ability use${n === 1 ? '' : 's'} each run cost 0 mana.`;
+    }
+
+    // Survival
+    case 'iron_resolve':
+      return `Start each run with a ${turnsLabel(Math.round(v))} shield.`;
+    case 'verdant_heart':
+      return `Green chains heal +${v.toFixed(1)} HP per rune.`;
+    case 'bloodbond':
+      return `Killing an enemy heals ${Math.round(v)} HP.`;
+    case 'last_stand': {
+      const n = Math.round(v);
+      return `${n === 1 ? 'Once' : `${n} times`} per run, survive lethal damage at 1 HP.`;
+    }
+    case 'bulwark':
+      return `Gold chains grant +${turnsLabel(Math.round(v))} of shield.`;
+    case 'spiked_aegis':
+      return `Shield reflects +${pctBonus(v)}% damage back at attackers.`;
+    case 'brambleward':
+      return `Shield Thorns reflect +${pctBonus(v)}% more damage. Stacks with Spiked Aegis.`;
+    case 'vampiric_sigil':
+      return `Heal ${Math.round(v * 100)}% of red-chain damage dealt back as HP.`;
+    case 'phoenix_heart':
+      return `Once per run, on lethal damage, revive at ${Math.round(v * 100)}% HP.`;
+
+    // Board / tempo / utility
+    case 'keysight':
+      return `Sealed tiles unlock ${turnsLabel(Math.round(v))} faster.`;
+    case 'cleansing_touch': {
+      const n = Math.round(v);
+      return `First ${n} corrupted source${n === 1 ? '' : 's'} cleared each run ${n === 1 ? 'is' : 'are'} free (no HP cost).`;
+    }
+    case 'quickstep':
+      return `First chain each run counts as +${Math.round(v)} length.`;
+    case 'foresight':
+      return `Telegraphed enemy intents reveal ${turnsLabel(Math.round(v))} earlier.`;
+    case 'shrine_ward':
+      return `Boss & elite damage to you reduced ${pctReduction(v)}% on turn 1.`;
+    case 'wanderers_compass':
+      return `+${pctBonus(v)}% Rune Shards from this run.`;
+    case 'cracked_crown':
+      return `Boss-rule damage modifiers softened by ${pctReduction(v)}%.`;
+    case 'rune_echo':
+      return `Every 4th chain repeats its effect at ${Math.round(v * 100)}% strength.`;
+    case 'foreseers_lens':
+      return `Gain +${turnsLabel(Math.round(v))} on every level.`;
+
+    default:
+      return relic.description;
+  }
+}
