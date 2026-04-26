@@ -96,6 +96,40 @@ export default function SeasonArchiveDetailPage() {
 
       <div className="space-y-3">
         {/* Podium — only for complete seasons */}
+        {isComplete && (champion || runnerUp || thirdPlace) && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-card p-3 flex items-center gap-2.5 overflow-x-auto"
+            style={{
+              background: 'linear-gradient(135deg, hsl(var(--gold) / 0.08), transparent 60%), hsl(var(--card))',
+              border: '1px solid hsl(var(--gold) / 0.18)',
+            }}
+          >
+            <Trophy className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(var(--gold))' }} />
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/70 flex-shrink-0">
+              Final
+            </span>
+            <div className="flex items-center gap-2 text-[11px] font-bold whitespace-nowrap">
+              {champion && (
+                <span style={{ color: 'hsl(var(--gold))' }}>🏆 {champion.display_name}</span>
+              )}
+              {runnerUp && (
+                <>
+                  <span className="text-muted-foreground/40">·</span>
+                  <span className="text-muted-foreground">🥈 {runnerUp.display_name}</span>
+                </>
+              )}
+              {thirdPlace && (
+                <>
+                  <span className="text-muted-foreground/40">·</span>
+                  <span className="text-muted-foreground">🥉 {thirdPlace.display_name}</span>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+
         {isComplete && (
           <SeasonPodium
             champion={champion}
