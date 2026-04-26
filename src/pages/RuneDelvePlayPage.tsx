@@ -252,6 +252,10 @@ export default function RuneDelvePlayPage() {
   // FX overlay queue — purely visual feedback for chains and abilities.
   const fxQ = useFxQueue();
   const { play: playSound } = useSoundEffect();
+  const { play: rdSfx } = useRuneDelveSfx();
+  const floaters = useFloaters();
+  const [hurtFlashKey, setHurtFlashKey] = useState(0);
+  const [healFlashKey, setHealFlashKey] = useState(0);
   const playRootRef = useRef<HTMLDivElement>(null);
   const rectFromEl = (el: Element | null): FxRect | undefined => {
     if (!el) return undefined;
