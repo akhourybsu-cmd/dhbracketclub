@@ -19,6 +19,7 @@ import {
   describeRelicAtRank,
 } from '@/lib/runedelve/relics';
 import { cn } from '@/lib/utils';
+import { useSheetSfx } from '@/hooks/useSheetSfx';
 
 interface Props {
   open: boolean;
@@ -75,6 +76,7 @@ export function RelicUpgradeSheet({
   pending,
   onConfirm,
 }: Props) {
+  useSheetSfx(open);
   // Reset internal animation state every time the sheet opens
   const [mountedKey, setMountedKey] = useState(0);
   useEffect(() => {

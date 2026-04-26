@@ -8,6 +8,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useSheetSfx } from '@/hooks/useSheetSfx';
 
 interface Props {
   open: boolean;
@@ -17,6 +18,7 @@ interface Props {
 
 /** Confirmation when leaving Rune Delve mid-run. */
 export function ExitRunDialog({ open, onOpenChange, onConfirm }: Props) {
+  useSheetSfx(open);
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>

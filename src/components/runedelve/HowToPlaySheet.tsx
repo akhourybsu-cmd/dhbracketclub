@@ -2,6 +2,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getClass, type HeroClass } from '@/lib/runedelve/classConfig';
 import { ClassBadge } from './ClassBadge';
+import { useSheetSfx } from '@/hooks/useSheetSfx';
 
 interface Props {
   open: boolean;
@@ -17,6 +18,7 @@ const RUNES = [
 ];
 
 export function HowToPlaySheet({ open, onOpenChange, heroClass }: Props) {
+  useSheetSfx(open);
   const cls = heroClass ? getClass(heroClass) : null;
 
   return (
