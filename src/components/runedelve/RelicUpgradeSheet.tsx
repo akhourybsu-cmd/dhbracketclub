@@ -16,6 +16,7 @@ import {
   rankCost,
   effectValue,
   clampRank,
+  describeRelicAtRank,
 } from '@/lib/runedelve/relics';
 import { cn } from '@/lib/utils';
 
@@ -140,7 +141,7 @@ export function RelicUpgradeSheet({
             </div>
           </SheetHeader>
 
-          <p className="text-[12px] text-foreground/85 leading-snug mt-3">{relic.description}</p>
+          <p className="text-[12px] text-foreground/85 leading-snug mt-3">{describeRelicAtRank(relic, cur)}</p>
 
           {/* Rank dots */}
           <div className="mt-4 flex items-center gap-1.5">
