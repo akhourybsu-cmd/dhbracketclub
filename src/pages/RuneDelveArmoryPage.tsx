@@ -170,6 +170,7 @@ export default function RuneDelveArmoryPage() {
                   key={r.id}
                   relic={r}
                   state={isEquipped ? 'equipped' : 'owned'}
+                  rank={rankById.get(r.id) ?? 1}
                   onClick={() => equip(r.id)}
                 />
               );
