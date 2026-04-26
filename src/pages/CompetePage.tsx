@@ -1728,11 +1728,20 @@ function NoSeasonState() {
 /* ══════════════════════════════════════════════════════════ */
 export default function CompetePage() {
   const { user } = useAuth();
-  const { season, loading: seasonLoading } = useCurrentSeason();
+  const { season, loading: seasonLoading, refetch: refetchSeason } = useCurrentSeason();
   const { standings, loading: standingsLoading, refetch: refetchStandings } = useSeasonStandings(season?.id);
   const { entries, loading: entriesLoading, refetch: refetchEntries } = useSeasonEntries(season?.id);
   const { matches } = usePlayoffMatchesLive(season?.id);
   const isCommissioner = useIsCommissioner(season);
+  const [isAppAdmin, setIsAppAdmin] = useState(false);
+  const [startNextOpen, setStartNextOpen] = useState(false);
+
+  useEffect(() => {
+    if (!user?.id) { setIsAppAdmin(false); return; }
+    supabase.rpc('is_app_admin', { _user_id: user.id }).then(({ data }) => {
+      setIsAppAdmin(!!data);
+    });
+  }, [user?.id]);
 
   const totalDrafts = season ? getSeasonDraftTarget(season) : 12;
 
