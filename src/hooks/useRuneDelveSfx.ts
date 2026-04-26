@@ -288,20 +288,20 @@ function playCue(cue: RdSfxCue, chainIndex = 0): void {
       noise(ctx, out, { dur: 0.10, peak: 0.025, filter: { type: 'lowpass', freq: 600 }, start: 0.06 });
       break;
     case 'hero.heal': {
-      // Ascending bell triad over a warm enveloping pad
-      const notes = [523, 659, 880];
-      notes.forEach((n, i) => bell(ctx, out, n, { dur: 0.35, peak: 0.06, start: i * 0.07 }));
-      tone(ctx, out, { freq: 261, type: 'sine', dur: 0.45, peak: 0.04, attack: 0.06, release: 0.4 });
-      tone(ctx, out, { freq: 392, type: 'sine', dur: 0.45, peak: 0.035, attack: 0.06, release: 0.4, start: 0.04 });
+      // HEAL — warm choir-like sine pad swell first, then ascending triad sparkle
+      tone(ctx, out, { freq: 261, type: 'sine', dur: 0.55, peak: 0.07, attack: 0.04, release: 0.5 });
+      tone(ctx, out, { freq: 392, type: 'sine', dur: 0.55, peak: 0.06, attack: 0.04, release: 0.5 });
+      tone(ctx, out, { freq: 523, type: 'triangle', dur: 0.55, peak: 0.05, attack: 0.04, release: 0.5, start: 0.02 });
+      const notes = [659, 880, 1175];
+      notes.forEach((n, i) => tone(ctx, out, { freq: n, type: 'sine', dur: 0.20, peak: 0.045, start: 0.10 + i * 0.06, bend: 1.05 }));
       break;
     }
     case 'shield.up':
-      // Wood/leather thunk → metallic ring-up → high shimmer
-      noise(ctx, out, { dur: 0.06, peak: 0.08, filter: { type: 'lowpass', freq: 800 } });
-      tone(ctx, out, { freq: 160, type: 'square', dur: 0.14, peak: 0.07, bend: 0.7 });
-      bell(ctx, out, 520, { dur: 0.5, peak: 0.06, start: 0.04, ratio: 2.76 });
-      bell(ctx, out, 1200, { dur: 0.45, peak: 0.05, start: 0.06 });
-      noise(ctx, out, { dur: 0.18, peak: 0.04, filter: { type: 'highpass', freq: 2200 }, start: 0.04 });
+      // SHIELD RAISE — wood/leather thunk, low metal body, brief shimmer (no bells)
+      noise(ctx, out, { dur: 0.06, peak: 0.10, filter: { type: 'lowpass', freq: 700 } });
+      tone(ctx, out, { freq: 130, type: 'square', dur: 0.18, peak: 0.09, bend: 0.7 });
+      tone(ctx, out, { freq: 360, type: 'triangle', dur: 0.28, peak: 0.06, bend: 1.4, start: 0.03, detune: 10 });
+      noise(ctx, out, { dur: 0.16, peak: 0.04, filter: { type: 'highpass', freq: 3500 }, start: 0.04 });
       break;
     case 'mana.gain':
       // Rising fill sweep under a clear bell
