@@ -17,7 +17,7 @@ export function HeroStatusBar({ state, cls, onAbility }: Props) {
   return (
     <div className="w-full space-y-2">
       <div className="flex items-center gap-2" data-fx-target="hp">
-        <Heart className="w-4 h-4" style={{ color: 'hsl(var(--destructive))' }} />
+        <Heart className={cn('w-4 h-4', hpPct < 35 && 'rd-breath')} style={{ color: 'hsl(var(--destructive))' }} />
         <div className="flex-1 h-3 rounded-full bg-muted/50 overflow-hidden relative" data-fx-hp-glow-target>
           <div
             className="h-full transition-all duration-300"
@@ -68,7 +68,7 @@ export function HeroStatusBar({ state, cls, onAbility }: Props) {
           disabled={!ready}
           className={cn(
             'ml-auto h-9 px-3 rounded-lg text-[11px] font-extrabold flex items-center gap-1.5 btn-press transition-all',
-            ready ? 'text-white' : 'text-muted-foreground bg-muted/40',
+            ready ? 'text-white rd-shimmer rd-btn-juice' : 'text-muted-foreground bg-muted/40',
           )}
           style={ready ? {
             background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)))',
