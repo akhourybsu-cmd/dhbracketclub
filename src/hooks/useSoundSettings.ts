@@ -60,6 +60,8 @@ function write(next: SoundSettings) {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
     // Keep the legacy boolean in sync so older readers stay correct.
     localStorage.setItem(STORAGE_KEY, String(next.master));
+    // Same-tab notification — `storage` events only fire across tabs natively.
+    window.dispatchEvent(new StorageEvent('storage', { key: SETTINGS_KEY }));
   } catch {
     /* ignore quota / private mode */
   }
