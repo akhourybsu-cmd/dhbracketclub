@@ -325,7 +325,7 @@ export default function RuneDelveResultsPage() {
               <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               <div className="min-w-0">
                 <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{s.label}</p>
-                <p className="font-mono text-sm font-extrabold tabular-nums">{s.value}</p>
+                <CountUp value={s.value} duration={750} delay={400} className="font-mono text-sm font-extrabold tabular-nums" />
               </div>
             </div>
           );
