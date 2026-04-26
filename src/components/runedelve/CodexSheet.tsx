@@ -13,6 +13,7 @@ import { ClassBadge } from './ClassBadge';
 import { RELIC_CATALOG } from '@/lib/runedelve/relics';
 import { Lock, Flame, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSheetSfx } from '@/hooks/useSheetSfx';
 
 interface Props {
   open: boolean;
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export function CodexSheet({ open, onOpenChange, defaultTab = 'mechanics' }: Props) {
+  useSheetSfx(open);
   const { data: hero } = useRuneDelveHero();
   const { data: progress } = useMyProgress();
   const { data: classTracks } = useAllClassProgress();

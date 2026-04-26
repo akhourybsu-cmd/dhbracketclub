@@ -1,6 +1,7 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { getMechanic, type MechanicId } from '@/lib/runedelve/mechanics';
 import { getBossRule, type BossRuleId } from '@/lib/runedelve/bossRules';
+import { useSheetSfx } from '@/hooks/useSheetSfx';
 
 interface Props {
   open: boolean;
@@ -19,6 +20,7 @@ interface Props {
  * Mobile-first: oversized icon, single-line title, one short rule, one CTA.
  */
 export function MechanicIntroSheet({ open, onOpenChange, mechanicId, bossRuleId, onBegin, levelNumber }: Props) {
+  useSheetSfx(open);
   const m = mechanicId ? getMechanic(mechanicId) : null;
   const boss = bossRuleId ? getBossRule(bossRuleId) : null;
   // When a boss rule is present, it takes the headline slot. Otherwise the

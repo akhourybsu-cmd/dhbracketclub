@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRuneDelveHero } from '@/hooks/useRuneDelveHero';
 import { useMyProgress } from '@/hooks/useRuneDelveCampaign';
 import { chapterFor, chapterMeta } from '@/lib/runedelve/levelGenerator';
 import { getClass } from '@/lib/runedelve/classConfig';
+import { useRuneDelveSfx } from '@/hooks/useRuneDelveSfx';
 import runedelveEmblem from '@/assets/runedelve-emblem.png';
 
 const BOOT_FLAG = 'rd_boot_played_v1';
@@ -31,6 +32,8 @@ export function RuneDelveBoot() {
   const [show, setShow] = useState(false);
   const [progress, setProgress] = useState(0);
   const [flavorIdx, setFlavorIdx] = useState(0);
+  const { play } = useRuneDelveSfx();
+  const playedReady = useRef(false);
 
   const { data: hero } = useRuneDelveHero();
   const { data: progressData } = useMyProgress();
@@ -54,6 +57,9 @@ export function RuneDelveBoot() {
       sessionStorage.setItem(BOOT_FLAG, '1');
     } catch {}
 
+    // Boot drone — long, slow rising tone synced to the bar fill.
+    play('boot.charge', { skipHaptic: true });
+
     const start = performance.now();
     let raf = 0;
     const tick = (t: number) => {
@@ -65,11 +71,17 @@ export function RuneDelveBoot() {
       // Swap flavor at ~55%
       if (linear > 0.55) setFlavorIdx(1);
       if (linear < 1) raf = requestAnimationFrame(tick);
-      else setTimeout(() => setShow(false), 220);
+      else {
+        if (!playedReady.current) {
+          playedReady.current = true;
+          play('boot.ready');
+        }
+        setTimeout(() => setShow(false), 220);
+      }
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [play]);
 
   return (
     <AnimatePresence>
