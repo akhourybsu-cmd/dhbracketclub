@@ -1846,8 +1846,53 @@ export default function CompetePage() {
                         </div>
                       </Link>
                     </motion.div>
+                    {(isCommissioner || isAppAdmin) && (
+                      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }}>
+                        <div
+                          className="glass-card p-4 flex items-center gap-3"
+                          style={{
+                            background: 'linear-gradient(135deg, hsl(var(--gold) / 0.10), transparent 60%), hsl(var(--card))',
+                            border: '1px solid hsl(var(--gold) / 0.25)',
+                            boxShadow: '0 0 24px -10px hsl(var(--gold) / 0.45)',
+                          }}
+                        >
+                          <div
+                            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                            style={{
+                              background: 'linear-gradient(135deg, hsl(var(--gold) / 0.22), hsl(var(--gold) / 0.06))',
+                              border: '1px solid hsl(var(--gold) / 0.3)',
+                            }}
+                          >
+                            <Sparkles className="w-5 h-5" style={{ color: 'hsl(var(--gold))' }} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-extrabold">Ready for the next season?</p>
+                            <p className="text-[10px] text-muted-foreground/70 mt-0.5 leading-snug">
+                              Archive {season.name} and open fresh standings.
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => setStartNextOpen(true)}
+                            className="h-9 px-3 rounded-lg text-[11px] font-extrabold btn-press flex items-center gap-1.5 flex-shrink-0"
+                            style={{
+                              background: 'linear-gradient(135deg, hsl(var(--gold) / 0.95), hsl(var(--gold) / 0.7))',
+                              color: 'hsl(0 0% 8%)',
+                              boxShadow: '0 4px 12px -4px hsl(var(--gold) / 0.5)',
+                            }}
+                          >
+                            <Plus className="w-3.5 h-3.5" /> Start
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
                     <StandingsCard standings={standings} userId={user?.id} />
                     <LifetimeStatsCard userId={user?.id} />
+                    <StartNextSeasonSheet
+                      open={startNextOpen}
+                      onOpenChange={setStartNextOpen}
+                      previousSeason={season}
+                      onCreated={() => { refetchSeason(); }}
+                    />
                   </>
                 ) : (
                   <>
