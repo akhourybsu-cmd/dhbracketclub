@@ -25,7 +25,9 @@ interface Props {
  */
 export function SoundSettingsCard({ embedded = false }: Props) {
   const { settings, setMaster, setHaptics, setCategory, reset } = useSoundSettings();
+  const { enabled: musicEnabled, setEnabled: setMusicEnabled } = useMusicPref();
   const masterOff = !settings.master;
+  const ambientOff = masterOff || !settings.categories.ambient;
 
   const Wrapper = embedded
     ? ({ children }: { children: React.ReactNode }) => <div className="space-y-3">{children}</div>
@@ -74,6 +76,16 @@ export function SoundSettingsCard({ embedded = false }: Props) {
         checked={settings.haptics}
         onChange={setHaptics}
         disabled={masterOff}
+      />
+
+      {/* Music */}
+      <Row
+        title="Background Music"
+        desc="Subtle fantasy ambient on the Rune Delve home screen."
+        Icon={Music}
+        checked={musicEnabled}
+        onChange={setMusicEnabled}
+        disabled={ambientOff}
       />
 
       {/* Categories */}
