@@ -217,33 +217,32 @@ function playCue(cue: RdSfxCue, chainIndex = 0): void {
       noise(ctx, out, { dur: 0.12, peak: 0.025, filter: { type: 'lowpass', freq: 600 } });
       break;
     case 'rune.fire.red':
-      // Sword slash — air whoosh → metallic edge ring → connecting body thud
-      noise(ctx, out, { dur: 0.20, peak: 0.09, filter: { type: 'bandpass', freq: 800, q: 1.4, sweepTo: 5500 } });
-      tone(ctx, out, { freq: 980, type: 'triangle', dur: 0.18, peak: 0.06, bend: 1.6, start: 0.06 });
-      tone(ctx, out, { freq: 1480, type: 'sine', dur: 0.16, peak: 0.045, bend: 1.5, start: 0.08, detune: 6 });
-      tone(ctx, out, { freq: 140, type: 'square', dur: 0.10, peak: 0.07, bend: 0.6, start: 0.10 });
+      // SWORD — instant slash whoosh + metallic edge, body thud lands almost immediately
+      noise(ctx, out, { dur: 0.18, peak: 0.10, filter: { type: 'bandpass', freq: 1200, q: 1.2, sweepTo: 6500 } });
+      tone(ctx, out, { freq: 1800, type: 'sawtooth', dur: 0.10, peak: 0.05, bend: 0.4 });
+      tone(ctx, out, { freq: 140, type: 'square', dur: 0.12, peak: 0.09, bend: 0.5, start: 0.02 });
+      noise(ctx, out, { dur: 0.06, peak: 0.05, filter: { type: 'highpass', freq: 4000 }, start: 0.04 });
       break;
     case 'rune.fire.blue':
-      // Arcane spark — building electric crackle into a triad burst
-      noise(ctx, out, { dur: 0.28, peak: 0.06, filter: { type: 'bandpass', freq: 1500, q: 2.2, sweepTo: 6000 } });
-      bell(ctx, out, 660, { dur: 0.36, peak: 0.07, ratio: 3.01 });
-      bell(ctx, out, 990, { dur: 0.38, peak: 0.06, start: 0.05, ratio: 3.01 });
-      bell(ctx, out, 1320, { dur: 0.4, peak: 0.06, start: 0.10, ratio: 3.01 });
-      bell(ctx, out, 2640, { dur: 0.32, peak: 0.05, start: 0.18 });
+      // ARCANE — instant electric ZAP, crackle tail, no bells
+      tone(ctx, out, { freq: 200, type: 'sawtooth', dur: 0.16, peak: 0.09, bend: 8.0 });
+      tone(ctx, out, { freq: 220, type: 'square', dur: 0.14, peak: 0.06, bend: 6.0, detune: 14 });
+      noise(ctx, out, { dur: 0.30, peak: 0.07, filter: { type: 'bandpass', freq: 3500, q: 3.0, sweepTo: 7500 } });
+      noise(ctx, out, { dur: 0.10, peak: 0.04, filter: { type: 'highpass', freq: 5000 }, start: 0.18 });
       break;
     case 'rune.fire.green':
-      // Living growth — harp pluck + airy pad + leaf shimmer rising
-      tone(ctx, out, { freq: 392, type: 'triangle', dur: 0.45, peak: 0.07, attack: 0.005, release: 0.4 });
-      tone(ctx, out, { freq: 587, type: 'sine', dur: 0.45, peak: 0.05, start: 0.04, release: 0.4 });
-      tone(ctx, out, { freq: 784, type: 'sine', dur: 0.55, peak: 0.045, start: 0.08, release: 0.5, bend: 1.25 });
-      noise(ctx, out, { dur: 0.45, peak: 0.022, filter: { type: 'lowpass', freq: 1200, sweepTo: 2200 } });
+      // NATURE — instant harp pluck + warm growth pad, leaf shimmer
+      tone(ctx, out, { freq: 392, type: 'triangle', dur: 0.45, peak: 0.09, attack: 0.002, release: 0.4 });
+      tone(ctx, out, { freq: 587, type: 'sine', dur: 0.45, peak: 0.06, release: 0.4 });
+      tone(ctx, out, { freq: 784, type: 'sine', dur: 0.55, peak: 0.05, start: 0.04, release: 0.5, bend: 1.25 });
+      noise(ctx, out, { dur: 0.45, peak: 0.025, filter: { type: 'lowpass', freq: 1200, sweepTo: 2400 } });
       break;
     case 'rune.fire.gold':
-      // Anvil — hard metallic transient → low body thud → struck-steel ring (inharmonic)
-      noise(ctx, out, { dur: 0.10, peak: 0.08, filter: { type: 'highpass', freq: 2500 } });
-      tone(ctx, out, { freq: 200, type: 'square', dur: 0.18, peak: 0.07, bend: 0.6 });
-      bell(ctx, out, 1100, { dur: 0.55, peak: 0.07, start: 0.03, ratio: 2.76 });
-      bell(ctx, out, 1700, { dur: 0.42, peak: 0.05, start: 0.05, ratio: 2.76 });
+      // GUARD / ANVIL — instant hard metallic clang, deep body, struck-steel ring
+      noise(ctx, out, { dur: 0.06, peak: 0.10, filter: { type: 'highpass', freq: 3000 } });
+      tone(ctx, out, { freq: 90, type: 'square', dur: 0.20, peak: 0.10, bend: 0.5 });
+      tone(ctx, out, { freq: 380, type: 'triangle', dur: 0.32, peak: 0.07, bend: 0.7, detune: 8 });
+      tone(ctx, out, { freq: 560, type: 'triangle', dur: 0.30, peak: 0.05, bend: 0.7, detune: -10, start: 0.02 });
       break;
     case 'chain.bonus': {
       const notes = [880, 1108, 1318, 1760];
