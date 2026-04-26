@@ -62,13 +62,16 @@ export type RdSfxCue =
   | 'boot.charge'
   | 'boot.ready';
 
-function getStoredSoundPref(): boolean {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored === null ? true : stored === 'true';
-  } catch {
-    return true;
-  }
+/** Map every cue to a high-level category for the sound-settings panel. */
+function categoryFor(cue: RdSfxCue): SoundCategory {
+  if (cue.startsWith('ui.') || cue === 'tab.switch') return 'ui';
+  if (cue.startsWith('boot.')) return 'ambient';
+  if (
+    cue === 'coin.pickup' || cue === 'shards.shower' || cue === 'level.unlock' ||
+    cue === 'star.earned' || cue === 'xp.fill' || cue === 'levelup.fanfare' ||
+    cue === 'relic.equip' || cue === 'victory' || cue === 'defeat'
+  ) return 'rewards';
+  return 'combat';
 }
 
 let _ctx: AudioContext | null = null;
