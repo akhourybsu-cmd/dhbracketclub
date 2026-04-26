@@ -316,39 +316,40 @@ function playCue(cue: RdSfxCue, chainIndex = 0): void {
       noise(ctx, out, { dur: 0.32, peak: 0.025, filter: { type: 'bandpass', freq: 2000, sweepTo: 4500 } });
       break;
     case 'ability.cast.warrior':
-      // CLEAVE — sweeping whoosh → heavy clang on impact → low body thud + grunt growl
-      noise(ctx, out, { dur: 0.35, peak: 0.07, filter: { type: 'bandpass', freq: 600, q: 1.6, sweepTo: 4500 } });
-      tone(ctx, out, { freq: 60, type: 'sawtooth', dur: 0.30, peak: 0.09, bend: 0.7, start: 0.18 });
-      tone(ctx, out, { freq: 200, type: 'square', dur: 0.18, peak: 0.08, bend: 0.5, start: 0.20 });
-      bell(ctx, out, 880, { dur: 0.55, peak: 0.07, start: 0.20, ratio: 2.76 });
-      bell(ctx, out, 1320, { dur: 0.45, peak: 0.05, start: 0.22, ratio: 2.76 });
-      tone(ctx, out, { freq: 130, type: 'sawtooth', dur: 0.16, peak: 0.05, bend: 0.6, start: 0.04, detune: -10 });
+      // CLEAVE — instant heavy STEEL CLANG, body thud, grunt growl, tail whoosh
+      tone(ctx, out, { freq: 220, type: 'square', dur: 0.22, peak: 0.10, bend: 0.45 });
+      tone(ctx, out, { freq: 330, type: 'sawtooth', dur: 0.20, peak: 0.07, bend: 0.5, detune: 12 });
+      tone(ctx, out, { freq: 70, type: 'sawtooth', dur: 0.32, peak: 0.10, bend: 0.6 });
+      noise(ctx, out, { dur: 0.10, peak: 0.07, filter: { type: 'highpass', freq: 3500 } });
+      tone(ctx, out, { freq: 130, type: 'sawtooth', dur: 0.22, peak: 0.06, bend: 0.55, detune: -10, start: 0.04 });
+      noise(ctx, out, { dur: 0.30, peak: 0.05, filter: { type: 'bandpass', freq: 800, q: 1.4, sweepTo: 4500 }, start: 0.08 });
       break;
     case 'ability.cast.mage':
-      // ARC BOLT — crackling charge → sharp zip → bright impact bell → secondary chain crackle
-      noise(ctx, out, { dur: 0.30, peak: 0.07, filter: { type: 'bandpass', freq: 800, q: 2.0, sweepTo: 7000 } });
-      tone(ctx, out, { freq: 440, type: 'sine', dur: 0.18, peak: 0.07, bend: 4.0, start: 0.05 });
-      bell(ctx, out, 1760, { dur: 0.5, peak: 0.07, start: 0.18 });
-      bell(ctx, out, 2640, { dur: 0.45, peak: 0.05, start: 0.20 });
-      noise(ctx, out, { dur: 0.18, peak: 0.045, filter: { type: 'bandpass', freq: 3500, q: 2.2, sweepTo: 6500 }, start: 0.30 });
-      tone(ctx, out, { freq: 1320, type: 'sine', dur: 0.12, peak: 0.04, bend: 1.8, start: 0.32 });
+      // ARC BOLT — instant electric ZAP + crackle, no chime bells
+      tone(ctx, out, { freq: 260, type: 'sawtooth', dur: 0.22, peak: 0.10, bend: 6.0 });
+      tone(ctx, out, { freq: 280, type: 'square', dur: 0.20, peak: 0.07, bend: 5.5, detune: 16 });
+      noise(ctx, out, { dur: 0.32, peak: 0.08, filter: { type: 'bandpass', freq: 1200, q: 2.6, sweepTo: 7500 } });
+      tone(ctx, out, { freq: 1800, type: 'sawtooth', dur: 0.10, peak: 0.05, bend: 0.5, start: 0.10 });
+      noise(ctx, out, { dur: 0.16, peak: 0.05, filter: { type: 'highpass', freq: 5500 }, start: 0.18 });
+      tone(ctx, out, { freq: 220, type: 'sawtooth', dur: 0.10, peak: 0.05, bend: 4.0, start: 0.22 });
       break;
     case 'ability.cast.rogue':
-      // SHADOWSTEP — vanish whoosh (down) → silence beat → blade unsheathe (up)
-      noise(ctx, out, { dur: 0.18, peak: 0.06, filter: { type: 'lowpass', freq: 1800, sweepTo: 200 } });
-      tone(ctx, out, { freq: 320, type: 'triangle', dur: 0.16, peak: 0.05, bend: 0.4 });
-      // (~80ms silent gap)
-      noise(ctx, out, { dur: 0.14, peak: 0.06, filter: { type: 'highpass', freq: 3500 }, start: 0.30 });
-      tone(ctx, out, { freq: 880, type: 'sine', dur: 0.14, peak: 0.06, bend: 1.8, start: 0.30 });
-      tone(ctx, out, { freq: 1760, type: 'triangle', dur: 0.10, peak: 0.04, bend: 1.4, start: 0.34 });
+      // SHADOWSTEP — instant blade SLICE (highpass air + zip), then dark vanish whoosh
+      noise(ctx, out, { dur: 0.10, peak: 0.10, filter: { type: 'highpass', freq: 4500 } });
+      tone(ctx, out, { freq: 2400, type: 'triangle', dur: 0.10, peak: 0.06, bend: 0.4 });
+      tone(ctx, out, { freq: 1200, type: 'sine', dur: 0.12, peak: 0.05, bend: 1.6, start: 0.02 });
+      noise(ctx, out, { dur: 0.24, peak: 0.05, filter: { type: 'lowpass', freq: 1800, sweepTo: 200 }, start: 0.08 });
+      tone(ctx, out, { freq: 320, type: 'triangle', dur: 0.18, peak: 0.04, bend: 0.4, start: 0.10 });
       break;
     case 'ability.cast.cleric': {
-      // SANCTUARY — sustained chapel chord (perfect-fifth voicing) + airy halo + warm low pad
-      const chord = [392, 494, 587, 784];
-      chord.forEach(n => bell(ctx, out, n, { dur: 0.9, peak: 0.055 }));
-      bell(ctx, out, 1175, { dur: 0.85, peak: 0.045, start: 0.06 });
-      tone(ctx, out, { freq: 196, type: 'sine', dur: 0.85, peak: 0.045, attack: 0.10, release: 0.7 });
-      noise(ctx, out, { dur: 0.55, peak: 0.025, filter: { type: 'highpass', freq: 4000 } });
+      // SANCTUARY — instant warm ORGAN PAD chord (sine triad), airy halo, no bells
+      const chord = [261, 392, 523, 784];
+      chord.forEach((n, i) => tone(ctx, out, {
+        freq: n, type: 'sine', dur: 0.95, peak: 0.07, attack: 0.02, release: 0.85, start: i * 0.015,
+      }));
+      tone(ctx, out, { freq: 130, type: 'triangle', dur: 0.95, peak: 0.05, attack: 0.04, release: 0.8 });
+      tone(ctx, out, { freq: 1175, type: 'sine', dur: 0.7, peak: 0.04, attack: 0.06, release: 0.6, start: 0.04 });
+      noise(ctx, out, { dur: 0.55, peak: 0.025, filter: { type: 'highpass', freq: 4500 } });
       break;
     }
     case 'turn.end':
