@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { getSoundSettings, type SoundCategory } from './useSoundSettings';
 
 /**
  * Themed RuneDelve sound family.
@@ -8,9 +9,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  * ADSR envelope, FM bell, filter sweep) so each cue has a *signature*
  * timbre rather than the generic ping/beep used in the broader app.
  *
- * Reuses the same global toggle key as `useSoundEffect` so the existing
- * sound on/off control naturally turns these off too. Always silent if
- * the user prefers reduced motion (treated as "low-stim" preference).
+ * Honours the central `useSoundSettings` store: master toggle, per-category
+ * mute (ui / combat / rewards / ambient), and haptics independence.
  *
  * Mobile haptics are emitted alongside cues where it adds tactile value.
  */
@@ -62,13 +62,16 @@ export type RdSfxCue =
   | 'boot.charge'
   | 'boot.ready';
 
-function getStoredSoundPref(): boolean {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored === null ? true : stored === 'true';
-  } catch {
-    return true;
-  }
+/** Map every cue to a high-level category for the sound-settings panel. */
+function categoryFor(cue: RdSfxCue): SoundCategory {
+  if (cue.startsWith('ui.') || cue === 'tab.switch') return 'ui';
+  if (cue.startsWith('boot.')) return 'ambient';
+  if (
+    cue === 'coin.pickup' || cue === 'shards.shower' || cue === 'level.unlock' ||
+    cue === 'star.earned' || cue === 'xp.fill' || cue === 'levelup.fanfare' ||
+    cue === 'relic.equip' || cue === 'victory' || cue === 'defeat'
+  ) return 'rewards';
+  return 'combat';
 }
 
 let _ctx: AudioContext | null = null;
@@ -444,19 +447,24 @@ function haptic(cue: RdSfxCue) {
 /* ─── Public hook ─────────────────────────────────────────────────── */
 
 export function useRuneDelveSfx() {
-  const [enabled, setEnabled] = useState(getStoredSoundPref);
+  const [settings, setSettings] = useState(() => getSoundSettings());
   const lastHoverRef = useRef(0);
 
-  // React to global toggle changes from other tabs / the regular SoundEffect hook.
+  // React to settings changes from other tabs or the settings panel.
   useEffect(() => {
-    const sync = () => setEnabled(getStoredSoundPref());
+    const sync = () => setSettings(getSoundSettings());
     window.addEventListener('storage', sync);
     return () => window.removeEventListener('storage', sync);
   }, []);
 
   const play = useCallback(
     (cue: RdSfxCue, opts: { index?: number; skipHaptic?: boolean } = {}) => {
-      if (!enabled) return;
+      // Re-read so settings changed in this tab take effect immediately.
+      const s = getSoundSettings();
+      const cat = categoryFor(cue);
+      const soundOk = s.master && s.categories[cat];
+      const hapticOk = s.master && s.haptics;
+      if (!soundOk && !hapticOk) return;
       // Honour reduced-motion as a low-stim preference for sound too.
       if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
       // Throttle hover cue so it never machine-guns.
@@ -465,11 +473,14 @@ export function useRuneDelveSfx() {
         if (now - lastHoverRef.current < HOVER_COOLDOWN_MS) return;
         lastHoverRef.current = now;
       }
-      try { playCue(cue, opts.index ?? 0); } catch { /* never break gameplay over audio */ }
-      if (!opts.skipHaptic) haptic(cue);
+      if (soundOk) {
+        try { playCue(cue, opts.index ?? 0); } catch { /* never break gameplay over audio */ }
+      }
+      if (hapticOk && !opts.skipHaptic) haptic(cue);
     },
-    [enabled],
+    [settings],
   );
 
-  return { play, enabled };
+  return { play, enabled: settings.master };
 }
+

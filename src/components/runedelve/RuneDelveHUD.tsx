@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, Sparkles } from 'lucide-react';
+import { ArrowLeft, BookOpen, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { useRuneDelveHero } from '@/hooks/useRuneDelveHero';
 import { useMyProgress } from '@/hooks/useRuneDelveCampaign';
 import { useRuneWallet } from '@/hooks/useRuneShards';
+import { useSoundSettings } from '@/hooks/useSoundSettings';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import SoundSettingsCard from '@/components/profile/SoundSettingsCard';
 import { ClassBadge } from './ClassBadge';
 import { ShardBalance } from './ShardBalance';
 import { ExitRunDialog } from './ExitRunDialog';
@@ -25,6 +28,8 @@ export function RuneDelveHUD() {
   const { data: wallet } = useRuneWallet();
   const [exitOpen, setExitOpen] = useState(false);
   const [codexOpen, setCodexOpen] = useState(false);
+  const [soundOpen, setSoundOpen] = useState(false);
+  const { settings } = useSoundSettings();
 
   const isHome = location.pathname === '/rune-delve';
   const isPlaying = location.pathname.startsWith('/rune-delve/play/');
@@ -84,14 +89,24 @@ export function RuneDelveHUD() {
           </Link>
 
           {!isPlaying && (
-            <button
-              onClick={() => setCodexOpen(true)}
-              aria-label="Open Codex"
-              className="w-9 h-9 rounded-xl flex items-center justify-center btn-press text-foreground/85 hover:text-primary"
-              style={{ background: 'hsl(var(--rd-arcane) / 0.12)' }}
-            >
-              <BookOpen className="w-4 h-4" />
-            </button>
+            <>
+              <button
+                onClick={() => setSoundOpen(true)}
+                aria-label="Sound settings"
+                className="w-9 h-9 rounded-xl flex items-center justify-center btn-press text-foreground/85 hover:text-primary"
+                style={{ background: 'hsl(var(--rd-arcane) / 0.12)' }}
+              >
+                {settings.master ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+              </button>
+              <button
+                onClick={() => setCodexOpen(true)}
+                aria-label="Open Codex"
+                className="w-9 h-9 rounded-xl flex items-center justify-center btn-press text-foreground/85 hover:text-primary"
+                style={{ background: 'hsl(var(--rd-arcane) / 0.12)' }}
+              >
+                <BookOpen className="w-4 h-4" />
+              </button>
+            </>
           )}
 
           <Link to="/rune-delve/shop" aria-label="Shop">
@@ -109,6 +124,17 @@ export function RuneDelveHUD() {
         }}
       />
       <CodexSheet open={codexOpen} onOpenChange={setCodexOpen} />
+
+      <Sheet open={soundOpen} onOpenChange={setSoundOpen}>
+        <SheetContent side="bottom" className="rounded-t-3xl p-0 max-h-[88vh] overflow-y-auto">
+          <SheetHeader className="px-5 pt-5 pb-2 text-left">
+            <SheetTitle className="text-xl font-extrabold tracking-tight">Sound & Haptics</SheetTitle>
+          </SheetHeader>
+          <div className="px-5 pb-7">
+            <SoundSettingsCard embedded />
+          </div>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }
