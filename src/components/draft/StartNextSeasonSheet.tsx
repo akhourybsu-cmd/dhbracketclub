@@ -57,14 +57,38 @@ export function StartNextSeasonSheet({ open, onOpenChange, previousSeason, onCre
     try {
       // Seasons progress by completed-draft count, not calendar dates.
       // We still satisfy NOT NULL schema columns with structural placeholders.
+      // The DB has a unique (year, season_label) constraint, so find the next
+      // available slot automatically — users no longer pick year/label.
       const now = new Date();
       const farFuture = new Date(now);
       farFuture.setFullYear(farFuture.getFullYear() + 1);
 
+      const LABEL_CYCLE: Array<'winter' | 'spring' | 'summer' | 'fall'> =
+        ['spring', 'summer', 'fall', 'winter'];
+      const { data: existing } = await (await import('@/integrations/supabase/client')).supabase
+        .from('draft_seasons' as any)
+        .select('year, season_label');
+      const taken = new Set(
+        ((existing as any[]) || []).map(r => `${r.year}::${r.season_label}`)
+      );
+      let chosenYear = now.getFullYear();
+      let chosenLabel: 'winter' | 'spring' | 'summer' | 'fall' = 'spring';
+      let found = false;
+      for (let yr = chosenYear; yr <= chosenYear + 25 && !found; yr++) {
+        for (const lbl of LABEL_CYCLE) {
+          if (!taken.has(`${yr}::${lbl}`)) {
+            chosenYear = yr;
+            chosenLabel = lbl;
+            found = true;
+            break;
+          }
+        }
+      }
+
       const created: any = await createSeason({
         name: name.trim(),
-        year: now.getFullYear(),
-        seasonLabel: previousSeason.season_label || 'spring',
+        year: chosenYear,
+        seasonLabel: chosenLabel,
         startsAt: now.toISOString(),
         endsAt: farFuture.toISOString(),
         regularSeasonDrafts,
