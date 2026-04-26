@@ -26,7 +26,7 @@ export function EnemyDisplay({ enemies, flashId }: Props) {
           >
             <div className="relative">
               <div
-                className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl rd-enemy-frame ${e.name?.startsWith('Elite') ? 'is-elite' : ''} ${e.tier === 'mini' ? 'rd-enemy-mini' : ''} ${e.tier === 'boss' ? 'rd-enemy-boss' : ''}`}
+                className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl rd-enemy-frame ${dead ? '' : e.tier === 'boss' ? 'rd-breath' : 'rd-breath-slow'} ${e.name?.startsWith('Elite') ? 'is-elite' : ''} ${e.tier === 'mini' ? 'rd-enemy-mini' : ''} ${e.tier === 'boss' ? 'rd-enemy-boss' : ''}`}
                 style={{
                   filter: dead ? 'grayscale(1)' : 'none',
                   opacity: dead ? 0.5 : 1,
