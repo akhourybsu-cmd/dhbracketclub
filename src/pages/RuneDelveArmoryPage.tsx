@@ -28,6 +28,11 @@ export default function RuneDelveArmoryPage() {
 
   const slotsUnlocked = wallet?.slots_unlocked ?? 2;
   const ownedIds = useMemo(() => new Set((owned ?? []).map(o => o.relic_id)), [owned]);
+  const rankById = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const o of owned ?? []) m.set(o.relic_id, o.rank ?? 1);
+    return m;
+  }, [owned]);
   const ownedRelics = useMemo(
     () => RELIC_CATALOG.filter(r => ownedIds.has(r.id)),
     [ownedIds],
