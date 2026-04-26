@@ -16,6 +16,8 @@ import { RELIC_BY_ID } from '@/lib/runedelve/relics';
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
+import { CountUp } from '@/components/runedelve/fx/CountUp';
+import { useRuneDelveSfx } from '@/hooks/useRuneDelveSfx';
 
 export default function RuneDelveResultsPage() {
   const navigate = useNavigate();
@@ -70,12 +72,18 @@ export default function RuneDelveResultsPage() {
     return () => clearTimeout(t);
   }, [level?.id, queryClient, levelNumber]);
 
+  const { play: rdSfx } = useRuneDelveSfx();
+
   useEffect(() => {
     if (run?.dungeon_cleared) {
       setShowConfetti(true);
+      rdSfx('victory');
       const t = setTimeout(() => setShowConfetti(false), 2500);
       return () => clearTimeout(t);
+    } else if (run && !run.dungeon_cleared) {
+      rdSfx('defeat');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [run?.dungeon_cleared]);
 
   // If the level row is still "transient" (not seeded in DB by an admin yet),
@@ -204,16 +212,22 @@ export default function RuneDelveResultsPage() {
         )}
         <p className="text-3xl mb-1">{outcome.emoji}</p>
         <p className="rd-title text-[14px] font-extrabold uppercase tracking-[0.18em] text-foreground/90 mb-1">{outcome.label}</p>
-        <p className="font-mono text-4xl font-extrabold tabular-nums mb-2" style={{ color: 'hsl(var(--gold))' }}>
-          {run.score.toLocaleString()}
-        </p>
+        <CountUp
+          value={run.score}
+          duration={1100}
+          delay={250}
+          format={(n) => n.toLocaleString()}
+          className="font-mono text-4xl font-extrabold tabular-nums mb-2 inline-block"
+          style={{ color: 'hsl(var(--gold))' }}
+        />
         {run.dungeon_cleared && (
           <div className="flex items-center justify-center gap-1 mt-2">
             {[1,2,3].map(s => (
-              <Star
+              <StarReveal
                 key={s}
-                className={cn('w-6 h-6', s <= stars ? 'fill-current' : 'opacity-30')}
-                style={{ color: 'hsl(var(--gold))' }}
+                index={s}
+                lit={s <= stars}
+                onLit={() => rdSfx('star.earned', { index: s - 1 })}
               />
             ))}
           </div>
@@ -303,7 +317,7 @@ export default function RuneDelveResultsPage() {
           )}
         </div>
       )}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 rd-stagger">
         {stats.map(s => {
           const Icon = s.icon;
           return (
@@ -311,7 +325,7 @@ export default function RuneDelveResultsPage() {
               <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               <div className="min-w-0">
                 <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{s.label}</p>
-                <p className="font-mono text-sm font-extrabold tabular-nums">{s.value}</p>
+                <CountUp value={s.value} duration={750} delay={400} className="font-mono text-sm font-extrabold tabular-nums" />
               </div>
             </div>
           );
@@ -425,5 +439,31 @@ export default function RuneDelveResultsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+/** Animated star reveal — pops + fires a chime callback when its delay hits. */
+function StarReveal({ index, lit, onLit }: { index: number; lit: boolean; onLit: () => void }) {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      setShown(true);
+      if (lit) onLit();
+    }, 1200 + index * 220);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index, lit]);
+  return (
+    <Star
+      className={cn(
+        'w-7 h-7 transition-all duration-300',
+        lit ? 'fill-current' : 'opacity-30',
+        shown ? 'scale-100 opacity-100' : 'scale-0 opacity-0',
+      )}
+      style={{
+        color: 'hsl(var(--gold))',
+        filter: lit && shown ? 'drop-shadow(0 0 8px hsl(var(--gold) / 0.7))' : undefined,
+      }}
+    />
   );
 }

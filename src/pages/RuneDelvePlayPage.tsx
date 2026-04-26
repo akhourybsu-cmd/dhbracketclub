@@ -110,6 +110,9 @@ import { CombatLog, type CombatLogEntry } from '@/components/runedelve/CombatLog
 import { FxLayer } from '@/components/runedelve/fx/FxLayer';
 import { useFxQueue, type FxRect } from '@/hooks/useFxQueue';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
+import { useRuneDelveSfx } from '@/hooks/useRuneDelveSfx';
+import { FloatingNumberLayer, useFloaters } from '@/components/runedelve/fx/FloatingNumber';
+import { ScreenEdgeFlash } from '@/components/runedelve/fx/ScreenEdgeFlash';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   buildSnapshot,
@@ -249,6 +252,10 @@ export default function RuneDelvePlayPage() {
   // FX overlay queue — purely visual feedback for chains and abilities.
   const fxQ = useFxQueue();
   const { play: playSound } = useSoundEffect();
+  const { play: rdSfx } = useRuneDelveSfx();
+  const floaters = useFloaters();
+  const [hurtFlashKey, setHurtFlashKey] = useState(0);
+  const [healFlashKey, setHealFlashKey] = useState(0);
   const playRootRef = useRef<HTMLDivElement>(null);
   const rectFromEl = (el: Element | null): FxRect | undefined => {
     if (!el) return undefined;
@@ -643,19 +650,20 @@ export default function RuneDelvePlayPage() {
       fxTarget = findHudRect('shield') ?? findHudRect('hp');
     }
     fxQ.trigger({ kind: 'rune', rune: type, length: chain.length, tier: fxTier, target: fxTarget });
-    // Audio + camera-feel beats per rune type.
+    // Themed audio + camera-feel beats per rune type.
     if (type === 'red') {
-      playSound('error');
+      rdSfx('rune.fire.red');
       if (chain.length >= 4) triggerCamShake(chain.length >= 6 ? 8 : 6);
     } else if (type === 'green') {
-      playSound('success');
+      rdSfx('rune.fire.green');
       window.setTimeout(pulseHpGlow, 520);
     } else if (type === 'gold') {
-      playSound('achievement');
+      rdSfx('rune.fire.gold');
     } else if (type === 'blue') {
-      playSound('ping');
+      rdSfx('rune.fire.blue');
     }
-    if (chain.length >= 8) playSound('achievement');
+    if (chain.length >= 8) rdSfx('chain.epic');
+    else if (chain.length >= 6) rdSfx('chain.bonus');
     // Snapshot relics for this run (falls back to live for first chain).
     const relics = activeRelicsSnapshot ?? activeRelics;
     // Per-chain counters BEFORE applying — drives Ember Edge / Crimson Tide / Quickstep.
@@ -1155,12 +1163,45 @@ export default function RuneDelvePlayPage() {
     const hpLost = Math.max(0, hpBefore - afterEnemies.hp);
     if (hpLost > 0) {
       turnLogs.push({ kind: 'taken', text: 'Enemies retaliated', amount: hpLost });
+      setHurtFlashKey(k => k + 1);
+      rdSfx('hero.hurt');
+      floaters.addAt(playRootRef.current?.querySelector('[data-fx-target="hp"]'), { kind: 'damage', text: String(hpLost) });
     } else if (next.enemies.some(e => e.hp > 0) && rawIncoming > 0) {
       turnLogs.push({ kind: 'info', text: 'You weathered the assault' });
     }
     if (hadShield && rawIncoming > hpLost) {
       const mitigated = rawIncoming - hpLost;
       if (mitigated > 0) turnLogs.push({ kind: 'mitigated', text: 'Your guard absorbed the blow', amount: mitigated });
+    }
+    // Floating numbers for chain effects (heal / mana / shield) so the player
+    // sees the reward land on the relevant HUD chip.
+    if (resolution.hpHealed > 0) {
+      floaters.addAt(playRootRef.current?.querySelector('[data-fx-target="hp"]'), { kind: 'heal', text: String(resolution.hpHealed) });
+      setHealFlashKey(k => k + 1);
+      rdSfx('hero.heal');
+    }
+    if (resolution.manaGained > 0) {
+      floaters.addAt(playRootRef.current?.querySelector('[data-fx-target="mana"]'), { kind: 'mana', text: String(resolution.manaGained) });
+      rdSfx('mana.gain', { index: resolution.manaGained });
+    }
+    if (resolution.guardGained > 0) {
+      floaters.addAt(playRootRef.current?.querySelector('[data-fx-target="shield"]') ?? playRootRef.current?.querySelector('[data-fx-target="hp"]'), { kind: 'shield', text: String(resolution.guardGained) });
+      rdSfx('shield.up');
+    }
+    // Damage numbers + enemy hit/die cues per kill in this chain.
+    if (resolution.damageDealt > 0) {
+      const targetEnemy = combat.enemies.find(e => resolution.enemyKills[0] ? e.id === resolution.enemyKills[0] : e.hp > 0);
+      const targetEl = targetEnemy ? playRootRef.current?.querySelector(`[data-enemy-id="${targetEnemy.id}"]`) : null;
+      floaters.addAt(targetEl, { kind: 'damage', text: String(resolution.damageDealt) });
+      rdSfx('enemy.hit');
+    }
+    for (const killId of resolution.enemyKills) {
+      const killed = combat.enemies.find(e => e.id === killId);
+      rdSfx(killed?.tier === 'boss' ? 'boss.roar' : 'enemy.die');
+    }
+    // Mana orbs filled to ready → ability ready cue
+    if (next.mana >= MAX_MANA && combat.mana < MAX_MANA) {
+      rdSfx('ability.ready');
     }
 
     // ── Mastery: Cleric T5 Eternal Aegis — once per run, block a fatal hit.
@@ -1356,7 +1397,7 @@ export default function RuneDelvePlayPage() {
       const firstAlive = combat.enemies.find(e => e.hp > 0);
       const target = firstAlive ? findEnemyRect(firstAlive.id) : undefined;
       fxQ.trigger({ kind: 'ability', cls: hero.class, target });
-      playSound('achievement');
+      rdSfx(`ability.cast.${hero.class}` as any);
       if (hero.class === 'warrior') triggerCamShake(8);
     }
     // First Light: first N ability casts skip the mana cost. We restore the
@@ -1526,6 +1567,7 @@ export default function RuneDelvePlayPage() {
     if (dailyShardMult !== 1) shardsAwarded = Math.round(shardsAwarded * dailyShardMult);
     shardsAwarded += masteryBonusShards;
     setEndState({ cleared, reason, score: breakdown.total, isNewBest, shards: shardsAwarded });
+    rdSfx(cleared ? 'victory' : 'defeat');
     try {
       // Server-truth flags. Default to the optimistic value so legacy
       // (transient-level) submissions still award XP correctly.
@@ -1791,6 +1833,8 @@ export default function RuneDelvePlayPage() {
     <div ref={playRootRef} className="space-y-2 pb-2 relative">
       {/* Cinematic combat FX overlay — chains, abilities, tier flourishes. */}
       <FxLayer queue={fxQ.queue} onComplete={fxQ.complete} />
+      <FloatingNumberLayer floaters={floaters.floaters} onComplete={floaters.complete} />
+      <ScreenEdgeFlash hurtKey={hurtFlashKey} healKey={healFlashKey} />
       {/* Compact combined HUD: turn counter + objective on a single row */}
       <div
         className="rd-carved rounded-xl px-3 py-2 flex items-center gap-2"
