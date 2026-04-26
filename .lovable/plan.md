@@ -1,58 +1,79 @@
 ## Goal
 
-Redesign the combat & ability sound cues in `src/hooks/useRuneDelveSfx.ts` so each one *sounds like the thing it does* — a sword cleave actually whooshes and clangs, a mage's arc actually crackles with electricity, a rogue's strike actually slices air, a cleric's sanctuary actually rings like a chapel, shields thud and shimmer, healing chimes warmly, etc.
+Cleanly close out **Season 1** (verify podium + stats render correctly) and provide a polished, commissioner-only flow to **package it up and start Season 2**.
 
-No new cue keys, no API changes, no callsite changes. Just much better-composed audio in the same `playCue()` switch so existing triggers across the game instantly feel meatier and more thematic.
+---
 
-## What gets reworked
+## Current state (verified from DB)
 
-### Rune ignition (chain-fire) cues
-- **`rune.fire.red` (sword chain)** — front-load a sharper air whoosh (bandpass sweep 800→5500Hz), then a metallic edge ring (two detuned triangle/sine partials), then a brief low-mid thud so it lands like a slash that connects.
-- **`rune.fire.blue` (arcane chain)** — replace plain bell arpeggio with a rising electric crackle: noise burst through a high-Q bandpass sweep (1500→6000Hz) layered with a quick FM-bell triad and a final sparkle bell — sounds like a building spark, not a wind chime.
-- **`rune.fire.green` (nature/heal chain)** — soften into a warm harp pluck plus a gentle airy pad (filtered pink-ish noise lowpass 1200Hz) and a leaf-rustle shimmer; current is fine but needs more "growing" feel via a slow upward bend on the top partial.
-- **`rune.fire.gold` (guard chain)** — anvil-clang upgrade: short hard noise transient (highpass 2500Hz) → low square thud → two metallic bells with slight inharmonic detune (ratio 2.76) so it rings like struck steel rather than a chime.
+Season 1 (`Season 1 / 2026 spring`) is marked `complete` and has all 6 playoff matches finished:
 
-### Ability casts (one per class)
-- **`ability.cast.warrior` (Cleave)** — full slash arc: long whoosh (bandpass 600→4500Hz, 0.35s), heavy metallic clang on impact (square thud + detuned bell at ratio 2.76), low body thud, brief grunt-like saw growl. Should feel like a horizontal sweep that connects.
-- **`ability.cast.mage` (Arc Bolt)** — electric zap: crackling noise with sweeping bandpass (800→7000Hz), a sharp sine "zip" with strong upward bend, a bright bell on impact, and a tiny secondary crackle 80ms later to imply the Arc Cascade chain.
-- **`ability.cast.rogue` (Shadowstep)** — silk-and-steel: very short low whoosh (lowpass swept down) for the vanish, brief silence beat, then a quick high-frequency blade unsheathe (highpass noise + sine zip up). Conveys disappear → reappear → strike-ready.
-- **`ability.cast.cleric` (Sanctuary)** — chapel chord: sustained perfect-fifth bell chord with a longer release (0.9s), soft airy "halo" noise (highpass 4000Hz), and a low warm pad underneath for a sacred-sanctified feel rather than a thin chime stack.
+- **Champion**: `af6cbf3c…` (won Finals 2-0 as #1 seed)
+- **Runner-up**: `4fba7a48…` (#3 seed, lost Finals 0-2)
+- **3rd Place**: `743babc8…` (won 3rd-place match)
+- **Reg-season Champ**: `af6cbf3c…` (rank #1, 76 pts)
 
-### Defensive / status cues
-- **`shield.up`** — woody/metallic shield raise: short noise *thunk* (lowpass 800Hz, very short attack), then a metallic ring-up bell with upward bend, plus the existing high shimmer. Currently too chime-y; needs body.
-- **`hero.heal`** — keep ascending bell triad but add a soft warm sine pad underneath (~0.4s) so it feels enveloping, not just sparkly.
-- **`mana.gain`** — add a tiny rising "fill" sweep (sine bend up) under the existing bell so stacking mana feels like water dropping into a glass.
-- **`ability.ready`** — make it feel like a weapon humming to life: add a low resonant pulse (square at ~110Hz with tight LFO-style retriggers via two short tone hits) under the existing rising sine + airy noise.
+**But** the `champion_user_id`, `runner_up_user_id`, `third_place_user_id`, `regular_season_champion_user_id`, `archived_at`, and `summary` columns are all `NULL` — so the podium component renders blank and the Seasons Archive list doesn't show a champion.
 
-### Enemy / impact cues
-- **`enemy.hit`** — add a leather/cloth thump (very short lowpass noise burst at 400Hz) before the existing square thud + bandpass noise so hits feel like they connect with a body, not just a square wave.
-- **`enemy.die`** — add a brief bone-crack transient (very short highpass noise 4000Hz, 30ms) at start so deaths punctuate before the existing fall-off.
-- **`boss.roar`** — add a snarling mid-band (sawtooth ~180Hz with heavy bend) layered over the existing low rumble so the roar has teeth, not just sub-bass.
-- **`hero.hurt`** — add a short breath/grunt approximation (filtered noise lowpass 600Hz, very fast decay) to humanize the hit.
+There is also **no UI anywhere** to create a new season; `createSeason()` exists in code but is never called.
 
-### Chain bonus / epic
-- **`chain.bonus`** — keep ascending bell sequence but speed up the stagger and add a tiny sparkle (high bell at ~2640Hz) at the end as a cherry.
-- **`chain.epic`** — add a low impact thud at t=0 (square 80Hz, very short) before the existing rumble + bell stack so the epic feels *triggered* by an impact, not just ambient.
+---
 
-## Approach
+## Plan
 
-All edits live in the `switch (cue)` block of `playCue()` in `src/hooks/useRuneDelveSfx.ts`. Reuses the existing `tone()`, `noise()`, `bell()` synth toolkit — no new helpers needed.
+### 1. Backfill Season 1 trophy data
 
-A few of the new layers want one capability the toolkit doesn't quite have: **inharmonic bell ratios** (e.g. 2.76 instead of 2.01) for metallic clangs. The `bell()` helper already accepts a `ratio` option, so this is just a matter of passing it.
+Run a one-time data update setting:
+- `champion_user_id`, `runner_up_user_id`, `third_place_user_id`, `regular_season_champion_user_id`
+- `archived_at = now()`
+- `summary` = `{ finalized_at, series_score: { championId: 2, runnerUpId: 0 }, finals: [...g1, g2], third_place_match_id }`
 
-No changes to:
-- The cue keys (`RdSfxCue` union)
-- The category mapping (`categoryFor`)
-- Haptic patterns (already aligned per-cue)
-- Sound settings, callsites, or any component code
+This makes the existing Season 1 archive page light up: podium displays the three players, archive card shows the champion line, and the "Archived" pill appears.
 
-## Files touched
+### 2. Verify display surfaces (no code changes needed if data is correct)
 
-- `src/hooks/useRuneDelveSfx.ts` — only the cue compositions inside `playCue()`'s switch statement.
+Spot-check after backfill:
+- **/drafts/seasons** → Season 1 card shows trophy + champion name, "Complete" pill
+- **/drafts/seasons/:id** → Podium with 3 players, full standings, playoff bracket, all 12 regular drafts list
+- **/compete (League tab)** → Season 1 still surfaces with "Season Complete" cta linking to archive
+
+### 3. Add the "Start Next Season" commissioner flow
+
+Today there is no way to advance the league. Add:
+
+**a. New season-launch sheet** (`src/components/draft/StartNextSeasonSheet.tsx`)
+- Bottom sheet form with: Season name (default "Season 2"), year, season label (winter / spring / summer / fall), starts-at, ends-at, regular-season drafts (default 12), best-of (default 10).
+- Pre-fills sensible defaults based on the previous season.
+- Calls existing `createSeason()`, then sets `commissioner_user_id` to the same user as Season 1's commissioner (or current user if commissioner is null), and toasts success.
+
+**b. "Start Next Season" CTA on the CompetePage League tab**
+- Visible **only when**:
+  - The latest/current season's `status === 'complete'`, AND
+  - Current user is an app admin OR was the previous season's commissioner.
+- Renders directly under the "Season Complete" card as a gold-bordered glass-card with `Sparkles` icon and a "Start Season 2" button that opens the sheet.
+
+**c. Refresh on creation**
+- After successful create, refetch `useCurrentSeason` (re-mount or expose a refetch). The new active season takes over the League tab automatically because `useCurrentSeason` already prefers `regular_season` / `playoffs` rows over completed ones.
+
+### 4. Small polish on the archive page
+
+- Add a subtle "Final Results" banner above the podium showing `Champion · Runner-up · 3rd Place` names in one line, mirroring the trophy colors. Helps when scrolling on mobile.
+- (No schema changes.)
+
+---
+
+## Technical details
+
+- **Files created**: `src/components/draft/StartNextSeasonSheet.tsx`
+- **Files edited**: `src/pages/CompetePage.tsx` (CTA + sheet wiring), `src/pages/SeasonArchiveDetailPage.tsx` (final-results banner), `src/hooks/useDraftSeasons.ts` (export a `refetch` from `useCurrentSeason`, helper `setSeasonCommissioner`).
+- **Database**: one-time `UPDATE` on `draft_seasons` for Season 1 (no schema migration; uses insert/update tool). No new tables, no RLS changes — `draft_seasons` already has commissioner-write policies.
+- **Permission gating**: reuse existing `isAppAdmin` (from `user_roles`) + `commissioner_user_id` check. No new role infrastructure.
+- **Idempotency**: backfill uses fixed user IDs derived from playoff results so re-running is safe.
+
+---
 
 ## Out of scope
 
-- UI/menu cues (`ui.tap`, `ui.hover`, sheet open/close, tab switch) — already feel right, leaving alone.
-- Reward cues (coins, stars, victory fanfare, levelup) — those are about progression celebration, not combat, so untouched unless you want them next.
-- Boot cues — ambient and intentional.
-- Ambient music — separate system.
+- No changes to playoff scoring, advance-playoffs edge function, or standings recalc.
+- No automatic "auto-create next season" — staying explicit/commissioner-driven.
+- No bulk season-import or cross-season leaderboards beyond the existing `LifetimeStatsCard`.
