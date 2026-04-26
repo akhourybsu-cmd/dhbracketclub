@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, Trophy, Calendar, Users2, Swords, Loader2 } from 'lucide-react';
+import { Sparkles, Trophy, Users2, Swords, Loader2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 import {
   createSeason,
   setSeasonCommissioner,
@@ -20,36 +19,13 @@ interface Props {
   onCreated: () => void;
 }
 
-const LABELS: { key: 'winter' | 'spring' | 'summer' | 'fall'; emoji: string; name: string }[] = [
-  { key: 'winter', emoji: '❄️', name: 'Winter' },
-  { key: 'spring', emoji: '⚡', name: 'Spring' },
-  { key: 'summer', emoji: '☀️', name: 'Summer' },
-  { key: 'fall',   emoji: '🍂', name: 'Fall' },
-];
-
-const NEXT_LABEL: Record<string, 'winter' | 'spring' | 'summer' | 'fall'> = {
-  winter: 'spring', spring: 'summer', summer: 'fall', fall: 'winter',
-};
-
 function suggestedDefaults(prev: DraftSeason) {
   // Increment the trailing number in the previous season name if present
   const m = prev.name.match(/^(.*?)(\d+)\s*$/);
   const nextName = m ? `${m[1]}${parseInt(m[2], 10) + 1}` : `${prev.name} · Next`;
-  const nextLabel = NEXT_LABEL[prev.season_label] || 'spring';
-  const nextYear = nextLabel === 'winter' && prev.season_label === 'fall' ? prev.year + 1 : prev.year;
-
-  // Start tomorrow, span ~3 months
-  const start = new Date();
-  start.setDate(start.getDate() + 1);
-  const end = new Date(start);
-  end.setMonth(end.getMonth() + 3);
 
   return {
     name: nextName.trim(),
-    year: nextYear,
-    seasonLabel: nextLabel,
-    startsAt: start.toISOString().slice(0, 10),
-    endsAt: end.toISOString().slice(0, 10),
     regularSeasonDrafts: prev.regular_season_drafts || 12,
     bestOf: prev.best_of || 10,
   };
