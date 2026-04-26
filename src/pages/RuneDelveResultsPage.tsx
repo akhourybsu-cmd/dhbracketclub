@@ -441,3 +441,29 @@ export default function RuneDelveResultsPage() {
     </div>
   );
 }
+
+/** Animated star reveal — pops + fires a chime callback when its delay hits. */
+function StarReveal({ index, lit, onLit }: { index: number; lit: boolean; onLit: () => void }) {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      setShown(true);
+      if (lit) onLit();
+    }, 1200 + index * 220);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index, lit]);
+  return (
+    <Star
+      className={cn(
+        'w-7 h-7 transition-all duration-300',
+        lit ? 'fill-current' : 'opacity-30',
+        shown ? 'scale-100 opacity-100' : 'scale-0 opacity-0',
+      )}
+      style={{
+        color: 'hsl(var(--gold))',
+        filter: lit && shown ? 'drop-shadow(0 0 8px hsl(var(--gold) / 0.7))' : undefined,
+      }}
+    />
+  );
+}
