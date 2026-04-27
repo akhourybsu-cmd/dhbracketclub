@@ -232,7 +232,7 @@ export default function RuneDelveHomePage() {
                 </p>
                 <p className="text-[10px] font-extrabold text-foreground/70 mt-0.5 flex items-center gap-1">
                   <Flame className="w-3 h-3 text-gold" />
-                  {dailyStreak?.current_streak ?? 0}-day · L{today.levelNumber}
+                  {dailyStreak?.current_streak ?? 0}-day · 2-min arena
                 </p>
               </div>
             </Link>
