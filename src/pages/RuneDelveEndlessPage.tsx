@@ -140,10 +140,9 @@ export default function RuneDelveEndlessPage() {
   // ── Continuous spawning — refill when field gets empty ───────────────────
   // Only depend on whether the field is empty, not on elapsedSec, so the
   // respawn timeout isn't cancelled four times per second by the timer tick.
-  const aliveCount = combat?.enemies.filter(e => e.hp > 0).length ?? 0;
+  const fieldEmpty = !!combat && combat.enemies.every(e => e.hp <= 0);
   useEffect(() => {
-    if (phase !== 'playing' || !combat) return;
-    if (aliveCount > 0) return;
+    if (phase !== 'playing' || !fieldEmpty) return;
     const wave = waveForElapsed(elapsedRef.current);
     const id = window.setTimeout(() => {
       if (phaseRef.current !== 'playing') return;
@@ -156,7 +155,7 @@ export default function RuneDelveEndlessPage() {
       });
     }, wave.respawnDelayMs);
     return () => window.clearTimeout(id);
-  }, [phase, aliveCount, combat]);
+  }, [phase, fieldEmpty]);
 
   // ── Death check ──────────────────────────────────────────────────────────
   useEffect(() => {
