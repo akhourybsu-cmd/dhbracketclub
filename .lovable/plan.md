@@ -1,79 +1,78 @@
-## Goal
+## Daily Challenge → Endless Survival Mode
 
-Cleanly close out **Season 1** (verify podium + stats render correctly) and provide a polished, commissioner-only flow to **package it up and start Season 2**.
+Replace the current "play a seeded level with daily modifiers" daily challenge with a **timed endless survival arena**: one continuous fight, no move limit, no chapters, no objectives — just the player vs. an unending stream of enemies until the timer hits zero or they die.
 
----
+### Core Design
 
-## Current state (verified from DB)
+**Format:**
+- Fixed time limit: **2:00 minutes** per attempt (single countdown, visible HUD timer)
+- One run per day per player (existing daily uniqueness preserved)
+- Player picks runes freely — **no turn/move limit**
+- Enemies spawn continuously: clear an enemy → next spawns shortly after, with difficulty ramping over time
+- Run ends when: (a) timer reaches 0, or (b) HP reaches 0
+- No level number, no chapters, no secondary objectives, no boss mechanics — pure combat loop
 
-Season 1 (`Season 1 / 2026 spring`) is marked `complete` and has all 6 playoff matches finished:
+**Scoring & Rewards (kill-count driven):**
+- Score = enemies defeated × tier multiplier + bonus for damage dealt
+- Reward tiers based on kill count (scaled to encourage character investment):
+  - 0–4 kills → 25 shards (participation)
+  - 5–9 kills → 75 shards
+  - 10–14 kills → 150 shards
+  - 15–19 kills → 250 shards
+  - 20–29 kills → 400 shards + cosmetic title progress
+  - 30+ kills → 600 shards + "Endless Conqueror" title at 30+, "Eternal" title at 50+
+- XP scales linearly with kills (10 XP per kill, capped at 500)
 
-- **Champion**: `af6cbf3c…` (won Finals 2-0 as #1 seed)
-- **Runner-up**: `4fba7a48…` (#3 seed, lost Finals 0-2)
-- **3rd Place**: `743babc8…` (won 3rd-place match)
-- **Reg-season Champ**: `af6cbf3c…` (rank #1, 76 pts)
+**Difficulty ramp (every 20 seconds):**
+- Wave 1 (0:00–0:20): basic enemies, single spawn
+- Wave 2 (0:20–0:40): +20% enemy HP, occasional 2-enemy spawns
+- Wave 3 (0:40–1:00): +50% enemy HP, mini-boss variants appear
+- Wave 4 (1:00–1:30): +100% enemy HP, all spawns are 2-enemy
+- Wave 5 (1:30–2:00): +200% enemy HP, boss variants in pool — "Final Push"
 
-**But** the `champion_user_id`, `runner_up_user_id`, `third_place_user_id`, `regular_season_champion_user_id`, `archived_at`, and `summary` columns are all `NULL` — so the podium component renders blank and the Seasons Archive list doesn't show a champion.
+**Why this incentivizes character investment:**
+- Stronger relics + class masteries = faster kills = more enemies cycled = bigger rewards
+- A weak loadout caps out around 5–10 kills; a tuned loadout pushes 25+
 
-There is also **no UI anywhere** to create a new season; `createSeason()` exists in code but is never called.
+### Streak & Leaderboard
 
----
+- Streak still rewards consecutive **days played** (lower the bar from "cleared" to "attempted with ≥5 kills" since there's no clear/fail anymore)
+- Leaderboard ranks by **kill count** primarily, score as tiebreaker
+- "Stars" repurposed: ★ = 5+ kills, ★★ = 15+ kills, ★★★ = 25+ kills
 
-## Plan
+### Files Changed
 
-### 1. Backfill Season 1 trophy data
+**New:**
+- `src/pages/RuneDelveEndlessPage.tsx` — the new survival play screen (timer HUD, continuous enemy spawner, kill counter, end-of-run summary)
+- `src/lib/runedelve/endlessMode.ts` — wave config, enemy spawn pool by time, reward tier calculator, `endlessStarsFor(kills)` helper
 
-Run a one-time data update setting:
-- `champion_user_id`, `runner_up_user_id`, `third_place_user_id`, `regular_season_champion_user_id`
-- `archived_at = now()`
-- `summary` = `{ finalized_at, series_score: { championId: 2, runnerUpId: 0 }, finals: [...g1, g2], third_place_match_id }`
+**Modified:**
+- `src/lib/runedelve/dailyChallenge.ts` — strip modifier rolling and `dailyLevelFor`; keep date helpers; add `endlessTimeLimit = 120` constant and `endlessRewardFor(kills)`
+- `src/hooks/useDailyChallenge.ts` — `useTodayDaily()` returns `{ dateStr, timeLimit }` only (no modifiers/level); `useSubmitDailyRun()` accepts `{ kills, score, heroClass }`; streak now bumps on attempts ≥5 kills
+- `src/pages/RuneDelveDailyPage.tsx` — remove the modifiers section and "Today's Trial" copy; show "Endless Survival · 2 minutes" hero, kill-count reward ladder, leaderboard ranked by kills
+- `src/pages/RuneDelvePlayPage.tsx` — remove `?daily=1` branch and all daily-modifier injection (lines 66–81, 144–153, daily mods in combat). Daily mode no longer routes here.
+- Routing: `/rune-delve/daily` "Begin" CTA points to a new `/rune-delve/endless` route registered in `src/App.tsx`
 
-This makes the existing Season 1 archive page light up: podium displays the three players, archive card shows the champion line, and the "Archived" pill appears.
+### Database
 
-### 2. Verify display surfaces (no code changes needed if data is correct)
+**Migration on `rune_delve_daily_runs`:**
+- Add `kills_count int not null default 0`
+- Repurpose existing `score` (still used) and `stars` (now derived from kills)
+- `dungeon_cleared` becomes legacy/unused — keep column for back-compat, always write `false`
+- `modifiers` jsonb — keep column, always write `[]`
+- No new table; the unique `(user_id, daily_date)` constraint still gates "one run per day"
 
-Spot-check after backfill:
-- **/drafts/seasons** → Season 1 card shows trophy + champion name, "Complete" pill
-- **/drafts/seasons/:id** → Podium with 3 players, full standings, playoff bracket, all 12 regular drafts list
-- **/compete (League tab)** → Season 1 still surfaces with "Season Complete" cta linking to archive
+**Migration on `rune_delve_daily_streaks`:**
+- No schema change. Logic in `useSubmitDailyRun` updates streak when `kills ≥ 5` instead of when `cleared = true`.
 
-### 3. Add the "Start Next Season" commissioner flow
+### Technical Notes
 
-Today there is no way to advance the league. Add:
+- Endless page uses the existing `RuneBoard`, `combatEngine.applyChain`, `EnemyDisplay`, `HeroStatusBar` — no combat logic rewrite. We bypass `endTurn` move-limit checks and replace `enemiesAttack` cadence with a time-based enemy AI tick (every 4s an alive enemy attacks; faster as waves progress).
+- Enemy spawner picks from `ENEMY_ROSTER` filtered by current wave tier; uses `spawnWave()` helper already exported from `combatEngine`.
+- Run snapshot/rehydrate from `runSnapshot.ts` is **disabled** for endless (one continuous run, no resume — if the player closes the app, the run ends).
+- Class masteries, relics, and shards economy all still apply during the endless run, so character power directly drives kill throughput.
+- Streak rules: if last_completed_date == today → no change; if == yesterday → +1; else → 1. Lifetime counter increments on any attempted run with ≥5 kills.
 
-**a. New season-launch sheet** (`src/components/draft/StartNextSeasonSheet.tsx`)
-- Bottom sheet form with: Season name (default "Season 2"), year, season label (winter / spring / summer / fall), starts-at, ends-at, regular-season drafts (default 12), best-of (default 10).
-- Pre-fills sensible defaults based on the previous season.
-- Calls existing `createSeason()`, then sets `commissioner_user_id` to the same user as Season 1's commissioner (or current user if commissioner is null), and toasts success.
+### Open Question
 
-**b. "Start Next Season" CTA on the CompetePage League tab**
-- Visible **only when**:
-  - The latest/current season's `status === 'complete'`, AND
-  - Current user is an app admin OR was the previous season's commissioner.
-- Renders directly under the "Season Complete" card as a gold-bordered glass-card with `Sparkles` icon and a "Start Season 2" button that opens the sheet.
-
-**c. Refresh on creation**
-- After successful create, refetch `useCurrentSeason` (re-mount or expose a refetch). The new active season takes over the League tab automatically because `useCurrentSeason` already prefers `regular_season` / `playoffs` rows over completed ones.
-
-### 4. Small polish on the archive page
-
-- Add a subtle "Final Results" banner above the podium showing `Champion · Runner-up · 3rd Place` names in one line, mirroring the trophy colors. Helps when scrolling on mobile.
-- (No schema changes.)
-
----
-
-## Technical details
-
-- **Files created**: `src/components/draft/StartNextSeasonSheet.tsx`
-- **Files edited**: `src/pages/CompetePage.tsx` (CTA + sheet wiring), `src/pages/SeasonArchiveDetailPage.tsx` (final-results banner), `src/hooks/useDraftSeasons.ts` (export a `refetch` from `useCurrentSeason`, helper `setSeasonCommissioner`).
-- **Database**: one-time `UPDATE` on `draft_seasons` for Season 1 (no schema migration; uses insert/update tool). No new tables, no RLS changes — `draft_seasons` already has commissioner-write policies.
-- **Permission gating**: reuse existing `isAppAdmin` (from `user_roles`) + `commissioner_user_id` check. No new role infrastructure.
-- **Idempotency**: backfill uses fixed user IDs derived from playoff results so re-running is safe.
-
----
-
-## Out of scope
-
-- No changes to playoff scoring, advance-playoffs edge function, or standings recalc.
-- No automatic "auto-create next season" — staying explicit/commissioner-driven.
-- No bulk season-import or cross-season leaderboards beyond the existing `LifetimeStatsCard`.
+The plan uses **2:00** as the timer. If you'd prefer 1:30 (tighter, more frantic) or 3:00 (more room for slow class builds), say the word and I'll adjust the constant before building.
