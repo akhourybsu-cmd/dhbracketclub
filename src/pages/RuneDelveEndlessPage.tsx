@@ -66,6 +66,10 @@ export default function RuneDelveEndlessPage() {
   const seedRef = useRef<number>(Date.now() & 0xffffffff);
   const startTimeRef = useRef<number>(0);
   const enemySpawnSeqRef = useRef(0);
+  const elapsedRef = useRef(0);
+  const phaseRef = useRef<'ready' | 'playing' | 'over'>('ready');
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
+  useEffect(() => { elapsedRef.current = elapsedSec; }, [elapsedSec]);
 
   const heroClass = hero?.class ?? 'warrior';
 
