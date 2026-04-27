@@ -128,16 +128,13 @@ export default function RuneDelvePlayPage() {
   const queryClient = useQueryClient();
   const { levelNumber: levelParam } = useParams<{ levelNumber: string }>();
   const [searchParams] = useSearchParams();
-  const isDailyMode = searchParams.get('daily') === '1';
-  const today = useTodayDaily();
+  // Daily challenge is now Endless Survival (separate page). Campaign play
+  // never enters daily mode — these stubs keep the legacy code paths inert.
+  const isDailyMode = false;
   const submitDaily = useSubmitDailyRun();
   const reportQuestProgress = useReportQuestProgress();
-  // In daily mode, force the level number to today's daily level (URL param
-  // is ignored — preserves "everyone faces the same trial today").
-  const levelNumber = isDailyMode
-    ? today.levelNumber
-    : Math.max(1, parseInt(levelParam ?? '1', 10) || 1);
-  const dailyMods = isDailyMode ? today.modifiers : [];
+  const levelNumber = Math.max(1, parseInt(levelParam ?? '1', 10) || 1);
+  const dailyMods: never[] = [];
 
   const { user } = useAuth();
   const { data: hero } = useRuneDelveHero();
