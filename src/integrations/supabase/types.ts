@@ -3674,6 +3674,7 @@ export type Database = {
           dungeon_cleared: boolean
           hero_class: string
           id: string
+          kills_count: number
           modifiers: Json
           score: number
           stars: number
@@ -3688,6 +3689,7 @@ export type Database = {
           dungeon_cleared?: boolean
           hero_class: string
           id?: string
+          kills_count?: number
           modifiers?: Json
           score?: number
           stars?: number
@@ -3702,6 +3704,7 @@ export type Database = {
           dungeon_cleared?: boolean
           hero_class?: string
           id?: string
+          kills_count?: number
           modifiers?: Json
           score?: number
           stars?: number

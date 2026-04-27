@@ -85,32 +85,25 @@ export function CodexSheet({ open, onOpenChange, defaultTab = 'mechanics' }: Pro
                 </p>
               </TabsContent>
 
-              {/* DAILY */}
+              {/* DAILY — Endless Survival */}
               <TabsContent value="daily" className="mt-0 space-y-3">
                 <div className="glass-card p-4" style={{
                   background: 'linear-gradient(160deg, hsl(var(--gold) / 0.12), hsl(var(--primary) / 0.08))',
                   borderColor: 'hsl(var(--gold) / 0.25)',
                 }}>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-foreground/70">Today · {today.dateStr}</p>
-                  <p className="font-rd-display text-lg font-extrabold mt-0.5">Daily Challenge</p>
-                  <p className="text-[11px] text-foreground/75 mt-1">Level {today.levelNumber} · {today.modifiers.length} modifier{today.modifiers.length === 1 ? '' : 's'}{today.modifiers.length === 3 ? ' · Weekend Gauntlet' : ''}</p>
+                  <p className="font-rd-display text-lg font-extrabold mt-0.5">Endless Survival</p>
+                  <p className="text-[11px] text-foreground/75 mt-1">{today.timeLimitSec / 60}-minute timed arena · Kill as many as you can.</p>
                 </div>
 
-                <div className="space-y-2">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">Active Modifiers</p>
-                  {today.modifiers.map(id => {
-                    const m = getDailyModifier(id);
-                    return (
-                      <div key={id} className="glass-card p-3 flex gap-3 items-start">
-                        <div className="text-2xl shrink-0 leading-none mt-0.5" aria-hidden>{m.icon}</div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-extrabold text-[13px]">{m.name}</p>
-                          <p className="text-[11px] text-foreground/80 leading-snug">{m.rule}</p>
-                          <p className="text-[10px] text-muted-foreground italic mt-0.5">{m.detail}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="rounded-xl border border-primary/25 bg-primary/5 p-3 text-[11px] text-foreground/85 leading-snug">
+                  <p className="font-extrabold text-primary mb-1.5">How it works</p>
+                  <ul className="space-y-0.5">
+                    <li>• You have 2 minutes. No turn limit.</li>
+                    <li>• Enemies spawn continuously and ramp every 20s.</li>
+                    <li>• Run ends when timer hits 0 or HP reaches 0.</li>
+                    <li>• Stronger relics + masteries → faster kills → bigger rewards.</li>
+                  </ul>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2">
@@ -120,13 +113,16 @@ export function CodexSheet({ open, onOpenChange, defaultTab = 'mechanics' }: Pro
                 </div>
 
                 <div className="rounded-xl border border-primary/25 bg-primary/5 p-3 text-[11px] text-foreground/85 leading-snug">
-                  <p className="font-extrabold text-primary mb-1">Rewards</p>
+                  <p className="font-extrabold text-primary mb-1">Reward Ladder (kills)</p>
                   <ul className="space-y-0.5">
-                    <li>• Clear → 50 shards + 100 XP</li>
-                    <li>• 2★ → +25 shards</li>
-                    <li>• 3★ → +50 shards</li>
-                    <li>• 7-day streak → 200 shards + Daily Devotee title</li>
-                    <li>• 30-day streak → 1000 shards + Eternal Pilgrim title</li>
+                    <li>• 0–4 → 25 shards</li>
+                    <li>• 5–9 → 75 shards · ★</li>
+                    <li>• 10–14 → 150 shards</li>
+                    <li>• 15–19 → 250 shards · ★★</li>
+                    <li>• 20–29 → 400 shards</li>
+                    <li>• 25+ → ★★★</li>
+                    <li>• 30+ → 600 shards · 🏆 Endless Conqueror</li>
+                    <li>• 50+ → 900 shards · 🏆 Eternal</li>
                   </ul>
                 </div>
               </TabsContent>
