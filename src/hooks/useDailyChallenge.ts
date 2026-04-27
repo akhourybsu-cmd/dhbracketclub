@@ -3,12 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   todayUtcDateString,
-  rollDailyModifiers,
-  dailyLevelFor,
-  dailyStarsFor,
-  computeDailyReward,
+  ENDLESS_TIME_LIMIT_SEC,
+  endlessRewardFor,
+  endlessStarsFor,
 } from '@/lib/runedelve/dailyChallenge';
-import type { DailyModifierId } from '@/lib/runedelve/dailyModifiers';
 import type { HeroClass } from '@/lib/runedelve/classConfig';
 
 export interface DailyRunRow {
@@ -17,9 +15,12 @@ export interface DailyRunRow {
   daily_date: string;
   score: number;
   stars: number;
+  /** Legacy field — always false in endless mode. Kept for back-compat. */
   dungeon_cleared: boolean;
-  modifiers: DailyModifierId[];
+  /** Legacy field — always [] in endless mode. */
+  modifiers: unknown[];
   hero_class: HeroClass;
+  kills_count: number;
   completed_at: string;
 }
 
@@ -31,13 +32,11 @@ export interface DailyStreakRow {
   lifetime_clears: number;
 }
 
-/** Today's daily roll — pure date-derived data, no network needed. */
+/** Today's daily metadata — date + format. Pure, no network. */
 export function useTodayDaily() {
-  const dateStr = todayUtcDateString();
   return {
-    dateStr,
-    modifiers: rollDailyModifiers(dateStr),
-    levelNumber: dailyLevelFor(dateStr),
+    dateStr: todayUtcDateString(),
+    timeLimitSec: ENDLESS_TIME_LIMIT_SEC,
   };
 }
 
@@ -83,7 +82,7 @@ export function useMyDailyStreak() {
   });
 }
 
-/** Today's leaderboard — top scores for the daily challenge. */
+/** Today's leaderboard — ranked by kill count, score as tiebreaker. */
 export function useDailyLeaderboard(limit = 10) {
   const dateStr = todayUtcDateString();
   return useQuery({
@@ -92,12 +91,12 @@ export function useDailyLeaderboard(limit = 10) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('rune_delve_daily_runs')
-        .select('id, user_id, score, stars, dungeon_cleared, hero_class, completed_at')
+        .select('id, user_id, score, stars, dungeon_cleared, hero_class, kills_count, completed_at')
         .eq('daily_date', dateStr)
+        .order('kills_count', { ascending: false })
         .order('score', { ascending: false })
         .limit(limit);
       if (error) throw error;
-      // Best-effort profile join — light columns only.
       const ids = (data ?? []).map(d => d.user_id);
       let profiles: Record<string, { display_name: string | null; avatar_url: string | null }> = {};
       if (ids.length) {
@@ -107,8 +106,9 @@ export function useDailyLeaderboard(limit = 10) {
           .in('id', ids);
         profiles = Object.fromEntries((profs ?? []).map(p => [p.id, { display_name: p.display_name, avatar_url: p.avatar_url }]));
       }
-      return (data ?? []).map((row, i) => ({
+      return (data ?? []).map((row: any, i) => ({
         ...row,
+        kills_count: row.kills_count ?? 0,
         rank: i + 1,
         profile: profiles[row.user_id] ?? { display_name: null, avatar_url: null },
       }));
@@ -117,34 +117,39 @@ export function useDailyLeaderboard(limit = 10) {
 }
 
 /**
- * Submit today's daily run. Idempotent at the DB layer (unique constraint on
- * user_id + daily_date) — we use upsert so retries replace a prior row only
- * when the new score is higher. Also updates the streak record.
+ * Submit today's endless run. One row per (user, daily_date) — we keep the
+ * best attempt (highest kill count, then highest score). Streak bumps when
+ * the player kills ≥5 enemies (the new "meaningful attempt" threshold).
  */
 export function useSubmitDailyRun() {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (params: {
+      kills: number;
       score: number;
-      cleared: boolean;
       heroClass: HeroClass;
-      levelNumber: number;
     }) => {
       if (!user) throw new Error('Not authenticated');
       const dateStr = todayUtcDateString();
-      const modifiers = rollDailyModifiers(dateStr);
-      const stars = dailyStarsFor(params.score, params.levelNumber, params.cleared);
+      const stars = endlessStarsFor(params.kills);
+      const meaningful = params.kills >= 5;
 
-      // Upsert run — only overwrite an existing row when the new score is higher.
+      // Keep the better of (kills, score).
       const { data: existing } = await supabase
         .from('rune_delve_daily_runs')
-        .select('score')
+        .select('score, kills_count')
         .eq('user_id', user.id)
         .eq('daily_date', dateStr)
         .maybeSingle();
 
-      if (!existing || params.score > (existing.score ?? 0)) {
+      const prevKills = (existing as any)?.kills_count ?? 0;
+      const prevScore = existing?.score ?? 0;
+      const isBetter = !existing
+        || params.kills > prevKills
+        || (params.kills === prevKills && params.score > prevScore);
+
+      if (isBetter) {
         const { error } = await supabase
           .from('rune_delve_daily_runs')
           .upsert([{
@@ -152,17 +157,18 @@ export function useSubmitDailyRun() {
             daily_date: dateStr,
             score: params.score,
             stars,
-            dungeon_cleared: params.cleared,
-            modifiers: modifiers as unknown as import('@/integrations/supabase/types').Json,
+            dungeon_cleared: false,
+            modifiers: [] as unknown as import('@/integrations/supabase/types').Json,
             hero_class: params.heroClass,
+            kills_count: params.kills,
             completed_at: new Date().toISOString(),
           }], { onConflict: 'user_id,daily_date' });
         if (error) throw error;
       }
 
-      // Update streak (only on a clear).
+      // Update streak — meaningful attempt counts.
       let nextStreak = 0;
-      if (params.cleared) {
+      if (meaningful) {
         const { data: streak } = await supabase
           .from('rune_delve_daily_streaks')
           .select('*')
@@ -177,7 +183,7 @@ export function useSubmitDailyRun() {
         const lifetime = (streak as { lifetime_clears: number } | null)?.lifetime_clears ?? 0;
 
         if (last === today) {
-          nextStreak = prevStreak; // already counted today
+          nextStreak = prevStreak;
         } else if (last === yesterdayStr) {
           nextStreak = prevStreak + 1;
         } else {
@@ -195,8 +201,8 @@ export function useSubmitDailyRun() {
           }], { onConflict: 'user_id' });
       }
 
-      const reward = computeDailyReward(stars, nextStreak);
-      return { stars, reward, dateStr };
+      const reward = endlessRewardFor(params.kills);
+      return { stars, reward, dateStr, kills: params.kills };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['rd-daily-run'] });
