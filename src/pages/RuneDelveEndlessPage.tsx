@@ -66,6 +66,10 @@ export default function RuneDelveEndlessPage() {
   const seedRef = useRef<number>(Date.now() & 0xffffffff);
   const startTimeRef = useRef<number>(0);
   const enemySpawnSeqRef = useRef(0);
+  const elapsedRef = useRef(0);
+  const phaseRef = useRef<'ready' | 'playing' | 'over'>('ready');
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
+  useEffect(() => { elapsedRef.current = elapsedSec; }, [elapsedSec]);
 
   const heroClass = hero?.class ?? 'warrior';
 
@@ -103,47 +107,55 @@ export default function RuneDelveEndlessPage() {
   }, [phase]);
 
   // ── Enemy attack tick — interval scales with current wave ────────────────
+  // Use refs (not elapsedSec/combat in deps) so the 250ms timer tick doesn't
+  // keep cancelling the attack timeout before it fires.
   useEffect(() => {
-    if (phase !== 'playing' || !combat) return;
-    const interval = enemyTickIntervalMs(elapsedSec);
-    const id = window.setTimeout(() => {
-      setCombat(prev => {
-        if (!prev) return prev;
-        // Sum up incoming damage from all living enemies; apply shield mitigation.
-        let incoming = 0;
-        for (const e of prev.enemies) if (e.hp > 0) incoming += e.damage;
-        if (incoming === 0) return prev;
-        const guarded = prev.shieldTurns > 0 ? Math.round(incoming * 0.4) : incoming;
-        const nextHp = Math.max(0, prev.hp - guarded);
-        const next: CombatState = {
-          ...prev,
-          hp: nextHp,
-          shieldTurns: Math.max(0, prev.shieldTurns - 1),
-        };
-        return next;
-      });
-    }, interval);
-    return () => window.clearTimeout(id);
-  }, [phase, combat, elapsedSec]);
+    if (phase !== 'playing') return;
+    let cancelled = false;
+    let timeoutId: number | null = null;
+    const schedule = () => {
+      if (cancelled) return;
+      const interval = enemyTickIntervalMs(elapsedRef.current);
+      timeoutId = window.setTimeout(() => {
+        if (cancelled || phaseRef.current !== 'playing') return;
+        setCombat(prev => {
+          if (!prev) return prev;
+          let incoming = 0;
+          for (const e of prev.enemies) if (e.hp > 0) incoming += e.damage;
+          if (incoming === 0) return prev;
+          const guarded = prev.shieldTurns > 0 ? Math.round(incoming * 0.4) : incoming;
+          const nextHp = Math.max(0, prev.hp - guarded);
+          return { ...prev, hp: nextHp, shieldTurns: Math.max(0, prev.shieldTurns - 1) };
+        });
+        schedule();
+      }, interval);
+    };
+    schedule();
+    return () => {
+      cancelled = true;
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+    };
+  }, [phase]);
 
   // ── Continuous spawning — refill when field gets empty ───────────────────
+  // Only depend on whether the field is empty, not on elapsedSec, so the
+  // respawn timeout isn't cancelled four times per second by the timer tick.
+  const fieldEmpty = !!combat && combat.enemies.every(e => e.hp <= 0);
   useEffect(() => {
-    if (phase !== 'playing' || !combat) return;
-    const aliveCount = combat.enemies.filter(e => e.hp > 0).length;
-    if (aliveCount > 0) return;
-    const wave = waveForElapsed(elapsedSec);
+    if (phase !== 'playing' || !fieldEmpty) return;
+    const wave = waveForElapsed(elapsedRef.current);
     const id = window.setTimeout(() => {
+      if (phaseRef.current !== 'playing') return;
       setCombat(prev => {
         if (!prev) return prev;
         enemySpawnSeqRef.current += 1;
-        const fresh = spawnBatch(elapsedSec, seedRef.current ^ enemySpawnSeqRef.current);
-        // Filter out dead enemies to keep the array tidy.
+        const fresh = spawnBatch(elapsedRef.current, seedRef.current ^ enemySpawnSeqRef.current);
         const alive = prev.enemies.filter(e => e.hp > 0);
         return { ...prev, enemies: [...alive, ...fresh] };
       });
     }, wave.respawnDelayMs);
     return () => window.clearTimeout(id);
-  }, [phase, combat, elapsedSec]);
+  }, [phase, fieldEmpty]);
 
   // ── Death check ──────────────────────────────────────────────────────────
   useEffect(() => {
