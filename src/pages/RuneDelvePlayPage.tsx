@@ -63,22 +63,9 @@ import { buildInitialPairs, pairsTriggeredByChain, consumePairs, type LinkedPair
 import { buildInitialEclipse, type EclipseSet } from '@/lib/runedelve/eclipseTiles';
 import { secondaryMet, secondaryShort, secondaryLabel, type SecondaryObjective } from '@/lib/runedelve/layeredGoals';
 import { getBossRule, type BossRuleId } from '@/lib/runedelve/bossRules';
-import { useTodayDaily, useSubmitDailyRun } from '@/hooks/useDailyChallenge';
 import { useReportQuestProgress } from '@/hooks/useQuests';
-import { dailyLevelFor } from '@/lib/runedelve/dailyChallenge';
-import {
-  dailyDamageMultiplier,
-  dailyMaxHpMultiplier,
-  dailyHpDrainPerTurn,
-  dailyChainCap,
-  dailyManaRefundPerChain,
-  dailyTurnLimitDelta,
-  dailyShardMultiplier,
-  dailyEnemyHpMultiplier,
-  dailyIroncladDamageMult,
-  dailyReflectivePct,
-  dailyHidesForesight,
-} from '@/lib/runedelve/dailyModifierEffects';
+// NOTE: Daily challenge no longer routes through this campaign play page.
+// It is now an Endless Survival arena (see RuneDelveEndlessPage).
 import { getActiveMasteries, masteryUnlockedAt } from '@/lib/runedelve/classMastery';
 import {
   getMasteryStartingMana,
