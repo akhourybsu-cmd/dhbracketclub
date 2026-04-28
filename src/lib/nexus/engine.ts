@@ -16,11 +16,22 @@ const nextId = (p: string) => `${p}_${++idCounter}_${Date.now().toString(36).sli
 
 // ---------- INIT ----------
 
-export function initBattle(missionId: number, abilities: AbilityKind[]): BattleState {
-  const mission = getMission(missionId);
+export interface InitBattleOptions {
+  /** Pre-resolved mission (with calibration already applied). Required when given. */
+  mission?: MissionDef;
+  enemyHpMult?: Partial<Record<EnemyKind, number>>;
+  enemyShieldMult?: Partial<Record<EnemyKind, number>>;
+  enemySpeedMult?: number;
+}
+
+export function initBattle(missionId: number, abilities: AbilityKind[], opts: InitBattleOptions = {}): BattleState {
+  const mission = opts.mission ?? getMission(missionId);
   if (!mission) throw new Error('Mission not found');
   const zeroTowers = { pulse: 0, arc: 0, cryo: 0, rail: 0 } as Record<TowerKind, number>;
   const zeroAbilities = { orbital: 0, emp: 0 } as Record<AbilityKind, number>;
+  const oneEnemies: Record<EnemyKind, number> = { drone: 1, walker: 1, shielded: 1, stealth: 1, boss: 1 };
+  const hpMult: Record<EnemyKind, number> = { ...oneEnemies, ...(opts.enemyHpMult ?? {}) };
+  const shieldMult: Record<EnemyKind, number> = { ...oneEnemies, ...(opts.enemyShieldMult ?? {}) };
   return {
     tickMs: TICK_MS,
     elapsedMs: 0,
@@ -45,6 +56,9 @@ export function initBattle(missionId: number, abilities: AbilityKind[]): BattleS
     abilityUses: { ...zeroAbilities },
     energyStarvedMs: 0,
     leaks: 0,
+    enemyHpMult: hpMult,
+    enemyShieldMult: shieldMult,
+    enemySpeedMult: opts.enemySpeedMult ?? 1,
   };
 }
 
