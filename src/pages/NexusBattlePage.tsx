@@ -7,6 +7,7 @@ import { NexusBattleScreen } from '@/components/nexus/NexusBattleScreen';
 import { useAuth } from '@/contexts/AuthContext';
 import { recordNexusRun, useNexusProgress } from '@/hooks/useNexusProgress';
 import { useResolvedMission } from '@/hooks/useMissionCalibrations';
+import { useNexusSfx } from '@/hooks/useNexusSfx';
 import { toast } from 'sonner';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -49,6 +50,11 @@ export default function NexusBattlePage() {
   const [paused, setPaused] = useState(false);
   const [exitOpen, setExitOpen] = useState(false);
   const savedRef = useRef(false);
+  const sfx = useNexusSfx();
+  const [shakeKey, setShakeKey] = useState(0);
+  const prevWaveIndexRef = useRef(-1);
+  const prevStatusRef = useRef<BattleState['status']>('pre');
+  const prevAbilityCdRef = useRef<Record<AbilityKind, number>>({ orbital: -1, emp: -1 });
 
   // Game loop
   useEffect(() => {
@@ -62,6 +68,38 @@ export default function NexusBattlePage() {
     }, TICK_MS);
     return () => clearInterval(interval);
   }, [mission, paused, exitOpen]);
+
+  // Battle SFX/haptics: walk new engine events + react to status & wave transitions
+  useEffect(() => {
+    if (!state) return;
+    sfx.consumeEvents(state.events);
+
+    if (state.events.some(ev => ev.type === 'leak')) {
+      setShakeKey(k => k + 1);
+    }
+
+    if (state.status === 'in_wave' && state.waveIndex !== prevWaveIndexRef.current) {
+      if (prevWaveIndexRef.current >= 0) {
+        sfx.play('wave.clear');
+        window.setTimeout(() => sfx.play('wave.start'), 220);
+      } else {
+        sfx.play('wave.start');
+      }
+      prevWaveIndexRef.current = state.waveIndex;
+    }
+
+    if (state.status !== prevStatusRef.current) {
+      if (state.status === 'victory') sfx.play('victory');
+      else if (state.status === 'defeat') sfx.play('defeat');
+      prevStatusRef.current = state.status;
+    }
+
+    for (const a of state.abilities) {
+      const prev = prevAbilityCdRef.current[a.kind];
+      if (prev > 0 && a.cooldownMs <= 0) sfx.play('ability.ready');
+      prevAbilityCdRef.current[a.kind] = a.cooldownMs;
+    }
+  }, [state, sfx]);
 
   // End-of-run handling
   useEffect(() => {
@@ -125,24 +163,38 @@ export default function NexusBattlePage() {
     const res = placeTower(state, selectedKind, col, row);
     if (!res.ok) {
       if (res.reason) toast.error(res.reason);
+      sfx.play('invalid');
       return;
     }
+    sfx.play('place');
     setState(res.state);
   };
   const handleUpgrade = (towerId: string) => {
     const res = upgradeTower(state, towerId);
-    if (!res.ok) { if (res.reason) toast.error(res.reason); return; }
+    if (!res.ok) { if (res.reason) toast.error(res.reason); sfx.play('invalid'); return; }
+    sfx.play('upgrade');
     setState(res.state);
   };
   const handleSell = (towerId: string) => {
+    sfx.play('sell');
     setState(sellTower(state, towerId));
     setSelectedTowerId(null);
   };
   const handleAbility = (kind: AbilityKind) => {
     const res = castAbility(state, kind);
-    if (res.ok) setState(res.state);
+    if (res.ok) {
+      // Engine event will also drive cast SFX — but firing immediately on tap
+      // gives the action a snappier feel. consumeEvents throttling prevents
+      // double-trigger because the same event timestamp won't be re-played.
+      setState(res.state);
+    } else {
+      sfx.play('invalid');
+    }
   };
   const handleStartWave = () => {
+    // Wave-start sound is emitted by the status-watcher effect once the engine
+    // flips into 'in_wave' on the next tick — keeps it consistent whether the
+    // player taps "rush" or the timer auto-starts.
     setState(startWave(state, mission));
   };
 
@@ -240,7 +292,13 @@ export default function NexusBattlePage() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0">
+      <motion.div
+        key={`shake-${shakeKey}`}
+        initial={shakeKey === 0 ? false : { x: 0 }}
+        animate={shakeKey === 0 ? undefined : { x: [0, -6, 5, -3, 2, 0] }}
+        transition={{ duration: 0.32, ease: 'easeOut' }}
+        className="flex-1 min-h-0"
+      >
         <NexusBattleScreen
           state={state}
           selectedTowerKind={selectedKind}
@@ -253,7 +311,7 @@ export default function NexusBattlePage() {
           onCastAbility={handleAbility}
           onStartWave={handleStartWave}
         />
-      </div>
+      </motion.div>
 
       {paused && (
         <div className="absolute inset-0 bg-background/85 backdrop-blur-sm flex items-center justify-center z-50">
