@@ -7,6 +7,7 @@ import { BattleState, TowerKind } from '@/lib/nexus/types';
 import { cn } from '@/lib/utils';
 import { Heart, ChevronUp, X } from 'lucide-react';
 import { TowerIcon } from './TowerIcon';
+import { EnemyMarker, getEnemyAccent } from './EnemyMarker';
 
 // hsl strings for SVG/inline use — anchored to nx tokens conceptually but
 // resolved here so they render reliably inside framer-motion wrappers.
