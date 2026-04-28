@@ -132,7 +132,7 @@ export function tick(state: BattleState, mission: MissionDef): BattleState {
     }
     const def = ENEMIES[e.kind];
     const slowFactor = e.slowMs > 0 ? (1 - e.slowFactor) : 1;
-    const cellsThisTick = (def.speed * (s.enemySpeedMult ?? 1) * slowFactor) * (TICK_MS / 1000);
+    const cellsThisTick = (def.speed * (s.enemySpeedMult ?? 1) * (s.modEnemySpeedMult ?? 1) * slowFactor) * (TICK_MS / 1000);
     let progress = e.progress + cellsThisTick;
     while (progress >= 1 && e.pathIndex < PATH.length - 1) {
       progress -= 1;
@@ -167,7 +167,9 @@ export function tick(state: BattleState, mission: MissionDef): BattleState {
     if (t.cooldownMs > 0) continue;
     const tDef = TOWERS[t.kind];
     const range = towerRangeAt(t.kind, t.level);
-    const damage = towerDamageAt(t.kind, t.level);
+    const baseDamage = towerDamageAt(t.kind, t.level);
+    const dmgMod = s.modTowerDamageMult?.[t.kind] ?? 1;
+    const damage = Math.max(1, Math.round(baseDamage * dmgMod));
     const fr = towerFireRateAt(t.kind, t.level);
     const cooldown = Math.max(80, Math.round(1000 / fr));
 
@@ -235,8 +237,9 @@ export function tick(state: BattleState, mission: MissionDef): BattleState {
   for (const e of s.enemies) {
     if (e.hp <= 0) {
       const def = ENEMIES[e.kind];
-      s.energy += def.bounty;
-      s.score += def.bounty;
+      const bounty = Math.max(0, Math.round(def.bounty * (s.modBountyMult ?? 1)));
+      s.energy += bounty;
+      s.score += bounty;
       s.killedThisRun += 1;
       const pos = pathToXY(e.pathIndex, e.progress);
       s.events.push({ type: 'kill', at: pos, t: s.elapsedMs });
@@ -246,13 +249,15 @@ export function tick(state: BattleState, mission: MissionDef): BattleState {
   }
   s.enemies = survivors;
 
-  // Mission 3 modifier: shield regen
-  if (mission.id === 3) {
+  // Modifier-driven shield regen (e.g. Shielded Vanguard).
+  if (s.modShieldRegen) {
     for (const e of s.enemies) {
-      if (e.kind === 'shielded') {
-        const maxShield = ENEMIES.shielded.shield ?? 0;
-        e.shield = Math.min(maxShield, e.shield + (10 * TICK_MS) / 1000);
-      }
+      const rate = s.modShieldRegen[e.kind];
+      if (!rate) continue;
+      const baseShield = ENEMIES[e.kind].shield ?? 0;
+      const maxShield = baseShield * (s.modEnemyShieldMult?.[e.kind] ?? 1) * (s.enemyShieldMult?.[e.kind] ?? 1);
+      if (maxShield <= 0) continue;
+      e.shield = Math.min(maxShield, e.shield + (rate * TICK_MS) / 1000);
     }
   }
 
