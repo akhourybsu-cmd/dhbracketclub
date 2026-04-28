@@ -117,6 +117,13 @@ export interface BattleState {
   score: number;
   killedThisRun: number;
   events: BattleEvent[];     // recent visual events for UI
+  // ---- telemetry counters (cheap, in-memory, sent on run end) ----
+  towerBuilds: Record<TowerKind, number>;
+  towerUpgrades: Record<TowerKind, number>;
+  towerSells: Record<TowerKind, number>;
+  abilityUses: Record<AbilityKind, number>;
+  energyStarvedMs: number;   // ms spent unable to afford the cheapest tower during a wave
+  leaks: number;             // count of enemies that reached the nexus
 }
 
 export type BattleEvent =
