@@ -2,24 +2,27 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ABILITIES } from '@/lib/nexus/abilities';
 import { ENEMIES } from '@/lib/nexus/enemies';
 import { TOWERS, towerDamageAt, towerRangeAt, towerSellValue, towerUpgradeCost } from '@/lib/nexus/towers';
-import { GRID_COLS, GRID_ROWS, isBuildable, isPath, NEXUS_CELL, pathToXY } from '@/lib/nexus/grid';
+import { GRID_COLS, GRID_ROWS, isBuildable, isPath, NEXUS_CELL, PATH, pathToXY } from '@/lib/nexus/grid';
 import { BattleState, TowerKind } from '@/lib/nexus/types';
 import { cn } from '@/lib/utils';
-import { Zap, Heart, Layers, ChevronUp, X } from 'lucide-react';
+import { Heart, ChevronUp, X } from 'lucide-react';
+import { TowerIcon } from './TowerIcon';
 
-const TOWER_COLORS: Record<TowerKind, { bg: string; border: string; ring: string; text: string }> = {
-  pulse:  { bg: 'bg-cyan-500/30',   border: 'border-cyan-400',   ring: 'ring-cyan-400/40',   text: 'text-cyan-300' },
-  arc:    { bg: 'bg-violet-500/30', border: 'border-violet-400', ring: 'ring-violet-400/40', text: 'text-violet-300' },
-  cryo:   { bg: 'bg-sky-500/30',    border: 'border-sky-400',    ring: 'ring-sky-400/40',    text: 'text-sky-300' },
-  rail:   { bg: 'bg-amber-500/30',  border: 'border-amber-400',  ring: 'ring-amber-400/40',  text: 'text-amber-300' },
+// hsl strings for SVG/inline use — anchored to nx tokens conceptually but
+// resolved here so they render reliably inside framer-motion wrappers.
+const TOWER_HSL: Record<TowerKind, { c: string; cDim: string; bg: string; text: string }> = {
+  pulse: { c: 'hsl(188 92% 56%)', cDim: 'hsl(188 92% 56% / 0.18)', bg: 'hsl(188 92% 56% / 0.14)', text: 'hsl(188 92% 78%)' },
+  arc:   { c: 'hsl(265 80% 70%)', cDim: 'hsl(265 80% 70% / 0.18)', bg: 'hsl(265 80% 70% / 0.14)', text: 'hsl(265 80% 84%)' },
+  cryo:  { c: 'hsl(200 95% 70%)', cDim: 'hsl(200 95% 70% / 0.18)', bg: 'hsl(200 95% 70% / 0.14)', text: 'hsl(200 95% 84%)' },
+  rail:  { c: 'hsl(38 95% 60%)',  cDim: 'hsl(38 95% 60% / 0.18)',  bg: 'hsl(38 95% 60% / 0.14)',  text: 'hsl(38 95% 78%)' },
 };
 
-const ENEMY_COLORS: Record<string, string> = {
-  drone: 'bg-rose-400 border-rose-200',
-  walker: 'bg-orange-500 border-orange-200',
-  shielded: 'bg-sky-400 border-sky-100',
-  stealth: 'bg-violet-500/60 border-violet-200',
-  boss: 'bg-red-600 border-red-200',
+const ENEMY_FILL: Record<string, string> = {
+  drone: '#fb7185',     // rose
+  walker: '#f97316',    // orange
+  shielded: '#38bdf8',  // sky
+  stealth: '#a78bfa',   // violet
+  boss: '#dc2626',      // red
 };
 
 interface Props {
@@ -35,6 +38,11 @@ interface Props {
   onStartWave: () => void;
 }
 
+// Build SVG polyline `points` attribute for the enemy path (centers of each cell)
+const PATH_POINTS = PATH
+  .map((c) => `${(c.col + 0.5) * (100 / GRID_COLS)},${(c.row + 0.5) * (100 / GRID_ROWS)}`)
+  .join(' ');
+
 export function NexusBattleScreen({
   state, selectedTowerKind, selectedTowerId,
   onSelectKind, onPlace, onSelectTower, onUpgrade, onSell, onCastAbility, onStartWave,
@@ -45,39 +53,160 @@ export function NexusBattleScreen({
   }
   const selectedTower = selectedTowerId ? state.towers.find(t => t.id === selectedTowerId) : null;
   const hpPctBase = state.baseHp / state.baseHpMax;
-  const hpColor = hpPctBase > 0.5 ? 'text-emerald-300' : hpPctBase > 0.25 ? 'text-amber-300' : 'text-rose-400';
+  const hpColor = hpPctBase > 0.5 ? 'hsl(150 80% 60%)' : hpPctBase > 0.25 ? 'hsl(38 95% 60%)' : 'hsl(350 85% 62%)';
 
   return (
     <div className="flex flex-col h-full w-full max-w-md mx-auto select-none">
-      {/* HUD */}
-      <div className="flex items-center justify-between gap-2 px-3 py-1.5 bg-card/80 backdrop-blur border-b border-border">
-        <div className="flex items-center gap-1.5 text-sm font-bold">
-          <Heart className={cn("w-4 h-4", hpColor)} />
-          <span className={cn("tabular-nums", hpColor)}>{state.baseHp}<span className="text-muted-foreground text-xs font-normal">/{state.baseHpMax}</span></span>
-        </div>
-        <div className="flex items-center gap-1.5 text-sm font-bold">
-          <Zap className="w-4 h-4 text-amber-400" />
-          <span className="text-amber-300 tabular-nums">{state.energy}</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-sm font-bold">
-          <Layers className="w-4 h-4 text-emerald-400" />
-          <span className="text-foreground tabular-nums">
-            {Math.max(0, state.waveIndex + 1)}
-            <span className="text-muted-foreground text-xs font-normal">/{state.totalWaves ?? '·'}</span>
-          </span>
+      {/* ───── Holographic HUD bar ───── */}
+      <div
+        className="px-3 py-2"
+        style={{
+          background:
+            'linear-gradient(180deg, hsl(var(--nx-panel) / 0.95), hsl(var(--nx-panel) / 0.6))',
+          borderBottom: '1px solid hsl(var(--nx-cyan) / 0.25)',
+          boxShadow: '0 1px 0 hsl(var(--nx-cyan) / 0.15), 0 8px 16px -10px hsl(var(--nx-cyan) / 0.3)',
+        }}
+      >
+        <div className="grid grid-cols-3 gap-2">
+          {/* HP */}
+          <div className="nx-bracket px-2 py-1.5 rounded-sm" style={{ background: 'hsl(218 35% 7%)', border: '1px solid hsl(0 0% 100% / 0.05)' }}>
+            <div className="flex items-center gap-1.5 mb-1">
+              <Heart className="w-3 h-3" style={{ color: hpColor }} />
+              <span className="nx-title text-[8px]" style={{ color: 'hsl(0 0% 100% / 0.55)' }}>NEXUS</span>
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-sm font-black tabular-nums" style={{ color: hpColor }}>{state.baseHp}</span>
+              <span className="text-[9px] font-bold tabular-nums" style={{ color: 'hsl(0 0% 100% / 0.4)' }}>/{state.baseHpMax}</span>
+            </div>
+            <div className="mt-1 h-[3px] rounded-full overflow-hidden" style={{ background: 'hsl(0 0% 100% / 0.06)' }}>
+              <div className="h-full transition-all" style={{ width: `${Math.max(0, hpPctBase * 100)}%`, background: hpColor, boxShadow: `0 0 6px ${hpColor}` }} />
+            </div>
+          </div>
+
+          {/* Energy */}
+          <div className="nx-bracket px-2 py-1.5 rounded-sm" style={{ background: 'hsl(218 35% 7%)', border: '1px solid hsl(var(--nx-amber) / 0.15)' }}>
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-[10px]" style={{ color: 'hsl(var(--nx-amber))' }}>⚡</span>
+              <span className="nx-title text-[8px]" style={{ color: 'hsl(0 0% 100% / 0.55)' }}>ENERGY</span>
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-sm font-black tabular-nums" style={{ color: 'hsl(var(--nx-amber))' }}>{state.energy}</span>
+            </div>
+            <div className="mt-1 h-[3px] rounded-full overflow-hidden nx-scan-bar" style={{ background: 'hsl(var(--nx-amber) / 0.15)' }}>
+              <div className="h-full" style={{ width: `100%`, background: 'linear-gradient(90deg, hsl(var(--nx-amber) / 0.55), hsl(var(--nx-amber)))' }} />
+            </div>
+          </div>
+
+          {/* Wave */}
+          <div className="nx-bracket px-2 py-1.5 rounded-sm" style={{ background: 'hsl(218 35% 7%)', border: '1px solid hsl(var(--nx-cyan) / 0.15)' }}>
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-[10px]" style={{ color: 'hsl(var(--nx-cyan))' }}>◫</span>
+              <span className="nx-title text-[8px]" style={{ color: 'hsl(0 0% 100% / 0.55)' }}>WAVE</span>
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-sm font-black tabular-nums" style={{ color: 'hsl(var(--nx-cyan))' }}>{Math.max(0, state.waveIndex + 1)}</span>
+              <span className="text-[9px] font-bold tabular-nums" style={{ color: 'hsl(0 0% 100% / 0.4)' }}>/{state.totalWaves ?? '·'}</span>
+            </div>
+            <div className="mt-1 flex gap-[2px]">
+              {Array.from({ length: state.totalWaves || 0 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex-1 h-[3px] rounded-sm"
+                  style={{
+                    background: i <= state.waveIndex
+                      ? 'hsl(var(--nx-cyan))'
+                      : 'hsl(var(--nx-cyan) / 0.18)',
+                    boxShadow: i <= state.waveIndex ? '0 0 4px hsl(var(--nx-cyan))' : undefined,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Grid */}
+      {/* ───── Battle grid ───── */}
       <div className="relative flex-1 flex items-center justify-center p-2 overflow-hidden">
         <div
-          className="relative grid w-full max-w-[420px] rounded-xl bg-[radial-gradient(circle_at_50%_50%,hsl(220_60%_8%),hsl(220_70%_4%))] border border-cyan-500/20 shadow-[0_0_30px_-10px_hsl(180_80%_50%/0.4)] overflow-hidden"
+          className="relative grid w-full max-w-[420px] overflow-hidden nx-clip"
           style={{
             gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`,
             gridTemplateRows: `repeat(${GRID_ROWS}, 1fr)`,
             aspectRatio: `${GRID_COLS} / ${GRID_ROWS}`,
+            background:
+              'radial-gradient(ellipse 80% 60% at 50% 40%, hsl(218 50% 9%), hsl(220 60% 4%) 75%)',
+            border: '1px solid hsl(var(--nx-cyan) / 0.35)',
+            boxShadow:
+              'inset 0 0 24px hsl(var(--nx-cyan) / 0.12), 0 0 28px -8px hsl(var(--nx-cyan) / 0.45)',
           }}
         >
+          {/* Subtle background grid */}
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none opacity-[0.18]"
+            style={{
+              backgroundImage:
+                'linear-gradient(hsl(var(--nx-cyan) / 0.6) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--nx-cyan) / 0.6) 1px, transparent 1px)',
+              backgroundSize: `${100 / GRID_COLS}% ${100 / GRID_ROWS}%`,
+            }}
+          />
+
+          {/* Energy corridor (path) — SVG glow + scan dashes */}
+          <svg
+            aria-hidden
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+          >
+            {/* Outer glow */}
+            <polyline
+              points={PATH_POINTS}
+              fill="none"
+              stroke="hsl(188 92% 56% / 0.18)"
+              strokeWidth="9"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+              style={{ filter: 'blur(2px)' }}
+            />
+            {/* Lane fill */}
+            <polyline
+              points={PATH_POINTS}
+              fill="none"
+              stroke="hsl(188 92% 56% / 0.32)"
+              strokeWidth="6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+            />
+            {/* Inner bright core */}
+            <polyline
+              points={PATH_POINTS}
+              fill="none"
+              stroke="hsl(188 92% 80%)"
+              strokeWidth="0.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+              opacity="0.7"
+            />
+            {/* Running scan dashes — energy moving toward the nexus */}
+            <polyline
+              points={PATH_POINTS}
+              fill="none"
+              stroke="hsl(188 92% 90%)"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+              strokeDasharray="2 8"
+              opacity="0.8"
+            >
+              <animate attributeName="stroke-dashoffset" from="0" to="-20" dur="1.6s" repeatCount="indefinite" />
+            </polyline>
+          </svg>
+
+          {/* Cell grid (interaction layer) */}
           {cells.map(({ c, r }) => {
             const onPath = isPath(c, r);
             const buildable = isBuildable(c, r);
@@ -100,25 +229,80 @@ export function NexusBattleScreen({
                   }
                 }}
                 className={cn(
-                  'relative border border-cyan-500/5 transition-colors',
-                  onPath && 'bg-cyan-500/10',
-                  buildable && !placed && 'bg-emerald-500/[0.04] hover:bg-emerald-500/15',
-                  isNexus && 'bg-amber-500/30 ring-1 ring-amber-400/60',
-                  canPlaceHere && 'bg-emerald-500/30 ring-1 ring-emerald-300',
-                  placed && 'bg-transparent',
+                  'relative transition-colors',
+                  buildable && !placed && !canPlaceHere && 'hover:bg-cyan-400/10',
+                  canPlaceHere && 'bg-emerald-400/25',
                 )}
+                style={canPlaceHere ? {
+                  boxShadow: 'inset 0 0 0 1.5px hsl(150 80% 60% / 0.85)',
+                } : undefined}
               >
-                {isNexus && <span className="absolute inset-0 flex items-center justify-center text-amber-300 font-black text-[10px]">N</span>}
+                {/* Nexus core */}
+                {isNexus && (
+                  <span aria-hidden className="absolute inset-0 flex items-center justify-center">
+                    <span
+                      className="nx-reactor-glow absolute inset-1 rounded-full"
+                      style={{
+                        background:
+                          'radial-gradient(circle, hsl(var(--nx-amber) / 0.6), hsl(var(--nx-amber) / 0.15) 60%, transparent 75%)',
+                      }}
+                    />
+                    <span
+                      className="relative w-[68%] h-[68%] rounded-full flex items-center justify-center"
+                      style={{
+                        background:
+                          'radial-gradient(circle at 35% 30%, hsl(38 95% 75%), hsl(38 95% 50%) 55%, hsl(20 70% 30%) 90%)',
+                        boxShadow:
+                          '0 0 10px hsl(var(--nx-amber) / 0.7), inset 0 0 6px hsl(0 0% 100% / 0.4), inset 0 -2px 4px hsl(0 0% 0% / 0.4)',
+                        border: '1px solid hsl(38 95% 80% / 0.7)',
+                      }}
+                    >
+                      <span className="text-[7px] font-black" style={{ color: 'hsl(20 60% 18%)' }}>◉</span>
+                    </span>
+                  </span>
+                )}
+
+                {/* Hardpoint dot on empty buildable tiles */}
+                {buildable && !placed && !canPlaceHere && (
+                  <span aria-hidden className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 nx-hardpoint" />
+                )}
+
+                {/* Path waypoint nodes (subtle) */}
+                {onPath && !isNexus && (
+                  <span
+                    aria-hidden
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[3px] h-[3px] rounded-full"
+                    style={{ background: 'hsl(188 92% 75% / 0.35)' }}
+                  />
+                )}
+
+                {/* Placed tower */}
                 {placed && (
-                  <div className={cn(
-                    'absolute inset-1 rounded-md border-2 flex items-center justify-center font-black text-[11px]',
-                    TOWER_COLORS[placed.kind].bg,
-                    TOWER_COLORS[placed.kind].border,
-                    TOWER_COLORS[placed.kind].text,
-                    selectedTowerId === placed.id && 'ring-2 ring-emerald-400',
-                  )}>
-                    {TOWERS[placed.kind].glyph}
-                    <span className="absolute -top-0.5 -right-0.5 text-[8px] bg-background/80 px-1 rounded">L{placed.level}</span>
+                  <div
+                    className={cn(
+                      'absolute inset-[3px] rounded-md flex items-center justify-center',
+                      selectedTowerId === placed.id && 'ring-2',
+                    )}
+                    style={{
+                      background: TOWER_HSL[placed.kind].bg,
+                      border: `1.5px solid ${TOWER_HSL[placed.kind].c}`,
+                      boxShadow: `0 0 8px ${TOWER_HSL[placed.kind].cDim}, inset 0 0 6px hsl(0 0% 100% / 0.06)`,
+                      color: TOWER_HSL[placed.kind].c,
+                      // @ts-expect-error css var
+                      '--tw-ring-color': 'hsl(150 80% 60% / 0.85)',
+                    }}
+                  >
+                    <TowerIcon kind={placed.kind} size={20} />
+                    <span
+                      className="absolute -top-[5px] -right-[5px] text-[7px] font-black px-[3px] py-[1px] rounded-sm leading-none"
+                      style={{
+                        background: 'hsl(218 50% 8%)',
+                        color: TOWER_HSL[placed.kind].text,
+                        border: `1px solid ${TOWER_HSL[placed.kind].c}`,
+                      }}
+                    >
+                      L{placed.level}
+                    </span>
                   </div>
                 )}
               </button>
@@ -140,15 +324,20 @@ export function NexusBattleScreen({
                   className="absolute -translate-x-1/2 -translate-y-1/2 transition-all duration-100"
                   style={{ left: `${left}%`, top: `${top}%` }}
                 >
-                  <div className={cn(
-                    'rounded-full border-2 shadow-md flex items-center justify-center text-[8px] font-black text-white',
-                    ENEMY_COLORS[e.kind],
-                    def.stealth && 'opacity-60',
-                  )} style={{ width: size, height: size }}>
+                  <div
+                    className={cn('rounded-full flex items-center justify-center text-[8px] font-black text-white', def.stealth && 'opacity-60')}
+                    style={{
+                      width: size,
+                      height: size,
+                      background: ENEMY_FILL[e.kind],
+                      border: '1.5px solid hsl(0 0% 100% / 0.85)',
+                      boxShadow: `0 0 6px ${ENEMY_FILL[e.kind]}, 0 1px 2px hsl(0 0% 0% / 0.5)`,
+                    }}
+                  >
                     {def.glyph}
                   </div>
-                  {(e.shield > 0) && (
-                    <div className="absolute -inset-0.5 rounded-full border border-sky-300/70" />
+                  {e.shield > 0 && (
+                    <div className="absolute -inset-0.5 rounded-full" style={{ border: '1px solid hsl(200 95% 70% / 0.85)', boxShadow: '0 0 4px hsl(200 95% 70%)' }} />
                   )}
                   <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-6 h-1 bg-black/60 rounded">
                     <div className="h-full bg-emerald-400 rounded transition-all" style={{ width: `${hpPct * 100}%` }} />
@@ -161,13 +350,16 @@ export function NexusBattleScreen({
           {/* Range circle for selected placed tower */}
           {selectedTower && (
             <div
-              className="absolute pointer-events-none rounded-full border border-emerald-400/60 bg-emerald-400/5"
+              className="absolute pointer-events-none rounded-full"
               style={{
                 left: `${((selectedTower.cell.col + 0.5) / GRID_COLS) * 100}%`,
                 top: `${((selectedTower.cell.row + 0.5) / GRID_ROWS) * 100}%`,
                 width: `${(towerRangeAt(selectedTower.kind, selectedTower.level) * 2 / GRID_COLS) * 100}%`,
                 height: `${(towerRangeAt(selectedTower.kind, selectedTower.level) * 2 / GRID_ROWS) * 100}%`,
                 transform: 'translate(-50%, -50%)',
+                border: '1px dashed hsl(150 80% 60% / 0.7)',
+                background: 'hsl(150 80% 60% / 0.05)',
+                boxShadow: 'inset 0 0 12px hsl(150 80% 60% / 0.18)',
               }}
             />
           )}
@@ -208,36 +400,71 @@ export function NexusBattleScreen({
         {(state.status === 'pre' || state.status === 'between') && (
           <button
             onClick={onStartWave}
-            className="absolute bottom-3 left-3 right-3 px-5 py-3 rounded-full bg-emerald-500 text-emerald-950 font-black text-sm shadow-lg shadow-emerald-500/30 active:scale-95 transition"
+            className="absolute bottom-3 left-3 right-3 nx-clip-sm py-3 font-black text-sm active:scale-95 transition nx-title"
+            style={{
+              background: 'linear-gradient(180deg, hsl(150 80% 55%), hsl(150 80% 42%))',
+              color: 'hsl(150 30% 8%)',
+              boxShadow: '0 0 18px hsl(150 80% 55% / 0.55), inset 0 1px 0 hsl(0 0% 100% / 0.35)',
+            }}
           >
             {state.status === 'pre'
-              ? `▶  START WAVE 1 / ${state.totalWaves}`
-              : `▶  WAVE ${state.waveIndex + 2} / ${state.totalWaves}  ·  ${Math.ceil(state.betweenWaveMs / 1000)}s  ·  TAP TO RUSH`}
+              ? `▶  DEPLOY WAVE 01 / ${String(state.totalWaves).padStart(2, '0')}`
+              : `▶  WAVE ${String(state.waveIndex + 2).padStart(2, '0')} / ${String(state.totalWaves).padStart(2, '0')}  ·  ${Math.ceil(state.betweenWaveMs / 1000)}s  ·  TAP TO RUSH`}
           </button>
         )}
       </div>
 
-      {/* Selected tower panel */}
+      {/* ───── Selected tower panel ───── */}
       {selectedTower && (
         <div className="px-3 pb-2">
-          <div className="rounded-lg border border-emerald-500/40 bg-card/90 p-2 flex items-center gap-2">
-            <div className={cn('w-9 h-9 rounded-md border-2 flex items-center justify-center font-black text-sm', TOWER_COLORS[selectedTower.kind].bg, TOWER_COLORS[selectedTower.kind].border, TOWER_COLORS[selectedTower.kind].text)}>
-              {TOWERS[selectedTower.kind].glyph}
+          <div
+            className="nx-clip-sm p-2 flex items-center gap-2"
+            style={{
+              background: 'linear-gradient(180deg, hsl(218 35% 11%), hsl(218 38% 8%))',
+              border: '1px solid hsl(150 80% 55% / 0.5)',
+              boxShadow: '0 0 12px -4px hsl(150 80% 55% / 0.5), inset 0 1px 0 hsl(0 0% 100% / 0.05)',
+            }}
+          >
+            <div
+              className="w-9 h-9 rounded-md flex items-center justify-center shrink-0"
+              style={{
+                background: TOWER_HSL[selectedTower.kind].bg,
+                border: `1.5px solid ${TOWER_HSL[selectedTower.kind].c}`,
+                color: TOWER_HSL[selectedTower.kind].c,
+                boxShadow: `0 0 10px ${TOWER_HSL[selectedTower.kind].cDim}`,
+              }}
+            >
+              <TowerIcon kind={selectedTower.kind} size={22} />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-bold">{TOWERS[selectedTower.kind].name} <span className="text-muted-foreground font-normal">L{selectedTower.level}</span></div>
-              <div className="text-[10px] text-muted-foreground">DMG {towerDamageAt(selectedTower.kind, selectedTower.level)} · RNG {towerRangeAt(selectedTower.kind, selectedTower.level).toFixed(1)}</div>
+              <div className="text-xs font-black truncate">
+                {TOWERS[selectedTower.kind].name}
+                <span className="ml-1.5 text-[9px] font-bold nx-title" style={{ color: TOWER_HSL[selectedTower.kind].text }}>L{selectedTower.level}</span>
+              </div>
+              <div className="text-[10px] text-foreground/65 nx-title">
+                DMG <span className="text-foreground">{towerDamageAt(selectedTower.kind, selectedTower.level)}</span> · RNG <span className="text-foreground">{towerRangeAt(selectedTower.kind, selectedTower.level).toFixed(1)}</span>
+              </div>
             </div>
             <button
               onClick={() => onUpgrade(selectedTower.id)}
               disabled={selectedTower.level >= 3 || state.energy < towerUpgradeCost(selectedTower.kind, selectedTower.level)}
-              className="px-2.5 py-2 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold disabled:opacity-40 active:scale-95"
+              className="px-2.5 py-2 rounded-md text-[11px] font-black disabled:opacity-40 active:scale-95 nx-title"
+              style={{
+                background: 'hsl(150 80% 55% / 0.18)',
+                color: 'hsl(150 80% 70%)',
+                border: '1px solid hsl(150 80% 55% / 0.5)',
+              }}
             >
               <ChevronUp className="w-3 h-3 inline" /> {selectedTower.level >= 3 ? 'MAX' : towerUpgradeCost(selectedTower.kind, selectedTower.level)}
             </button>
             <button
               onClick={() => onSell(selectedTower.id)}
-              className="px-2.5 py-2 rounded-md bg-rose-500/15 text-rose-300 border border-rose-500/30 text-xs font-bold active:scale-95"
+              className="px-2.5 py-2 rounded-md text-[11px] font-black active:scale-95 nx-title"
+              style={{
+                background: 'hsl(350 85% 62% / 0.14)',
+                color: 'hsl(350 85% 78%)',
+                border: '1px solid hsl(350 85% 62% / 0.4)',
+              }}
             >
               <X className="w-3 h-3 inline" /> {towerSellValue(selectedTower.kind, selectedTower.level)}
             </button>
@@ -245,28 +472,50 @@ export function NexusBattleScreen({
         </div>
       )}
 
-      {/* Bottom tray: tower picker + abilities */}
-      <div className="px-3 pb-3 pt-1 bg-card/80 backdrop-blur border-t border-border">
+      {/* ───── Bottom tray: tower picker + abilities ───── */}
+      <div
+        className="px-3 pb-3 pt-2"
+        style={{
+          background: 'linear-gradient(180deg, hsl(var(--nx-panel) / 0.6), hsl(var(--nx-panel) / 0.95))',
+          borderTop: '1px solid hsl(var(--nx-cyan) / 0.25)',
+          boxShadow: '0 -1px 0 hsl(var(--nx-cyan) / 0.15)',
+        }}
+      >
         <div className="grid grid-cols-4 gap-1.5 mb-2">
           {(['pulse','arc','cryo','rail'] as TowerKind[]).map(kind => {
             const def = TOWERS[kind];
             const selected = selectedTowerKind === kind;
             const affordable = state.energy >= def.cost;
             const shortName = kind === 'pulse' ? 'Pulse' : kind === 'arc' ? 'Arc' : kind === 'cryo' ? 'Cryo' : 'Rail';
+            const c = TOWER_HSL[kind];
             return (
               <button
                 key={kind}
                 onClick={() => { onSelectKind(selected ? null : kind); onSelectTower(null); }}
                 className={cn(
-                  'relative min-h-[60px] rounded-lg border-2 flex flex-col items-center justify-center gap-0 py-1 transition active:scale-95',
-                  TOWER_COLORS[kind].bg,
-                  selected ? TOWER_COLORS[kind].border + ' ring-2 ring-emerald-400/50' : 'border-transparent',
+                  'relative min-h-[64px] nx-clip-sm flex flex-col items-center justify-center gap-0 py-1 transition active:scale-95',
                   !affordable && 'opacity-50',
                 )}
+                style={{
+                  background: selected
+                    ? `linear-gradient(180deg, ${c.bg}, hsl(218 35% 9%))`
+                    : 'linear-gradient(180deg, hsl(218 35% 11%), hsl(218 38% 8%))',
+                  border: selected ? `1.5px solid ${c.c}` : '1px solid hsl(0 0% 100% / 0.06)',
+                  boxShadow: selected
+                    ? `0 0 14px -2px ${c.cDim}, inset 0 1px 0 hsl(0 0% 100% / 0.08)`
+                    : 'inset 0 1px 0 hsl(0 0% 100% / 0.04)',
+                  color: c.c,
+                }}
               >
-                <span className={cn('font-black text-lg leading-none', TOWER_COLORS[kind].text)}>{def.glyph}</span>
-                <span className={cn('text-[10px] font-bold leading-tight mt-0.5', TOWER_COLORS[kind].text)}>{shortName}</span>
-                <span className="text-[9px] font-bold text-foreground/80 leading-none">⚡{def.cost}</span>
+                <TowerIcon kind={kind} size={26} />
+                <span className="nx-title text-[8px] mt-0.5" style={{ color: selected ? c.text : 'hsl(0 0% 100% / 0.7)' }}>{shortName}</span>
+                <span className="text-[9px] font-black tabular-nums leading-none mt-0.5" style={{ color: 'hsl(var(--nx-amber))' }}>⚡{def.cost}</span>
+                {selected && (
+                  <>
+                    <span aria-hidden className="absolute top-0.5 left-0.5 w-1.5 h-1.5 border-l border-t" style={{ borderColor: c.c }} />
+                    <span aria-hidden className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-r border-b" style={{ borderColor: c.c }} />
+                  </>
+                )}
               </button>
             );
           })}
@@ -276,20 +525,44 @@ export function NexusBattleScreen({
             const def = ABILITIES[a.kind];
             const ready = a.cooldownMs <= 0;
             const pct = ready ? 1 : 1 - (a.cooldownMs / def.cooldownMs);
+            const remainSec = Math.ceil(a.cooldownMs / 1000);
             return (
               <button
                 key={a.kind}
                 onClick={() => ready && onCastAbility(a.kind)}
                 disabled={!ready}
-                className={cn(
-                  'relative h-11 rounded-lg border-2 flex items-center justify-center gap-1.5 font-bold text-xs overflow-hidden active:scale-95',
-                  ready ? 'border-amber-400 bg-amber-500/20 text-amber-200' : 'border-border bg-muted/50 text-muted-foreground',
-                )}
+                className="relative h-12 nx-clip-sm flex items-center justify-center gap-2 font-black text-xs overflow-hidden active:scale-95 nx-title"
+                style={{
+                  background: ready
+                    ? 'linear-gradient(180deg, hsl(var(--nx-amber) / 0.28), hsl(var(--nx-amber) / 0.12))'
+                    : 'linear-gradient(180deg, hsl(218 35% 12%), hsl(218 38% 9%))',
+                  border: ready ? '1.5px solid hsl(var(--nx-amber) / 0.85)' : '1px solid hsl(0 0% 100% / 0.06)',
+                  boxShadow: ready
+                    ? '0 0 14px -2px hsl(var(--nx-amber) / 0.55), inset 0 1px 0 hsl(0 0% 100% / 0.1)'
+                    : 'inset 0 1px 0 hsl(0 0% 100% / 0.04)',
+                  color: ready ? 'hsl(var(--nx-amber))' : 'hsl(0 0% 100% / 0.4)',
+                }}
               >
-                <span className="text-base">{def.glyph}</span>
-                <span>{def.name}</span>
+                <span className="text-base leading-none">{def.glyph}</span>
+                <span className="text-[10px]">{def.name}</span>
+                {/* Radial cooldown sweep */}
                 {!ready && (
-                  <div className="absolute inset-0 bg-background/60" style={{ clipPath: `inset(0 0 ${pct * 100}% 0)` }} />
+                  <>
+                    <div
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        background:
+                          `conic-gradient(hsl(0 0% 0% / 0.55) ${(1 - pct) * 360}deg, transparent 0deg)`,
+                        mixBlendMode: 'multiply',
+                      }}
+                    />
+                    <span className="absolute right-1.5 bottom-1 text-[9px] font-mono tabular-nums" style={{ color: 'hsl(0 0% 100% / 0.7)' }}>
+                      {remainSec}s
+                    </span>
+                  </>
+                )}
+                {ready && (
+                  <span aria-hidden className="absolute inset-0 pointer-events-none nx-scan-bar" />
                 )}
               </button>
             );
