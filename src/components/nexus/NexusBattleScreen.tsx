@@ -44,7 +44,7 @@ export function NexusBattleScreen({
     for (let c = 0; c < GRID_COLS; c++) cells.push({ c, r });
   }
   const selectedTower = selectedTowerId ? state.towers.find(t => t.id === selectedTowerId) : null;
-  const totalWaves = (state as any).totalWaves ?? undefined;
+  
   // Range preview for selected tower
   const rangePreview = selectedTower
     ? { col: selectedTower.cell.col, row: selectedTower.cell.row, range: towerRangeAt(selectedTower.kind, selectedTower.level) }
