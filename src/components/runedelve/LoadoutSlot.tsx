@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 interface Props {
   relic: RelicDef | null;
   locked?: boolean;
-  unlockHint?: string; // e.g. "Reach Lv 50"
+  unlockHint?: string; // e.g. "Reach Lv 25"
   /** Optional rank (1..5) for the equipped relic. */
   rank?: number;
   onClick?: () => void;
