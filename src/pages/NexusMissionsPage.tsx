@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Lock, Check, Skull } from 'lucide-react';
-import { MISSIONS } from '@/lib/nexus/missions';
+import { useResolvedMissions } from '@/hooks/useMissionCalibrations';
 import { useNexusProgress } from '@/hooks/useNexusProgress';
 import { cn } from '@/lib/utils';
 
 export default function NexusMissionsPage() {
   const { progress } = useNexusProgress();
+  const { missions: MISSIONS } = useResolvedMissions();
   return (
     <div className="max-w-md mx-auto pb-24 px-1">
       <div className="mb-4 mt-2">

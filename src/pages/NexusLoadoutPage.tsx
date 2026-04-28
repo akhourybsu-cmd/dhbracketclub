@@ -1,7 +1,6 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useMemo } from 'react';
-import { getMission } from '@/lib/nexus/missions';
+import { useResolvedMission } from '@/hooks/useMissionCalibrations';
 import { TOWERS, TOWER_LIST } from '@/lib/nexus/towers';
 import { ABILITIES, ABILITY_LIST } from '@/lib/nexus/abilities';
 import { cn } from '@/lib/utils';
@@ -10,7 +9,8 @@ export default function NexusLoadoutPage() {
   const { missionId } = useParams<{ missionId: string }>();
   const navigate = useNavigate();
   const id = parseInt(missionId || '1', 10);
-  const mission = useMemo(() => getMission(id), [id]);
+  const { mission, loading } = useResolvedMission(id);
+  if (loading) return <div className="p-6 text-center text-muted-foreground">Loading mission…</div>;
   if (!mission) return <div className="p-6">Mission not found.</div>;
 
   return (

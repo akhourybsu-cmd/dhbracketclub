@@ -2,11 +2,12 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Shield, Zap, Trophy, Target, Cpu } from 'lucide-react';
 import { useNexusProgress } from '@/hooks/useNexusProgress';
-import { MISSIONS } from '@/lib/nexus/missions';
+import { useResolvedMissions } from '@/hooks/useMissionCalibrations';
 
 export default function NexusHomePage() {
   const { progress } = useNexusProgress();
-  const nextMission = MISSIONS.find(m => m.id === progress.highest_mission) ?? MISSIONS[0];
+  const { missions } = useResolvedMissions();
+  const nextMission = missions.find(m => m.id === progress.highest_mission) ?? missions[0];
 
   return (
     <div className="max-w-md mx-auto pb-24">
