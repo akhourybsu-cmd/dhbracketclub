@@ -26,6 +26,7 @@ export function initBattle(missionId: number, abilities: AbilityKind[]): BattleS
     baseHp: mission.baseHp,
     baseHpMax: mission.baseHp,
     waveIndex: -1,
+    totalWaves: mission.waves.length,
     waveTimeMs: 0,
     spawnQueues: [],
     enemies: [],
