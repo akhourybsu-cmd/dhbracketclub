@@ -3,6 +3,7 @@ import { ENEMIES } from './enemies';
 import { PATH, distanceCells, isBuildable, pathToXY } from './grid';
 import { MISSIONS, getMission } from './missions';
 import { TOWERS, towerDamageAt, towerFireRateAt, towerRangeAt, towerSellValue, towerUpgradeCost } from './towers';
+import { aggregateModifiers, emptyAggregated, resolveModifiers } from './modifiers';
 import {
   AbilityKind, ActiveEnemy, BattleEvent, BattleState, EnemyKind, MissionDef, PlacedTower, TowerKind,
 } from './types';
@@ -32,10 +33,15 @@ export function initBattle(missionId: number, abilities: AbilityKind[], opts: In
   const oneEnemies: Record<EnemyKind, number> = { drone: 1, walker: 1, shielded: 1, stealth: 1, boss: 1 };
   const hpMult: Record<EnemyKind, number> = { ...oneEnemies, ...(opts.enemyHpMult ?? {}) };
   const shieldMult: Record<EnemyKind, number> = { ...oneEnemies, ...(opts.enemyShieldMult ?? {}) };
+
+  // Resolve mission modifiers (compose on top of calibration).
+  const modDefs = resolveModifiers(mission.modifierIds);
+  const mods = modDefs.length ? aggregateModifiers(modDefs) : emptyAggregated();
+
   return {
     tickMs: TICK_MS,
     elapsedMs: 0,
-    energy: mission.startEnergy,
+    energy: Math.max(0, mission.startEnergy + mods.startEnergyDelta),
     baseHp: mission.baseHp,
     baseHpMax: mission.baseHp,
     waveIndex: -1,
@@ -59,6 +65,16 @@ export function initBattle(missionId: number, abilities: AbilityKind[], opts: In
     enemyHpMult: hpMult,
     enemyShieldMult: shieldMult,
     enemySpeedMult: opts.enemySpeedMult ?? 1,
+    modifierIds: mission.modifierIds ?? [],
+    modEnemyHpMult: mods.enemyHpMult,
+    modEnemyShieldMult: mods.enemyShieldMult,
+    modEnemySpeedMult: mods.enemySpeedMult,
+    modBountyMult: mods.bountyMult,
+    modTowerCostMult: mods.towerCostMult,
+    modTowerDamageMult: mods.towerDamageMult,
+    modAbilityCooldownMult: mods.abilityCooldownMult,
+    modShieldRegen: mods.shieldRegen,
+    modBossHpMult: mods.bossHpMult,
   };
 }
 
