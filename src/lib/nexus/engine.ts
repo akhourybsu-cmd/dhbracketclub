@@ -338,6 +338,7 @@ export function upgradeTower(state: BattleState, towerId: string): { state: Batt
       ...state,
       energy: state.energy - cost,
       towers: state.towers.map(x => x.id === towerId ? { ...x, level: x.level + 1 } : x),
+      towerUpgrades: { ...state.towerUpgrades, [t.kind]: state.towerUpgrades[t.kind] + 1 },
     },
     ok: true,
   };
@@ -351,6 +352,7 @@ export function sellTower(state: BattleState, towerId: string): BattleState {
     ...state,
     energy: state.energy + refund,
     towers: state.towers.filter(x => x.id !== towerId),
+    towerSells: { ...state.towerSells, [t.kind]: state.towerSells[t.kind] + 1 },
   };
 }
 
