@@ -1907,7 +1907,7 @@ export default function CompetePage() {
         <Tabs defaultValue="league" className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-4">
             <TabsTrigger value="league" className="text-[11px] font-bold">🏆 League</TabsTrigger>
-            <TabsTrigger value="runedelve" className="text-[11px] font-bold">✨ Rune Delve</TabsTrigger>
+            <TabsTrigger value="runedelve" className="text-[11px] font-bold">🎮 Games</TabsTrigger>
             <TabsTrigger value="other" className="text-[11px] font-bold">📦 Other</TabsTrigger>
           </TabsList>
 
