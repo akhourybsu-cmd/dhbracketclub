@@ -259,19 +259,21 @@ export function NexusBattleScreen({
             const def = TOWERS[kind];
             const selected = selectedTowerKind === kind;
             const affordable = state.energy >= def.cost;
+            const shortName = kind === 'pulse' ? 'Pulse' : kind === 'arc' ? 'Arc' : kind === 'cryo' ? 'Cryo' : 'Rail';
             return (
               <button
                 key={kind}
                 onClick={() => { onSelectKind(selected ? null : kind); onSelectTower(null); }}
                 className={cn(
-                  'relative h-14 rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 transition active:scale-95',
+                  'relative min-h-[60px] rounded-lg border-2 flex flex-col items-center justify-center gap-0 py-1 transition active:scale-95',
                   TOWER_COLORS[kind].bg,
-                  selected ? TOWER_COLORS[kind].border : 'border-transparent',
+                  selected ? TOWER_COLORS[kind].border + ' ring-2 ring-emerald-400/50' : 'border-transparent',
                   !affordable && 'opacity-50',
                 )}
               >
-                <span className={cn('font-black text-base', TOWER_COLORS[kind].text)}>{def.glyph}</span>
-                <span className="text-[9px] font-bold text-foreground/80">⚡{def.cost}</span>
+                <span className={cn('font-black text-lg leading-none', TOWER_COLORS[kind].text)}>{def.glyph}</span>
+                <span className={cn('text-[10px] font-bold leading-tight mt-0.5', TOWER_COLORS[kind].text)}>{shortName}</span>
+                <span className="text-[9px] font-bold text-foreground/80 leading-none">⚡{def.cost}</span>
               </button>
             );
           })}
