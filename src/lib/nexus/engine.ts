@@ -278,11 +278,16 @@ function spawnEnemy(s: BattleState, kind: EnemyKind, mission: MissionDef) {
   const def = ENEMIES[kind];
   let hp = def.hp;
   if (mission.id === 2 && kind === 'walker') hp = Math.round(hp * 1.25);
+  // Apply calibration multipliers (default 1× = no change).
+  const hpMult = s.enemyHpMult?.[kind] ?? 1;
+  const shieldMult = s.enemyShieldMult?.[kind] ?? 1;
+  hp = Math.max(1, Math.round(hp * hpMult));
+  const shield = Math.max(0, Math.round((def.shield ?? 0) * shieldMult));
   s.enemies.push({
     id: nextId('e'),
     kind,
     hp,
-    shield: def.shield ?? 0,
+    shield,
     pathIndex: 0,
     progress: 0,
     slowMs: 0,
