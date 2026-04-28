@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { recordNexusRun, useNexusProgress } from '@/hooks/useNexusProgress';
 import { useResolvedMission } from '@/hooks/useMissionCalibrations';
 import { useNexusSfx } from '@/hooks/useNexusSfx';
+import { resolveModifiers, modifierTone } from '@/lib/nexus/modifiers';
 import { toast } from 'sonner';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
