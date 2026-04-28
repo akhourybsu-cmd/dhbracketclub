@@ -165,6 +165,20 @@ export function NexusBattleScreen({
             })}
           </div>
 
+          {/* Range circle for selected placed tower */}
+          {selectedTower && (
+            <div
+              className="absolute pointer-events-none rounded-full border border-emerald-400/60 bg-emerald-400/5"
+              style={{
+                left: `${((selectedTower.cell.col + 0.5) / GRID_COLS) * 100}%`,
+                top: `${((selectedTower.cell.row + 0.5) / GRID_ROWS) * 100}%`,
+                width: `${(towerRangeAt(selectedTower.kind, selectedTower.level) * 2 / GRID_COLS) * 100}%`,
+                height: `${(towerRangeAt(selectedTower.kind, selectedTower.level) * 2 / GRID_ROWS) * 100}%`,
+                transform: 'translate(-50%, -50%)',
+              }}
+            />
+          )}
+
           {/* Shot effects */}
           <div className="absolute inset-0 pointer-events-none">
             <AnimatePresence>
@@ -201,9 +215,11 @@ export function NexusBattleScreen({
         {(state.status === 'pre' || state.status === 'between') && (
           <button
             onClick={onStartWave}
-            className="absolute bottom-3 left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-full bg-emerald-500 text-emerald-950 font-black text-sm shadow-lg shadow-emerald-500/30 active:scale-95 transition"
+            className="absolute bottom-3 left-3 right-3 px-5 py-3 rounded-full bg-emerald-500 text-emerald-950 font-black text-sm shadow-lg shadow-emerald-500/30 active:scale-95 transition"
           >
-            {state.status === 'pre' ? 'START WAVE 1' : `NEXT WAVE (${Math.ceil(state.betweenWaveMs / 1000)}s) — TAP TO RUSH`}
+            {state.status === 'pre'
+              ? `▶  START WAVE 1 / ${state.totalWaves}`
+              : `▶  WAVE ${state.waveIndex + 2} / ${state.totalWaves}  ·  ${Math.ceil(state.betweenWaveMs / 1000)}s  ·  TAP TO RUSH`}
           </button>
         )}
       </div>
