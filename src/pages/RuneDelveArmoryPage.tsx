@@ -139,7 +139,7 @@ export default function RuneDelveArmoryPage() {
                 key={i}
                 relic={slotRelic}
                 locked={locked}
-                unlockHint={locked ? 'Lv 50 unlock' : undefined}
+                unlockHint={locked ? `Lv ${THIRD_SLOT_UNLOCK_LEVEL} unlock` : undefined}
                 onClear={slotRelic ? () => unequip(i) : undefined}
               />
             );
@@ -147,7 +147,7 @@ export default function RuneDelveArmoryPage() {
         </div>
         {slotsUnlocked < 3 && (
           <p className="text-[11px] font-semibold text-foreground/80 text-center italic">
-            Reach class level 50 in any class to unlock the 3rd relic slot.
+            Reach class level {THIRD_SLOT_UNLOCK_LEVEL} in any class to unlock the 3rd relic slot.
           </p>
         )}
       </div>
