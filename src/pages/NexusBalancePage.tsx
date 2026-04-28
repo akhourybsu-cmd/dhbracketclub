@@ -109,6 +109,17 @@ export default function NexusBalancePage() {
         </div>
       </div>
 
+      <Link
+        to="/nexus/calibration"
+        className="flex items-center justify-between rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2.5 mb-4 active:bg-amber-500/20"
+      >
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-amber-300">Tune missions</div>
+          <div className="text-sm font-bold">Open mission calibration →</div>
+        </div>
+        <span className="text-amber-300 text-lg">⚙</span>
+      </Link>
+
       {/* Overview chips */}
       <div className="grid grid-cols-3 gap-2 mb-5">
         <Chip label="Total runs" value={totalRuns} />
