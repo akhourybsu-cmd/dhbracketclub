@@ -1,9 +1,17 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useResolvedMission } from '@/hooks/useMissionCalibrations';
-import { TOWERS, TOWER_LIST } from '@/lib/nexus/towers';
-import { ABILITIES, ABILITY_LIST } from '@/lib/nexus/abilities';
-import { cn } from '@/lib/utils';
+import { TOWER_LIST } from '@/lib/nexus/towers';
+import { ABILITY_LIST } from '@/lib/nexus/abilities';
+import { TowerIcon } from '@/components/nexus/TowerIcon';
+import { TowerKind } from '@/lib/nexus/types';
+
+const TOWER_HSL: Record<TowerKind, { c: string; bg: string; text: string }> = {
+  pulse: { c: 'hsl(188 92% 56%)', bg: 'hsl(188 92% 56% / 0.12)', text: 'hsl(188 92% 78%)' },
+  arc:   { c: 'hsl(265 80% 70%)', bg: 'hsl(265 80% 70% / 0.12)', text: 'hsl(265 80% 84%)' },
+  cryo:  { c: 'hsl(200 95% 70%)', bg: 'hsl(200 95% 70% / 0.12)', text: 'hsl(200 95% 84%)' },
+  rail:  { c: 'hsl(38 95% 60%)',  bg: 'hsl(38 95% 60% / 0.12)',  text: 'hsl(38 95% 78%)' },
+};
 
 export default function NexusLoadoutPage() {
   const { missionId } = useParams<{ missionId: string }>();
@@ -16,43 +24,78 @@ export default function NexusLoadoutPage() {
   return (
     <div className="max-w-md mx-auto pb-6 px-1">
       <div className="mb-4 mt-1">
-        <div className="text-[10px] font-bold uppercase tracking-widest text-cyan-400">Mission {mission.id}</div>
-        <h1 className="text-2xl font-black">{mission.name}</h1>
+        <div className="nx-title text-[9px]" style={{ color: 'hsl(var(--nx-cyan))' }}>MISSION {String(mission.id).padStart(2, '0')}</div>
+        <h1 className="text-2xl font-black tracking-tight">{mission.name}</h1>
         {mission.modifier && (
-          <div className="mt-2 p-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10">
-            <div className="text-[10px] font-black uppercase tracking-wider text-amber-300">{mission.modifier.label}</div>
-            <div className="text-xs text-amber-100/80 mt-0.5">{mission.modifier.description}</div>
+          <div
+            className="mt-2 p-2.5 nx-clip-sm"
+            style={{
+              background: 'linear-gradient(180deg, hsl(var(--nx-amber) / 0.15), hsl(var(--nx-amber) / 0.05))',
+              border: '1px solid hsl(var(--nx-amber) / 0.45)',
+            }}
+          >
+            <div className="nx-title text-[9px]" style={{ color: 'hsl(var(--nx-amber))' }}>▲ TACTICAL INTEL · {mission.modifier.label}</div>
+            <div className="text-xs text-amber-100/85 mt-0.5">{mission.modifier.description}</div>
           </div>
         )}
       </div>
 
       <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-4">
-        <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">Tower Loadout · all 4 unlocked</h2>
+        <h2 className="nx-title text-[9px] mb-2" style={{ color: 'hsl(0 0% 100% / 0.55)' }}>◢ TOWER LOADOUT · ALL 4 UNLOCKED</h2>
         <div className="grid grid-cols-2 gap-2">
-          {TOWER_LIST.map(t => (
-            <div key={t.kind} className={cn('p-2.5 rounded-lg border-2 border-cyan-500/30 bg-card')}>
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-7 h-7 rounded-md bg-cyan-500/20 border border-cyan-400 flex items-center justify-center font-black text-cyan-300 text-sm">{t.glyph}</div>
-                <div className="text-xs font-bold">{t.name}</div>
+          {TOWER_LIST.map(t => {
+            const c = TOWER_HSL[t.kind];
+            return (
+              <div
+                key={t.kind}
+                className="p-2.5 nx-clip-sm relative"
+                style={{
+                  background: 'linear-gradient(180deg, hsl(218 35% 11%), hsl(218 38% 7%))',
+                  border: `1px solid ${c.c}`,
+                  boxShadow: `inset 0 1px 0 hsl(0 0% 100% / 0.05), 0 0 12px -6px ${c.c}`,
+                }}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <div
+                    className="w-8 h-8 rounded-md flex items-center justify-center shrink-0"
+                    style={{ background: c.bg, border: `1.5px solid ${c.c}`, color: c.c }}
+                  >
+                    <TowerIcon kind={t.kind} size={20} />
+                  </div>
+                  <div className="text-xs font-black" style={{ color: c.text }}>{t.name}</div>
+                </div>
+                <div className="text-[10px] text-foreground/70 leading-snug">{t.tagline}</div>
+                <div className="nx-title text-[9px] mt-1.5" style={{ color: 'hsl(var(--nx-amber))' }}>⚡{t.cost}</div>
               </div>
-              <div className="text-[10px] text-muted-foreground leading-snug">{t.tagline}</div>
-              <div className="text-[10px] mt-1.5 text-amber-300">⚡{t.cost}</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </motion.section>
 
       <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.05 }} className="mb-4">
-        <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">Commander Abilities</h2>
+        <h2 className="nx-title text-[9px] mb-2" style={{ color: 'hsl(0 0% 100% / 0.55)' }}>◢ COMMANDER ABILITIES</h2>
         <div className="grid grid-cols-2 gap-2">
           {ABILITY_LIST.map(a => (
-            <div key={a.kind} className="p-2.5 rounded-lg border-2 border-amber-500/30 bg-card">
+            <div
+              key={a.kind}
+              className="p-2.5 nx-clip-sm"
+              style={{
+                background: 'linear-gradient(180deg, hsl(218 35% 11%), hsl(218 38% 7%))',
+                border: '1px solid hsl(var(--nx-amber) / 0.55)',
+                boxShadow: 'inset 0 1px 0 hsl(0 0% 100% / 0.05), 0 0 10px -6px hsl(var(--nx-amber))',
+              }}
+            >
               <div className="flex items-center gap-2 mb-1">
-                <div className="w-7 h-7 rounded-md bg-amber-500/20 border border-amber-400 flex items-center justify-center font-black text-amber-300 text-sm">{a.glyph}</div>
-                <div className="text-xs font-bold">{a.name}</div>
+                <div
+                  className="w-8 h-8 rounded-md flex items-center justify-center font-black text-sm"
+                  style={{ background: 'hsl(var(--nx-amber) / 0.18)', border: '1.5px solid hsl(var(--nx-amber))', color: 'hsl(var(--nx-amber))' }}
+                >
+                  {a.glyph}
+                </div>
+                <div className="text-xs font-black" style={{ color: 'hsl(var(--nx-amber))' }}>{a.name}</div>
               </div>
-              <div className="text-[10px] text-muted-foreground leading-snug">{a.tagline}</div>
-              <div className="text-[10px] mt-1.5 text-cyan-300">CD {a.cooldownMs / 1000}s</div>
+              <div className="text-[10px] text-foreground/70 leading-snug">{a.tagline}</div>
+              <div className="nx-title text-[9px] mt-1.5" style={{ color: 'hsl(var(--nx-cyan))' }}>CD {a.cooldownMs / 1000}s</div>
             </div>
           ))}
         </div>
@@ -66,9 +109,14 @@ export default function NexusLoadoutPage() {
 
       <button
         onClick={() => navigate(`/nexus/battle/${mission.id}`)}
-        className="w-full py-3.5 rounded-xl bg-emerald-500 text-emerald-950 font-black text-sm shadow-lg shadow-emerald-500/30 active:scale-95"
+        className="w-full py-3.5 nx-clip-sm font-black text-sm active:scale-95 nx-title relative overflow-hidden"
+        style={{
+          background: 'linear-gradient(180deg, hsl(150 80% 55%), hsl(150 80% 42%))',
+          color: 'hsl(150 30% 8%)',
+          boxShadow: '0 0 18px hsl(150 80% 55% / 0.55), inset 0 1px 0 hsl(0 0% 100% / 0.35)',
+        }}
       >
-        DEPLOY
+        ▶  DEPLOY
       </button>
     </div>
   );
@@ -76,9 +124,16 @@ export default function NexusLoadoutPage() {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="p-2.5 rounded-lg bg-card border border-border">
-      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className="text-base font-black tabular-nums">{value}</div>
+    <div
+      className="p-2.5 nx-clip-sm"
+      style={{
+        background: 'hsl(218 35% 7%)',
+        border: '1px solid hsl(var(--nx-cyan) / 0.18)',
+      }}
+    >
+      <div className="nx-title text-[9px]" style={{ color: 'hsl(0 0% 100% / 0.55)' }}>{label}</div>
+      <div className="text-base font-black tabular-nums" style={{ color: 'hsl(var(--nx-cyan))' }}>{value}</div>
     </div>
   );
 }
+
