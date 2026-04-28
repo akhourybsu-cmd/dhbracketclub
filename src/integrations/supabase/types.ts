@@ -2272,37 +2272,58 @@ export type Database = {
       }
       nexus_runs: {
         Row: {
+          ability_usage: Json
           base_hp_remaining: number
           created_at: string
           duration_seconds: number
+          energy_starved_ms: number
+          failed_wave: number | null
           id: string
+          leaks: number
           loadout: Json
           mission_id: number
           score: number
+          tower_sells: Json
+          tower_upgrades: Json
+          tower_usage: Json
           user_id: string
           victory: boolean
           waves_cleared: number
         }
         Insert: {
+          ability_usage?: Json
           base_hp_remaining?: number
           created_at?: string
           duration_seconds?: number
+          energy_starved_ms?: number
+          failed_wave?: number | null
           id?: string
+          leaks?: number
           loadout?: Json
           mission_id: number
           score?: number
+          tower_sells?: Json
+          tower_upgrades?: Json
+          tower_usage?: Json
           user_id: string
           victory: boolean
           waves_cleared?: number
         }
         Update: {
+          ability_usage?: Json
           base_hp_remaining?: number
           created_at?: string
           duration_seconds?: number
+          energy_starved_ms?: number
+          failed_wave?: number | null
           id?: string
+          leaks?: number
           loadout?: Json
           mission_id?: number
           score?: number
+          tower_sells?: Json
+          tower_upgrades?: Json
+          tower_usage?: Json
           user_id?: string
           victory?: boolean
           waves_cleared?: number
