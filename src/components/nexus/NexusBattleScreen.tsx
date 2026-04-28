@@ -521,17 +521,30 @@ export function NexusBattleScreen({
         </div>
       )}
 
-      {/* ───── Bottom tray: tower picker + abilities ───── */}
+      {/* ───── Command deck: deployment rail + abilities ───── */}
       <div
-        className="px-3 pb-3 pt-2"
+        className="relative px-3 pb-3 pt-2"
         style={{
-          background: 'linear-gradient(180deg, hsl(var(--nx-panel) / 0.6), hsl(var(--nx-panel) / 0.95))',
-          borderTop: '1px solid hsl(var(--nx-cyan) / 0.25)',
-          boxShadow: '0 -1px 0 hsl(var(--nx-cyan) / 0.15)',
+          background: 'linear-gradient(180deg, hsl(var(--nx-panel) / 0.55), hsl(var(--nx-panel) / 0.97))',
+          borderTop: '1px solid hsl(var(--nx-cyan) / 0.3)',
+          boxShadow: '0 -1px 0 hsl(var(--nx-cyan) / 0.18), 0 -8px 16px -10px hsl(var(--nx-cyan) / 0.3)',
         }}
       >
-        <div className="grid grid-cols-4 gap-1.5 mb-2">
-          {(['pulse','arc','cryo','rail'] as TowerKind[]).map(kind => {
+        <div className="flex items-center gap-2 mb-1.5 px-0.5">
+          <span className="h-px flex-1" style={{ background: 'linear-gradient(90deg, transparent, hsl(var(--nx-cyan) / 0.4))' }} />
+          <span className="nx-title text-[8px]" style={{ color: 'hsl(var(--nx-cyan) / 0.85)', letterSpacing: '0.22em' }}>DEPLOYMENT</span>
+          <span className="h-px flex-1" style={{ background: 'linear-gradient(90deg, hsl(var(--nx-cyan) / 0.4), transparent)' }} />
+        </div>
+
+        <div
+          className="relative flex items-stretch mb-2 nx-clip-sm overflow-hidden"
+          style={{
+            background: 'linear-gradient(180deg, hsl(218 38% 9%), hsl(218 42% 6%))',
+            border: '1px solid hsl(var(--nx-cyan) / 0.22)',
+            boxShadow: 'inset 0 1px 0 hsl(0 0% 100% / 0.05), inset 0 0 14px hsl(var(--nx-cyan) / 0.05)',
+          }}
+        >
+          {(['pulse','arc','cryo','rail'] as TowerKind[]).map((kind, idx) => {
             const def = TOWERS[kind];
             const selected = selectedTowerKind === kind;
             const affordable = state.energy >= def.cost;
@@ -542,34 +555,52 @@ export function NexusBattleScreen({
                 key={kind}
                 onClick={() => { onSelectKind(selected ? null : kind); onSelectTower(null); }}
                 className={cn(
-                  'relative min-h-[64px] nx-clip-sm flex flex-col items-center justify-center gap-0 py-1 transition active:scale-95',
+                  'relative flex-1 min-h-[68px] flex flex-col items-center justify-center gap-0 py-1.5 transition-colors active:scale-[0.97]',
                   !affordable && 'opacity-50',
                 )}
                 style={{
                   background: selected
-                    ? `linear-gradient(180deg, ${c.bg}, hsl(218 35% 9%))`
-                    : 'linear-gradient(180deg, hsl(218 35% 11%), hsl(218 38% 8%))',
-                  border: selected ? `1.5px solid ${c.c}` : '1px solid hsl(0 0% 100% / 0.06)',
-                  boxShadow: selected
-                    ? `0 0 14px -2px ${c.cDim}, inset 0 1px 0 hsl(0 0% 100% / 0.08)`
-                    : 'inset 0 1px 0 hsl(0 0% 100% / 0.04)',
+                    ? `linear-gradient(180deg, ${c.bg}, transparent)`
+                    : 'transparent',
+                  borderRight: idx < 3 ? '1px solid hsl(var(--nx-cyan) / 0.18)' : undefined,
                   color: c.c,
                 }}
               >
-                <TowerIcon kind={kind} size={26} />
-                <span className="nx-title text-[8px] mt-0.5" style={{ color: selected ? c.text : 'hsl(0 0% 100% / 0.7)' }}>{shortName}</span>
-                <span className="text-[9px] font-black tabular-nums leading-none mt-0.5" style={{ color: 'hsl(var(--nx-amber))' }}>⚡{def.cost}</span>
                 {selected && (
                   <>
-                    <span aria-hidden className="absolute top-0.5 left-0.5 w-1.5 h-1.5 border-l border-t" style={{ borderColor: c.c }} />
-                    <span aria-hidden className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-r border-b" style={{ borderColor: c.c }} />
+                    <span
+                      aria-hidden
+                      className="absolute top-0 left-1.5 right-1.5 h-[2px] rounded-b"
+                      style={{ background: c.c, boxShadow: `0 0 8px ${c.c}` }}
+                    />
+                    <span
+                      aria-hidden
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        background: `radial-gradient(ellipse 70% 50% at 50% 110%, ${c.cDim}, transparent 70%)`,
+                      }}
+                    />
                   </>
                 )}
+                <TowerIcon kind={kind} size={26} />
+                <span
+                  className="nx-title text-[8px] mt-1"
+                  style={{ color: selected ? c.text : 'hsl(0 0% 100% / 0.7)', letterSpacing: '0.12em' }}
+                >
+                  {shortName}
+                </span>
+                <span
+                  className="text-[9px] font-black tabular-nums leading-none mt-0.5"
+                  style={{ color: affordable ? 'hsl(var(--nx-amber))' : 'hsl(350 80% 65%)' }}
+                >
+                  ⚡{def.cost}
+                </span>
               </button>
             );
           })}
         </div>
-        <div className="grid grid-cols-2 gap-1.5">
+
+        <div className="grid grid-cols-2 gap-2">
           {state.abilities.map(a => {
             const def = ABILITIES[a.kind];
             const ready = a.cooldownMs <= 0;
@@ -580,28 +611,33 @@ export function NexusBattleScreen({
                 key={a.kind}
                 onClick={() => ready && onCastAbility(a.kind)}
                 disabled={!ready}
-                className="relative h-12 nx-clip-sm flex items-center justify-center gap-2 font-black text-xs overflow-hidden active:scale-95 nx-title"
+                className="relative h-12 nx-clip-sm flex items-center justify-center gap-2 font-black text-xs overflow-hidden active:scale-[0.97] nx-title"
                 style={{
                   background: ready
-                    ? 'linear-gradient(180deg, hsl(var(--nx-amber) / 0.28), hsl(var(--nx-amber) / 0.12))'
-                    : 'linear-gradient(180deg, hsl(218 35% 12%), hsl(218 38% 9%))',
-                  border: ready ? '1.5px solid hsl(var(--nx-amber) / 0.85)' : '1px solid hsl(0 0% 100% / 0.06)',
+                    ? 'linear-gradient(180deg, hsl(var(--nx-amber) / 0.32), hsl(var(--nx-amber) / 0.1))'
+                    : 'linear-gradient(180deg, hsl(218 38% 11%), hsl(218 42% 7%))',
+                  border: ready ? '1px solid hsl(var(--nx-amber) / 0.85)' : '1px solid hsl(var(--nx-cyan) / 0.18)',
                   boxShadow: ready
-                    ? '0 0 14px -2px hsl(var(--nx-amber) / 0.55), inset 0 1px 0 hsl(0 0% 100% / 0.1)'
+                    ? '0 0 16px -2px hsl(var(--nx-amber) / 0.55), inset 0 1px 0 hsl(0 0% 100% / 0.12)'
                     : 'inset 0 1px 0 hsl(0 0% 100% / 0.04)',
-                  color: ready ? 'hsl(var(--nx-amber))' : 'hsl(0 0% 100% / 0.4)',
+                  color: ready ? 'hsl(var(--nx-amber))' : 'hsl(0 0% 100% / 0.45)',
                 }}
               >
-                <span className="text-base leading-none">{def.glyph}</span>
-                <span className="text-[10px]">{def.name}</span>
-                {/* Radial cooldown sweep */}
+                {ready && (
+                  <>
+                    <span aria-hidden className="absolute top-0.5 left-0.5 w-1.5 h-1.5 border-l border-t" style={{ borderColor: 'hsl(var(--nx-amber))' }} />
+                    <span aria-hidden className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-r border-b" style={{ borderColor: 'hsl(var(--nx-amber))' }} />
+                  </>
+                )}
+                <span className="text-base leading-none" style={{ filter: ready ? 'drop-shadow(0 0 4px hsl(var(--nx-amber)))' : undefined }}>{def.glyph}</span>
+                <span className="text-[10px]" style={{ letterSpacing: '0.14em' }}>{def.name}</span>
                 {!ready && (
                   <>
                     <div
                       className="absolute inset-0 pointer-events-none"
                       style={{
                         background:
-                          `conic-gradient(hsl(0 0% 0% / 0.55) ${(1 - pct) * 360}deg, transparent 0deg)`,
+                          `conic-gradient(hsl(0 0% 0% / 0.6) ${(1 - pct) * 360}deg, transparent 0deg)`,
                         mixBlendMode: 'multiply',
                       }}
                     />
