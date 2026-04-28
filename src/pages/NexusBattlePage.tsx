@@ -148,32 +148,96 @@ export default function NexusBattlePage() {
 
   return (
     <div className="fixed inset-0 bg-background flex flex-col z-30">
-      {/* Mission header */}
-      <div className="flex items-center justify-between px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-1 bg-gradient-to-b from-cyan-950/40 to-transparent">
-        <button
-          onClick={() => {
-            // If mission already ended, exit immediately
-            if (state.status === 'victory' || state.status === 'defeat' || state.status === 'pre') {
-              navigate('/nexus');
-            } else {
-              setExitOpen(true);
-            }
-          }}
-          className="text-xs text-muted-foreground active:text-foreground px-2 py-1.5 -ml-2"
-        >
-          ← Exit
-        </button>
-        <div className="text-center">
-          <div className="text-[10px] text-cyan-400 uppercase tracking-widest font-bold">Mission {mission.id}</div>
-          <div className="text-sm font-black">{mission.name}</div>
+      {/* Mission header — bracketed command frame */}
+      <div
+        className="relative px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2"
+        style={{
+          background:
+            'linear-gradient(180deg, hsl(218 60% 6% / 0.92), hsl(218 50% 4% / 0.4))',
+        }}
+      >
+        <div className="flex items-stretch gap-2">
+          {/* Left bracket: emblem / exit */}
+          <button
+            onClick={() => {
+              if (state.status === 'victory' || state.status === 'defeat' || state.status === 'pre') {
+                navigate('/nexus');
+              } else {
+                setExitOpen(true);
+              }
+            }}
+            aria-label="Exit mission"
+            className="relative w-12 h-12 nx-clip-sm flex items-center justify-center active:scale-95 transition"
+            style={{
+              background: 'linear-gradient(180deg, hsl(218 50% 11%), hsl(218 55% 7%))',
+              border: '1px solid hsl(var(--nx-cyan) / 0.55)',
+              boxShadow:
+                '0 0 12px -2px hsl(var(--nx-cyan) / 0.5), inset 0 1px 0 hsl(0 0% 100% / 0.08)',
+              color: 'hsl(var(--nx-cyan))',
+            }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={{ filter: 'drop-shadow(0 0 4px hsl(var(--nx-cyan)))' }}>
+              <path d="M12 2 L21 7 V17 L12 22 L3 17 V7 Z" stroke="currentColor" strokeWidth="1.6" />
+              <path d="M9 9 L15 9 L15 15 L9 15 Z" stroke="currentColor" strokeWidth="1.4" fill="currentColor" fillOpacity="0.25" />
+            </svg>
+            <span aria-hidden className="absolute top-0.5 left-0.5 w-1.5 h-1.5 border-l border-t" style={{ borderColor: 'hsl(var(--nx-cyan))' }} />
+            <span aria-hidden className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-r border-b" style={{ borderColor: 'hsl(var(--nx-cyan))' }} />
+          </button>
+
+          {/* Center frame: mission title */}
+          <div
+            className="relative flex-1 nx-clip-sm flex flex-col items-center justify-center px-3 py-1"
+            style={{
+              background:
+                'linear-gradient(180deg, hsl(218 50% 9% / 0.95), hsl(218 55% 5% / 0.95))',
+              border: '1px solid hsl(var(--nx-cyan) / 0.45)',
+              boxShadow:
+                '0 0 14px -2px hsl(var(--nx-cyan) / 0.4), inset 0 1px 0 hsl(0 0% 100% / 0.05)',
+            }}
+          >
+            <span
+              className="nx-title text-[9px] leading-none"
+              style={{ color: 'hsl(var(--nx-cyan))', letterSpacing: '0.28em', textShadow: '0 0 6px hsl(var(--nx-cyan) / 0.6)' }}
+            >
+              MISSION {String(mission.id).padStart(2, '0')}
+            </span>
+            <span
+              className="text-base font-black tracking-wide leading-tight mt-0.5 truncate"
+              style={{ color: 'hsl(0 0% 98%)', letterSpacing: '0.06em', textShadow: '0 0 8px hsl(var(--nx-cyan) / 0.4)' }}
+            >
+              {mission.name.toUpperCase()}
+            </span>
+            <span aria-hidden className="absolute top-0.5 left-0.5 w-2 h-2 border-l border-t" style={{ borderColor: 'hsl(var(--nx-cyan))' }} />
+            <span aria-hidden className="absolute top-0.5 right-0.5 w-2 h-2 border-r border-t" style={{ borderColor: 'hsl(var(--nx-cyan))' }} />
+            <span aria-hidden className="absolute bottom-0.5 left-0.5 w-2 h-2 border-l border-b" style={{ borderColor: 'hsl(var(--nx-cyan))' }} />
+            <span aria-hidden className="absolute bottom-0.5 right-0.5 w-2 h-2 border-r border-b" style={{ borderColor: 'hsl(var(--nx-cyan))' }} />
+          </div>
+
+          {/* Right bracket: pause */}
+          <button
+            onClick={() => setPaused(p => !p)}
+            aria-label={paused ? 'Resume' : 'Pause'}
+            className="relative w-12 h-12 nx-clip-sm flex items-center justify-center active:scale-95 transition"
+            style={{
+              background: 'linear-gradient(180deg, hsl(218 50% 11%), hsl(218 55% 7%))',
+              border: '1px solid hsl(var(--nx-cyan) / 0.55)',
+              boxShadow:
+                '0 0 12px -2px hsl(var(--nx-cyan) / 0.5), inset 0 1px 0 hsl(0 0% 100% / 0.08)',
+              color: 'hsl(var(--nx-cyan))',
+            }}
+          >
+            {paused ? (
+              <span className="text-base font-black" style={{ filter: 'drop-shadow(0 0 4px hsl(var(--nx-cyan)))' }}>▶</span>
+            ) : (
+              <div className="flex gap-[3px]">
+                <span className="block w-[3px] h-4 rounded-sm" style={{ background: 'hsl(var(--nx-cyan))', boxShadow: '0 0 6px hsl(var(--nx-cyan))' }} />
+                <span className="block w-[3px] h-4 rounded-sm" style={{ background: 'hsl(var(--nx-cyan))', boxShadow: '0 0 6px hsl(var(--nx-cyan))' }} />
+              </div>
+            )}
+            <span aria-hidden className="absolute top-0.5 left-0.5 w-1.5 h-1.5 border-l border-t" style={{ borderColor: 'hsl(var(--nx-cyan))' }} />
+            <span aria-hidden className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-r border-b" style={{ borderColor: 'hsl(var(--nx-cyan))' }} />
+          </button>
         </div>
-        <button
-          onClick={() => setPaused(p => !p)}
-          aria-label={paused ? 'Resume' : 'Pause'}
-          className="text-sm px-3 py-1.5 -mr-1 rounded-md bg-card border border-border min-w-[44px] min-h-[36px] flex items-center justify-center"
-        >
-          {paused ? '▶' : '❚❚'}
-        </button>
       </div>
 
       <div className="flex-1 min-h-0">
