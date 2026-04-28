@@ -57,7 +57,10 @@ export interface MissionDef {
   startEnergy: number;
   baseHp: number;
   waves: Wave[];
+  /** Legacy single label — superseded by `modifierIds`. Kept for backwards compat. */
   modifier?: { label: string; description: string };
+  /** Modifier ids resolved from src/lib/nexus/modifiers.ts */
+  modifierIds?: string[];
   isBoss?: boolean;
   rewardCores: number;
 }
