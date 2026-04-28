@@ -2237,6 +2237,66 @@ export type Database = {
           },
         ]
       }
+      nexus_mission_calibrations: {
+        Row: {
+          base_hp_delta: number
+          boss_hp_mult: number
+          boss_shield_mult: number
+          created_at: string
+          enemy_hp_mult: number
+          enemy_shield_mult: number
+          enemy_speed_mult: number
+          mission_id: number
+          notes: string | null
+          reward_cores_delta: number
+          spawn_count_mult: number
+          spawn_delay_mult: number
+          spawn_interval_mult: number
+          start_energy_delta: number
+          updated_at: string
+          updated_by: string | null
+          wave_reward_mult: number
+        }
+        Insert: {
+          base_hp_delta?: number
+          boss_hp_mult?: number
+          boss_shield_mult?: number
+          created_at?: string
+          enemy_hp_mult?: number
+          enemy_shield_mult?: number
+          enemy_speed_mult?: number
+          mission_id: number
+          notes?: string | null
+          reward_cores_delta?: number
+          spawn_count_mult?: number
+          spawn_delay_mult?: number
+          spawn_interval_mult?: number
+          start_energy_delta?: number
+          updated_at?: string
+          updated_by?: string | null
+          wave_reward_mult?: number
+        }
+        Update: {
+          base_hp_delta?: number
+          boss_hp_mult?: number
+          boss_shield_mult?: number
+          created_at?: string
+          enemy_hp_mult?: number
+          enemy_shield_mult?: number
+          enemy_speed_mult?: number
+          mission_id?: number
+          notes?: string | null
+          reward_cores_delta?: number
+          spawn_count_mult?: number
+          spawn_delay_mult?: number
+          spawn_interval_mult?: number
+          start_energy_delta?: number
+          updated_at?: string
+          updated_by?: string | null
+          wave_reward_mult?: number
+        }
+        Relationships: []
+      }
       nexus_progress: {
         Row: {
           cores: number
