@@ -477,6 +477,95 @@ export function NexusBattleScreen({
               })}
             </AnimatePresence>
           </div>
+
+          {/* Kill bursts — quick energy disintegration at the death position */}
+          <div className="absolute inset-0 pointer-events-none">
+            <AnimatePresence>
+              {state.events.filter(ev => ev.type === 'kill').map((ev, i) => {
+                if (ev.type !== 'kill') return null;
+                const left = ((ev.at.x + 0.5) / GRID_COLS) * 100;
+                const top = ((ev.at.y + 0.5) / GRID_ROWS) * 100;
+                return (
+                  <motion.span
+                    key={`kill-${ev.t}-${i}`}
+                    aria-hidden
+                    initial={{ opacity: 0.95, scale: 0.35 }}
+                    animate={{ opacity: 0, scale: 1.6 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.35, ease: 'easeOut' }}
+                    className="absolute rounded-full"
+                    style={{
+                      left: `${left}%`,
+                      top: `${top}%`,
+                      width: 26,
+                      height: 26,
+                      transform: 'translate(-50%, -50%)',
+                      background:
+                        'radial-gradient(circle, hsl(38 95% 80% / 0.95), hsl(188 92% 70% / 0.55) 45%, transparent 75%)',
+                      boxShadow:
+                        '0 0 14px hsl(38 95% 70% / 0.7), 0 0 22px hsl(188 92% 60% / 0.45)',
+                      filter: 'blur(0.4px)',
+                    }}
+                  />
+                );
+              })}
+            </AnimatePresence>
+          </div>
+
+          {/* Ability flash — orbital impact / EMP suppression ring */}
+          <div className="absolute inset-0 pointer-events-none">
+            <AnimatePresence>
+              {state.events.filter(ev => ev.type === 'ability').map((ev, i) => {
+                if (ev.type !== 'ability') return null;
+                const isOrbital = ev.ability === 'orbital';
+                return (
+                  <motion.span
+                    key={`ab-${ev.t}-${i}`}
+                    aria-hidden
+                    initial={{ opacity: 0.85, scale: 0.4 }}
+                    animate={{ opacity: 0, scale: 2.4 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.6, ease: 'easeOut' }}
+                    className="absolute top-1/2 left-1/2 rounded-full"
+                    style={{
+                      width: '70%',
+                      height: '70%',
+                      transform: 'translate(-50%, -50%)',
+                      border: isOrbital
+                        ? '2px solid hsl(38 95% 70% / 0.85)'
+                        : '2px solid hsl(265 80% 75% / 0.85)',
+                      background: isOrbital
+                        ? 'radial-gradient(circle, hsl(38 95% 70% / 0.35), transparent 65%)'
+                        : 'radial-gradient(circle, hsl(265 80% 70% / 0.30), transparent 65%)',
+                      boxShadow: isOrbital
+                        ? '0 0 30px hsl(38 95% 60% / 0.7)'
+                        : '0 0 30px hsl(265 80% 70% / 0.7)',
+                    }}
+                  />
+                );
+              })}
+            </AnimatePresence>
+          </div>
+
+          {/* Leak / breach flash — red vignette pulse over the battlefield */}
+          <AnimatePresence>
+            {state.events.some(ev => ev.type === 'leak') && (
+              <motion.span
+                key={`leak-${state.events.find(ev => ev.type === 'leak')?.t ?? 0}`}
+                aria-hidden
+                initial={{ opacity: 0 }}
+                animate={{ opacity: [0, 0.55, 0] }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.45, ease: 'easeOut' }}
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background:
+                    'radial-gradient(ellipse at 50% 100%, hsl(350 85% 55% / 0.55), transparent 65%)',
+                  mixBlendMode: 'screen',
+                }}
+              />
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Start wave / status overlay */}
