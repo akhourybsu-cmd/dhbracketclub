@@ -47,9 +47,14 @@ import { applyArmorToDamage } from '@/lib/runedelve/enemyAbilities';
 export default function RuneDelveEndlessPage() {
   const navigate = useNavigate();
   const { data: hero } = useRuneDelveHero();
+  const { data: wallet } = useRuneWallet();
+  const { data: classTracks } = useAllClassProgress();
   const { data: existingRun } = useMyDailyRun();
   const submitDaily = useSubmitDailyRun();
   const earnShards = useEarnShards();
+  const updateClass = useUpdateClassProgress();
+  const updateHero = useUpdateHero();
+  const unlockSlot = useUnlockSlot();
 
   // ── Run state ────────────────────────────────────────────────────────────
   const [phase, setPhase] = useState<'ready' | 'playing' | 'over'>('ready');
