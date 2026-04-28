@@ -381,6 +381,7 @@ export function castAbility(state: BattleState, kind: AbilityKind): { state: Bat
       enemies,
       abilities: state.abilities.map(a => a.kind === kind ? { ...a, cooldownMs: def.cooldownMs } : a),
       events: [...state.events, { type: 'ability', ability: kind, t: state.elapsedMs }],
+      abilityUses: { ...state.abilityUses, [kind]: state.abilityUses[kind] + 1 },
     },
     ok: true,
   };
