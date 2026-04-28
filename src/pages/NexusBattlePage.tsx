@@ -76,8 +76,27 @@ export default function NexusBattlePage() {
           baseHpRemaining: state.baseHp,
           durationSeconds: Math.round(state.elapsedMs / 1000),
           loadout: { towers: ['pulse','arc','cryo','rail'], abilities },
+          failedWave: won ? null : state.waveIndex + 1,
+          towerUsage: state.towerBuilds,
+          towerUpgrades: state.towerUpgrades,
+          towerSells: state.towerSells,
+          abilityUsage: state.abilityUses,
+          energyStarvedMs: state.energyStarvedMs,
+          leaks: state.leaks,
         }).catch(() => {});
       }
+      // Stash run insight for the results page (avoids URL bloat).
+      try {
+        sessionStorage.setItem(`nexus_run_${mission.id}`, JSON.stringify({
+          towerBuilds: state.towerBuilds,
+          towerUpgrades: state.towerUpgrades,
+          towerSells: state.towerSells,
+          abilityUses: state.abilityUses,
+          energyStarvedMs: state.energyStarvedMs,
+          leaks: state.leaks,
+          durationSeconds: Math.round(state.elapsedMs / 1000),
+        }));
+      } catch {}
       const t = setTimeout(() => {
         navigate(`/nexus/results/${mission.id}?win=${won ? 1 : 0}&score=${state.score}&hp=${state.baseHp}&waves=${won ? mission.waves.length : Math.max(0, state.waveIndex)}&cores=${cores}`);
       }, 1200);
