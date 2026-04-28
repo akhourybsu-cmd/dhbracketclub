@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+// no Link needed — HUD owns navigation
 import { supabase } from '@/integrations/supabase/client';
 import { MISSIONS } from '@/lib/nexus/missions';
 import { Medal } from 'lucide-react';
@@ -57,10 +57,9 @@ export default function NexusLeaderboardPage() {
   }, [missionId]);
 
   return (
-    <div className="max-w-md mx-auto pb-24 px-1">
-      <div className="mb-3 mt-2">
-        <Link to="/nexus" className="text-xs text-muted-foreground">← Hub</Link>
-        <h1 className="text-2xl font-black mt-1">Leaderboards</h1>
+    <div className="max-w-md mx-auto pb-6 px-1">
+      <div className="mb-3 mt-1">
+        <h1 className="text-2xl font-black">Leaderboards</h1>
         <p className="text-sm text-muted-foreground">Best score per pilot, per mission</p>
       </div>
 

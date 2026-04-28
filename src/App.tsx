@@ -89,6 +89,7 @@ const NexusCodexPage = lazy(() => import("./pages/NexusCodexPage"));
 const NexusBalancePage = lazy(() => import("./pages/NexusBalancePage"));
 const NexusCalibrationPage = lazy(() => import("./pages/NexusCalibrationPage"));
 import { RuneDelveLayout } from "./components/runedelve/RuneDelveLayout";
+import { NexusLayout } from "./components/nexus/NexusLayout";
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -224,16 +225,16 @@ function AnimatedRoutes() {
         <Route path="/rune-delve/simulator" element={<ProtectedPage><RuneDelveSimulatorPage /></ProtectedPage>} />
         <Route path="/rune-delve/balance" element={<ProtectedPage><RuneDelveBalanceReportPage /></ProtectedPage>} />
 
-        {/* Nexus Defense — sci-fi tower defense */}
-        <Route path="/nexus" element={<ProtectedPage><NexusHomePage /></ProtectedPage>} />
-        <Route path="/nexus/missions" element={<ProtectedPage><NexusMissionsPage /></ProtectedPage>} />
-        <Route path="/nexus/loadout/:missionId" element={<ProtectedPage><NexusLoadoutPage /></ProtectedPage>} />
-        <Route path="/nexus/battle/:missionId" element={<ProtectedPage><NexusBattlePage /></ProtectedPage>} />
-        <Route path="/nexus/results/:missionId" element={<ProtectedPage><NexusResultsPage /></ProtectedPage>} />
-        <Route path="/nexus/leaderboard" element={<ProtectedPage><NexusLeaderboardPage /></ProtectedPage>} />
-        <Route path="/nexus/codex" element={<ProtectedPage><NexusCodexPage /></ProtectedPage>} />
-        <Route path="/nexus/balance" element={<ProtectedPage><NexusBalancePage /></ProtectedPage>} />
-        <Route path="/nexus/calibration" element={<ProtectedPage><NexusCalibrationPage /></ProtectedPage>} />
+        {/* Nexus Defense — sci-fi tower defense (full-screen game shell) */}
+        <Route path="/nexus" element={<ProtectedPage><NexusLayout><NexusHomePage /></NexusLayout></ProtectedPage>} />
+        <Route path="/nexus/missions" element={<ProtectedPage><NexusLayout><NexusMissionsPage /></NexusLayout></ProtectedPage>} />
+        <Route path="/nexus/loadout/:missionId" element={<ProtectedPage><NexusLayout><NexusLoadoutPage /></NexusLayout></ProtectedPage>} />
+        <Route path="/nexus/battle/:missionId" element={<ProtectedPage><NexusLayout><NexusBattlePage /></NexusLayout></ProtectedPage>} />
+        <Route path="/nexus/results/:missionId" element={<ProtectedPage><NexusLayout><NexusResultsPage /></NexusLayout></ProtectedPage>} />
+        <Route path="/nexus/leaderboard" element={<ProtectedPage><NexusLayout><NexusLeaderboardPage /></NexusLayout></ProtectedPage>} />
+        <Route path="/nexus/codex" element={<ProtectedPage><NexusLayout><NexusCodexPage /></NexusLayout></ProtectedPage>} />
+        <Route path="/nexus/balance" element={<ProtectedPage><NexusLayout><NexusBalancePage /></NexusLayout></ProtectedPage>} />
+        <Route path="/nexus/calibration" element={<ProtectedPage><NexusLayout><NexusCalibrationPage /></NexusLayout></ProtectedPage>} />
 
         <Route path="/profile" element={<ProtectedPage><ProfilePage /></ProtectedPage>} />
 

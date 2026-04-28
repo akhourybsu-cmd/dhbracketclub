@@ -129,6 +129,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   const isChatRoute = location.pathname.startsWith('/chat');
   const isRuneDelve = location.pathname.startsWith('/rune-delve');
+  const isNexus = location.pathname.startsWith('/nexus');
+  const isGameShell = isRuneDelve || isNexus;
 
   const isNavActive = (path: string) => {
     if (path === '/brackets') {
@@ -155,10 +157,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
       {/* Main Content */}
       <main className={cn(
         "flex-1 overflow-x-hidden min-w-0",
-        isRuneDelve ? "pb-0" : "lg:pb-0 lg:pl-64",
-        isChatRoute ? "pb-0 overflow-hidden" : !isRuneDelve && "pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))]"
+        isGameShell ? "pb-0" : "lg:pb-0 lg:pl-64",
+        isChatRoute ? "pb-0 overflow-hidden" : !isGameShell && "pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))]"
       )}>
-        {location.pathname === '/chat' || isRuneDelve ? (
+        {location.pathname === '/chat' || isGameShell ? (
           children
         ) : (
           <div className="max-w-[640px] mx-auto px-4 sm:px-5 py-5 sm:py-6 lg:py-8 min-w-0">
@@ -167,8 +169,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
         )}
       </main>
 
-      {/* Desktop Sidebar — hidden inside Rune Delve game shell */}
-      {!isRuneDelve && (
+      {/* Desktop Sidebar — hidden inside game shells (Rune Delve, Nexus) */}
+      {!isGameShell && (
       <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 flex-col z-40 bg-sidebar-background border-r border-border/50" style={{
         backdropFilter: 'blur(24px) saturate(180%)',
         boxShadow: 'inset -1px 0 0 hsl(var(--foreground) / 0.02)',
@@ -241,8 +243,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </aside>
       )}
 
-      {/* Mobile Bottom Nav — hidden inside Rune Delve game shell */}
-      {!isRuneDelve && (
+      {/* Mobile Bottom Nav — hidden inside game shells (Rune Delve, Nexus) */}
+      {!isGameShell && (
       <nav className={cn(
         "lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 border-t border-border/25 transition-all duration-200",
         isChatRoute && isKeyboardOpen && "translate-y-full opacity-0 pointer-events-none"
