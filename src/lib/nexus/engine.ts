@@ -317,7 +317,12 @@ export function placeTower(state: BattleState, kind: TowerKind, col: number, row
     kills: 0,
   };
   return {
-    state: { ...state, towers: [...state.towers, tower], energy: state.energy - cost },
+    state: {
+      ...state,
+      towers: [...state.towers, tower],
+      energy: state.energy - cost,
+      towerBuilds: { ...state.towerBuilds, [kind]: state.towerBuilds[kind] + 1 },
+    },
     ok: true,
   };
 }
