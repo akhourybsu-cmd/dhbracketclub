@@ -88,17 +88,12 @@ export function computeFailureShards(args: FailShardArgs): ShardBreakdown {
   return { base, bonuses, multiplier, total };
 }
 
-// Slot-unlock threshold: clearing CAMPAIGN level THIRD_SLOT_UNLOCK_LEVEL grants
-// a hero-wide 3rd slot. Tied to dungeon progression (highest_unlocked_level)
-// rather than per-class XP, so deep delvers see the reward sooner.
-export const THIRD_SLOT_UNLOCK_LEVEL = 50;
-export function slotsForCampaignLevel(highestUnlockedLevel: number): number {
-  return highestUnlockedLevel >= THIRD_SLOT_UNLOCK_LEVEL ? 3 : 2;
-}
-// Legacy alias kept for any consumers still passing class level — now defers
-// to the campaign threshold by treating its argument as the campaign level.
+// Slot-unlock threshold: any class hitting THIRD_SLOT_UNLOCK_LEVEL grants a
+// hero-wide 3rd relic slot. Tied to per-class XP (combat investment), not
+// dungeon progression — rewards mastery of a chosen class.
+export const THIRD_SLOT_UNLOCK_LEVEL = 25;
 export function slotsForClassLevels(maxClassLevel: number): number {
-  return slotsForCampaignLevel(maxClassLevel);
+  return maxClassLevel >= THIRD_SLOT_UNLOCK_LEVEL ? 3 : 2;
 }
 
 // Helper used by the Home unlock-banner heuristic.
