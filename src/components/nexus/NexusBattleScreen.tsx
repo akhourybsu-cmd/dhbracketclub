@@ -7,6 +7,7 @@ import { BattleState, TowerKind } from '@/lib/nexus/types';
 import { cn } from '@/lib/utils';
 import { Heart, ChevronUp, X } from 'lucide-react';
 import { TowerIcon } from './TowerIcon';
+import { EnemyMarker, getEnemyAccent } from './EnemyMarker';
 
 // hsl strings for SVG/inline use — anchored to nx tokens conceptually but
 // resolved here so they render reliably inside framer-motion wrappers.
@@ -15,14 +16,6 @@ const TOWER_HSL: Record<TowerKind, { c: string; cDim: string; bg: string; text: 
   arc:   { c: 'hsl(265 80% 70%)', cDim: 'hsl(265 80% 70% / 0.18)', bg: 'hsl(265 80% 70% / 0.14)', text: 'hsl(265 80% 84%)' },
   cryo:  { c: 'hsl(200 95% 70%)', cDim: 'hsl(200 95% 70% / 0.18)', bg: 'hsl(200 95% 70% / 0.14)', text: 'hsl(200 95% 84%)' },
   rail:  { c: 'hsl(38 95% 60%)',  cDim: 'hsl(38 95% 60% / 0.18)',  bg: 'hsl(38 95% 60% / 0.14)',  text: 'hsl(38 95% 78%)' },
-};
-
-const ENEMY_FILL: Record<string, string> = {
-  drone: '#fb7185',     // rose
-  walker: '#f97316',    // orange
-  shielded: '#38bdf8',  // sky
-  stealth: '#a78bfa',   // violet
-  boss: '#dc2626',      // red
 };
 
 interface Props {
@@ -57,25 +50,29 @@ export function NexusBattleScreen({
 
   return (
     <div className="flex flex-col h-full w-full max-w-md mx-auto select-none">
-      {/* ───── Holographic HUD bar ───── */}
+      {/* ───── Unified command HUD rail ───── */}
       <div
-        className="px-3 py-2"
+        className="relative px-3 py-2"
         style={{
           background:
-            'linear-gradient(180deg, hsl(var(--nx-panel) / 0.95), hsl(var(--nx-panel) / 0.6))',
-          borderBottom: '1px solid hsl(var(--nx-cyan) / 0.25)',
-          boxShadow: '0 1px 0 hsl(var(--nx-cyan) / 0.15), 0 8px 16px -10px hsl(var(--nx-cyan) / 0.3)',
+            'linear-gradient(180deg, hsl(var(--nx-panel) / 0.96), hsl(var(--nx-panel) / 0.55))',
+          borderBottom: '1px solid hsl(var(--nx-cyan) / 0.3)',
+          boxShadow:
+            '0 1px 0 hsl(var(--nx-cyan) / 0.18), 0 8px 16px -10px hsl(var(--nx-cyan) / 0.35)',
         }}
       >
-        <div className="grid grid-cols-3 gap-2">
-          {/* HP */}
-          <div className="nx-bracket px-2 py-1.5 rounded-sm" style={{ background: 'hsl(218 35% 7%)', border: '1px solid hsl(0 0% 100% / 0.05)' }}>
-            <div className="flex items-center gap-1.5 mb-1">
-              <Heart className="w-3 h-3" style={{ color: hpColor }} />
-              <span className="nx-title text-[8px]" style={{ color: 'hsl(0 0% 100% / 0.55)' }}>NEXUS</span>
+        {/* Corner brackets — make whole HUD feel like one panel */}
+        <span aria-hidden className="absolute top-1 left-1 w-2 h-2 border-l border-t" style={{ borderColor: 'hsl(var(--nx-cyan) / 0.7)' }} />
+        <span aria-hidden className="absolute top-1 right-1 w-2 h-2 border-r border-t" style={{ borderColor: 'hsl(var(--nx-cyan) / 0.7)' }} />
+        <div className="flex items-stretch gap-3">
+          {/* HP block */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1 mb-0.5">
+              <Heart className="w-2.5 h-2.5" style={{ color: hpColor }} />
+              <span className="nx-title text-[8px]" style={{ color: 'hsl(0 0% 100% / 0.55)', letterSpacing: '0.14em' }}>NEXUS</span>
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-sm font-black tabular-nums" style={{ color: hpColor }}>{state.baseHp}</span>
+              <span className="text-base font-black tabular-nums leading-none" style={{ color: hpColor, textShadow: `0 0 8px ${hpColor}` }}>{state.baseHp}</span>
               <span className="text-[9px] font-bold tabular-nums" style={{ color: 'hsl(0 0% 100% / 0.4)' }}>/{state.baseHpMax}</span>
             </div>
             <div className="mt-1 h-[3px] rounded-full overflow-hidden" style={{ background: 'hsl(0 0% 100% / 0.06)' }}>
@@ -83,28 +80,34 @@ export function NexusBattleScreen({
             </div>
           </div>
 
-          {/* Energy */}
-          <div className="nx-bracket px-2 py-1.5 rounded-sm" style={{ background: 'hsl(218 35% 7%)', border: '1px solid hsl(var(--nx-amber) / 0.15)' }}>
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-[10px]" style={{ color: 'hsl(var(--nx-amber))' }}>⚡</span>
-              <span className="nx-title text-[8px]" style={{ color: 'hsl(0 0% 100% / 0.55)' }}>ENERGY</span>
+          {/* Vertical divider */}
+          <div className="w-px self-stretch" style={{ background: 'linear-gradient(180deg, transparent, hsl(var(--nx-cyan) / 0.35), transparent)' }} />
+
+          {/* Energy block */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1 mb-0.5">
+              <span className="text-[10px] leading-none" style={{ color: 'hsl(var(--nx-amber))' }}>⚡</span>
+              <span className="nx-title text-[8px]" style={{ color: 'hsl(0 0% 100% / 0.55)', letterSpacing: '0.14em' }}>ENERGY</span>
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-sm font-black tabular-nums" style={{ color: 'hsl(var(--nx-amber))' }}>{state.energy}</span>
+              <span className="text-base font-black tabular-nums leading-none" style={{ color: 'hsl(var(--nx-amber))', textShadow: '0 0 8px hsl(var(--nx-amber) / 0.7)' }}>{state.energy}</span>
             </div>
             <div className="mt-1 h-[3px] rounded-full overflow-hidden nx-scan-bar" style={{ background: 'hsl(var(--nx-amber) / 0.15)' }}>
               <div className="h-full" style={{ width: `100%`, background: 'linear-gradient(90deg, hsl(var(--nx-amber) / 0.55), hsl(var(--nx-amber)))' }} />
             </div>
           </div>
 
-          {/* Wave */}
-          <div className="nx-bracket px-2 py-1.5 rounded-sm" style={{ background: 'hsl(218 35% 7%)', border: '1px solid hsl(var(--nx-cyan) / 0.15)' }}>
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-[10px]" style={{ color: 'hsl(var(--nx-cyan))' }}>◫</span>
-              <span className="nx-title text-[8px]" style={{ color: 'hsl(0 0% 100% / 0.55)' }}>WAVE</span>
+          {/* Vertical divider */}
+          <div className="w-px self-stretch" style={{ background: 'linear-gradient(180deg, transparent, hsl(var(--nx-cyan) / 0.35), transparent)' }} />
+
+          {/* Wave block */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1 mb-0.5">
+              <span className="text-[10px] leading-none" style={{ color: 'hsl(var(--nx-cyan))' }}>◫</span>
+              <span className="nx-title text-[8px]" style={{ color: 'hsl(0 0% 100% / 0.55)', letterSpacing: '0.14em' }}>WAVE</span>
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-sm font-black tabular-nums" style={{ color: 'hsl(var(--nx-cyan))' }}>{Math.max(0, state.waveIndex + 1)}</span>
+              <span className="text-base font-black tabular-nums leading-none" style={{ color: 'hsl(var(--nx-cyan))', textShadow: '0 0 8px hsl(var(--nx-cyan) / 0.7)' }}>{Math.max(0, state.waveIndex + 1)}</span>
               <span className="text-[9px] font-bold tabular-nums" style={{ color: 'hsl(0 0% 100% / 0.4)' }}>/{state.totalWaves ?? '·'}</span>
             </div>
             <div className="mt-1 flex gap-[2px]">
@@ -309,38 +312,84 @@ export function NexusBattleScreen({
             );
           })}
 
-          {/* Enemies overlay */}
+          {/* Enemies overlay — distinct silhouettes per type */}
           <div className="absolute inset-0 pointer-events-none">
             {state.enemies.map(e => {
               const def = ENEMIES[e.kind];
+              const accent = getEnemyAccent(e.kind);
               const pos = pathToXY(e.pathIndex, e.progress);
               const left = ((pos.x + 0.5) / GRID_COLS) * 100;
               const top = ((pos.y + 0.5) / GRID_ROWS) * 100;
               const hpPct = Math.max(0, e.hp / def.hp);
-              const size = e.kind === 'boss' ? 28 : e.kind === 'walker' ? 18 : 14;
+              const size = e.kind === 'boss' ? 30 : e.kind === 'walker' ? 22 : 17;
+              const barW = e.kind === 'boss' ? 22 : 14;
               return (
                 <div
                   key={e.id}
                   className="absolute -translate-x-1/2 -translate-y-1/2 transition-all duration-100"
                   style={{ left: `${left}%`, top: `${top}%` }}
                 >
-                  <div
-                    className={cn('rounded-full flex items-center justify-center text-[8px] font-black text-white', def.stealth && 'opacity-60')}
-                    style={{
-                      width: size,
-                      height: size,
-                      background: ENEMY_FILL[e.kind],
-                      border: '1.5px solid hsl(0 0% 100% / 0.85)',
-                      boxShadow: `0 0 6px ${ENEMY_FILL[e.kind]}, 0 1px 2px hsl(0 0% 0% / 0.5)`,
-                    }}
-                  >
-                    {def.glyph}
-                  </div>
-                  {e.shield > 0 && (
-                    <div className="absolute -inset-0.5 rounded-full" style={{ border: '1px solid hsl(200 95% 70% / 0.85)', boxShadow: '0 0 4px hsl(200 95% 70%)' }} />
+                  {/* Boss aura — extra threat presence */}
+                  {e.kind === 'boss' && (
+                    <span
+                      aria-hidden
+                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full nx-reactor-glow"
+                      style={{
+                        width: size + 14,
+                        height: size + 14,
+                        background: `radial-gradient(circle, ${accent.glow}, transparent 70%)`,
+                      }}
+                    />
                   )}
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-6 h-1 bg-black/60 rounded">
-                    <div className="h-full bg-emerald-400 rounded transition-all" style={{ width: `${hpPct * 100}%` }} />
+
+                  {/* Stealth cloak ring (dashed) */}
+                  {def.stealth && (
+                    <span
+                      aria-hidden
+                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                      style={{
+                        width: size + 6,
+                        height: size + 6,
+                        border: `1px dashed ${accent.edge}`,
+                        opacity: 0.55,
+                      }}
+                    />
+                  )}
+
+                  {/* Shield bubble */}
+                  {e.shield > 0 && (
+                    <span
+                      aria-hidden
+                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                      style={{
+                        width: size + 8,
+                        height: size + 8,
+                        background: 'radial-gradient(circle, hsl(200 95% 70% / 0.18), transparent 70%)',
+                        border: '1px solid hsl(200 95% 75% / 0.85)',
+                        boxShadow: '0 0 6px hsl(200 95% 70% / 0.7), inset 0 0 4px hsl(200 95% 80% / 0.4)',
+                      }}
+                    />
+                  )}
+
+                  <div
+                    className={cn('relative flex items-center justify-center', def.stealth && 'opacity-75')}
+                    style={{ width: size, height: size }}
+                  >
+                    <EnemyMarker kind={e.kind} size={size} />
+                  </div>
+
+                  {/* HP bar */}
+                  <div
+                    className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 h-[2px] rounded overflow-hidden"
+                    style={{ width: barW, background: 'hsl(0 0% 0% / 0.7)', border: '0.5px solid hsl(0 0% 100% / 0.15)' }}
+                  >
+                    <div
+                      className="h-full transition-all"
+                      style={{
+                        width: `${hpPct * 100}%`,
+                        background: hpPct > 0.5 ? 'hsl(150 85% 60%)' : hpPct > 0.25 ? 'hsl(38 95% 60%)' : 'hsl(350 90% 62%)',
+                      }}
+                    />
                   </div>
                 </div>
               );
@@ -472,17 +521,30 @@ export function NexusBattleScreen({
         </div>
       )}
 
-      {/* ───── Bottom tray: tower picker + abilities ───── */}
+      {/* ───── Command deck: deployment rail + abilities ───── */}
       <div
-        className="px-3 pb-3 pt-2"
+        className="relative px-3 pb-3 pt-2"
         style={{
-          background: 'linear-gradient(180deg, hsl(var(--nx-panel) / 0.6), hsl(var(--nx-panel) / 0.95))',
-          borderTop: '1px solid hsl(var(--nx-cyan) / 0.25)',
-          boxShadow: '0 -1px 0 hsl(var(--nx-cyan) / 0.15)',
+          background: 'linear-gradient(180deg, hsl(var(--nx-panel) / 0.55), hsl(var(--nx-panel) / 0.97))',
+          borderTop: '1px solid hsl(var(--nx-cyan) / 0.3)',
+          boxShadow: '0 -1px 0 hsl(var(--nx-cyan) / 0.18), 0 -8px 16px -10px hsl(var(--nx-cyan) / 0.3)',
         }}
       >
-        <div className="grid grid-cols-4 gap-1.5 mb-2">
-          {(['pulse','arc','cryo','rail'] as TowerKind[]).map(kind => {
+        <div className="flex items-center gap-2 mb-1.5 px-0.5">
+          <span className="h-px flex-1" style={{ background: 'linear-gradient(90deg, transparent, hsl(var(--nx-cyan) / 0.4))' }} />
+          <span className="nx-title text-[8px]" style={{ color: 'hsl(var(--nx-cyan) / 0.85)', letterSpacing: '0.22em' }}>DEPLOYMENT</span>
+          <span className="h-px flex-1" style={{ background: 'linear-gradient(90deg, hsl(var(--nx-cyan) / 0.4), transparent)' }} />
+        </div>
+
+        <div
+          className="relative flex items-stretch mb-2 nx-clip-sm overflow-hidden"
+          style={{
+            background: 'linear-gradient(180deg, hsl(218 38% 9%), hsl(218 42% 6%))',
+            border: '1px solid hsl(var(--nx-cyan) / 0.22)',
+            boxShadow: 'inset 0 1px 0 hsl(0 0% 100% / 0.05), inset 0 0 14px hsl(var(--nx-cyan) / 0.05)',
+          }}
+        >
+          {(['pulse','arc','cryo','rail'] as TowerKind[]).map((kind, idx) => {
             const def = TOWERS[kind];
             const selected = selectedTowerKind === kind;
             const affordable = state.energy >= def.cost;
@@ -493,34 +555,52 @@ export function NexusBattleScreen({
                 key={kind}
                 onClick={() => { onSelectKind(selected ? null : kind); onSelectTower(null); }}
                 className={cn(
-                  'relative min-h-[64px] nx-clip-sm flex flex-col items-center justify-center gap-0 py-1 transition active:scale-95',
+                  'relative flex-1 min-h-[68px] flex flex-col items-center justify-center gap-0 py-1.5 transition-colors active:scale-[0.97]',
                   !affordable && 'opacity-50',
                 )}
                 style={{
                   background: selected
-                    ? `linear-gradient(180deg, ${c.bg}, hsl(218 35% 9%))`
-                    : 'linear-gradient(180deg, hsl(218 35% 11%), hsl(218 38% 8%))',
-                  border: selected ? `1.5px solid ${c.c}` : '1px solid hsl(0 0% 100% / 0.06)',
-                  boxShadow: selected
-                    ? `0 0 14px -2px ${c.cDim}, inset 0 1px 0 hsl(0 0% 100% / 0.08)`
-                    : 'inset 0 1px 0 hsl(0 0% 100% / 0.04)',
+                    ? `linear-gradient(180deg, ${c.bg}, transparent)`
+                    : 'transparent',
+                  borderRight: idx < 3 ? '1px solid hsl(var(--nx-cyan) / 0.18)' : undefined,
                   color: c.c,
                 }}
               >
-                <TowerIcon kind={kind} size={26} />
-                <span className="nx-title text-[8px] mt-0.5" style={{ color: selected ? c.text : 'hsl(0 0% 100% / 0.7)' }}>{shortName}</span>
-                <span className="text-[9px] font-black tabular-nums leading-none mt-0.5" style={{ color: 'hsl(var(--nx-amber))' }}>⚡{def.cost}</span>
                 {selected && (
                   <>
-                    <span aria-hidden className="absolute top-0.5 left-0.5 w-1.5 h-1.5 border-l border-t" style={{ borderColor: c.c }} />
-                    <span aria-hidden className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-r border-b" style={{ borderColor: c.c }} />
+                    <span
+                      aria-hidden
+                      className="absolute top-0 left-1.5 right-1.5 h-[2px] rounded-b"
+                      style={{ background: c.c, boxShadow: `0 0 8px ${c.c}` }}
+                    />
+                    <span
+                      aria-hidden
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        background: `radial-gradient(ellipse 70% 50% at 50% 110%, ${c.cDim}, transparent 70%)`,
+                      }}
+                    />
                   </>
                 )}
+                <TowerIcon kind={kind} size={26} />
+                <span
+                  className="nx-title text-[8px] mt-1"
+                  style={{ color: selected ? c.text : 'hsl(0 0% 100% / 0.7)', letterSpacing: '0.12em' }}
+                >
+                  {shortName}
+                </span>
+                <span
+                  className="text-[9px] font-black tabular-nums leading-none mt-0.5"
+                  style={{ color: affordable ? 'hsl(var(--nx-amber))' : 'hsl(350 80% 65%)' }}
+                >
+                  ⚡{def.cost}
+                </span>
               </button>
             );
           })}
         </div>
-        <div className="grid grid-cols-2 gap-1.5">
+
+        <div className="grid grid-cols-2 gap-2">
           {state.abilities.map(a => {
             const def = ABILITIES[a.kind];
             const ready = a.cooldownMs <= 0;
@@ -531,28 +611,33 @@ export function NexusBattleScreen({
                 key={a.kind}
                 onClick={() => ready && onCastAbility(a.kind)}
                 disabled={!ready}
-                className="relative h-12 nx-clip-sm flex items-center justify-center gap-2 font-black text-xs overflow-hidden active:scale-95 nx-title"
+                className="relative h-12 nx-clip-sm flex items-center justify-center gap-2 font-black text-xs overflow-hidden active:scale-[0.97] nx-title"
                 style={{
                   background: ready
-                    ? 'linear-gradient(180deg, hsl(var(--nx-amber) / 0.28), hsl(var(--nx-amber) / 0.12))'
-                    : 'linear-gradient(180deg, hsl(218 35% 12%), hsl(218 38% 9%))',
-                  border: ready ? '1.5px solid hsl(var(--nx-amber) / 0.85)' : '1px solid hsl(0 0% 100% / 0.06)',
+                    ? 'linear-gradient(180deg, hsl(var(--nx-amber) / 0.32), hsl(var(--nx-amber) / 0.1))'
+                    : 'linear-gradient(180deg, hsl(218 38% 11%), hsl(218 42% 7%))',
+                  border: ready ? '1px solid hsl(var(--nx-amber) / 0.85)' : '1px solid hsl(var(--nx-cyan) / 0.18)',
                   boxShadow: ready
-                    ? '0 0 14px -2px hsl(var(--nx-amber) / 0.55), inset 0 1px 0 hsl(0 0% 100% / 0.1)'
+                    ? '0 0 16px -2px hsl(var(--nx-amber) / 0.55), inset 0 1px 0 hsl(0 0% 100% / 0.12)'
                     : 'inset 0 1px 0 hsl(0 0% 100% / 0.04)',
-                  color: ready ? 'hsl(var(--nx-amber))' : 'hsl(0 0% 100% / 0.4)',
+                  color: ready ? 'hsl(var(--nx-amber))' : 'hsl(0 0% 100% / 0.45)',
                 }}
               >
-                <span className="text-base leading-none">{def.glyph}</span>
-                <span className="text-[10px]">{def.name}</span>
-                {/* Radial cooldown sweep */}
+                {ready && (
+                  <>
+                    <span aria-hidden className="absolute top-0.5 left-0.5 w-1.5 h-1.5 border-l border-t" style={{ borderColor: 'hsl(var(--nx-amber))' }} />
+                    <span aria-hidden className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-r border-b" style={{ borderColor: 'hsl(var(--nx-amber))' }} />
+                  </>
+                )}
+                <span className="text-base leading-none" style={{ filter: ready ? 'drop-shadow(0 0 4px hsl(var(--nx-amber)))' : undefined }}>{def.glyph}</span>
+                <span className="text-[10px]" style={{ letterSpacing: '0.14em' }}>{def.name}</span>
                 {!ready && (
                   <>
                     <div
                       className="absolute inset-0 pointer-events-none"
                       style={{
                         background:
-                          `conic-gradient(hsl(0 0% 0% / 0.55) ${(1 - pct) * 360}deg, transparent 0deg)`,
+                          `conic-gradient(hsl(0 0% 0% / 0.6) ${(1 - pct) * 360}deg, transparent 0deg)`,
                         mixBlendMode: 'multiply',
                       }}
                     />
