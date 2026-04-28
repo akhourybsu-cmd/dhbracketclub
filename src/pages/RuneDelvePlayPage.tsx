@@ -1775,6 +1775,15 @@ export default function RuneDelvePlayPage() {
         if (shardsAwarded > 0) {
           events.push({ type: 'shards_earned', amount: shardsAwarded, heroClass });
         }
+        // Power Move: count special-ability uses per run (not gated by clear).
+        if (abilityUsedCount > 0) {
+          events.push({ type: 'abilities_used', amount: abilityUsedCount, heroClass });
+        }
+        // Path of Mastery: only credit class XP when the server actually
+        // awarded XP (new best clear), so quest progress mirrors progression.
+        if (serverWasNewBest && xp > 0) {
+          events.push({ type: 'class_xp_earned', amount: xp, heroClass });
+        }
         for (const e of events) {
           await reportQuestProgress(e);
         }
