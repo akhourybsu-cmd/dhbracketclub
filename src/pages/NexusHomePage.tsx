@@ -10,7 +10,7 @@ export default function NexusHomePage() {
   const nextMission = missions.find(m => m.id === progress.highest_mission) ?? missions[0];
 
   return (
-    <div className="max-w-md mx-auto pb-24">
+    <div className="max-w-md mx-auto pb-6">
       {/* Hero */}
       <motion.div
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}

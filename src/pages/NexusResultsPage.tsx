@@ -50,7 +50,7 @@ export default function NexusResultsPage() {
   const starvedSec = insight ? Math.round(insight.energyStarvedMs / 1000) : 0;
 
   return (
-    <div className="max-w-md mx-auto pb-24 px-3 pt-6 text-center">
+    <div className="max-w-md mx-auto pb-6 px-3 pt-4 text-center">
       <motion.div
         initial={{ scale: 0.85, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
