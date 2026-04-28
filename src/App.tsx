@@ -79,6 +79,13 @@ const RuneDelveQuestsPage = lazy(() => import("./pages/RuneDelveQuestsPage"));
 const RequestClubPage = lazy(() => import("./pages/RequestClubPage"));
 const AdminClubsPage = lazy(() => import("./pages/AdminClubsPage"));
 const ClubSettingsPage = lazy(() => import("./pages/ClubSettingsPage"));
+const NexusHomePage = lazy(() => import("./pages/NexusHomePage"));
+const NexusMissionsPage = lazy(() => import("./pages/NexusMissionsPage"));
+const NexusLoadoutPage = lazy(() => import("./pages/NexusLoadoutPage"));
+const NexusBattlePage = lazy(() => import("./pages/NexusBattlePage"));
+const NexusResultsPage = lazy(() => import("./pages/NexusResultsPage"));
+const NexusLeaderboardPage = lazy(() => import("./pages/NexusLeaderboardPage"));
+const NexusCodexPage = lazy(() => import("./pages/NexusCodexPage"));
 import { RuneDelveLayout } from "./components/runedelve/RuneDelveLayout";
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -214,6 +221,15 @@ function AnimatedRoutes() {
         <Route path="/rune-delve/analytics" element={<ProtectedPage><RuneDelveAnalyticsPage /></ProtectedPage>} />
         <Route path="/rune-delve/simulator" element={<ProtectedPage><RuneDelveSimulatorPage /></ProtectedPage>} />
         <Route path="/rune-delve/balance" element={<ProtectedPage><RuneDelveBalanceReportPage /></ProtectedPage>} />
+
+        {/* Nexus Defense — sci-fi tower defense */}
+        <Route path="/nexus" element={<ProtectedPage><NexusHomePage /></ProtectedPage>} />
+        <Route path="/nexus/missions" element={<ProtectedPage><NexusMissionsPage /></ProtectedPage>} />
+        <Route path="/nexus/loadout/:missionId" element={<ProtectedPage><NexusLoadoutPage /></ProtectedPage>} />
+        <Route path="/nexus/battle/:missionId" element={<ProtectedPage><NexusBattlePage /></ProtectedPage>} />
+        <Route path="/nexus/results/:missionId" element={<ProtectedPage><NexusResultsPage /></ProtectedPage>} />
+        <Route path="/nexus/leaderboard" element={<ProtectedPage><NexusLeaderboardPage /></ProtectedPage>} />
+        <Route path="/nexus/codex" element={<ProtectedPage><NexusCodexPage /></ProtectedPage>} />
 
         <Route path="/profile" element={<ProtectedPage><ProfilePage /></ProtectedPage>} />
 

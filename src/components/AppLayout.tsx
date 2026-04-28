@@ -29,6 +29,7 @@ const sidebarModules = [
   { path: '/compete', label: 'Compete Hub', icon: Swords },
   { path: '/drafts', label: 'Drafts', icon: Bookmark },
   { path: '/rune-delve', label: 'Rune Delve', icon: Sparkles },
+  { path: '/nexus', label: 'Nexus Defense', icon: Shield },
   { path: '/pickem', label: "Pick'em", icon: Trophy },
   { path: '/brackets', label: 'Brackets', icon: Trophy },
   { type: 'divider', label: 'Other' },
