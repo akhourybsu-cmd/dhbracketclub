@@ -291,6 +291,39 @@ export default function NexusBattlePage() {
             <span aria-hidden className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-r border-b" style={{ borderColor: 'hsl(var(--nx-cyan))' }} />
           </button>
         </div>
+
+        {/* Modifier intel strip — compact, scrollable on mobile */}
+        {(() => {
+          const mods = resolveModifiers(mission.modifierIds);
+          if (mods.length === 0) return null;
+          return (
+            <div
+              className="mt-1.5 -mx-1 px-1 flex items-center gap-1 overflow-x-auto"
+              style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
+              aria-label="Mission modifiers"
+            >
+              {mods.map(mod => {
+                const t = modifierTone(mod.tone);
+                return (
+                  <div
+                    key={mod.id}
+                    className="shrink-0 inline-flex items-center gap-1 px-1.5 py-[3px] nx-clip-sm leading-none"
+                    style={{ background: t.bg, border: `1px solid ${t.border}` }}
+                    title={`${mod.label} — ${mod.description}`}
+                  >
+                    <span className="font-black" style={{ color: t.fg, fontSize: 10, lineHeight: 1 }}>{mod.glyph}</span>
+                    <span className="nx-title text-[8px] font-black" style={{ color: t.fg, letterSpacing: '0.16em' }}>
+                      {mod.label.toUpperCase()}
+                    </span>
+                    <span className="text-[8px] font-medium" style={{ color: 'hsl(0 0% 100% / 0.7)' }}>
+                      · {mod.short}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
       </div>
 
       <motion.div
