@@ -139,7 +139,8 @@ export default function NexusBattlePage() {
         </div>
         <button
           onClick={() => setPaused(p => !p)}
-          className="text-xs px-2 py-1 rounded bg-card border border-border"
+          aria-label={paused ? 'Resume' : 'Pause'}
+          className="text-sm px-3 py-1.5 -mr-1 rounded-md bg-card border border-border min-w-[44px] min-h-[36px] flex items-center justify-center"
         >
           {paused ? '▶' : '❚❚'}
         </button>
