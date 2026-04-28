@@ -8,6 +8,10 @@ import { NexusBattleScreen } from '@/components/nexus/NexusBattleScreen';
 import { useAuth } from '@/contexts/AuthContext';
 import { recordNexusRun, useNexusProgress } from '@/hooks/useNexusProgress';
 import { toast } from 'sonner';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function NexusBattlePage() {
   const { missionId } = useParams<{ missionId: string }>();
@@ -32,6 +36,7 @@ export default function NexusBattlePage() {
   const [selectedKind, setSelectedKind] = useState<TowerKind | null>(null);
   const [selectedTowerId, setSelectedTowerId] = useState<string | null>(null);
   const [paused, setPaused] = useState(false);
+  const [exitOpen, setExitOpen] = useState(false);
   const savedRef = useRef(false);
 
   // Game loop
