@@ -44,23 +44,34 @@ export function NexusBattleScreen({
     for (let c = 0; c < GRID_COLS; c++) cells.push({ c, r });
   }
   const selectedTower = selectedTowerId ? state.towers.find(t => t.id === selectedTowerId) : null;
-  const totalWaves = state.spawnQueues.length > 0 || state.waveIndex >= 0 ? state.waveIndex + 1 : 0;
+  const totalWaves = (state as any).totalWaves ?? undefined;
+  // Range preview for selected tower
+  const rangePreview = selectedTower
+    ? { col: selectedTower.cell.col, row: selectedTower.cell.row, range: towerRangeAt(selectedTower.kind, selectedTower.level) }
+    : selectedTowerKind
+      ? { col: -1, row: -1, range: TOWERS[selectedTowerKind].range }
+      : null;
+  const hpPctBase = state.baseHp / state.baseHpMax;
+  const hpColor = hpPctBase > 0.5 ? 'text-emerald-300' : hpPctBase > 0.25 ? 'text-amber-300' : 'text-rose-400';
 
   return (
     <div className="flex flex-col h-full w-full max-w-md mx-auto select-none">
       {/* HUD */}
-      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-card/80 backdrop-blur border-b border-border">
-        <div className="flex items-center gap-2 text-sm font-bold">
-          <Heart className="w-4 h-4 text-red-400" />
-          <span className="text-foreground tabular-nums">{state.baseHp}<span className="text-muted-foreground text-xs">/{state.baseHpMax}</span></span>
+      <div className="flex items-center justify-between gap-2 px-3 py-1.5 bg-card/80 backdrop-blur border-b border-border">
+        <div className="flex items-center gap-1.5 text-sm font-bold">
+          <Heart className={cn("w-4 h-4", hpColor)} />
+          <span className={cn("tabular-nums", hpColor)}>{state.baseHp}<span className="text-muted-foreground text-xs font-normal">/{state.baseHpMax}</span></span>
         </div>
-        <div className="flex items-center gap-2 text-sm font-bold">
+        <div className="flex items-center gap-1.5 text-sm font-bold">
           <Zap className="w-4 h-4 text-amber-400" />
           <span className="text-amber-300 tabular-nums">{state.energy}</span>
         </div>
-        <div className="flex items-center gap-2 text-sm font-bold">
+        <div className="flex items-center gap-1.5 text-sm font-bold">
           <Layers className="w-4 h-4 text-emerald-400" />
-          <span className="text-foreground tabular-nums">{Math.max(0, state.waveIndex + 1)}</span>
+          <span className="text-foreground tabular-nums">
+            {Math.max(0, state.waveIndex + 1)}
+            <span className="text-muted-foreground text-xs font-normal">/{state.totalWaves ?? '·'}</span>
+          </span>
         </div>
       </div>
 
