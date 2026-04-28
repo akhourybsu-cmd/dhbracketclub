@@ -262,6 +262,7 @@ export default function AdminHub() {
     { icon: Swords, label: 'Rune Delve Analytics', description: 'Per-level stats, cliffs, AI handoff', to: '/rune-delve/analytics', iconColor: 'primary' },
     { icon: Swords, label: 'Rune Delve Playtest Sim', description: 'Stress-test any future level (1-150)', to: '/rune-delve/simulator', iconColor: 'accent' },
     { icon: BarChart3, label: 'Rune Delve Balance Report', description: 'Full-spectrum audit · sim + live data', to: '/rune-delve/balance', iconColor: 'gold' },
+    { icon: BarChart3, label: 'Nexus Defense Balance', description: 'Mission, tower & ability telemetry', to: '/nexus/balance', iconColor: 'primary' },
   ];
 
   const diagnostics: Tool[] = [
