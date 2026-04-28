@@ -40,7 +40,7 @@ import {
   type ActiveRelics,
 } from '@/lib/runedelve/relicEffects';
 import { MAX_MANA } from '@/lib/runedelve/combatEngine';
-import { computeClearShards, computeFailureShards, slotsForCampaignLevel } from '@/lib/runedelve/shardEconomy';
+import { computeClearShards, computeFailureShards, slotsForClassLevels } from '@/lib/runedelve/shardEconomy';
 
 import { objectiveLabel, type ObjectiveType } from '@/lib/runedelve/levelGenerator';
 import {
