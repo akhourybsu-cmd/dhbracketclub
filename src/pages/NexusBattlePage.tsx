@@ -2,11 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { castAbility, initBattle, placeTower, sellTower, startWave, tick, TICK_MS, upgradeTower } from '@/lib/nexus/engine';
-import { getMission } from '@/lib/nexus/missions';
 import { AbilityKind, BattleState, TowerKind } from '@/lib/nexus/types';
 import { NexusBattleScreen } from '@/components/nexus/NexusBattleScreen';
 import { useAuth } from '@/contexts/AuthContext';
 import { recordNexusRun, useNexusProgress } from '@/hooks/useNexusProgress';
+import { useResolvedMission } from '@/hooks/useMissionCalibrations';
 import { toast } from 'sonner';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -21,7 +21,7 @@ export default function NexusBattlePage() {
   const { progress, updateProgress } = useNexusProgress();
 
   const id = parseInt(missionId || '1', 10);
-  const mission = useMemo(() => getMission(id), [id]);
+  const { mission, enemyMods, loading: calLoading } = useResolvedMission(id);
 
   const abilities = useMemo<AbilityKind[]>(() => {
     const raw = params.get('abilities');
@@ -29,7 +29,18 @@ export default function NexusBattlePage() {
     return raw.split(',').filter(Boolean) as AbilityKind[];
   }, [params]);
 
-  const [state, setState] = useState<BattleState>(() => mission ? initBattle(mission.id, abilities) : null as any);
+  const [state, setState] = useState<BattleState | null>(null);
+  // Initialise battle once mission is resolved.
+  useEffect(() => {
+    if (!mission || state) return;
+    setState(initBattle(mission.id, abilities, {
+      mission,
+      enemyHpMult: enemyMods.hpMult,
+      enemyShieldMult: enemyMods.shieldMult,
+      enemySpeedMult: enemyMods.speedMult,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mission]);
   const stateRef = useRef(state);
   stateRef.current = state;
 
