@@ -122,9 +122,14 @@ export default function NexusBattlePage() {
       <div className="flex items-center justify-between px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-1 bg-gradient-to-b from-cyan-950/40 to-transparent">
         <button
           onClick={() => {
-            if (confirm('Abandon mission?')) navigate('/nexus');
+            // If mission already ended, exit immediately
+            if (state.status === 'victory' || state.status === 'defeat' || state.status === 'pre') {
+              navigate('/nexus');
+            } else {
+              setExitOpen(true);
+            }
           }}
-          className="text-xs text-muted-foreground active:text-foreground"
+          className="text-xs text-muted-foreground active:text-foreground px-2 py-1.5 -ml-2"
         >
           ← Exit
         </button>
@@ -163,6 +168,26 @@ export default function NexusBattlePage() {
           </motion.div>
         </div>
       )}
+
+      <AlertDialog open={exitOpen} onOpenChange={setExitOpen}>
+        <AlertDialogContent className="max-w-[320px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Abandon mission?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your current run will end and progress for this attempt will not be saved.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep playing</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => navigate('/nexus')}
+              className="bg-rose-500 text-rose-950 hover:bg-rose-400"
+            >
+              Abandon
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
