@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Trophy, X, Cpu, Zap, ShieldOff, Clock } from 'lucide-react';
-import { getMission, MISSIONS } from '@/lib/nexus/missions';
+import { useResolvedMissions } from '@/hooks/useMissionCalibrations';
 import { TOWERS } from '@/lib/nexus/towers';
 import { ABILITIES } from '@/lib/nexus/abilities';
 import type { TowerKind, AbilityKind } from '@/lib/nexus/types';
@@ -22,13 +22,14 @@ export default function NexusResultsPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const id = parseInt(missionId || '1', 10);
-  const mission = getMission(id);
+  const { missions } = useResolvedMissions();
+  const mission = missions.find(m => m.id === id);
   const won = params.get('win') === '1';
   const score = parseInt(params.get('score') || '0', 10);
   const hp = parseInt(params.get('hp') || '0', 10);
   const waves = parseInt(params.get('waves') || '0', 10);
   const cores = parseInt(params.get('cores') || '0', 10);
-  const next = MISSIONS.find(m => m.id === id + 1);
+  const next = missions.find(m => m.id === id + 1);
 
   const insight = useMemo<RunInsight | null>(() => {
     try {
