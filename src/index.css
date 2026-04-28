@@ -1650,3 +1650,103 @@
   animation: nx-pulse 2.4s ease-in-out infinite;
 }
 
+/* ─── Cut-corner clipped surface (tactical bevel) ───
+   Subtle chamfer on top-right + bottom-left so panels read as machined
+   composite plates instead of generic rounded rectangles. Pair with .nx-panel
+   for full holographic effect, or use alone. */
+.nx-mode .nx-clip {
+  clip-path: polygon(
+    0 0,
+    calc(100% - 10px) 0,
+    100% 10px,
+    100% 100%,
+    10px 100%,
+    0 calc(100% - 10px)
+  );
+}
+.nx-mode .nx-clip-sm {
+  clip-path: polygon(
+    0 0,
+    calc(100% - 6px) 0,
+    100% 6px,
+    100% 100%,
+    6px 100%,
+    0 calc(100% - 6px)
+  );
+}
+
+/* Tactical corner brackets — purely decorative L-marks at the 4 corners. */
+.nx-mode .nx-bracket {
+  position: relative;
+}
+.nx-mode .nx-bracket::before,
+.nx-mode .nx-bracket::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-color: hsl(var(--nx-cyan) / 0.7);
+  pointer-events: none;
+}
+.nx-mode .nx-bracket::before {
+  top: -1px;
+  left: -1px;
+  border-top: 1.5px solid;
+  border-left: 1.5px solid;
+}
+.nx-mode .nx-bracket::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 1.5px solid;
+  border-right: 1.5px solid;
+}
+
+/* Running scan sweep — used inside readiness bars / energy lanes. */
+@keyframes nx-scan {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+.nx-mode .nx-scan-bar {
+  position: relative;
+  overflow: hidden;
+}
+.nx-mode .nx-scan-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 30%, hsl(var(--nx-cyan) / 0.55) 50%, transparent 70%);
+  animation: nx-scan 2.4s linear infinite;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+/* Hardpoint deployment dot — used on buildable tiles. */
+@keyframes nx-hardpoint {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.25); }
+}
+.nx-mode .nx-hardpoint {
+  width: 4px;
+  height: 4px;
+  border-radius: 1px;
+  background: hsl(var(--nx-cyan) / 0.55);
+  box-shadow: 0 0 6px hsl(var(--nx-cyan) / 0.85);
+  animation: nx-hardpoint 2.4s ease-in-out infinite;
+}
+
+/* Reactor pulse for the Nexus core tile. */
+@keyframes nx-reactor {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.18); }
+}
+.nx-mode .nx-reactor-glow {
+  animation: nx-reactor 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nx-mode .nx-pulse-dot,
+  .nx-mode .nx-scan-bar::after,
+  .nx-mode .nx-hardpoint,
+  .nx-mode .nx-reactor-glow { animation: none !important; }
+}
+
