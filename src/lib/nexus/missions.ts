@@ -146,10 +146,10 @@ export const MISSIONS: MissionDef[] = [
         { enemy: 'walker', count: 6, intervalMs: 1100, delayMs: 1500 },
         { enemy: 'drone', count: 18, intervalMs: 400, delayMs: 2500 },
       ] },
-      { index: 3, rewardEnergy: 200, spawns: [
+      { index: 3, rewardEnergy: 220, spawns: [
         { enemy: 'boss', count: 1, intervalMs: 1000 },
-        { enemy: 'shielded', count: 8, intervalMs: 1000, delayMs: 4000 },
-        { enemy: 'walker', count: 8, intervalMs: 900, delayMs: 6000 },
+        { enemy: 'shielded', count: 6, intervalMs: 1100, delayMs: 6000 },
+        { enemy: 'walker', count: 6, intervalMs: 1000, delayMs: 9000 },
       ] },
     ],
   },
