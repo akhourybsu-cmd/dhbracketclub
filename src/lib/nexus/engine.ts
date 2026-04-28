@@ -298,11 +298,11 @@ function startNextWave(s: BattleState, mission: MissionDef) {
 function spawnEnemy(s: BattleState, kind: EnemyKind, mission: MissionDef) {
   const def = ENEMIES[kind];
   let hp = def.hp;
-  if (mission.id === 2 && kind === 'walker') hp = Math.round(hp * 1.25);
-  // Apply calibration multipliers (default 1× = no change).
-  const hpMult = s.enemyHpMult?.[kind] ?? 1;
-  const shieldMult = s.enemyShieldMult?.[kind] ?? 1;
+  // Apply calibration multipliers (default 1× = no change), then modifier mults.
+  const hpMult = (s.enemyHpMult?.[kind] ?? 1) * (s.modEnemyHpMult?.[kind] ?? 1);
+  const shieldMult = (s.enemyShieldMult?.[kind] ?? 1) * (s.modEnemyShieldMult?.[kind] ?? 1);
   hp = Math.max(1, Math.round(hp * hpMult));
+  if (kind === 'boss') hp = Math.max(1, Math.round(hp * (s.modBossHpMult ?? 1)));
   const shield = Math.max(0, Math.round((def.shield ?? 0) * shieldMult));
   s.enemies.push({
     id: nextId('e'),
@@ -345,7 +345,7 @@ export function startWave(state: BattleState, mission: MissionDef): BattleState 
 export function placeTower(state: BattleState, kind: TowerKind, col: number, row: number): { state: BattleState; ok: boolean; reason?: string } {
   if (!isBuildable(col, row)) return { state, ok: false, reason: 'Not a build tile' };
   if (state.towers.some(t => t.cell.col === col && t.cell.row === row)) return { state, ok: false, reason: 'Occupied' };
-  const cost = TOWERS[kind].cost;
+  const cost = Math.max(1, Math.round(TOWERS[kind].cost * (state.modTowerCostMult?.[kind] ?? 1)));
   if (state.energy < cost) return { state, ok: false, reason: 'Not enough energy' };
   const tower: PlacedTower = {
     id: nextId('t'),
@@ -371,7 +371,8 @@ export function upgradeTower(state: BattleState, towerId: string): { state: Batt
   const t = state.towers.find(t => t.id === towerId);
   if (!t) return { state, ok: false, reason: 'Tower missing' };
   if (t.level >= 3) return { state, ok: false, reason: 'Max level' };
-  const cost = towerUpgradeCost(t.kind, t.level);
+  const baseCost = towerUpgradeCost(t.kind, t.level);
+  const cost = Math.max(1, Math.round(baseCost * (state.modTowerCostMult?.[t.kind] ?? 1)));
   if (state.energy < cost) return { state, ok: false, reason: 'Not enough energy' };
   return {
     state: {
@@ -415,11 +416,12 @@ export function castAbility(state: BattleState, kind: AbilityKind): { state: Bat
       e.stunnedMs = 3000;
     });
   }
+  const cooldown = Math.max(1000, Math.round(def.cooldownMs * (state.modAbilityCooldownMult?.[kind] ?? 1)));
   return {
     state: {
       ...state,
       enemies,
-      abilities: state.abilities.map(a => a.kind === kind ? { ...a, cooldownMs: def.cooldownMs } : a),
+      abilities: state.abilities.map(a => a.kind === kind ? { ...a, cooldownMs: cooldown } : a),
       events: [...state.events, { type: 'ability', ability: kind, t: state.elapsedMs }],
       abilityUses: { ...state.abilityUses, [kind]: state.abilityUses[kind] + 1 },
     },
