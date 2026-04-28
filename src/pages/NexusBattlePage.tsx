@@ -125,7 +125,7 @@ export default function NexusBattlePage() {
           wavesCleared: won ? mission.waves.length : Math.max(0, state.waveIndex),
           baseHpRemaining: state.baseHp,
           durationSeconds: Math.round(state.elapsedMs / 1000),
-          loadout: { towers: ['pulse','arc','cryo','rail'], abilities },
+          loadout: { towers: ['pulse','arc','cryo','rail'], abilities, modifierIds: state.modifierIds },
           failedWave: won ? null : state.waveIndex + 1,
           towerUsage: state.towerBuilds,
           towerUpgrades: state.towerUpgrades,
