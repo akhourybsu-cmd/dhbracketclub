@@ -88,9 +88,11 @@ export function computeFailureShards(args: FailShardArgs): ShardBreakdown {
   return { base, bonuses, multiplier, total };
 }
 
-// Slot-unlock threshold: any class hitting L50 grants a hero-wide 3rd slot.
+// Slot-unlock threshold: any class hitting THIRD_SLOT_UNLOCK_LEVEL grants a hero-wide 3rd slot.
+// Tuned to be aspirational but achievable with a week or two of dedicated play.
+export const THIRD_SLOT_UNLOCK_LEVEL = 20;
 export function slotsForClassLevels(maxClassLevel: number): number {
-  return maxClassLevel >= 50 ? 3 : 2;
+  return maxClassLevel >= THIRD_SLOT_UNLOCK_LEVEL ? 3 : 2;
 }
 
 // Helper used by the Home unlock-banner heuristic.
