@@ -114,10 +114,18 @@ export function tick(state: BattleState, mission: MissionDef): BattleState {
       // leaked
       s.baseHp = Math.max(0, s.baseHp - def.damage);
       s.events.push({ type: 'leak', t: s.elapsedMs });
+      s.leaks += 1;
       leakers.push(e);
     }
   }
   s.enemies = s.enemies.filter(e => !leakers.includes(e));
+
+  // --- Energy starvation tracking (during waves only) ---
+  if (s.status === 'in_wave') {
+    const cheapest = Math.min(TOWERS.pulse.cost, TOWERS.arc.cost, TOWERS.cryo.cost, TOWERS.rail.cost);
+    if (s.energy < cheapest) s.energyStarvedMs += TICK_MS;
+  }
+
   if (s.baseHp <= 0) {
     s.status = 'defeat';
     return s;
