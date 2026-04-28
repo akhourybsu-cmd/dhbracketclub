@@ -163,24 +163,38 @@ export default function NexusBattlePage() {
     const res = placeTower(state, selectedKind, col, row);
     if (!res.ok) {
       if (res.reason) toast.error(res.reason);
+      sfx.play('invalid');
       return;
     }
+    sfx.play('place');
     setState(res.state);
   };
   const handleUpgrade = (towerId: string) => {
     const res = upgradeTower(state, towerId);
-    if (!res.ok) { if (res.reason) toast.error(res.reason); return; }
+    if (!res.ok) { if (res.reason) toast.error(res.reason); sfx.play('invalid'); return; }
+    sfx.play('upgrade');
     setState(res.state);
   };
   const handleSell = (towerId: string) => {
+    sfx.play('sell');
     setState(sellTower(state, towerId));
     setSelectedTowerId(null);
   };
   const handleAbility = (kind: AbilityKind) => {
     const res = castAbility(state, kind);
-    if (res.ok) setState(res.state);
+    if (res.ok) {
+      // Engine event will also drive cast SFX — but firing immediately on tap
+      // gives the action a snappier feel. consumeEvents throttling prevents
+      // double-trigger because the same event timestamp won't be re-played.
+      setState(res.state);
+    } else {
+      sfx.play('invalid');
+    }
   };
   const handleStartWave = () => {
+    // Wave-start sound is emitted by the status-watcher effect once the engine
+    // flips into 'in_wave' on the next tick — keeps it consistent whether the
+    // player taps "rush" or the timer auto-starts.
     setState(startWave(state, mission));
   };
 
