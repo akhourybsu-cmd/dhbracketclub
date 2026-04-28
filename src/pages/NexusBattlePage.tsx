@@ -292,7 +292,13 @@ export default function NexusBattlePage() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0">
+      <motion.div
+        key={`shake-${shakeKey}`}
+        initial={shakeKey === 0 ? false : { x: 0 }}
+        animate={shakeKey === 0 ? undefined : { x: [0, -6, 5, -3, 2, 0] }}
+        transition={{ duration: 0.32, ease: 'easeOut' }}
+        className="flex-1 min-h-0"
+      >
         <NexusBattleScreen
           state={state}
           selectedTowerKind={selectedKind}
@@ -305,7 +311,7 @@ export default function NexusBattlePage() {
           onCastAbility={handleAbility}
           onStartWave={handleStartWave}
         />
-      </div>
+      </motion.div>
 
       {paused && (
         <div className="absolute inset-0 bg-background/85 backdrop-blur-sm flex items-center justify-center z-50">
