@@ -115,10 +115,10 @@ export default function NexusBattlePage() {
     }
   }, [state?.status, mission, navigate, progress, updateProgress, user, abilities, state]);
 
-  if (!mission) {
-    return <div className="p-6 text-center text-muted-foreground">Mission not found.</div>;
+  if (calLoading || !mission) {
+    return <div className="p-6 text-center text-muted-foreground">{calLoading ? 'Loading mission…' : 'Mission not found.'}</div>;
   }
-  if (!state) return null;
+  if (!state) return <div className="p-6 text-center text-muted-foreground">Preparing battle…</div>;
 
   const handlePlace = (col: number, row: number) => {
     if (!selectedKind) return;
