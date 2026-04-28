@@ -18,14 +18,6 @@ const TOWER_HSL: Record<TowerKind, { c: string; cDim: string; bg: string; text: 
   rail:  { c: 'hsl(38 95% 60%)',  cDim: 'hsl(38 95% 60% / 0.18)',  bg: 'hsl(38 95% 60% / 0.14)',  text: 'hsl(38 95% 78%)' },
 };
 
-const ENEMY_FILL: Record<string, string> = {
-  drone: '#fb7185',     // rose
-  walker: '#f97316',    // orange
-  shielded: '#38bdf8',  // sky
-  stealth: '#a78bfa',   // violet
-  boss: '#dc2626',      // red
-};
-
 interface Props {
   state: BattleState;
   selectedTowerKind: TowerKind | null;
