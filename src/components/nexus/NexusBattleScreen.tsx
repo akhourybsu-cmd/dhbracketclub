@@ -50,25 +50,29 @@ export function NexusBattleScreen({
 
   return (
     <div className="flex flex-col h-full w-full max-w-md mx-auto select-none">
-      {/* ───── Holographic HUD bar ───── */}
+      {/* ───── Unified command HUD rail ───── */}
       <div
-        className="px-3 py-2"
+        className="relative px-3 py-2"
         style={{
           background:
-            'linear-gradient(180deg, hsl(var(--nx-panel) / 0.95), hsl(var(--nx-panel) / 0.6))',
-          borderBottom: '1px solid hsl(var(--nx-cyan) / 0.25)',
-          boxShadow: '0 1px 0 hsl(var(--nx-cyan) / 0.15), 0 8px 16px -10px hsl(var(--nx-cyan) / 0.3)',
+            'linear-gradient(180deg, hsl(var(--nx-panel) / 0.96), hsl(var(--nx-panel) / 0.55))',
+          borderBottom: '1px solid hsl(var(--nx-cyan) / 0.3)',
+          boxShadow:
+            '0 1px 0 hsl(var(--nx-cyan) / 0.18), 0 8px 16px -10px hsl(var(--nx-cyan) / 0.35)',
         }}
       >
-        <div className="grid grid-cols-3 gap-2">
-          {/* HP */}
-          <div className="nx-bracket px-2 py-1.5 rounded-sm" style={{ background: 'hsl(218 35% 7%)', border: '1px solid hsl(0 0% 100% / 0.05)' }}>
-            <div className="flex items-center gap-1.5 mb-1">
-              <Heart className="w-3 h-3" style={{ color: hpColor }} />
-              <span className="nx-title text-[8px]" style={{ color: 'hsl(0 0% 100% / 0.55)' }}>NEXUS</span>
+        {/* Corner brackets — make whole HUD feel like one panel */}
+        <span aria-hidden className="absolute top-1 left-1 w-2 h-2 border-l border-t" style={{ borderColor: 'hsl(var(--nx-cyan) / 0.7)' }} />
+        <span aria-hidden className="absolute top-1 right-1 w-2 h-2 border-r border-t" style={{ borderColor: 'hsl(var(--nx-cyan) / 0.7)' }} />
+        <div className="flex items-stretch gap-3">
+          {/* HP block */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1 mb-0.5">
+              <Heart className="w-2.5 h-2.5" style={{ color: hpColor }} />
+              <span className="nx-title text-[8px]" style={{ color: 'hsl(0 0% 100% / 0.55)', letterSpacing: '0.14em' }}>NEXUS</span>
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-sm font-black tabular-nums" style={{ color: hpColor }}>{state.baseHp}</span>
+              <span className="text-base font-black tabular-nums leading-none" style={{ color: hpColor, textShadow: `0 0 8px ${hpColor}` }}>{state.baseHp}</span>
               <span className="text-[9px] font-bold tabular-nums" style={{ color: 'hsl(0 0% 100% / 0.4)' }}>/{state.baseHpMax}</span>
             </div>
             <div className="mt-1 h-[3px] rounded-full overflow-hidden" style={{ background: 'hsl(0 0% 100% / 0.06)' }}>
@@ -76,28 +80,34 @@ export function NexusBattleScreen({
             </div>
           </div>
 
-          {/* Energy */}
-          <div className="nx-bracket px-2 py-1.5 rounded-sm" style={{ background: 'hsl(218 35% 7%)', border: '1px solid hsl(var(--nx-amber) / 0.15)' }}>
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-[10px]" style={{ color: 'hsl(var(--nx-amber))' }}>⚡</span>
-              <span className="nx-title text-[8px]" style={{ color: 'hsl(0 0% 100% / 0.55)' }}>ENERGY</span>
+          {/* Vertical divider */}
+          <div className="w-px self-stretch" style={{ background: 'linear-gradient(180deg, transparent, hsl(var(--nx-cyan) / 0.35), transparent)' }} />
+
+          {/* Energy block */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1 mb-0.5">
+              <span className="text-[10px] leading-none" style={{ color: 'hsl(var(--nx-amber))' }}>⚡</span>
+              <span className="nx-title text-[8px]" style={{ color: 'hsl(0 0% 100% / 0.55)', letterSpacing: '0.14em' }}>ENERGY</span>
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-sm font-black tabular-nums" style={{ color: 'hsl(var(--nx-amber))' }}>{state.energy}</span>
+              <span className="text-base font-black tabular-nums leading-none" style={{ color: 'hsl(var(--nx-amber))', textShadow: '0 0 8px hsl(var(--nx-amber) / 0.7)' }}>{state.energy}</span>
             </div>
             <div className="mt-1 h-[3px] rounded-full overflow-hidden nx-scan-bar" style={{ background: 'hsl(var(--nx-amber) / 0.15)' }}>
               <div className="h-full" style={{ width: `100%`, background: 'linear-gradient(90deg, hsl(var(--nx-amber) / 0.55), hsl(var(--nx-amber)))' }} />
             </div>
           </div>
 
-          {/* Wave */}
-          <div className="nx-bracket px-2 py-1.5 rounded-sm" style={{ background: 'hsl(218 35% 7%)', border: '1px solid hsl(var(--nx-cyan) / 0.15)' }}>
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-[10px]" style={{ color: 'hsl(var(--nx-cyan))' }}>◫</span>
-              <span className="nx-title text-[8px]" style={{ color: 'hsl(0 0% 100% / 0.55)' }}>WAVE</span>
+          {/* Vertical divider */}
+          <div className="w-px self-stretch" style={{ background: 'linear-gradient(180deg, transparent, hsl(var(--nx-cyan) / 0.35), transparent)' }} />
+
+          {/* Wave block */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1 mb-0.5">
+              <span className="text-[10px] leading-none" style={{ color: 'hsl(var(--nx-cyan))' }}>◫</span>
+              <span className="nx-title text-[8px]" style={{ color: 'hsl(0 0% 100% / 0.55)', letterSpacing: '0.14em' }}>WAVE</span>
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-sm font-black tabular-nums" style={{ color: 'hsl(var(--nx-cyan))' }}>{Math.max(0, state.waveIndex + 1)}</span>
+              <span className="text-base font-black tabular-nums leading-none" style={{ color: 'hsl(var(--nx-cyan))', textShadow: '0 0 8px hsl(var(--nx-cyan) / 0.7)' }}>{Math.max(0, state.waveIndex + 1)}</span>
               <span className="text-[9px] font-bold tabular-nums" style={{ color: 'hsl(0 0% 100% / 0.4)' }}>/{state.totalWaves ?? '·'}</span>
             </div>
             <div className="mt-1 flex gap-[2px]">
