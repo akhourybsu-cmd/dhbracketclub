@@ -70,6 +70,13 @@ export async function recordNexusRun(params: {
   baseHpRemaining: number;
   durationSeconds: number;
   loadout: { towers: string[]; abilities: string[] };
+  failedWave?: number | null;
+  towerUsage?: Record<string, number>;
+  towerUpgrades?: Record<string, number>;
+  towerSells?: Record<string, number>;
+  abilityUsage?: Record<string, number>;
+  energyStarvedMs?: number;
+  leaks?: number;
 }) {
   await (supabase as any).from('nexus_runs').insert({
     user_id: params.userId,
@@ -80,5 +87,12 @@ export async function recordNexusRun(params: {
     base_hp_remaining: params.baseHpRemaining,
     duration_seconds: params.durationSeconds,
     loadout: params.loadout,
+    failed_wave: params.failedWave ?? null,
+    tower_usage: params.towerUsage ?? {},
+    tower_upgrades: params.towerUpgrades ?? {},
+    tower_sells: params.towerSells ?? {},
+    ability_usage: params.abilityUsage ?? {},
+    energy_starved_ms: params.energyStarvedMs ?? 0,
+    leaks: params.leaks ?? 0,
   });
 }

@@ -19,6 +19,8 @@ const nextId = (p: string) => `${p}_${++idCounter}_${Date.now().toString(36).sli
 export function initBattle(missionId: number, abilities: AbilityKind[]): BattleState {
   const mission = getMission(missionId);
   if (!mission) throw new Error('Mission not found');
+  const zeroTowers = { pulse: 0, arc: 0, cryo: 0, rail: 0 } as Record<TowerKind, number>;
+  const zeroAbilities = { orbital: 0, emp: 0 } as Record<AbilityKind, number>;
   return {
     tickMs: TICK_MS,
     elapsedMs: 0,
@@ -37,6 +39,12 @@ export function initBattle(missionId: number, abilities: AbilityKind[]): BattleS
     score: 0,
     killedThisRun: 0,
     events: [],
+    towerBuilds: { ...zeroTowers },
+    towerUpgrades: { ...zeroTowers },
+    towerSells: { ...zeroTowers },
+    abilityUses: { ...zeroAbilities },
+    energyStarvedMs: 0,
+    leaks: 0,
   };
 }
 
@@ -106,10 +114,18 @@ export function tick(state: BattleState, mission: MissionDef): BattleState {
       // leaked
       s.baseHp = Math.max(0, s.baseHp - def.damage);
       s.events.push({ type: 'leak', t: s.elapsedMs });
+      s.leaks += 1;
       leakers.push(e);
     }
   }
   s.enemies = s.enemies.filter(e => !leakers.includes(e));
+
+  // --- Energy starvation tracking (during waves only) ---
+  if (s.status === 'in_wave') {
+    const cheapest = Math.min(TOWERS.pulse.cost, TOWERS.arc.cost, TOWERS.cryo.cost, TOWERS.rail.cost);
+    if (s.energy < cheapest) s.energyStarvedMs += TICK_MS;
+  }
+
   if (s.baseHp <= 0) {
     s.status = 'defeat';
     return s;
@@ -301,7 +317,12 @@ export function placeTower(state: BattleState, kind: TowerKind, col: number, row
     kills: 0,
   };
   return {
-    state: { ...state, towers: [...state.towers, tower], energy: state.energy - cost },
+    state: {
+      ...state,
+      towers: [...state.towers, tower],
+      energy: state.energy - cost,
+      towerBuilds: { ...state.towerBuilds, [kind]: state.towerBuilds[kind] + 1 },
+    },
     ok: true,
   };
 }
@@ -317,6 +338,7 @@ export function upgradeTower(state: BattleState, towerId: string): { state: Batt
       ...state,
       energy: state.energy - cost,
       towers: state.towers.map(x => x.id === towerId ? { ...x, level: x.level + 1 } : x),
+      towerUpgrades: { ...state.towerUpgrades, [t.kind]: state.towerUpgrades[t.kind] + 1 },
     },
     ok: true,
   };
@@ -330,6 +352,7 @@ export function sellTower(state: BattleState, towerId: string): BattleState {
     ...state,
     energy: state.energy + refund,
     towers: state.towers.filter(x => x.id !== towerId),
+    towerSells: { ...state.towerSells, [t.kind]: state.towerSells[t.kind] + 1 },
   };
 }
 
@@ -358,6 +381,7 @@ export function castAbility(state: BattleState, kind: AbilityKind): { state: Bat
       enemies,
       abilities: state.abilities.map(a => a.kind === kind ? { ...a, cooldownMs: def.cooldownMs } : a),
       events: [...state.events, { type: 'ability', ability: kind, t: state.elapsedMs }],
+      abilityUses: { ...state.abilityUses, [kind]: state.abilityUses[kind] + 1 },
     },
     ok: true,
   };
