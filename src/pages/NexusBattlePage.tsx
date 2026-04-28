@@ -145,6 +145,7 @@ export default function NexusBattlePage() {
           energyStarvedMs: state.energyStarvedMs,
           leaks: state.leaks,
           durationSeconds: Math.round(state.elapsedMs / 1000),
+          modifierIds: state.modifierIds,
         }));
       } catch {}
       const t = setTimeout(() => {
