@@ -129,13 +129,13 @@ export function spawnEnemy(elapsedSec: number, rng: Rng): Enemy {
   let prefix = '';
   if (wave.allowBoss && rngInt(rng, 10) === 0) {
     tier = 'boss';
-    hpMul *= 4;
-    dmgMul *= 1.6;
+    hpMul *= 3;        // was 4 — keeps bosses meaty but killable in ~10–15s
+    dmgMul *= 1.5;     // was 1.6
     prefix = 'Dread ';
   } else if (wave.allowMini && rngInt(rng, 4) === 0) {
     tier = 'mini';
-    hpMul *= 2;
-    dmgMul *= 1.25;
+    hpMul *= 1.8;      // was 2 — softens the mini-boss spike
+    dmgMul *= 1.2;     // was 1.25
     prefix = 'Greater ';
   }
   const hp = Math.max(20, Math.round(arc.baseHp * hpMul));
