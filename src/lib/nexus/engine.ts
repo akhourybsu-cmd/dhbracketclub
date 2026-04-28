@@ -26,6 +26,7 @@ export function initBattle(missionId: number, abilities: AbilityKind[]): BattleS
     baseHp: mission.baseHp,
     baseHpMax: mission.baseHp,
     waveIndex: -1,
+    totalWaves: mission.waves.length,
     waveTimeMs: 0,
     spawnQueues: [],
     enemies: [],
@@ -54,6 +55,15 @@ export function tick(state: BattleState, mission: MissionDef): BattleState {
   };
   s.elapsedMs += TICK_MS;
   s.abilities.forEach(a => { a.cooldownMs = Math.max(0, a.cooldownMs - TICK_MS); });
+
+  // Passive energy trickle: 1 energy every 1.5s during waves, 0.75s between waves.
+  // Smooths out mid-wave economy without trivializing kill bounties.
+  if (s.status === 'in_wave' || s.status === 'between') {
+    const intervalMs = s.status === 'in_wave' ? 1500 : 750;
+    if (Math.floor(s.elapsedMs / intervalMs) > Math.floor((s.elapsedMs - TICK_MS) / intervalMs)) {
+      s.energy += 1;
+    }
+  }
 
   // --- Wave control ---
   if (s.status === 'between') {

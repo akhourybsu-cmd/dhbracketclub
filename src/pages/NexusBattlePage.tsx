@@ -8,6 +8,10 @@ import { NexusBattleScreen } from '@/components/nexus/NexusBattleScreen';
 import { useAuth } from '@/contexts/AuthContext';
 import { recordNexusRun, useNexusProgress } from '@/hooks/useNexusProgress';
 import { toast } from 'sonner';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function NexusBattlePage() {
   const { missionId } = useParams<{ missionId: string }>();
@@ -32,6 +36,7 @@ export default function NexusBattlePage() {
   const [selectedKind, setSelectedKind] = useState<TowerKind | null>(null);
   const [selectedTowerId, setSelectedTowerId] = useState<string | null>(null);
   const [paused, setPaused] = useState(false);
+  const [exitOpen, setExitOpen] = useState(false);
   const savedRef = useRef(false);
 
   // Game loop
@@ -39,13 +44,13 @@ export default function NexusBattlePage() {
     if (!mission) return;
     const interval = setInterval(() => {
       const cur = stateRef.current;
-      if (!cur || cur.status === 'victory' || cur.status === 'defeat' || paused) return;
+      if (!cur || cur.status === 'victory' || cur.status === 'defeat' || paused || exitOpen) return;
       const next = tick(cur, mission);
       stateRef.current = next;
       setState(next);
     }, TICK_MS);
     return () => clearInterval(interval);
-  }, [mission, paused]);
+  }, [mission, paused, exitOpen]);
 
   // End-of-run handling
   useEffect(() => {
@@ -117,9 +122,14 @@ export default function NexusBattlePage() {
       <div className="flex items-center justify-between px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-1 bg-gradient-to-b from-cyan-950/40 to-transparent">
         <button
           onClick={() => {
-            if (confirm('Abandon mission?')) navigate('/nexus');
+            // If mission already ended, exit immediately
+            if (state.status === 'victory' || state.status === 'defeat' || state.status === 'pre') {
+              navigate('/nexus');
+            } else {
+              setExitOpen(true);
+            }
           }}
-          className="text-xs text-muted-foreground active:text-foreground"
+          className="text-xs text-muted-foreground active:text-foreground px-2 py-1.5 -ml-2"
         >
           ← Exit
         </button>
@@ -129,7 +139,8 @@ export default function NexusBattlePage() {
         </div>
         <button
           onClick={() => setPaused(p => !p)}
-          className="text-xs px-2 py-1 rounded bg-card border border-border"
+          aria-label={paused ? 'Resume' : 'Pause'}
+          className="text-sm px-3 py-1.5 -mr-1 rounded-md bg-card border border-border min-w-[44px] min-h-[36px] flex items-center justify-center"
         >
           {paused ? '▶' : '❚❚'}
         </button>
@@ -158,6 +169,26 @@ export default function NexusBattlePage() {
           </motion.div>
         </div>
       )}
+
+      <AlertDialog open={exitOpen} onOpenChange={setExitOpen}>
+        <AlertDialogContent className="max-w-[320px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Abandon mission?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your current run will end and progress for this attempt will not be saved.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep playing</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => navigate('/nexus')}
+              className="bg-rose-500 text-rose-950 hover:bg-rose-400"
+            >
+              Abandon
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

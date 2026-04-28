@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { MISSIONS } from '@/lib/nexus/missions';
-import { Trophy, Medal } from 'lucide-react';
+import { Medal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Row {
@@ -21,6 +21,7 @@ export default function NexusLeaderboardPage() {
 
   useEffect(() => {
     setLoading(true);
+    let cancelled = false;
     (async () => {
       const { data: runs } = await (supabase as any)
         .from('nexus_runs')
@@ -28,23 +29,31 @@ export default function NexusLeaderboardPage() {
         .eq('mission_id', missionId)
         .eq('victory', true)
         .order('score', { ascending: false })
-        .limit(50);
-      if (!runs) { setRows([]); setLoading(false); return; }
-      // best per user
+        .limit(200);
+      if (cancelled) return;
+      if (!runs || runs.length === 0) { setRows([]); setLoading(false); return; }
+      // Best per user — defensive against unsorted results: explicitly keep highest score.
       const best = new Map<string, any>();
-      runs.forEach((r: any) => { if (!best.has(r.user_id)) best.set(r.user_id, r); });
+      runs.forEach((r: any) => {
+        const prev = best.get(r.user_id);
+        if (!prev || r.score > prev.score) best.set(r.user_id, r);
+      });
       const userIds = Array.from(best.keys());
       const { data: profiles } = await supabase.from('profiles').select('id, display_name, avatar_url').in('id', userIds);
+      if (cancelled) return;
       const profMap = new Map<string, any>();
       (profiles || []).forEach((p: any) => profMap.set(p.id, p));
-      const merged = Array.from(best.values()).map((r: any) => ({
-        ...r,
-        display_name: profMap.get(r.user_id)?.display_name ?? null,
-        avatar_url: profMap.get(r.user_id)?.avatar_url ?? null,
-      }));
+      const merged = Array.from(best.values())
+        .sort((a: any, b: any) => b.score - a.score)
+        .map((r: any) => ({
+          ...r,
+          display_name: profMap.get(r.user_id)?.display_name ?? null,
+          avatar_url: profMap.get(r.user_id)?.avatar_url ?? null,
+        }));
       setRows(merged);
       setLoading(false);
     })();
+    return () => { cancelled = true; };
   }, [missionId]);
 
   return (

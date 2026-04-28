@@ -106,6 +106,7 @@ export interface BattleState {
   baseHp: number;
   baseHpMax: number;
   waveIndex: number;         // 0-based, -1 = pre-wave
+  totalWaves: number;        // from mission
   waveTimeMs: number;        // ms inside current wave
   spawnQueues: Array<{ enemy: EnemyKind; remaining: number; nextSpawnIn: number; intervalMs: number; }>;
   enemies: ActiveEnemy[];

@@ -44,23 +44,27 @@ export function NexusBattleScreen({
     for (let c = 0; c < GRID_COLS; c++) cells.push({ c, r });
   }
   const selectedTower = selectedTowerId ? state.towers.find(t => t.id === selectedTowerId) : null;
-  const totalWaves = state.spawnQueues.length > 0 || state.waveIndex >= 0 ? state.waveIndex + 1 : 0;
+  const hpPctBase = state.baseHp / state.baseHpMax;
+  const hpColor = hpPctBase > 0.5 ? 'text-emerald-300' : hpPctBase > 0.25 ? 'text-amber-300' : 'text-rose-400';
 
   return (
     <div className="flex flex-col h-full w-full max-w-md mx-auto select-none">
       {/* HUD */}
-      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-card/80 backdrop-blur border-b border-border">
-        <div className="flex items-center gap-2 text-sm font-bold">
-          <Heart className="w-4 h-4 text-red-400" />
-          <span className="text-foreground tabular-nums">{state.baseHp}<span className="text-muted-foreground text-xs">/{state.baseHpMax}</span></span>
+      <div className="flex items-center justify-between gap-2 px-3 py-1.5 bg-card/80 backdrop-blur border-b border-border">
+        <div className="flex items-center gap-1.5 text-sm font-bold">
+          <Heart className={cn("w-4 h-4", hpColor)} />
+          <span className={cn("tabular-nums", hpColor)}>{state.baseHp}<span className="text-muted-foreground text-xs font-normal">/{state.baseHpMax}</span></span>
         </div>
-        <div className="flex items-center gap-2 text-sm font-bold">
+        <div className="flex items-center gap-1.5 text-sm font-bold">
           <Zap className="w-4 h-4 text-amber-400" />
           <span className="text-amber-300 tabular-nums">{state.energy}</span>
         </div>
-        <div className="flex items-center gap-2 text-sm font-bold">
+        <div className="flex items-center gap-1.5 text-sm font-bold">
           <Layers className="w-4 h-4 text-emerald-400" />
-          <span className="text-foreground tabular-nums">{Math.max(0, state.waveIndex + 1)}</span>
+          <span className="text-foreground tabular-nums">
+            {Math.max(0, state.waveIndex + 1)}
+            <span className="text-muted-foreground text-xs font-normal">/{state.totalWaves ?? '·'}</span>
+          </span>
         </div>
       </div>
 
@@ -154,6 +158,20 @@ export function NexusBattleScreen({
             })}
           </div>
 
+          {/* Range circle for selected placed tower */}
+          {selectedTower && (
+            <div
+              className="absolute pointer-events-none rounded-full border border-emerald-400/60 bg-emerald-400/5"
+              style={{
+                left: `${((selectedTower.cell.col + 0.5) / GRID_COLS) * 100}%`,
+                top: `${((selectedTower.cell.row + 0.5) / GRID_ROWS) * 100}%`,
+                width: `${(towerRangeAt(selectedTower.kind, selectedTower.level) * 2 / GRID_COLS) * 100}%`,
+                height: `${(towerRangeAt(selectedTower.kind, selectedTower.level) * 2 / GRID_ROWS) * 100}%`,
+                transform: 'translate(-50%, -50%)',
+              }}
+            />
+          )}
+
           {/* Shot effects */}
           <div className="absolute inset-0 pointer-events-none">
             <AnimatePresence>
@@ -190,9 +208,11 @@ export function NexusBattleScreen({
         {(state.status === 'pre' || state.status === 'between') && (
           <button
             onClick={onStartWave}
-            className="absolute bottom-3 left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-full bg-emerald-500 text-emerald-950 font-black text-sm shadow-lg shadow-emerald-500/30 active:scale-95 transition"
+            className="absolute bottom-3 left-3 right-3 px-5 py-3 rounded-full bg-emerald-500 text-emerald-950 font-black text-sm shadow-lg shadow-emerald-500/30 active:scale-95 transition"
           >
-            {state.status === 'pre' ? 'START WAVE 1' : `NEXT WAVE (${Math.ceil(state.betweenWaveMs / 1000)}s) — TAP TO RUSH`}
+            {state.status === 'pre'
+              ? `▶  START WAVE 1 / ${state.totalWaves}`
+              : `▶  WAVE ${state.waveIndex + 2} / ${state.totalWaves}  ·  ${Math.ceil(state.betweenWaveMs / 1000)}s  ·  TAP TO RUSH`}
           </button>
         )}
       </div>
@@ -232,19 +252,21 @@ export function NexusBattleScreen({
             const def = TOWERS[kind];
             const selected = selectedTowerKind === kind;
             const affordable = state.energy >= def.cost;
+            const shortName = kind === 'pulse' ? 'Pulse' : kind === 'arc' ? 'Arc' : kind === 'cryo' ? 'Cryo' : 'Rail';
             return (
               <button
                 key={kind}
                 onClick={() => { onSelectKind(selected ? null : kind); onSelectTower(null); }}
                 className={cn(
-                  'relative h-14 rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 transition active:scale-95',
+                  'relative min-h-[60px] rounded-lg border-2 flex flex-col items-center justify-center gap-0 py-1 transition active:scale-95',
                   TOWER_COLORS[kind].bg,
-                  selected ? TOWER_COLORS[kind].border : 'border-transparent',
+                  selected ? TOWER_COLORS[kind].border + ' ring-2 ring-emerald-400/50' : 'border-transparent',
                   !affordable && 'opacity-50',
                 )}
               >
-                <span className={cn('font-black text-base', TOWER_COLORS[kind].text)}>{def.glyph}</span>
-                <span className="text-[9px] font-bold text-foreground/80">⚡{def.cost}</span>
+                <span className={cn('font-black text-lg leading-none', TOWER_COLORS[kind].text)}>{def.glyph}</span>
+                <span className={cn('text-[10px] font-bold leading-tight mt-0.5', TOWER_COLORS[kind].text)}>{shortName}</span>
+                <span className="text-[9px] font-bold text-foreground/80 leading-none">⚡{def.cost}</span>
               </button>
             );
           })}

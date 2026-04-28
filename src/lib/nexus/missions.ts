@@ -69,13 +69,17 @@ export const MISSIONS: MissionDef[] = [
     id: 4,
     name: 'Ghost Signal',
     sector: 'Outer Rim',
-    startEnergy: 240,
+    startEnergy: 260,
     baseHp: 22,
     rewardCores: 55,
     modifier: { label: 'Cloaked Approach', description: 'Stealth units only visible to Rail Battery.' },
     waves: [
-      { index: 0, rewardEnergy: 60, spawns: [{ enemy: 'stealth', count: 4, intervalMs: 1300 }] },
-      { index: 1, rewardEnergy: 70, spawns: [
+      // Tutorialize stealth: a couple stealth + a slow walker so non-Rail towers still contribute.
+      { index: 0, rewardEnergy: 70, spawns: [
+        { enemy: 'stealth', count: 3, intervalMs: 1500 },
+        { enemy: 'walker', count: 2, intervalMs: 1600, delayMs: 800 },
+      ] },
+      { index: 1, rewardEnergy: 80, spawns: [
         { enemy: 'stealth', count: 6, intervalMs: 1100 },
         { enemy: 'drone', count: 12, intervalMs: 500, delayMs: 1000 },
       ] },
@@ -142,10 +146,10 @@ export const MISSIONS: MissionDef[] = [
         { enemy: 'walker', count: 6, intervalMs: 1100, delayMs: 1500 },
         { enemy: 'drone', count: 18, intervalMs: 400, delayMs: 2500 },
       ] },
-      { index: 3, rewardEnergy: 200, spawns: [
+      { index: 3, rewardEnergy: 220, spawns: [
         { enemy: 'boss', count: 1, intervalMs: 1000 },
-        { enemy: 'shielded', count: 8, intervalMs: 1000, delayMs: 4000 },
-        { enemy: 'walker', count: 8, intervalMs: 900, delayMs: 6000 },
+        { enemy: 'shielded', count: 6, intervalMs: 1100, delayMs: 6000 },
+        { enemy: 'walker', count: 6, intervalMs: 1000, delayMs: 9000 },
       ] },
     ],
   },
