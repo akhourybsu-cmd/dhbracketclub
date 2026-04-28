@@ -44,13 +44,13 @@ export default function NexusBattlePage() {
     if (!mission) return;
     const interval = setInterval(() => {
       const cur = stateRef.current;
-      if (!cur || cur.status === 'victory' || cur.status === 'defeat' || paused) return;
+      if (!cur || cur.status === 'victory' || cur.status === 'defeat' || paused || exitOpen) return;
       const next = tick(cur, mission);
       stateRef.current = next;
       setState(next);
     }, TICK_MS);
     return () => clearInterval(interval);
-  }, [mission, paused]);
+  }, [mission, paused, exitOpen]);
 
   // End-of-run handling
   useEffect(() => {
