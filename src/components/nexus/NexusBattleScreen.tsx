@@ -44,13 +44,6 @@ export function NexusBattleScreen({
     for (let c = 0; c < GRID_COLS; c++) cells.push({ c, r });
   }
   const selectedTower = selectedTowerId ? state.towers.find(t => t.id === selectedTowerId) : null;
-  
-  // Range preview for selected tower
-  const rangePreview = selectedTower
-    ? { col: selectedTower.cell.col, row: selectedTower.cell.row, range: towerRangeAt(selectedTower.kind, selectedTower.level) }
-    : selectedTowerKind
-      ? { col: -1, row: -1, range: TOWERS[selectedTowerKind].range }
-      : null;
   const hpPctBase = state.baseHp / state.baseHpMax;
   const hpColor = hpPctBase > 0.5 ? 'text-emerald-300' : hpPctBase > 0.25 ? 'text-amber-300' : 'text-rose-400';
 
