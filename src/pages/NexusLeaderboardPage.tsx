@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+// no Link needed — HUD owns navigation
 import { supabase } from '@/integrations/supabase/client';
 import { MISSIONS } from '@/lib/nexus/missions';
 import { Medal } from 'lucide-react';

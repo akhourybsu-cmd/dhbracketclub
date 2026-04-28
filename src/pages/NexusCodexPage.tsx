@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+// no Link needed — HUD owns navigation
 import { TOWER_LIST } from '@/lib/nexus/towers';
 import { ENEMY_LIST } from '@/lib/nexus/enemies';
 import { ABILITY_LIST } from '@/lib/nexus/abilities';
