@@ -40,7 +40,7 @@ import {
   type ActiveRelics,
 } from '@/lib/runedelve/relicEffects';
 import { MAX_MANA } from '@/lib/runedelve/combatEngine';
-import { computeClearShards, computeFailureShards, slotsForClassLevels } from '@/lib/runedelve/shardEconomy';
+import { computeClearShards, computeFailureShards, slotsForCampaignLevel } from '@/lib/runedelve/shardEconomy';
 
 import { objectiveLabel, type ObjectiveType } from '@/lib/runedelve/levelGenerator';
 import {
@@ -1707,14 +1707,14 @@ export default function RuneDelvePlayPage() {
         } else {
           await bumpFailure.mutateAsync(level.level_number);
         }
-        // Auto-unlock 3rd slot when ANY class hits L50.
-        const tracks = classTracks ?? [];
-        const maxClassLevel = Math.max(
-          hero.level,
-          ...tracks.map(t => t.level),
-          isNewBest ? 1 : 0,
+        // Auto-unlock 3rd slot when CAMPAIGN level threshold is reached.
+        // Uses the just-cleared level if it advanced the player past the gate;
+        // otherwise falls back to their existing highest_unlocked_level.
+        const campaignLevel = Math.max(
+          progress?.highest_unlocked_level ?? 1,
+          cleared ? level.level_number : 0,
         );
-        const desired = slotsForClassLevels(maxClassLevel);
+        const desired = slotsForCampaignLevel(campaignLevel);
         if ((wallet?.slots_unlocked ?? 2) < desired) {
           await unlockSlot.mutateAsync(desired);
           toast.success('🔓 3rd Relic Slot Unlocked!', { duration: 4500 });
