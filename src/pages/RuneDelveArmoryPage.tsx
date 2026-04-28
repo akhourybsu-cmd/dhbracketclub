@@ -8,6 +8,7 @@ import { useRelicCollection } from '@/hooks/useRelicCollection';
 import { useLoadout, useUpdateLoadout } from '@/hooks/useLoadout';
 import { useAllClassProgress } from '@/hooks/useRuneDelveClassProgress';
 import { CLASS_LIST, getClass, type HeroClass } from '@/lib/runedelve/classConfig';
+import { THIRD_SLOT_UNLOCK_LEVEL } from '@/lib/runedelve/shardEconomy';
 import { RELIC_BY_ID, RELIC_CATALOG, type RelicDef } from '@/lib/runedelve/relics';
 import { ClassBadge } from '@/components/runedelve/ClassBadge';
 import { LoadoutSlot } from '@/components/runedelve/LoadoutSlot';
