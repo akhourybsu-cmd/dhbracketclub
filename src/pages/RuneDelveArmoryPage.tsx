@@ -6,6 +6,8 @@ import { useRuneDelveHero } from '@/hooks/useRuneDelveHero';
 import { useRuneWallet } from '@/hooks/useRuneShards';
 import { useRelicCollection } from '@/hooks/useRelicCollection';
 import { useLoadout, useUpdateLoadout } from '@/hooks/useLoadout';
+import { useUnlockSlot } from '@/hooks/useRuneShards';
+import { slotsForClassLevels } from '@/lib/runedelve/shardEconomy';
 import { useAllClassProgress } from '@/hooks/useRuneDelveClassProgress';
 import { CLASS_LIST, getClass, type HeroClass } from '@/lib/runedelve/classConfig';
 import { THIRD_SLOT_UNLOCK_LEVEL } from '@/lib/runedelve/shardEconomy';
