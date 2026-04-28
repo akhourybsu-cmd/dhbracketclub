@@ -37,6 +37,7 @@ import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Loader2, Sparkles, RefreshCw } from 'lucide-react';
 import runedelveEmblem from '@/assets/runedelve-emblem.png';
+import nexusEmblem from '@/assets/nexus-emblem.png';
 import { StartNextSeasonSheet } from '@/components/draft/StartNextSeasonSheet';
 
 /* ── Lockbox card (unchanged) ── */
@@ -188,6 +189,100 @@ function RuneDelveCompeteCard() {
                 }}
               >
                 Enter <ChevronRight className="w-3.5 h-3.5" strokeWidth={3} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </Link>
+    </motion.div>
+  );
+}
+
+/* ── Nexus Defense card — sci-fi tower defense ── */
+function NexusDefenseCompeteCard() {
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+      <Link to="/nexus" className="block">
+        <div
+          className="relative overflow-hidden rounded-2xl btn-press"
+          style={{
+            background:
+              'radial-gradient(ellipse 120% 80% at 50% 0%, hsl(202 90% 28% / 0.55), transparent 60%),' +
+              'radial-gradient(ellipse 90% 60% at 100% 100%, hsl(190 95% 50% / 0.25), transparent 60%),' +
+              'linear-gradient(180deg, hsl(215 40% 8%), hsl(220 45% 5%))',
+            border: '1px solid hsl(195 80% 55% / 0.35)',
+            boxShadow:
+              '0 12px 40px hsl(202 90% 25% / 0.45), inset 0 1px 0 hsl(190 90% 70% / 0.18)',
+          }}
+        >
+          {/* Drifting energy glow */}
+          <div
+            aria-hidden
+            className="absolute -top-12 -right-10 w-44 h-44 rounded-full pointer-events-none"
+            style={{
+              background:
+                'radial-gradient(circle, hsl(195 95% 55% / 0.4), transparent 70%)',
+              filter: 'blur(8px)',
+            }}
+          />
+
+          <div className="relative z-10 p-5 flex items-center gap-4">
+            {/* Emblem hero visual */}
+            <div className="relative flex-shrink-0">
+              <div
+                aria-hidden
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background:
+                    'radial-gradient(circle, hsl(195 95% 55% / 0.5), transparent 65%)',
+                  filter: 'blur(10px)',
+                  transform: 'scale(1.15)',
+                }}
+              />
+              <img
+                src={nexusEmblem}
+                alt="Nexus Defense"
+                width={96}
+                height={96}
+                loading="lazy"
+                decoding="async"
+                className="relative w-[88px] h-[88px] object-contain drop-shadow-[0_4px_18px_hsl(195_95%_50%/0.55)]"
+              />
+            </div>
+
+            {/* Title + CTA */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span
+                  className="text-[9px] font-extrabold uppercase tracking-[0.22em]"
+                  style={{ color: 'hsl(190 90% 72%)' }}
+                >
+                  ◆ Tower Defense
+                </span>
+              </div>
+              <h2
+                className="font-extrabold text-[22px] leading-none tracking-tight mb-2.5"
+                style={{
+                  background:
+                    'linear-gradient(180deg, hsl(195 30% 98%), hsl(195 90% 70%))',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  textShadow: '0 0 18px hsl(195 95% 45% / 0.45)',
+                }}
+              >
+                Nexus Defense
+              </h2>
+              <div
+                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider"
+                style={{
+                  background:
+                    'linear-gradient(135deg, hsl(195 95% 52%), hsl(210 90% 48%))',
+                  color: 'hsl(215 50% 6%)',
+                  boxShadow:
+                    '0 4px 14px hsl(200 95% 40% / 0.5), inset 0 1px 0 hsl(190 95% 85% / 0.55)',
+                }}
+              >
+                Deploy <ChevronRight className="w-3.5 h-3.5" strokeWidth={3} />
               </div>
             </div>
           </div>
@@ -1939,6 +2034,7 @@ export default function CompetePage() {
 
           <TabsContent value="runedelve" className="space-y-3">
             <RuneDelveCompeteCard />
+            <NexusDefenseCompeteCard />
           </TabsContent>
 
           <TabsContent value="other" className="space-y-3">
