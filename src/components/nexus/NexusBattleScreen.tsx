@@ -155,30 +155,43 @@ export function NexusBattleScreen({
             }}
           />
 
-          {/* Energy corridor (path) — SVG glow + scan dashes */}
+          {/* Energy corridor (path) — SVG glow + scan dashes + arrows */}
           <svg
             aria-hidden
             className="absolute inset-0 w-full h-full pointer-events-none"
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
           >
+            <defs>
+              <marker
+                id="nx-path-arrow"
+                viewBox="0 0 10 10"
+                refX="6"
+                refY="5"
+                markerWidth="3.5"
+                markerHeight="3.5"
+                orient="auto-start-reverse"
+              >
+                <path d="M0 1 L8 5 L0 9 Z" fill="hsl(188 95% 88%)" opacity="0.95" />
+              </marker>
+            </defs>
             {/* Outer glow */}
             <polyline
               points={PATH_POINTS}
               fill="none"
-              stroke="hsl(188 92% 56% / 0.18)"
-              strokeWidth="9"
+              stroke="hsl(188 92% 56% / 0.28)"
+              strokeWidth="11"
               strokeLinecap="round"
               strokeLinejoin="round"
               vectorEffect="non-scaling-stroke"
-              style={{ filter: 'blur(2px)' }}
+              style={{ filter: 'blur(2.5px)' }}
             />
             {/* Lane fill */}
             <polyline
               points={PATH_POINTS}
               fill="none"
-              stroke="hsl(188 92% 56% / 0.32)"
-              strokeWidth="6"
+              stroke="hsl(188 92% 60% / 0.45)"
+              strokeWidth="6.5"
               strokeLinecap="round"
               strokeLinejoin="round"
               vectorEffect="non-scaling-stroke"
@@ -187,26 +200,27 @@ export function NexusBattleScreen({
             <polyline
               points={PATH_POINTS}
               fill="none"
-              stroke="hsl(188 92% 80%)"
-              strokeWidth="0.6"
+              stroke="hsl(188 95% 92%)"
+              strokeWidth="0.9"
               strokeLinecap="round"
               strokeLinejoin="round"
               vectorEffect="non-scaling-stroke"
-              opacity="0.7"
+              opacity="0.85"
+              markerMid="url(#nx-path-arrow)"
             />
             {/* Running scan dashes — energy moving toward the nexus */}
             <polyline
               points={PATH_POINTS}
               fill="none"
-              stroke="hsl(188 92% 90%)"
-              strokeWidth="1.4"
+              stroke="hsl(188 95% 92%)"
+              strokeWidth="1.6"
               strokeLinecap="round"
               strokeLinejoin="round"
               vectorEffect="non-scaling-stroke"
-              strokeDasharray="2 8"
-              opacity="0.8"
+              strokeDasharray="2.5 9"
+              opacity="0.85"
             >
-              <animate attributeName="stroke-dashoffset" from="0" to="-20" dur="1.6s" repeatCount="indefinite" />
+              <animate attributeName="stroke-dashoffset" from="0" to="-23" dur="1.4s" repeatCount="indefinite" />
             </polyline>
           </svg>
 
