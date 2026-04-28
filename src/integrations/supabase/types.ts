@@ -2237,6 +2237,78 @@ export type Database = {
           },
         ]
       }
+      nexus_progress: {
+        Row: {
+          cores: number
+          created_at: string
+          highest_mission: number
+          unlocked_abilities: string[]
+          unlocked_towers: string[]
+          updated_at: string
+          upgrades: Json
+          user_id: string
+        }
+        Insert: {
+          cores?: number
+          created_at?: string
+          highest_mission?: number
+          unlocked_abilities?: string[]
+          unlocked_towers?: string[]
+          updated_at?: string
+          upgrades?: Json
+          user_id: string
+        }
+        Update: {
+          cores?: number
+          created_at?: string
+          highest_mission?: number
+          unlocked_abilities?: string[]
+          unlocked_towers?: string[]
+          updated_at?: string
+          upgrades?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
+      nexus_runs: {
+        Row: {
+          base_hp_remaining: number
+          created_at: string
+          duration_seconds: number
+          id: string
+          loadout: Json
+          mission_id: number
+          score: number
+          user_id: string
+          victory: boolean
+          waves_cleared: number
+        }
+        Insert: {
+          base_hp_remaining?: number
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          loadout?: Json
+          mission_id: number
+          score?: number
+          user_id: string
+          victory: boolean
+          waves_cleared?: number
+        }
+        Update: {
+          base_hp_remaining?: number
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          loadout?: Json
+          mission_id?: number
+          score?: number
+          user_id?: string
+          victory?: boolean
+          waves_cleared?: number
+        }
+        Relationships: []
+      }
       nfl_games: {
         Row: {
           away_score: number | null
