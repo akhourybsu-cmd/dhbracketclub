@@ -57,7 +57,10 @@ export interface MissionDef {
   startEnergy: number;
   baseHp: number;
   waves: Wave[];
+  /** Legacy single label — superseded by `modifierIds`. Kept for backwards compat. */
   modifier?: { label: string; description: string };
+  /** Modifier ids resolved from src/lib/nexus/modifiers.ts */
+  modifierIds?: string[];
   isBoss?: boolean;
   rewardCores: number;
 }
@@ -128,6 +131,17 @@ export interface BattleState {
   enemyHpMult: Record<EnemyKind, number>;
   enemyShieldMult: Record<EnemyKind, number>;
   enemySpeedMult: number;
+  // ---- mission modifier effects (composed on top of calibration) ----
+  modifierIds: string[];
+  modEnemyHpMult: Record<EnemyKind, number>;
+  modEnemyShieldMult: Record<EnemyKind, number>;
+  modEnemySpeedMult: number;
+  modBountyMult: number;
+  modTowerCostMult: Record<TowerKind, number>;
+  modTowerDamageMult: Record<TowerKind, number>;
+  modAbilityCooldownMult: Record<AbilityKind, number>;
+  modShieldRegen: Partial<Record<EnemyKind, number>>;
+  modBossHpMult: number;
 }
 
 export type BattleEvent =

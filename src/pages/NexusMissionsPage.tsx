@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Lock, Check, Skull } from 'lucide-react';
 import { useResolvedMissions } from '@/hooks/useMissionCalibrations';
 import { useNexusProgress } from '@/hooks/useNexusProgress';
+import { resolveModifiers, modifierTone } from '@/lib/nexus/modifiers';
 import { cn } from '@/lib/utils';
 
 export default function NexusMissionsPage() {
@@ -73,18 +74,27 @@ export default function NexusMissionsPage() {
                       {m.waves.length} WAVES · {m.rewardCores} CORES
                     </div>
                   </div>
-                  {m.modifier && unlocked && (
-                    <div
-                      className="nx-title text-[8px] px-1.5 py-0.5 max-w-[90px] text-right"
-                      style={{
-                        color: 'hsl(var(--nx-amber))',
-                        background: 'hsl(var(--nx-amber) / 0.12)',
-                        border: '1px solid hsl(var(--nx-amber) / 0.35)',
-                      }}
-                    >
-                      {m.modifier.label}
-                    </div>
-                  )}
+                  {unlocked && (() => {
+                    const mods = resolveModifiers(m.modifierIds);
+                    if (mods.length === 0) return null;
+                    return (
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        {mods.slice(0, 3).map(mod => {
+                          const t = modifierTone(mod.tone);
+                          return (
+                            <span
+                              key={mod.id}
+                              title={`${mod.label} — ${mod.short}`}
+                              className="inline-flex items-center justify-center w-5 h-5 nx-clip-sm text-[10px] font-black"
+                              style={{ background: t.bg, border: `1px solid ${t.border}`, color: t.fg }}
+                            >
+                              {mod.glyph}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
               </Link>
             </motion.div>

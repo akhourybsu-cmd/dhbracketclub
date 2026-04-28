@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { recordNexusRun, useNexusProgress } from '@/hooks/useNexusProgress';
 import { useResolvedMission } from '@/hooks/useMissionCalibrations';
 import { useNexusSfx } from '@/hooks/useNexusSfx';
+import { resolveModifiers, modifierTone } from '@/lib/nexus/modifiers';
 import { toast } from 'sonner';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -124,7 +125,7 @@ export default function NexusBattlePage() {
           wavesCleared: won ? mission.waves.length : Math.max(0, state.waveIndex),
           baseHpRemaining: state.baseHp,
           durationSeconds: Math.round(state.elapsedMs / 1000),
-          loadout: { towers: ['pulse','arc','cryo','rail'], abilities },
+          loadout: { towers: ['pulse','arc','cryo','rail'], abilities, modifierIds: state.modifierIds },
           failedWave: won ? null : state.waveIndex + 1,
           towerUsage: state.towerBuilds,
           towerUpgrades: state.towerUpgrades,
@@ -144,6 +145,7 @@ export default function NexusBattlePage() {
           energyStarvedMs: state.energyStarvedMs,
           leaks: state.leaks,
           durationSeconds: Math.round(state.elapsedMs / 1000),
+          modifierIds: state.modifierIds,
         }));
       } catch {}
       const t = setTimeout(() => {
@@ -290,6 +292,39 @@ export default function NexusBattlePage() {
             <span aria-hidden className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-r border-b" style={{ borderColor: 'hsl(var(--nx-cyan))' }} />
           </button>
         </div>
+
+        {/* Modifier intel strip — compact, scrollable on mobile */}
+        {(() => {
+          const mods = resolveModifiers(mission.modifierIds);
+          if (mods.length === 0) return null;
+          return (
+            <div
+              className="mt-1.5 -mx-1 px-1 flex items-center gap-1 overflow-x-auto"
+              style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
+              aria-label="Mission modifiers"
+            >
+              {mods.map(mod => {
+                const t = modifierTone(mod.tone);
+                return (
+                  <div
+                    key={mod.id}
+                    className="shrink-0 inline-flex items-center gap-1 px-1.5 py-[3px] nx-clip-sm leading-none"
+                    style={{ background: t.bg, border: `1px solid ${t.border}` }}
+                    title={`${mod.label} — ${mod.description}`}
+                  >
+                    <span className="font-black" style={{ color: t.fg, fontSize: 10, lineHeight: 1 }}>{mod.glyph}</span>
+                    <span className="nx-title text-[8px] font-black" style={{ color: t.fg, letterSpacing: '0.16em' }}>
+                      {mod.label.toUpperCase()}
+                    </span>
+                    <span className="text-[8px] font-medium" style={{ color: 'hsl(0 0% 100% / 0.7)' }}>
+                      · {mod.short}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
       </div>
 
       <motion.div

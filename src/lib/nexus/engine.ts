@@ -3,6 +3,7 @@ import { ENEMIES } from './enemies';
 import { PATH, distanceCells, isBuildable, pathToXY } from './grid';
 import { MISSIONS, getMission } from './missions';
 import { TOWERS, towerDamageAt, towerFireRateAt, towerRangeAt, towerSellValue, towerUpgradeCost } from './towers';
+import { aggregateModifiers, emptyAggregated, resolveModifiers } from './modifiers';
 import {
   AbilityKind, ActiveEnemy, BattleEvent, BattleState, EnemyKind, MissionDef, PlacedTower, TowerKind,
 } from './types';
@@ -32,10 +33,15 @@ export function initBattle(missionId: number, abilities: AbilityKind[], opts: In
   const oneEnemies: Record<EnemyKind, number> = { drone: 1, walker: 1, shielded: 1, stealth: 1, boss: 1 };
   const hpMult: Record<EnemyKind, number> = { ...oneEnemies, ...(opts.enemyHpMult ?? {}) };
   const shieldMult: Record<EnemyKind, number> = { ...oneEnemies, ...(opts.enemyShieldMult ?? {}) };
+
+  // Resolve mission modifiers (compose on top of calibration).
+  const modDefs = resolveModifiers(mission.modifierIds);
+  const mods = modDefs.length ? aggregateModifiers(modDefs) : emptyAggregated();
+
   return {
     tickMs: TICK_MS,
     elapsedMs: 0,
-    energy: mission.startEnergy,
+    energy: Math.max(0, mission.startEnergy + mods.startEnergyDelta),
     baseHp: mission.baseHp,
     baseHpMax: mission.baseHp,
     waveIndex: -1,
@@ -59,6 +65,16 @@ export function initBattle(missionId: number, abilities: AbilityKind[], opts: In
     enemyHpMult: hpMult,
     enemyShieldMult: shieldMult,
     enemySpeedMult: opts.enemySpeedMult ?? 1,
+    modifierIds: mission.modifierIds ?? [],
+    modEnemyHpMult: mods.enemyHpMult,
+    modEnemyShieldMult: mods.enemyShieldMult,
+    modEnemySpeedMult: mods.enemySpeedMult,
+    modBountyMult: mods.bountyMult,
+    modTowerCostMult: mods.towerCostMult,
+    modTowerDamageMult: mods.towerDamageMult,
+    modAbilityCooldownMult: mods.abilityCooldownMult,
+    modShieldRegen: mods.shieldRegen,
+    modBossHpMult: mods.bossHpMult,
   };
 }
 
@@ -116,7 +132,7 @@ export function tick(state: BattleState, mission: MissionDef): BattleState {
     }
     const def = ENEMIES[e.kind];
     const slowFactor = e.slowMs > 0 ? (1 - e.slowFactor) : 1;
-    const cellsThisTick = (def.speed * (s.enemySpeedMult ?? 1) * slowFactor) * (TICK_MS / 1000);
+    const cellsThisTick = (def.speed * (s.enemySpeedMult ?? 1) * (s.modEnemySpeedMult ?? 1) * slowFactor) * (TICK_MS / 1000);
     let progress = e.progress + cellsThisTick;
     while (progress >= 1 && e.pathIndex < PATH.length - 1) {
       progress -= 1;
@@ -151,7 +167,9 @@ export function tick(state: BattleState, mission: MissionDef): BattleState {
     if (t.cooldownMs > 0) continue;
     const tDef = TOWERS[t.kind];
     const range = towerRangeAt(t.kind, t.level);
-    const damage = towerDamageAt(t.kind, t.level);
+    const baseDamage = towerDamageAt(t.kind, t.level);
+    const dmgMod = s.modTowerDamageMult?.[t.kind] ?? 1;
+    const damage = Math.max(1, Math.round(baseDamage * dmgMod));
     const fr = towerFireRateAt(t.kind, t.level);
     const cooldown = Math.max(80, Math.round(1000 / fr));
 
@@ -219,8 +237,9 @@ export function tick(state: BattleState, mission: MissionDef): BattleState {
   for (const e of s.enemies) {
     if (e.hp <= 0) {
       const def = ENEMIES[e.kind];
-      s.energy += def.bounty;
-      s.score += def.bounty;
+      const bounty = Math.max(0, Math.round(def.bounty * (s.modBountyMult ?? 1)));
+      s.energy += bounty;
+      s.score += bounty;
       s.killedThisRun += 1;
       const pos = pathToXY(e.pathIndex, e.progress);
       s.events.push({ type: 'kill', at: pos, t: s.elapsedMs });
@@ -230,13 +249,15 @@ export function tick(state: BattleState, mission: MissionDef): BattleState {
   }
   s.enemies = survivors;
 
-  // Mission 3 modifier: shield regen
-  if (mission.id === 3) {
+  // Modifier-driven shield regen (e.g. Shielded Vanguard).
+  if (s.modShieldRegen) {
     for (const e of s.enemies) {
-      if (e.kind === 'shielded') {
-        const maxShield = ENEMIES.shielded.shield ?? 0;
-        e.shield = Math.min(maxShield, e.shield + (10 * TICK_MS) / 1000);
-      }
+      const rate = s.modShieldRegen[e.kind];
+      if (!rate) continue;
+      const baseShield = ENEMIES[e.kind].shield ?? 0;
+      const maxShield = baseShield * (s.modEnemyShieldMult?.[e.kind] ?? 1) * (s.enemyShieldMult?.[e.kind] ?? 1);
+      if (maxShield <= 0) continue;
+      e.shield = Math.min(maxShield, e.shield + (rate * TICK_MS) / 1000);
     }
   }
 
@@ -277,11 +298,11 @@ function startNextWave(s: BattleState, mission: MissionDef) {
 function spawnEnemy(s: BattleState, kind: EnemyKind, mission: MissionDef) {
   const def = ENEMIES[kind];
   let hp = def.hp;
-  if (mission.id === 2 && kind === 'walker') hp = Math.round(hp * 1.25);
-  // Apply calibration multipliers (default 1× = no change).
-  const hpMult = s.enemyHpMult?.[kind] ?? 1;
-  const shieldMult = s.enemyShieldMult?.[kind] ?? 1;
+  // Apply calibration multipliers (default 1× = no change), then modifier mults.
+  const hpMult = (s.enemyHpMult?.[kind] ?? 1) * (s.modEnemyHpMult?.[kind] ?? 1);
+  const shieldMult = (s.enemyShieldMult?.[kind] ?? 1) * (s.modEnemyShieldMult?.[kind] ?? 1);
   hp = Math.max(1, Math.round(hp * hpMult));
+  if (kind === 'boss') hp = Math.max(1, Math.round(hp * (s.modBossHpMult ?? 1)));
   const shield = Math.max(0, Math.round((def.shield ?? 0) * shieldMult));
   s.enemies.push({
     id: nextId('e'),
@@ -324,7 +345,7 @@ export function startWave(state: BattleState, mission: MissionDef): BattleState 
 export function placeTower(state: BattleState, kind: TowerKind, col: number, row: number): { state: BattleState; ok: boolean; reason?: string } {
   if (!isBuildable(col, row)) return { state, ok: false, reason: 'Not a build tile' };
   if (state.towers.some(t => t.cell.col === col && t.cell.row === row)) return { state, ok: false, reason: 'Occupied' };
-  const cost = TOWERS[kind].cost;
+  const cost = Math.max(1, Math.round(TOWERS[kind].cost * (state.modTowerCostMult?.[kind] ?? 1)));
   if (state.energy < cost) return { state, ok: false, reason: 'Not enough energy' };
   const tower: PlacedTower = {
     id: nextId('t'),
@@ -350,7 +371,8 @@ export function upgradeTower(state: BattleState, towerId: string): { state: Batt
   const t = state.towers.find(t => t.id === towerId);
   if (!t) return { state, ok: false, reason: 'Tower missing' };
   if (t.level >= 3) return { state, ok: false, reason: 'Max level' };
-  const cost = towerUpgradeCost(t.kind, t.level);
+  const baseCost = towerUpgradeCost(t.kind, t.level);
+  const cost = Math.max(1, Math.round(baseCost * (state.modTowerCostMult?.[t.kind] ?? 1)));
   if (state.energy < cost) return { state, ok: false, reason: 'Not enough energy' };
   return {
     state: {
@@ -394,11 +416,12 @@ export function castAbility(state: BattleState, kind: AbilityKind): { state: Bat
       e.stunnedMs = 3000;
     });
   }
+  const cooldown = Math.max(1000, Math.round(def.cooldownMs * (state.modAbilityCooldownMult?.[kind] ?? 1)));
   return {
     state: {
       ...state,
       enemies,
-      abilities: state.abilities.map(a => a.kind === kind ? { ...a, cooldownMs: def.cooldownMs } : a),
+      abilities: state.abilities.map(a => a.kind === kind ? { ...a, cooldownMs: cooldown } : a),
       events: [...state.events, { type: 'ability', ability: kind, t: state.elapsedMs }],
       abilityUses: { ...state.abilityUses, [kind]: state.abilityUses[kind] + 1 },
     },

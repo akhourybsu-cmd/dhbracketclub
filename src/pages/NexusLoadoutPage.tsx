@@ -5,6 +5,7 @@ import { TOWER_LIST } from '@/lib/nexus/towers';
 import { ABILITY_LIST } from '@/lib/nexus/abilities';
 import { TowerIcon } from '@/components/nexus/TowerIcon';
 import { TowerKind } from '@/lib/nexus/types';
+import { resolveModifiers, modifierTone } from '@/lib/nexus/modifiers';
 
 const TOWER_HSL: Record<TowerKind, { c: string; bg: string; text: string }> = {
   pulse: { c: 'hsl(188 92% 56%)', bg: 'hsl(188 92% 56% / 0.12)', text: 'hsl(188 92% 78%)' },
@@ -26,18 +27,68 @@ export default function NexusLoadoutPage() {
       <div className="mb-4 mt-1">
         <div className="nx-title text-[9px]" style={{ color: 'hsl(var(--nx-cyan))' }}>MISSION {String(mission.id).padStart(2, '0')}</div>
         <h1 className="text-2xl font-black tracking-tight">{mission.name}</h1>
-        {mission.modifier && (
-          <div
-            className="mt-2 p-2.5 nx-clip-sm"
-            style={{
-              background: 'linear-gradient(180deg, hsl(var(--nx-amber) / 0.15), hsl(var(--nx-amber) / 0.05))',
-              border: '1px solid hsl(var(--nx-amber) / 0.45)',
-            }}
-          >
-            <div className="nx-title text-[9px]" style={{ color: 'hsl(var(--nx-amber))' }}>▲ TACTICAL INTEL · {mission.modifier.label}</div>
-            <div className="text-xs text-amber-100/85 mt-0.5">{mission.modifier.description}</div>
-          </div>
-        )}
+        {(() => {
+          const mods = resolveModifiers(mission.modifierIds);
+          if (mods.length === 0 && !mission.modifier) return null;
+          return (
+            <div className="mt-2.5 space-y-1.5">
+              <div className="nx-title text-[9px]" style={{ color: 'hsl(var(--nx-amber))', letterSpacing: '0.2em' }}>
+                ▲ TACTICAL INTEL · {mods.length} MODIFIER{mods.length === 1 ? '' : 'S'}
+              </div>
+              {mods.length > 0 ? (
+                mods.map(mod => {
+                  const t = modifierTone(mod.tone);
+                  return (
+                    <div
+                      key={mod.id}
+                      className="p-2.5 nx-clip-sm flex items-start gap-2.5"
+                      style={{
+                        background: `linear-gradient(180deg, ${t.bg}, hsl(218 50% 6% / 0.85))`,
+                        border: `1px solid ${t.border}`,
+                      }}
+                    >
+                      <div
+                        className="shrink-0 w-8 h-8 nx-clip-sm flex items-center justify-center text-base font-black"
+                        style={{ background: t.bg, border: `1px solid ${t.border}`, color: t.fg }}
+                      >
+                        {mod.glyph}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline gap-1.5 flex-wrap">
+                          <span className="text-[11px] font-black tracking-wide" style={{ color: t.fg }}>
+                            {mod.label.toUpperCase()}
+                          </span>
+                          <span
+                            className="nx-title text-[8px] px-1 py-px"
+                            style={{ color: 'hsl(0 0% 100% / 0.55)', border: '1px solid hsl(0 0% 100% / 0.18)', letterSpacing: '0.18em' }}
+                          >
+                            {mod.category.toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="text-[11px] mt-0.5" style={{ color: 'hsl(0 0% 100% / 0.85)' }}>
+                          {mod.description}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                mission.modifier && (
+                  <div
+                    className="p-2.5 nx-clip-sm"
+                    style={{
+                      background: 'linear-gradient(180deg, hsl(var(--nx-amber) / 0.15), hsl(var(--nx-amber) / 0.05))',
+                      border: '1px solid hsl(var(--nx-amber) / 0.45)',
+                    }}
+                  >
+                    <div className="nx-title text-[9px]" style={{ color: 'hsl(var(--nx-amber))' }}>{mission.modifier.label}</div>
+                    <div className="text-xs text-amber-100/85 mt-0.5">{mission.modifier.description}</div>
+                  </div>
+                )
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-4">

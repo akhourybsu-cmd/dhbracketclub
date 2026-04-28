@@ -26,6 +26,7 @@ export const MISSIONS: MissionDef[] = [
     baseHp: 22,
     rewardCores: 35,
     modifier: { label: 'Reinforced Hulls', description: 'Walkers have +25% HP.' },
+    modifierIds: ['reinforced_hulls', 'bonus_bounty'],
     waves: [
       { index: 0, rewardEnergy: 50, spawns: [{ enemy: 'drone', count: 12, intervalMs: 700 }] },
       { index: 1, rewardEnergy: 60, spawns: [
@@ -49,6 +50,7 @@ export const MISSIONS: MissionDef[] = [
     baseHp: 22,
     rewardCores: 45,
     modifier: { label: 'Shielded Vanguard', description: 'Shielded Troopers regenerate 10 shield/sec.' },
+    modifierIds: ['shielded_vanguard', 'arc_resonance'],
     waves: [
       { index: 0, rewardEnergy: 60, spawns: [{ enemy: 'shielded', count: 5, intervalMs: 1200 }] },
       { index: 1, rewardEnergy: 70, spawns: [
@@ -73,6 +75,7 @@ export const MISSIONS: MissionDef[] = [
     baseHp: 22,
     rewardCores: 55,
     modifier: { label: 'Cloaked Approach', description: 'Stealth units only visible to Rail Battery.' },
+    modifierIds: ['cloaked_approach', 'emergency_reserves'],
     waves: [
       // Tutorialize stealth: a couple stealth + a slow walker so non-Rail towers still contribute.
       { index: 0, rewardEnergy: 70, spawns: [
@@ -101,6 +104,7 @@ export const MISSIONS: MissionDef[] = [
     baseHp: 25,
     rewardCores: 70,
     modifier: { label: 'Mixed Assault', description: 'All enemy types appear together.' },
+    modifierIds: ['mixed_assault', 'supply_drought', 'rapid_command'],
     waves: [
       { index: 0, rewardEnergy: 60, spawns: [
         { enemy: 'drone', count: 14, intervalMs: 500 },
@@ -132,6 +136,7 @@ export const MISSIONS: MissionDef[] = [
     rewardCores: 120,
     isBoss: true,
     modifier: { label: 'BOSS · Siege Mech inbound', description: 'Survive the assault, then face the Siege Mech.' },
+    modifierIds: ['hardened_boss', 'comms_jammed', 'bonus_bounty'],
     waves: [
       { index: 0, rewardEnergy: 80, spawns: [
         { enemy: 'drone', count: 18, intervalMs: 450 },
