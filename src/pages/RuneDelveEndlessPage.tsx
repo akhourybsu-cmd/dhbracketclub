@@ -2,9 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft, Timer, Skull, Trophy, Sparkles as SparklesIcon } from 'lucide-react';
-import { useRuneDelveHero } from '@/hooks/useRuneDelveHero';
-import { useEarnShards } from '@/hooks/useRuneShards';
+import { useRuneDelveHero, useUpdateHero } from '@/hooks/useRuneDelveHero';
+import { useEarnShards, useRuneWallet, useUnlockSlot } from '@/hooks/useRuneShards';
 import { useSubmitDailyRun, useMyDailyRun } from '@/hooks/useDailyChallenge';
+import { useAllClassProgress, useUpdateClassProgress } from '@/hooks/useRuneDelveClassProgress';
+import { levelFromXp, titleForLevel, newTitleUnlocked } from '@/lib/runedelve/classConfig';
+import { slotsForClassLevels, THIRD_SLOT_UNLOCK_LEVEL } from '@/lib/runedelve/shardEconomy';
 import {
   ENDLESS_TIME_LIMIT_SEC,
   endlessRewardFor,
