@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Sparkles, ShoppingBag } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useRuneDelveHero } from '@/hooks/useRuneDelveHero';
-import { useRuneWallet } from '@/hooks/useRuneShards';
+import { useRuneWallet, useUnlockSlot } from '@/hooks/useRuneShards';
 import { useRelicCollection } from '@/hooks/useRelicCollection';
 import { useLoadout, useUpdateLoadout } from '@/hooks/useLoadout';
+import { slotsForClassLevels, THIRD_SLOT_UNLOCK_LEVEL } from '@/lib/runedelve/shardEconomy';
 import { useAllClassProgress } from '@/hooks/useRuneDelveClassProgress';
 import { CLASS_LIST, getClass, type HeroClass } from '@/lib/runedelve/classConfig';
 import { RELIC_BY_ID, RELIC_CATALOG, type RelicDef } from '@/lib/runedelve/relics';
@@ -22,7 +23,31 @@ export default function RuneDelveArmoryPage() {
   const { data: owned } = useRelicCollection();
   const { data: tracks } = useAllClassProgress();
   const updateLoadout = useUpdateLoadout();
+  const unlockSlot = useUnlockSlot();
   const { play: rdSfx } = useRuneDelveSfx();
+
+  // Backfill: if the player has already crossed the class-level threshold
+  // (e.g. from prior campaign runs before slot unlock was wired into endless),
+  // open the 3rd slot the next time they visit the Armory.
+  useEffect(() => {
+    if (!wallet || !tracks) return;
+    const maxClassLevel = Math.max(
+      hero?.level ?? 1,
+      ...tracks.map(t => t.level),
+    );
+    const desired = slotsForClassLevels(maxClassLevel);
+    if (desired > (wallet.slots_unlocked ?? 2)) {
+      unlockSlot.mutate(desired, {
+        onSuccess: () => {
+          toast.success('🔓 3rd Relic Slot Unlocked!', {
+            description: `Class Lv ${THIRD_SLOT_UNLOCK_LEVEL} reached`,
+            duration: 5500,
+          });
+        },
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wallet?.slots_unlocked, tracks?.length, hero?.level]);
 
   const [activeClass, setActiveClass] = useState<HeroClass | null>(null);
   const cls = activeClass ?? hero?.class ?? 'warrior';
@@ -139,7 +164,7 @@ export default function RuneDelveArmoryPage() {
                 key={i}
                 relic={slotRelic}
                 locked={locked}
-                unlockHint={locked ? 'Lv 50 unlock' : undefined}
+                unlockHint={locked ? `Lv ${THIRD_SLOT_UNLOCK_LEVEL} unlock` : undefined}
                 onClear={slotRelic ? () => unequip(i) : undefined}
               />
             );
@@ -147,7 +172,7 @@ export default function RuneDelveArmoryPage() {
         </div>
         {slotsUnlocked < 3 && (
           <p className="text-[11px] font-semibold text-foreground/80 text-center italic">
-            Reach class level 50 in any class to unlock the 3rd relic slot.
+            Reach class level {THIRD_SLOT_UNLOCK_LEVEL} in any class to unlock the 3rd relic slot.
           </p>
         )}
       </div>

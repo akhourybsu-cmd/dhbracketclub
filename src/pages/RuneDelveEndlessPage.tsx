@@ -2,9 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft, Timer, Skull, Trophy, Sparkles as SparklesIcon } from 'lucide-react';
-import { useRuneDelveHero } from '@/hooks/useRuneDelveHero';
-import { useEarnShards } from '@/hooks/useRuneShards';
+import { useRuneDelveHero, useUpdateHero } from '@/hooks/useRuneDelveHero';
+import { useEarnShards, useRuneWallet, useUnlockSlot } from '@/hooks/useRuneShards';
 import { useSubmitDailyRun, useMyDailyRun } from '@/hooks/useDailyChallenge';
+import { useAllClassProgress, useUpdateClassProgress } from '@/hooks/useRuneDelveClassProgress';
+import { levelFromXp, titleForLevel, newTitleUnlocked } from '@/lib/runedelve/classConfig';
+import { slotsForClassLevels, THIRD_SLOT_UNLOCK_LEVEL } from '@/lib/runedelve/shardEconomy';
 import {
   ENDLESS_TIME_LIMIT_SEC,
   endlessRewardFor,
@@ -44,9 +47,14 @@ import { applyArmorToDamage } from '@/lib/runedelve/enemyAbilities';
 export default function RuneDelveEndlessPage() {
   const navigate = useNavigate();
   const { data: hero } = useRuneDelveHero();
+  const { data: wallet } = useRuneWallet();
+  const { data: classTracks } = useAllClassProgress();
   const { data: existingRun } = useMyDailyRun();
   const submitDaily = useSubmitDailyRun();
   const earnShards = useEarnShards();
+  const updateClass = useUpdateClassProgress();
+  const updateHero = useUpdateHero();
+  const unlockSlot = useUnlockSlot();
 
   // ── Run state ────────────────────────────────────────────────────────────
   const [phase, setPhase] = useState<'ready' | 'playing' | 'over'>('ready');
@@ -221,11 +229,69 @@ export default function RuneDelveEndlessPage() {
       if (reward.shards > 0) {
         try { await earnShards.mutateAsync(reward.shards); } catch { /* best-effort */ }
       }
+
+      // ── Class XP + level + title progression ──────────────────────────────
+      // Endless awards XP (preview already promised "+XP" in the toast). Apply
+      // it to the active class track and mirror level/title onto the hero row
+      // so leaderboards reflect the new state.
+      let classLevelUp: { from: number; to: number } | null = null;
+      let titleUnlock: { previous: string | null; next: string } | null = null;
+      try {
+        if (reward.xp > 0) {
+          const activeTrack = classTracks?.find(t => t.class === hero.class);
+          const prevXp = activeTrack?.xp ?? hero.xp ?? 0;
+          const prevLevel = activeTrack?.level ?? hero.level ?? 1;
+          const newXp = prevXp + reward.xp;
+          const newLevel = levelFromXp(newXp).level;
+          const newTitle = titleForLevel(newLevel, hero.class) ?? activeTrack?.cosmetic_title ?? null;
+          if (newLevel > prevLevel) classLevelUp = { from: prevLevel, to: newLevel };
+          titleUnlock = newTitleUnlocked(hero.class, prevLevel, newLevel);
+
+          await updateClass.mutateAsync({
+            cls: hero.class,
+            patch: {
+              xp: newXp,
+              level: newLevel,
+              cosmetic_title: newTitle,
+              lifetime_runs: (activeTrack?.lifetime_runs ?? 0) + 1,
+              lifetime_score: (activeTrack?.lifetime_score ?? 0) + score,
+            },
+          });
+          await updateHero.mutateAsync({
+            xp: newXp,
+            level: newLevel,
+            cosmetic_title: newTitle,
+            lifetime_runs: (hero.lifetime_runs ?? 0) + 1,
+            lifetime_score: (hero.lifetime_score ?? 0) + score,
+          } as any);
+
+          // Auto-unlock the 3rd relic slot when ANY class hits the threshold.
+          const maxClassLevel = Math.max(
+            newLevel,
+            ...(classTracks ?? []).filter(t => t.class !== hero.class).map(t => t.level),
+          );
+          const desired = slotsForClassLevels(maxClassLevel);
+          if ((wallet?.slots_unlocked ?? 2) < desired) {
+            await unlockSlot.mutateAsync(desired);
+            toast.success('🔓 3rd Relic Slot Unlocked!', {
+              description: `Class Lv ${THIRD_SLOT_UNLOCK_LEVEL} reached`,
+              duration: 5500,
+            });
+          }
+        }
+      } catch { /* progression is best-effort */ }
+
       const starStr = '★'.repeat(stars) + '☆'.repeat(3 - stars);
       toast.success(`${starStr} · ${finalKills} kills`, {
         description: `+${reward.shards} shards · +${reward.xp} XP${reward.title ? ` · 🏆 ${reward.title}` : ''}`,
         duration: 6000,
       });
+      if (classLevelUp) {
+        toast.success(`⬆️ ${hero.class} Lv ${classLevelUp.from} → ${classLevelUp.to}`, { duration: 5000 });
+      }
+      if (titleUnlock) {
+        toast.success(`✨ New Title — ${titleUnlock.next}`, { duration: 5500 });
+      }
     } catch (e: any) {
       toast.error(`Couldn't save run: ${e?.message ?? 'unknown'}`);
     } finally {

@@ -42,8 +42,12 @@ export const ENDLESS_WAVES: WaveTier[] = [
   { index: 1, startSec: 0,  hpMult: 1.0, damageMult: 1.0, spawnMin: 1, spawnMax: 1, respawnDelayMs: 600,  allowMini: false, allowBoss: false, label: 'Skirmish' },
   { index: 2, startSec: 20, hpMult: 1.2, damageMult: 1.0, spawnMin: 1, spawnMax: 2, respawnDelayMs: 550,  allowMini: false, allowBoss: false, label: 'Pressure' },
   { index: 3, startSec: 40, hpMult: 1.5, damageMult: 1.1, spawnMin: 1, spawnMax: 2, respawnDelayMs: 500,  allowMini: true,  allowBoss: false, label: 'Onslaught' },
-  { index: 4, startSec: 60, hpMult: 2.0, damageMult: 1.2, spawnMin: 2, spawnMax: 2, respawnDelayMs: 450,  allowMini: true,  allowBoss: false, label: 'Swarm' },
-  { index: 5, startSec: 90, hpMult: 3.0, damageMult: 1.4, spawnMin: 2, spawnMax: 3, respawnDelayMs: 400,  allowMini: true,  allowBoss: true,  label: 'Final Push' },
+  // Smoothed wave 4: 1.5 → 1.8 (was 2.0). Keeps the swarm tense without
+  // wall-checking under-leveled mages/clerics who lack burst.
+  { index: 4, startSec: 60, hpMult: 1.8, damageMult: 1.2, spawnMin: 2, spawnMax: 2, respawnDelayMs: 450,  allowMini: true,  allowBoss: false, label: 'Swarm' },
+  // Final Push: 2.5× regular (was 3.0). Bosses still feel meaty thanks to the
+  // ×4 boss multiplier in spawnEnemy, but no longer un-killable in 30s.
+  { index: 5, startSec: 90, hpMult: 2.5, damageMult: 1.3, spawnMin: 2, spawnMax: 3, respawnDelayMs: 400,  allowMini: true,  allowBoss: true,  label: 'Final Push' },
 ];
 
 /** Resolve which wave is active given elapsed seconds. */
@@ -125,13 +129,13 @@ export function spawnEnemy(elapsedSec: number, rng: Rng): Enemy {
   let prefix = '';
   if (wave.allowBoss && rngInt(rng, 10) === 0) {
     tier = 'boss';
-    hpMul *= 4;
-    dmgMul *= 1.6;
+    hpMul *= 3;        // was 4 — keeps bosses meaty but killable in ~10–15s
+    dmgMul *= 1.5;     // was 1.6
     prefix = 'Dread ';
   } else if (wave.allowMini && rngInt(rng, 4) === 0) {
     tier = 'mini';
-    hpMul *= 2;
-    dmgMul *= 1.25;
+    hpMul *= 1.8;      // was 2 — softens the mini-boss spike
+    dmgMul *= 1.2;     // was 1.25
     prefix = 'Greater ';
   }
   const hp = Math.max(20, Math.round(arc.baseHp * hpMul));
