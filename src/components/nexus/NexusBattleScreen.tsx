@@ -251,9 +251,28 @@ export function NexusBattleScreen({
                   buildable && !placed && !canPlaceHere && 'hover:bg-cyan-400/10',
                   canPlaceHere && 'bg-emerald-400/25',
                 )}
-                style={canPlaceHere ? {
-                  boxShadow: 'inset 0 0 0 1.5px hsl(150 80% 60% / 0.85)',
-                } : undefined}
+                style={
+                  canPlaceHere
+                    ? {
+                        boxShadow:
+                          'inset 0 0 0 1.5px hsl(150 80% 60% / 0.85), inset 0 0 10px hsl(150 80% 55% / 0.25)',
+                      }
+                    : buildable && !placed
+                      ? {
+                          background:
+                            'linear-gradient(145deg, hsl(218 45% 12% / 0.55), hsl(218 55% 6% / 0.85))',
+                          boxShadow:
+                            'inset 0 0 0 1px hsl(var(--nx-cyan) / 0.12), inset 0 1px 0 hsl(0 0% 100% / 0.04), inset 0 -2px 3px hsl(0 0% 0% / 0.35)',
+                        }
+                      : !buildable && !onPath && !isNexus
+                        ? {
+                            background:
+                              'linear-gradient(145deg, hsl(218 50% 8%), hsl(220 60% 4%))',
+                            boxShadow:
+                              'inset 0 0 0 1px hsl(0 0% 100% / 0.025), inset 0 1px 0 hsl(0 0% 100% / 0.03)',
+                          }
+                        : undefined
+                }
               >
                 {/* Nexus core */}
                 {isNexus && (
