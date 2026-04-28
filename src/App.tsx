@@ -87,6 +87,7 @@ const NexusResultsPage = lazy(() => import("./pages/NexusResultsPage"));
 const NexusLeaderboardPage = lazy(() => import("./pages/NexusLeaderboardPage"));
 const NexusCodexPage = lazy(() => import("./pages/NexusCodexPage"));
 const NexusBalancePage = lazy(() => import("./pages/NexusBalancePage"));
+const NexusCalibrationPage = lazy(() => import("./pages/NexusCalibrationPage"));
 import { RuneDelveLayout } from "./components/runedelve/RuneDelveLayout";
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -232,6 +233,7 @@ function AnimatedRoutes() {
         <Route path="/nexus/leaderboard" element={<ProtectedPage><NexusLeaderboardPage /></ProtectedPage>} />
         <Route path="/nexus/codex" element={<ProtectedPage><NexusCodexPage /></ProtectedPage>} />
         <Route path="/nexus/balance" element={<ProtectedPage><NexusBalancePage /></ProtectedPage>} />
+        <Route path="/nexus/calibration" element={<ProtectedPage><NexusCalibrationPage /></ProtectedPage>} />
 
         <Route path="/profile" element={<ProtectedPage><ProfilePage /></ProtectedPage>} />
 

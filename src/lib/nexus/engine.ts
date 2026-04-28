@@ -16,11 +16,22 @@ const nextId = (p: string) => `${p}_${++idCounter}_${Date.now().toString(36).sli
 
 // ---------- INIT ----------
 
-export function initBattle(missionId: number, abilities: AbilityKind[]): BattleState {
-  const mission = getMission(missionId);
+export interface InitBattleOptions {
+  /** Pre-resolved mission (with calibration already applied). Required when given. */
+  mission?: MissionDef;
+  enemyHpMult?: Partial<Record<EnemyKind, number>>;
+  enemyShieldMult?: Partial<Record<EnemyKind, number>>;
+  enemySpeedMult?: number;
+}
+
+export function initBattle(missionId: number, abilities: AbilityKind[], opts: InitBattleOptions = {}): BattleState {
+  const mission = opts.mission ?? getMission(missionId);
   if (!mission) throw new Error('Mission not found');
   const zeroTowers = { pulse: 0, arc: 0, cryo: 0, rail: 0 } as Record<TowerKind, number>;
   const zeroAbilities = { orbital: 0, emp: 0 } as Record<AbilityKind, number>;
+  const oneEnemies: Record<EnemyKind, number> = { drone: 1, walker: 1, shielded: 1, stealth: 1, boss: 1 };
+  const hpMult: Record<EnemyKind, number> = { ...oneEnemies, ...(opts.enemyHpMult ?? {}) };
+  const shieldMult: Record<EnemyKind, number> = { ...oneEnemies, ...(opts.enemyShieldMult ?? {}) };
   return {
     tickMs: TICK_MS,
     elapsedMs: 0,
@@ -45,6 +56,9 @@ export function initBattle(missionId: number, abilities: AbilityKind[]): BattleS
     abilityUses: { ...zeroAbilities },
     energyStarvedMs: 0,
     leaks: 0,
+    enemyHpMult: hpMult,
+    enemyShieldMult: shieldMult,
+    enemySpeedMult: opts.enemySpeedMult ?? 1,
   };
 }
 
@@ -102,7 +116,7 @@ export function tick(state: BattleState, mission: MissionDef): BattleState {
     }
     const def = ENEMIES[e.kind];
     const slowFactor = e.slowMs > 0 ? (1 - e.slowFactor) : 1;
-    const cellsThisTick = (def.speed * slowFactor) * (TICK_MS / 1000);
+    const cellsThisTick = (def.speed * (s.enemySpeedMult ?? 1) * slowFactor) * (TICK_MS / 1000);
     let progress = e.progress + cellsThisTick;
     while (progress >= 1 && e.pathIndex < PATH.length - 1) {
       progress -= 1;
@@ -264,11 +278,16 @@ function spawnEnemy(s: BattleState, kind: EnemyKind, mission: MissionDef) {
   const def = ENEMIES[kind];
   let hp = def.hp;
   if (mission.id === 2 && kind === 'walker') hp = Math.round(hp * 1.25);
+  // Apply calibration multipliers (default 1× = no change).
+  const hpMult = s.enemyHpMult?.[kind] ?? 1;
+  const shieldMult = s.enemyShieldMult?.[kind] ?? 1;
+  hp = Math.max(1, Math.round(hp * hpMult));
+  const shield = Math.max(0, Math.round((def.shield ?? 0) * shieldMult));
   s.enemies.push({
     id: nextId('e'),
     kind,
     hp,
-    shield: def.shield ?? 0,
+    shield,
     pathIndex: 0,
     progress: 0,
     slowMs: 0,

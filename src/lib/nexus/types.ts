@@ -124,6 +124,10 @@ export interface BattleState {
   abilityUses: Record<AbilityKind, number>;
   energyStarvedMs: number;   // ms spent unable to afford the cheapest tower during a wave
   leaks: number;             // count of enemies that reached the nexus
+  // ---- calibration mods (applied at spawn / per-tick) ----
+  enemyHpMult: Record<EnemyKind, number>;
+  enemyShieldMult: Record<EnemyKind, number>;
+  enemySpeedMult: number;
 }
 
 export type BattleEvent =
