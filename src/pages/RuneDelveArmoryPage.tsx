@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Sparkles, ShoppingBag } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useRuneDelveHero } from '@/hooks/useRuneDelveHero';
 import { useRuneWallet } from '@/hooks/useRuneShards';
