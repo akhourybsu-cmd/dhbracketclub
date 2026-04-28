@@ -19,6 +19,8 @@ const nextId = (p: string) => `${p}_${++idCounter}_${Date.now().toString(36).sli
 export function initBattle(missionId: number, abilities: AbilityKind[]): BattleState {
   const mission = getMission(missionId);
   if (!mission) throw new Error('Mission not found');
+  const zeroTowers = { pulse: 0, arc: 0, cryo: 0, rail: 0 } as Record<TowerKind, number>;
+  const zeroAbilities = { orbital: 0, emp: 0 } as Record<AbilityKind, number>;
   return {
     tickMs: TICK_MS,
     elapsedMs: 0,
@@ -37,6 +39,12 @@ export function initBattle(missionId: number, abilities: AbilityKind[]): BattleS
     score: 0,
     killedThisRun: 0,
     events: [],
+    towerBuilds: { ...zeroTowers },
+    towerUpgrades: { ...zeroTowers },
+    towerSells: { ...zeroTowers },
+    abilityUses: { ...zeroAbilities },
+    energyStarvedMs: 0,
+    leaks: 0,
   };
 }
 
