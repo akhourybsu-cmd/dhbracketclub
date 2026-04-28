@@ -312,38 +312,84 @@ export function NexusBattleScreen({
             );
           })}
 
-          {/* Enemies overlay */}
+          {/* Enemies overlay — distinct silhouettes per type */}
           <div className="absolute inset-0 pointer-events-none">
             {state.enemies.map(e => {
               const def = ENEMIES[e.kind];
+              const accent = getEnemyAccent(e.kind);
               const pos = pathToXY(e.pathIndex, e.progress);
               const left = ((pos.x + 0.5) / GRID_COLS) * 100;
               const top = ((pos.y + 0.5) / GRID_ROWS) * 100;
               const hpPct = Math.max(0, e.hp / def.hp);
-              const size = e.kind === 'boss' ? 28 : e.kind === 'walker' ? 18 : 14;
+              const size = e.kind === 'boss' ? 30 : e.kind === 'walker' ? 22 : 17;
+              const barW = e.kind === 'boss' ? 22 : 14;
               return (
                 <div
                   key={e.id}
                   className="absolute -translate-x-1/2 -translate-y-1/2 transition-all duration-100"
                   style={{ left: `${left}%`, top: `${top}%` }}
                 >
-                  <div
-                    className={cn('rounded-full flex items-center justify-center text-[8px] font-black text-white', def.stealth && 'opacity-60')}
-                    style={{
-                      width: size,
-                      height: size,
-                      background: ENEMY_FILL[e.kind],
-                      border: '1.5px solid hsl(0 0% 100% / 0.85)',
-                      boxShadow: `0 0 6px ${ENEMY_FILL[e.kind]}, 0 1px 2px hsl(0 0% 0% / 0.5)`,
-                    }}
-                  >
-                    {def.glyph}
-                  </div>
-                  {e.shield > 0 && (
-                    <div className="absolute -inset-0.5 rounded-full" style={{ border: '1px solid hsl(200 95% 70% / 0.85)', boxShadow: '0 0 4px hsl(200 95% 70%)' }} />
+                  {/* Boss aura — extra threat presence */}
+                  {e.kind === 'boss' && (
+                    <span
+                      aria-hidden
+                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full nx-reactor-glow"
+                      style={{
+                        width: size + 14,
+                        height: size + 14,
+                        background: `radial-gradient(circle, ${accent.glow}, transparent 70%)`,
+                      }}
+                    />
                   )}
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-6 h-1 bg-black/60 rounded">
-                    <div className="h-full bg-emerald-400 rounded transition-all" style={{ width: `${hpPct * 100}%` }} />
+
+                  {/* Stealth cloak ring (dashed) */}
+                  {def.stealth && (
+                    <span
+                      aria-hidden
+                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                      style={{
+                        width: size + 6,
+                        height: size + 6,
+                        border: `1px dashed ${accent.edge}`,
+                        opacity: 0.55,
+                      }}
+                    />
+                  )}
+
+                  {/* Shield bubble */}
+                  {e.shield > 0 && (
+                    <span
+                      aria-hidden
+                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                      style={{
+                        width: size + 8,
+                        height: size + 8,
+                        background: 'radial-gradient(circle, hsl(200 95% 70% / 0.18), transparent 70%)',
+                        border: '1px solid hsl(200 95% 75% / 0.85)',
+                        boxShadow: '0 0 6px hsl(200 95% 70% / 0.7), inset 0 0 4px hsl(200 95% 80% / 0.4)',
+                      }}
+                    />
+                  )}
+
+                  <div
+                    className={cn('relative flex items-center justify-center', def.stealth && 'opacity-75')}
+                    style={{ width: size, height: size }}
+                  >
+                    <EnemyMarker kind={e.kind} size={size} />
+                  </div>
+
+                  {/* HP bar */}
+                  <div
+                    className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 h-[2px] rounded overflow-hidden"
+                    style={{ width: barW, background: 'hsl(0 0% 0% / 0.7)', border: '0.5px solid hsl(0 0% 100% / 0.15)' }}
+                  >
+                    <div
+                      className="h-full transition-all"
+                      style={{
+                        width: `${hpPct * 100}%`,
+                        background: hpPct > 0.5 ? 'hsl(150 85% 60%)' : hpPct > 0.25 ? 'hsl(38 95% 60%)' : 'hsl(350 90% 62%)',
+                      }}
+                    />
                   </div>
                 </div>
               );
