@@ -14,10 +14,9 @@ export default function NexusLoadoutPage() {
   if (!mission) return <div className="p-6">Mission not found.</div>;
 
   return (
-    <div className="max-w-md mx-auto pb-24 px-1">
-      <div className="mb-4 mt-2">
-        <Link to="/nexus/missions" className="text-xs text-muted-foreground">← Sector Map</Link>
-        <div className="text-[10px] font-bold uppercase tracking-widest text-cyan-400 mt-1">Mission {mission.id}</div>
+    <div className="max-w-md mx-auto pb-6 px-1">
+      <div className="mb-4 mt-1">
+        <div className="text-[10px] font-bold uppercase tracking-widest text-cyan-400">Mission {mission.id}</div>
         <h1 className="text-2xl font-black">{mission.name}</h1>
         {mission.modifier && (
           <div className="mt-2 p-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10">

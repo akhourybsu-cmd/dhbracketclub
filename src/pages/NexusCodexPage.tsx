@@ -5,10 +5,9 @@ import { ABILITY_LIST } from '@/lib/nexus/abilities';
 
 export default function NexusCodexPage() {
   return (
-    <div className="max-w-md mx-auto pb-24 px-1">
-      <div className="mb-4 mt-2">
-        <Link to="/nexus" className="text-xs text-muted-foreground">← Hub</Link>
-        <h1 className="text-2xl font-black mt-1">Codex</h1>
+    <div className="max-w-md mx-auto pb-6 px-1">
+      <div className="mb-4 mt-1">
+        <h1 className="text-2xl font-black">Codex</h1>
       </div>
 
       <Section title="Towers">
