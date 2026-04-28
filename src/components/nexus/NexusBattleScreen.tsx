@@ -521,135 +521,204 @@ export function NexusBattleScreen({
         </div>
       )}
 
-      {/* ───── Command deck: deployment rail + abilities ───── */}
+      {/* ───── Command deck: tower cards + ability bar ───── */}
       <div
-        className="relative px-3 pb-3 pt-2"
+        className="relative px-2 pb-2 pt-1.5"
         style={{
           background: 'linear-gradient(180deg, hsl(var(--nx-panel) / 0.55), hsl(var(--nx-panel) / 0.97))',
           borderTop: '1px solid hsl(var(--nx-cyan) / 0.3)',
           boxShadow: '0 -1px 0 hsl(var(--nx-cyan) / 0.18), 0 -8px 16px -10px hsl(var(--nx-cyan) / 0.3)',
         }}
       >
-        <div className="flex items-center gap-2 mb-1.5 px-0.5">
-          <span className="h-px flex-1" style={{ background: 'linear-gradient(90deg, transparent, hsl(var(--nx-cyan) / 0.4))' }} />
-          <span className="nx-title text-[8px]" style={{ color: 'hsl(var(--nx-cyan) / 0.85)', letterSpacing: '0.22em' }}>DEPLOYMENT</span>
-          <span className="h-px flex-1" style={{ background: 'linear-gradient(90deg, hsl(var(--nx-cyan) / 0.4), transparent)' }} />
-        </div>
-
-        <div
-          className="relative flex items-stretch mb-2 nx-clip-sm overflow-hidden"
-          style={{
-            background: 'linear-gradient(180deg, hsl(218 38% 9%), hsl(218 42% 6%))',
-            border: '1px solid hsl(var(--nx-cyan) / 0.22)',
-            boxShadow: 'inset 0 1px 0 hsl(0 0% 100% / 0.05), inset 0 0 14px hsl(var(--nx-cyan) / 0.05)',
-          }}
-        >
-          {(['pulse','arc','cryo','rail'] as TowerKind[]).map((kind, idx) => {
+        {/* Tower cards — distinct framed slots with letter badge + icon */}
+        <div className="grid grid-cols-4 gap-1.5 mb-2">
+          {(['pulse','arc','cryo','rail'] as TowerKind[]).map((kind) => {
             const def = TOWERS[kind];
             const selected = selectedTowerKind === kind;
             const affordable = state.energy >= def.cost;
-            const shortName = kind === 'pulse' ? 'Pulse' : kind === 'arc' ? 'Arc' : kind === 'cryo' ? 'Cryo' : 'Rail';
+            const shortName = kind === 'pulse' ? 'PULSE' : kind === 'arc' ? 'ARC' : kind === 'cryo' ? 'CRYO' : 'RAIL';
+            const letter = kind === 'pulse' ? 'P' : kind === 'arc' ? 'A' : kind === 'cryo' ? 'C' : 'R';
             const c = TOWER_HSL[kind];
             return (
               <button
                 key={kind}
                 onClick={() => { onSelectKind(selected ? null : kind); onSelectTower(null); }}
                 className={cn(
-                  'relative flex-1 min-h-[68px] flex flex-col items-center justify-center gap-0 py-1.5 transition-colors active:scale-[0.97]',
-                  !affordable && 'opacity-50',
+                  'relative min-h-[78px] nx-clip-sm flex flex-col items-stretch justify-between p-1.5 transition active:scale-[0.97]',
+                  !affordable && 'opacity-55',
                 )}
                 style={{
                   background: selected
-                    ? `linear-gradient(180deg, ${c.bg}, transparent)`
-                    : 'transparent',
-                  borderRight: idx < 3 ? '1px solid hsl(var(--nx-cyan) / 0.18)' : undefined,
+                    ? `linear-gradient(180deg, ${c.bg}, hsl(218 50% 6% / 0.95))`
+                    : 'linear-gradient(180deg, hsl(218 50% 10%), hsl(218 55% 6%))',
+                  border: selected ? `1.5px solid ${c.c}` : `1px solid ${c.c.replace(')', ' / 0.4)').replace('hsl(', 'hsl(')}`,
+                  boxShadow: selected
+                    ? `0 0 14px -2px ${c.c.replace(')', ' / 0.55)').replace('hsl(', 'hsl(')}, inset 0 1px 0 hsl(0 0% 100% / 0.08)`
+                    : 'inset 0 1px 0 hsl(0 0% 100% / 0.04)',
                   color: c.c,
                 }}
               >
+                {/* Top row: letter badge + tower icon */}
+                <div className="flex items-center justify-between gap-1">
+                  <span
+                    className="flex items-center justify-center w-5 h-5 rounded-sm text-[10px] font-black leading-none"
+                    style={{
+                      background: `${c.bg}`,
+                      border: `1px solid ${c.c}`,
+                      color: c.c,
+                      boxShadow: selected ? `0 0 6px ${c.cDim}` : undefined,
+                    }}
+                  >
+                    {letter}
+                  </span>
+                  <span style={{ filter: `drop-shadow(0 0 4px ${c.cDim})` }}>
+                    <TowerIcon kind={kind} size={22} />
+                  </span>
+                </div>
+
+                {/* Selected indicator chevron */}
                 {selected && (
-                  <>
-                    <span
-                      aria-hidden
-                      className="absolute top-0 left-1.5 right-1.5 h-[2px] rounded-b"
-                      style={{ background: c.c, boxShadow: `0 0 8px ${c.c}` }}
-                    />
-                    <span
-                      aria-hidden
-                      className="absolute inset-0 pointer-events-none"
-                      style={{
-                        background: `radial-gradient(ellipse 70% 50% at 50% 110%, ${c.cDim}, transparent 70%)`,
-                      }}
-                    />
-                  </>
+                  <span
+                    aria-hidden
+                    className="absolute -top-[1px] left-1/2 -translate-x-1/2 w-0 h-0"
+                    style={{
+                      borderLeft: '5px solid transparent',
+                      borderRight: '5px solid transparent',
+                      borderBottom: `5px solid ${c.c}`,
+                      filter: `drop-shadow(0 0 4px ${c.c})`,
+                    }}
+                  />
                 )}
-                <TowerIcon kind={kind} size={26} />
-                <span
-                  className="nx-title text-[8px] mt-1"
-                  style={{ color: selected ? c.text : 'hsl(0 0% 100% / 0.7)', letterSpacing: '0.12em' }}
-                >
-                  {shortName}
-                </span>
-                <span
-                  className="text-[9px] font-black tabular-nums leading-none mt-0.5"
-                  style={{ color: affordable ? 'hsl(var(--nx-amber))' : 'hsl(350 80% 65%)' }}
-                >
-                  ⚡{def.cost}
-                </span>
+
+                {/* Bottom: name + cost */}
+                <div className="flex flex-col items-center mt-1">
+                  <span
+                    className="nx-title text-[9px] leading-none"
+                    style={{ color: selected ? c.text : 'hsl(0 0% 100% / 0.78)', letterSpacing: '0.16em' }}
+                  >
+                    {shortName}
+                  </span>
+                  <span
+                    className="text-[10px] font-black tabular-nums leading-none mt-1 flex items-center gap-px"
+                    style={{ color: affordable ? 'hsl(var(--nx-amber))' : 'hsl(350 80% 65%)' }}
+                  >
+                    <span style={{ filter: 'drop-shadow(0 0 3px hsl(var(--nx-amber) / 0.7))' }}>⚡</span>
+                    {def.cost}
+                  </span>
+                </div>
               </button>
             );
           })}
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          {state.abilities.map(a => {
+        {/* Ability footer: dial · emblem · dial */}
+        <div
+          className="relative nx-clip-sm flex items-stretch"
+          style={{
+            background: 'linear-gradient(180deg, hsl(218 50% 9%), hsl(218 55% 5%))',
+            border: '1px solid hsl(var(--nx-cyan) / 0.3)',
+            boxShadow: 'inset 0 1px 0 hsl(0 0% 100% / 0.05), 0 0 12px -4px hsl(var(--nx-cyan) / 0.35)',
+            minHeight: 52,
+          }}
+        >
+          {state.abilities.map((a, idx) => {
             const def = ABILITIES[a.kind];
             const ready = a.cooldownMs <= 0;
             const pct = ready ? 1 : 1 - (a.cooldownMs / def.cooldownMs);
             const remainSec = Math.ceil(a.cooldownMs / 1000);
+            const shortKey = a.kind === 'orbital' ? 'O' : 'E';
+            const tone = ready ? 'hsl(var(--nx-amber))' : 'hsl(var(--nx-cyan))';
+            // Render center divider after the first ability
             return (
-              <button
-                key={a.kind}
-                onClick={() => ready && onCastAbility(a.kind)}
-                disabled={!ready}
-                className="relative h-12 nx-clip-sm flex items-center justify-center gap-2 font-black text-xs overflow-hidden active:scale-[0.97] nx-title"
-                style={{
-                  background: ready
-                    ? 'linear-gradient(180deg, hsl(var(--nx-amber) / 0.32), hsl(var(--nx-amber) / 0.1))'
-                    : 'linear-gradient(180deg, hsl(218 38% 11%), hsl(218 42% 7%))',
-                  border: ready ? '1px solid hsl(var(--nx-amber) / 0.85)' : '1px solid hsl(var(--nx-cyan) / 0.18)',
-                  boxShadow: ready
-                    ? '0 0 16px -2px hsl(var(--nx-amber) / 0.55), inset 0 1px 0 hsl(0 0% 100% / 0.12)'
-                    : 'inset 0 1px 0 hsl(0 0% 100% / 0.04)',
-                  color: ready ? 'hsl(var(--nx-amber))' : 'hsl(0 0% 100% / 0.45)',
-                }}
-              >
-                {ready && (
-                  <>
-                    <span aria-hidden className="absolute top-0.5 left-0.5 w-1.5 h-1.5 border-l border-t" style={{ borderColor: 'hsl(var(--nx-amber))' }} />
-                    <span aria-hidden className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-r border-b" style={{ borderColor: 'hsl(var(--nx-amber))' }} />
-                  </>
-                )}
-                <span className="text-base leading-none" style={{ filter: ready ? 'drop-shadow(0 0 4px hsl(var(--nx-amber)))' : undefined }}>{def.glyph}</span>
-                <span className="text-[10px]" style={{ letterSpacing: '0.14em' }}>{def.name}</span>
-                {!ready && (
-                  <>
-                    <div
-                      className="absolute inset-0 pointer-events-none"
+              <>
+                {idx === 1 && (
+                  <div
+                    key="divider"
+                    className="relative flex items-center justify-center px-2"
+                    style={{
+                      borderLeft: '1px solid hsl(var(--nx-cyan) / 0.25)',
+                      borderRight: '1px solid hsl(var(--nx-cyan) / 0.25)',
+                    }}
+                  >
+                    <span
+                      aria-hidden
+                      className="w-6 h-6 flex items-center justify-center rounded-sm"
                       style={{
-                        background:
-                          `conic-gradient(hsl(0 0% 0% / 0.6) ${(1 - pct) * 360}deg, transparent 0deg)`,
-                        mixBlendMode: 'multiply',
+                        background: 'hsl(218 60% 6%)',
+                        border: '1px solid hsl(var(--nx-cyan) / 0.5)',
+                        color: 'hsl(var(--nx-cyan))',
+                        boxShadow: '0 0 6px hsl(var(--nx-cyan) / 0.4)',
                       }}
-                    />
-                    <span className="absolute right-1.5 bottom-1 text-[9px] font-mono tabular-nums" style={{ color: 'hsl(0 0% 100% / 0.7)' }}>
-                      {remainSec}s
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2 L20 7 V17 L12 22 L4 17 V7 Z" stroke="currentColor" strokeWidth="1.6" />
+                      </svg>
                     </span>
-                  </>
+                  </div>
                 )}
-                {ready && (
-                  <span aria-hidden className="absolute inset-0 pointer-events-none nx-scan-bar" />
-                )}
-              </button>
+                <button
+                  key={a.kind}
+                  onClick={() => ready && onCastAbility(a.kind)}
+                  disabled={!ready}
+                  className="relative flex-1 flex items-center justify-between px-3 py-2 active:scale-[0.97] transition nx-title"
+                  style={{ color: ready ? 'hsl(0 0% 98%)' : 'hsl(0 0% 100% / 0.45)' }}
+                >
+                  {/* Left circular dial: key + glow */}
+                  <span className="relative flex items-center justify-center" style={{ width: 30, height: 30 }}>
+                    <svg width="30" height="30" viewBox="0 0 30 30" className="absolute inset-0">
+                      <circle cx="15" cy="15" r="12" fill="none" stroke="hsl(var(--nx-cyan) / 0.2)" strokeWidth="1.5" />
+                      <circle
+                        cx="15" cy="15" r="12" fill="none"
+                        stroke={tone}
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeDasharray={`${pct * 75.4} 75.4`}
+                        strokeDashoffset="0"
+                        transform="rotate(-90 15 15)"
+                        style={{ filter: ready ? `drop-shadow(0 0 4px ${tone})` : undefined }}
+                      />
+                    </svg>
+                    <span
+                      className="text-[11px] font-black"
+                      style={{ color: ready ? 'hsl(var(--nx-amber))' : 'hsl(0 0% 100% / 0.55)' }}
+                    >
+                      {shortKey}
+                    </span>
+                  </span>
+
+                  <span
+                    className="text-[10px] font-black flex-1 text-center"
+                    style={{
+                      letterSpacing: '0.18em',
+                      color: ready ? 'hsl(0 0% 98%)' : 'hsl(0 0% 100% / 0.5)',
+                    }}
+                  >
+                    {def.name.toUpperCase()}
+                  </span>
+
+                  {/* Right circular dial: countdown / ready */}
+                  <span className="relative flex items-center justify-center" style={{ width: 32, height: 32 }}>
+                    <svg width="32" height="32" viewBox="0 0 32 32" className="absolute inset-0">
+                      <circle cx="16" cy="16" r="13" fill="none" stroke="hsl(var(--nx-cyan) / 0.2)" strokeWidth="1.5" />
+                      <circle
+                        cx="16" cy="16" r="13" fill="none"
+                        stroke={tone}
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeDasharray={`${pct * 81.7} 81.7`}
+                        transform="rotate(-90 16 16)"
+                        style={{ filter: ready ? `drop-shadow(0 0 5px ${tone})` : undefined }}
+                      />
+                    </svg>
+                    <span
+                      className="text-[10px] font-black tabular-nums"
+                      style={{ color: ready ? 'hsl(var(--nx-amber))' : 'hsl(var(--nx-cyan))' }}
+                    >
+                      {ready ? `${Math.round(def.cooldownMs / 1000)}s` : `${remainSec}s`}
+                    </span>
+                  </span>
+                </button>
+              </>
             );
           })}
         </div>
