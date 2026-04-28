@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ABILITIES } from '@/lib/nexus/abilities';
 import { ENEMIES } from '@/lib/nexus/enemies';
@@ -630,7 +631,7 @@ export function NexusBattleScreen({
             const tone = ready ? 'hsl(var(--nx-amber))' : 'hsl(var(--nx-cyan))';
             // Render center divider after the first ability
             return (
-              <>
+              <Fragment key={a.kind}>
                 {idx === 1 && (
                   <div
                     key="divider"
@@ -718,7 +719,7 @@ export function NexusBattleScreen({
                     </span>
                   </span>
                 </button>
-              </>
+              </Fragment>
             );
           })}
         </div>
