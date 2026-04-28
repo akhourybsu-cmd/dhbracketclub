@@ -7,6 +7,7 @@ import { NexusBattleScreen } from '@/components/nexus/NexusBattleScreen';
 import { useAuth } from '@/contexts/AuthContext';
 import { recordNexusRun, useNexusProgress } from '@/hooks/useNexusProgress';
 import { useResolvedMission } from '@/hooks/useMissionCalibrations';
+import { useNexusSfx } from '@/hooks/useNexusSfx';
 import { toast } from 'sonner';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
