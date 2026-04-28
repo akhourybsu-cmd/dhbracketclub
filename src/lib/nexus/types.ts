@@ -131,6 +131,17 @@ export interface BattleState {
   enemyHpMult: Record<EnemyKind, number>;
   enemyShieldMult: Record<EnemyKind, number>;
   enemySpeedMult: number;
+  // ---- mission modifier effects (composed on top of calibration) ----
+  modifierIds: string[];
+  modEnemyHpMult: Record<EnemyKind, number>;
+  modEnemyShieldMult: Record<EnemyKind, number>;
+  modEnemySpeedMult: number;
+  modBountyMult: number;
+  modTowerCostMult: Record<TowerKind, number>;
+  modTowerDamageMult: Record<TowerKind, number>;
+  modAbilityCooldownMult: Record<AbilityKind, number>;
+  modShieldRegen: Partial<Record<EnemyKind, number>>;
+  modBossHpMult: number;
 }
 
 export type BattleEvent =
