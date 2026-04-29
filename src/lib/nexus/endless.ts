@@ -161,7 +161,7 @@ export const ENDLESS_MISSION: MissionDef = {
   startEnergy: 260,
   baseHp: 28,
   rewardCores: 0, // co-op runs don't grant solo cores; they fuel the operation
-  modifier: { label: 'Endless gauntlet', description: '30 escalating waves with 4 boss encounters. Survive as long as you can — every kill, point of score, and damage to a boss feeds the active Operation.' },
+  modifier: { label: 'Endless gauntlet', description: '20 escalating waves with 4 boss encounters (waves 5/10/15/20). Survive as long as you can — kills, score and boss damage all feed the active Operation.' },
   modifierIds: ['mixed_assault', 'bonus_bounty'],
   waves: buildWaves(),
 };
