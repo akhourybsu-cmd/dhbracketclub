@@ -127,6 +127,7 @@ export interface BattleState {
   abilityUses: Record<AbilityKind, number>;
   energyStarvedMs: number;   // ms spent unable to afford the cheapest tower during a wave
   leaks: number;             // count of enemies that reached the nexus
+  bossDamageDealt: number;   // total damage dealt to boss enemies (used by co-op endless mode)
   // ---- calibration mods (applied at spawn / per-tick) ----
   enemyHpMult: Record<EnemyKind, number>;
   enemyShieldMult: Record<EnemyKind, number>;
