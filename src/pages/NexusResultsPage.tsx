@@ -200,6 +200,71 @@ export default function NexusResultsPage() {
         </motion.div>
       )}
 
+      {/* Co-op Operation contribution summary — only when this was an endless run. */}
+      {insight?.endless && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="relative nx-clip-sm p-3 mb-4"
+          style={{
+            background: 'linear-gradient(180deg, hsl(280 50% 14%), hsl(280 60% 8%))',
+            border: '1px solid hsl(280 80% 65% / 0.45)',
+            boxShadow: '0 0 16px -4px hsl(280 80% 60% / 0.4)',
+          }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5" style={{ color: 'hsl(280 90% 78%)' }} />
+              <span className="nx-title text-[10px]" style={{ color: 'hsl(280 90% 78%)', letterSpacing: '0.22em' }}>
+                OPERATION CONTRIBUTION
+              </span>
+            </div>
+            {insight.operation && !insight.operation.duplicate && (
+              <span className="text-xs font-black tabular-nums" style={{ color: 'hsl(280 95% 82%)' }}>
+                +{insight.operation.pointsAwarded} PTS
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div>
+              <div className="text-[9px] uppercase tracking-wider text-foreground/55">Kills</div>
+              <div className="text-base font-black tabular-nums text-foreground">{(insight.kills ?? 0).toLocaleString()}</div>
+            </div>
+            <div>
+              <div className="text-[9px] uppercase tracking-wider text-foreground/55">Score</div>
+              <div className="text-base font-black tabular-nums text-foreground">{score.toLocaleString()}</div>
+            </div>
+            <div>
+              <div className="text-[9px] uppercase tracking-wider text-foreground/55">Boss Dmg</div>
+              <div className="text-base font-black tabular-nums text-foreground">{(insight.bossDamage ?? 0).toLocaleString()}</div>
+            </div>
+          </div>
+          {insight.operation?.duplicate && (
+            <div className="mt-2 text-[10px] text-foreground/60 text-center">
+              Already submitted — no duplicate points awarded.
+            </div>
+          )}
+          {insight.operation?.status === 'complete' && (
+            <div className="mt-2 text-[10px] text-center font-bold" style={{ color: 'hsl(280 95% 82%)' }}>
+              ◆ OPERATION COMPLETE — your run sealed it.
+            </div>
+          )}
+          {!insight.operation && (
+            <div className="mt-2 text-[10px] text-foreground/60 text-center">
+              No active Operation — points were not awarded.
+            </div>
+          )}
+          <Link
+            to="/nexus/operation"
+            className="mt-3 block text-center text-[11px] font-black uppercase tracking-widest py-2 nx-clip-sm"
+            style={{ background: 'hsl(280 60% 18%)', color: 'hsl(280 95% 85%)', border: '1px solid hsl(280 80% 60% / 0.5)' }}
+          >
+            View Operation Hub →
+          </Link>
+        </motion.div>
+      )}
+
       {/* Actions */}
       <div className="flex flex-col gap-2">
         {won && next && (
