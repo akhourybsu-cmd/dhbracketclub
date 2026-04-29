@@ -78,7 +78,7 @@ export async function recordNexusRun(params: {
   energyStarvedMs?: number;
   leaks?: number;
 }) {
-  await (supabase as any).from('nexus_runs').insert({
+  const { data, error } = await (supabase as any).from('nexus_runs').insert({
     user_id: params.userId,
     mission_id: params.missionId,
     victory: params.victory,
@@ -94,5 +94,10 @@ export async function recordNexusRun(params: {
     ability_usage: params.abilityUsage ?? {},
     energy_starved_ms: params.energyStarvedMs ?? 0,
     leaks: params.leaks ?? 0,
-  });
+  }).select('id').single();
+  if (error) {
+    console.warn('[nexus] recordNexusRun failed', error.message);
+    return null;
+  }
+  return (data?.id as string) ?? null;
 }
