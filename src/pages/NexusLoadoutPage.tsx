@@ -20,8 +20,16 @@ const TOWER_HSL: Record<TowerKind, { c: string; bg: string; text: string }> = {
 export default function NexusLoadoutPage() {
   const { missionId } = useParams<{ missionId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const id = parseInt(missionId || '1', 10);
   const { mission, loading } = useResolvedMission(id);
+  const isEndless = id === ENDLESS_MISSION_ID;
+  const opIdParam = searchParams.get('op');
+  const { operation } = useActiveOperation();
+  // Treat as a co-op-bound run only when the loadout was launched with ?op=
+  // AND that op matches the current active op. Otherwise it's a solo Endless run.
+  const contributingToOp = isEndless && !!opIdParam && operation?.id === opIdParam && operation?.status === 'active';
+
   if (loading) return <div className="p-6 text-center text-muted-foreground">Loading mission…</div>;
   if (!mission) return <div className="p-6">Mission not found.</div>;
 
@@ -30,6 +38,67 @@ export default function NexusLoadoutPage() {
       <div className="mb-4 mt-1">
         <div className="nx-title text-[9px]" style={{ color: 'hsl(var(--nx-cyan))' }}>MISSION {String(mission.id).padStart(2, '0')}</div>
         <h1 className="text-2xl font-black tracking-tight">{mission.name}</h1>
+
+        {isEndless && (
+          contributingToOp && operation ? (
+            <div
+              className="mt-2.5 p-2.5 nx-clip-sm flex items-start gap-2.5"
+              style={{
+                background: 'linear-gradient(180deg, hsl(280 50% 14%), hsl(280 60% 8%))',
+                border: '1px solid hsl(280 80% 65% / 0.5)',
+                boxShadow: '0 0 12px -6px hsl(280 80% 60% / 0.5)',
+              }}
+            >
+              <div
+                className="shrink-0 w-8 h-8 nx-clip-sm flex items-center justify-center"
+                style={{ background: 'hsl(280 80% 65% / 0.2)', border: '1px solid hsl(280 80% 65%)', color: 'hsl(280 90% 80%)' }}
+              >
+                <Users className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="nx-title text-[9px]" style={{ color: 'hsl(280 90% 78%)', letterSpacing: '0.2em' }}>
+                  CONTRIBUTING TO CO-OP OP
+                </div>
+                <div className="text-[12px] font-black truncate text-foreground">{operation.name}</div>
+                <div className="text-[10px] text-foreground/70 mt-0.5">
+                  Phase {operation.current_phase} · this run's score, kills & boss damage push club progress.
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div
+              className="mt-2.5 p-2.5 nx-clip-sm flex items-start gap-2.5"
+              style={{
+                background: 'linear-gradient(180deg, hsl(38 30% 10%), hsl(38 40% 6%))',
+                border: '1px dashed hsl(var(--nx-amber) / 0.4)',
+              }}
+            >
+              <div
+                className="shrink-0 w-8 h-8 nx-clip-sm flex items-center justify-center"
+                style={{ background: 'hsl(var(--nx-amber) / 0.18)', border: '1px solid hsl(var(--nx-amber))', color: 'hsl(var(--nx-amber))' }}
+              >
+                <InfinityIcon className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="nx-title text-[9px]" style={{ color: 'hsl(var(--nx-amber))', letterSpacing: '0.2em' }}>
+                  SOLO ENDLESS RUN
+                </div>
+                <div className="text-[11px] text-foreground/80 mt-0.5">
+                  Standalone score — won't push club operation progress.
+                </div>
+                {operation?.status === 'active' && (
+                  <Link
+                    to={`/nexus/loadout/${ENDLESS_MISSION_ID}?op=${operation.id}`}
+                    className="inline-block mt-1.5 text-[10px] font-black nx-title"
+                    style={{ color: 'hsl(280 90% 78%)' }}
+                  >
+                    JOIN ACTIVE CO-OP OP →
+                  </Link>
+                )}
+              </div>
+            </div>
+          )
+        )}
         {(() => {
           const mods = resolveModifiers(mission.modifierIds);
           if (mods.length === 0 && !mission.modifier) return null;
