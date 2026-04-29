@@ -160,6 +160,9 @@ export const MISSIONS: MissionDef[] = [
   },
 ];
 
+import { ENDLESS_MISSION, ENDLESS_MISSION_ID } from './endless';
+
 export function getMission(id: number): MissionDef | undefined {
+  if (id === ENDLESS_MISSION_ID) return ENDLESS_MISSION;
   return MISSIONS.find(m => m.id === id);
 }

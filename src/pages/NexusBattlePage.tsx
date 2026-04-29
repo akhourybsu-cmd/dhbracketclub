@@ -9,6 +9,9 @@ import { recordNexusRun, useNexusProgress } from '@/hooks/useNexusProgress';
 import { useResolvedMission } from '@/hooks/useMissionCalibrations';
 import { useNexusSfx } from '@/hooks/useNexusSfx';
 import { resolveModifiers, modifierTone } from '@/lib/nexus/modifiers';
+import { isEndlessMission } from '@/lib/nexus/endless';
+import { submitOperationContribution } from '@/hooks/useNexusOperation';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -108,48 +111,110 @@ export default function NexusBattlePage() {
     if (state.status === 'victory' || state.status === 'defeat') {
       savedRef.current = true;
       const won = state.status === 'victory';
-      const cores = won ? mission.rewardCores : Math.round(mission.rewardCores * 0.2);
+      const endless = isEndlessMission(mission.id);
+      // Endless co-op runs do not award solo cores or unlock missions.
+      const cores = endless ? 0 : (won ? mission.rewardCores : Math.round(mission.rewardCores * 0.2));
       const newProgress: Partial<typeof progress> = {
         cores: progress.cores + cores,
       };
-      if (won && mission.id >= progress.highest_mission) {
+      if (!endless && won && mission.id >= progress.highest_mission) {
         newProgress.highest_mission = Math.min(mission.id + 1, 6);
       }
       updateProgress(newProgress);
-      if (user) {
-        recordNexusRun({
-          userId: user.id,
-          missionId: mission.id,
-          victory: won,
-          score: state.score,
-          wavesCleared: won ? mission.waves.length : Math.max(0, state.waveIndex),
-          baseHpRemaining: state.baseHp,
-          durationSeconds: Math.round(state.elapsedMs / 1000),
-          loadout: { towers: ['pulse','arc','cryo','rail'], abilities, modifierIds: state.modifierIds },
-          failedWave: won ? null : state.waveIndex + 1,
-          towerUsage: state.towerBuilds,
-          towerUpgrades: state.towerUpgrades,
-          towerSells: state.towerSells,
-          abilityUsage: state.abilityUses,
-          energyStarvedMs: state.energyStarvedMs,
-          leaks: state.leaks,
-        }).catch(() => {});
-      }
-      // Stash run insight for the results page (avoids URL bloat).
-      try {
-        sessionStorage.setItem(`nexus_run_${mission.id}`, JSON.stringify({
-          towerBuilds: state.towerBuilds,
-          towerUpgrades: state.towerUpgrades,
-          towerSells: state.towerSells,
-          abilityUses: state.abilityUses,
-          energyStarvedMs: state.energyStarvedMs,
-          leaks: state.leaks,
-          durationSeconds: Math.round(state.elapsedMs / 1000),
-          modifierIds: state.modifierIds,
-        }));
-      } catch {}
+
+      const wavesCleared = won ? mission.waves.length : Math.max(0, state.waveIndex);
+      const durationSeconds = Math.round(state.elapsedMs / 1000);
+
+      const totalKills = (state.towers ?? []).reduce((sum, t) => sum + (t.kills || 0), 0);
+
+      const finalize = async () => {
+        let nexusRunId: string | null = null;
+        if (user) {
+          nexusRunId = await recordNexusRun({
+            userId: user.id,
+            missionId: mission.id,
+            victory: won,
+            score: state.score,
+            wavesCleared,
+            baseHpRemaining: state.baseHp,
+            durationSeconds,
+            loadout: { towers: ['pulse','arc','cryo','rail'], abilities, modifierIds: state.modifierIds },
+            failedWave: won ? null : state.waveIndex + 1,
+            towerUsage: state.towerBuilds,
+            towerUpgrades: state.towerUpgrades,
+            towerSells: state.towerSells,
+            abilityUsage: state.abilityUses,
+            energyStarvedMs: state.energyStarvedMs,
+            leaks: state.leaks,
+          }).catch(() => null);
+        }
+
+        // Endless runs feed the active Operation. Even partial runs count.
+        let opSummary: {
+          operationId: string;
+          pointsAwarded: number;
+          phase: number;
+          status: string;
+          duplicate: boolean;
+        } | null = null;
+        if (endless && user) {
+          try {
+            const { data: op } = await (supabase as any)
+              .from('nexus_operations')
+              .select('id')
+              .eq('status', 'active')
+              .order('started_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (op?.id) {
+              const res = await submitOperationContribution({
+                operationId: op.id,
+                nexusRunId,
+                kills: totalKills,
+                score: state.score,
+                waves: wavesCleared,
+                bossDamage: state.bossDamageDealt ?? 0,
+                durationSeconds,
+              });
+              if (res.ok) {
+                opSummary = {
+                  operationId: op.id,
+                  pointsAwarded: res.pointsAwarded ?? 0,
+                  phase: res.phase ?? 1,
+                  status: res.status ?? 'active',
+                  duplicate: !!res.duplicate,
+                };
+                if (!res.duplicate && (res.pointsAwarded ?? 0) > 0) {
+                  toast.success(`+${res.pointsAwarded} Operation points`);
+                }
+              }
+            }
+          } catch {}
+        }
+
+        // Stash run insight for the results page (avoids URL bloat).
+        try {
+          sessionStorage.setItem(`nexus_run_${mission.id}`, JSON.stringify({
+            towerBuilds: state.towerBuilds,
+            towerUpgrades: state.towerUpgrades,
+            towerSells: state.towerSells,
+            abilityUses: state.abilityUses,
+            energyStarvedMs: state.energyStarvedMs,
+            leaks: state.leaks,
+            durationSeconds,
+            modifierIds: state.modifierIds,
+            kills: totalKills,
+            bossDamage: state.bossDamageDealt ?? 0,
+            endless,
+            operation: opSummary,
+          }));
+        } catch {}
+      };
+
+      finalize();
+
       const t = setTimeout(() => {
-        navigate(`/nexus/results/${mission.id}?win=${won ? 1 : 0}&score=${state.score}&hp=${state.baseHp}&waves=${won ? mission.waves.length : Math.max(0, state.waveIndex)}&cores=${cores}`);
+        navigate(`/nexus/results/${mission.id}?win=${won ? 1 : 0}&score=${state.score}&hp=${state.baseHp}&waves=${wavesCleared}&cores=${cores}`);
       }, 1200);
       return () => clearTimeout(t);
     }
