@@ -240,6 +240,7 @@ function AnimatedRoutes() {
         <Route path="/nexus/calibration" element={<ProtectedPage><NexusLayout><NexusCalibrationPage /></NexusLayout></ProtectedPage>} />
         <Route path="/nexus/operation" element={<ProtectedPage><NexusLayout><NexusOperationPage /></NexusLayout></ProtectedPage>} />
         <Route path="/nexus/sigils" element={<ProtectedPage><NexusLayout><NexusSigilVaultPage /></NexusLayout></ProtectedPage>} />
+        <Route path="/nexus/simulator" element={<ProtectedPage><NexusLayout><NexusSimulatorPage /></NexusLayout></ProtectedPage>} />
 
         <Route path="/profile" element={<ProtectedPage><ProfilePage /></ProtectedPage>} />
 
