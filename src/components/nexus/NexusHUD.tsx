@@ -4,6 +4,7 @@ import { ArrowLeft, BookOpen, Trophy, Cpu, Users } from 'lucide-react';
 import { useNexusProgress } from '@/hooks/useNexusProgress';
 import { useActiveOperation } from '@/hooks/useNexusOperation';
 import { NexusExitDialog } from './NexusExitDialog';
+import { NexusSalvagePill } from './NexusSalvagePill';
 import nexusEmblem from '@/assets/nexus-emblem.png';
 
 /**
@@ -96,6 +97,9 @@ export function NexusHUD() {
               </p>
             </div>
           </Link>
+
+          {/* Salvage Tokens */}
+          <NexusSalvagePill />
 
           {/* Cores readout */}
           <div
