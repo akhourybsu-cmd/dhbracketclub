@@ -39,10 +39,21 @@ export default function NexusBattlePage() {
   const { data: pendingBoost } = usePendingBoost();
 
   const [state, setState] = useState<BattleState | null>(null);
-  // Initialise battle once mission is resolved. Wait for boost query so we don't
-  // re-init mid-run if the boost loads slightly late.
+  const [resumed, setResumed] = useState(false);
+  // Initialise battle once mission is resolved. If we find a saved checkpoint
+  // for this user+mission, resume from it (paused, so the player consents
+  // before time starts again). Otherwise build a fresh BattleState.
   useEffect(() => {
     if (!mission || state) return;
+    const saved = loadBattle(user?.id, mission.id);
+    if (saved && saved.state.status !== 'victory' && saved.state.status !== 'defeat') {
+      setState(saved.state);
+      setResumed(true);
+      setPaused(true); // start paused so the player isn't blindsided
+      // Surface a small confirmation that progress was restored.
+      try { toast.message('Run restored — tap ▶ to resume'); } catch {}
+      return;
+    }
     const boost = pendingBoost
       ? {
           code: pendingBoost.code,
@@ -73,6 +84,7 @@ export default function NexusBattlePage() {
   const prevWaveIndexRef = useRef(-1);
   const prevStatusRef = useRef<BattleState['status']>('pre');
   const prevAbilityCdRef = useRef<Record<AbilityKind, number>>({ orbital: -1, emp: -1 });
+  const lastSaveAtRef = useRef(0);
 
   // Game loop
   useEffect(() => {
@@ -83,9 +95,46 @@ export default function NexusBattlePage() {
       const next = tick(cur, mission);
       stateRef.current = next;
       setState(next);
+      // Throttled checkpoint so a tab-close keeps progress within ~1.5s.
+      const now = Date.now();
+      if (now - lastSaveAtRef.current >= SAVE_THROTTLE_MS) {
+        lastSaveAtRef.current = now;
+        saveBattle(user?.id, mission.id, abilities, next);
+      }
     }, TICK_MS);
     return () => clearInterval(interval);
-  }, [mission, paused, exitOpen]);
+  }, [mission, paused, exitOpen, user?.id, abilities]);
+
+  // Auto-pause + flush save when the tab is hidden, the window blurs, or the
+  // page is being unloaded (mobile background, PWA close, navigation).
+  useEffect(() => {
+    if (!mission) return;
+    const flush = () => {
+      const cur = stateRef.current;
+      if (cur) saveBattle(user?.id, mission.id, abilities, cur);
+    };
+    const onHidden = () => {
+      if (document.visibilityState === 'hidden') {
+        setPaused(true);
+        flush();
+      }
+    };
+    const onBlur = () => { setPaused(true); flush(); };
+    const onPageHide = () => { flush(); };
+    document.addEventListener('visibilitychange', onHidden);
+    window.addEventListener('blur', onBlur);
+    window.addEventListener('pagehide', onPageHide);
+    window.addEventListener('beforeunload', onPageHide);
+    return () => {
+      document.removeEventListener('visibilitychange', onHidden);
+      window.removeEventListener('blur', onBlur);
+      window.removeEventListener('pagehide', onPageHide);
+      window.removeEventListener('beforeunload', onPageHide);
+      // Also flush on unmount (route change) so navigating away mid-mission
+      // doesn't lose the most recent few ticks.
+      flush();
+    };
+  }, [mission, user?.id, abilities]);
 
   // Battle SFX/haptics: walk new engine events + react to status & wave transitions
   useEffect(() => {
