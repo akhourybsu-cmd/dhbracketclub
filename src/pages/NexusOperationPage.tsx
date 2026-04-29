@@ -150,6 +150,32 @@ export default function NexusOperationPage() {
         </div>
       </motion.div>
 
+      {/* Rewards distributed banner — appears once op completes */}
+      {isComplete && (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-3 p-3 nx-clip-sm relative overflow-hidden"
+          style={{
+            background: 'linear-gradient(180deg, hsl(45 50% 16%), hsl(45 60% 8%))',
+            border: '1px solid hsl(45 100% 60% / 0.5)',
+            boxShadow: '0 0 18px -4px hsl(45 100% 60% / 0.5)',
+          }}
+        >
+          <div className="flex items-center gap-2 mb-1.5">
+            <Sparkles className="w-4 h-4" style={{ color: 'hsl(45 100% 75%)' }} />
+            <span className="nx-title text-[10px]" style={{ color: 'hsl(45 100% 80%)', letterSpacing: '0.22em' }}>
+              REWARDS DISTRIBUTED
+            </span>
+          </div>
+          <div className="text-[12px] leading-relaxed text-foreground/85">
+            All contributors received <span className="font-black" style={{ color: 'hsl(195 95% 80%)' }}>⬢ Salvage Tokens</span> + the <span className="font-black" style={{ color: 'hsl(150 90% 78%)' }}>Operative</span> sigil.
+            Top 3 earned <span className="font-black" style={{ color: 'hsl(195 95% 80%)' }}>Tactician</span>/<span className="font-black" style={{ color: 'hsl(280 95% 85%)' }}>Strategist</span> sigils.
+            The MVP was crowned with the <span className="font-black" style={{ color: 'hsl(45 100% 78%)' }}>Siege Core</span> legendary.
+          </div>
+        </motion.div>
+      )}
+
       {/* Phase strip */}
       <div className="grid grid-cols-3 gap-1.5 mb-3">
         {PHASE_META.map(p => {
