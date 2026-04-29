@@ -86,24 +86,7 @@ export default function NexusOperationPage() {
     : operation.current_phase === 2 ? operation.phase2_target
     : operation.phase3_target;
   const pct = Math.min(100, Math.round((progress / target) * 100));
-  const myContrib = leaderboard.find(c => c.user_id === user?.id);
-  const isComplete = operation.status === 'complete';
   const mvpUserId = leaderboard[0]?.user_id ?? null;
-
-  // Auto-trigger reward distribution once when the op completes. RPC is idempotent
-  // (server-side `rewards_distributed_at` flag), so multiple contributors hitting
-  // this page won't double-award.
-  const distributedRef = useRef(false);
-  useEffect(() => {
-    if (!isComplete || !user || distributedRef.current) return;
-    if (!myContrib) return; // only contributors should trigger
-    distributedRef.current = true;
-    awardOperationRewards(operation.id);
-  }, [isComplete, operation.id, user, myContrib]);
-
-  // Pre-fetch displayed sigils for the contributor list (one query, no N+1).
-  const contributorIds = useMemo(() => leaderboard.map(c => c.user_id), [leaderboard]);
-  const { data: displayedMap = {} } = useDisplayedSigils(contributorIds);
 
   return (
     <div className="max-w-md mx-auto px-2 pt-3 pb-10">
