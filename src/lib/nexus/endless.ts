@@ -30,153 +30,124 @@ function wave(index: number, rewardEnergy: number, spawns: SpawnTemplate[]): Wav
   return { index, rewardEnergy, spawns };
 }
 
-/** Build the 30-wave endless gauntlet. */
+/** Build the 20-wave endless gauntlet (mobile-tuned).
+ *
+ * Pacing target on mobile (10 ticks/sec engine):
+ *   - Weak run (waves 1–5):    ~3 minutes
+ *   - Normal run (waves 6–10): ~5–7 minutes
+ *   - Strong run (waves 11–15):~9–11 minutes
+ *   - Excellent (waves 16–20): ~12–14 minutes
+ *
+ * Bosses appear on waves 5, 10, 15, 20 — every meaningful run produces
+ * boss damage so Phase 3 contribution is reachable from average play.
+ */
 function buildWaves(): Wave[] {
   const waves: Wave[] = [];
-  // 1–4: warm-up swarms
-  waves.push(wave(0, 40, [{ enemy: 'drone', count: 10, intervalMs: 800 }]));
-  waves.push(wave(1, 50, [{ enemy: 'drone', count: 14, intervalMs: 700 }]));
-  waves.push(wave(2, 60, [
-    { enemy: 'drone', count: 12, intervalMs: 600 },
-    { enemy: 'walker', count: 2, intervalMs: 1500, delayMs: 1500 },
-  ]));
-  waves.push(wave(3, 70, [
-    { enemy: 'walker', count: 4, intervalMs: 1200 },
-    { enemy: 'drone', count: 10, intervalMs: 500, delayMs: 1000 },
+
+  // 1–2: warm-up
+  waves.push(wave(0, 50, [{ enemy: 'drone', count: 10, intervalMs: 750 }]));
+  waves.push(wave(1, 60, [
+    { enemy: 'drone', count: 12, intervalMs: 650 },
+    { enemy: 'walker', count: 2, intervalMs: 1400, delayMs: 1500 },
   ]));
 
-  // 5–7: shielded introduction
-  waves.push(wave(4, 80, [
-    { enemy: 'shielded', count: 4, intervalMs: 1100 },
+  // 3–4: shielded intro
+  waves.push(wave(2, 70, [
+    { enemy: 'shielded', count: 4, intervalMs: 1000 },
     { enemy: 'drone', count: 12, intervalMs: 500, delayMs: 1500 },
   ]));
-  waves.push(wave(5, 90, [
-    { enemy: 'shielded', count: 6, intervalMs: 1000 },
-    { enemy: 'walker', count: 4, intervalMs: 1200, delayMs: 1500 },
-  ]));
-  waves.push(wave(6, 100, [
-    { enemy: 'shielded', count: 8, intervalMs: 900 },
-    { enemy: 'drone', count: 14, intervalMs: 500, delayMs: 2000 },
+  waves.push(wave(3, 85, [
+    { enemy: 'shielded', count: 6, intervalMs: 950 },
+    { enemy: 'walker', count: 4, intervalMs: 1100, delayMs: 1500 },
   ]));
 
-  // 8: BOSS #1
-  waves.push(wave(7, 220, [
+  // 5: BOSS #1 (early — proves Phase 3 contribution is real)
+  waves.push(wave(4, 200, [
     { enemy: 'boss', count: 1, intervalMs: 1000 },
-    { enemy: 'shielded', count: 4, intervalMs: 1200, delayMs: 4000 },
+    { enemy: 'shielded', count: 4, intervalMs: 1200, delayMs: 3500 },
   ]));
 
-  // 9–12: stealth + mixed
-  waves.push(wave(8, 110, [
-    { enemy: 'stealth', count: 5, intervalMs: 1100 },
-    { enemy: 'walker', count: 3, intervalMs: 1300, delayMs: 1500 },
+  // 6–7: stealth intro + swarm
+  waves.push(wave(5, 100, [
+    { enemy: 'stealth', count: 5, intervalMs: 1000 },
+    { enemy: 'walker', count: 3, intervalMs: 1200, delayMs: 1500 },
   ]));
-  waves.push(wave(9, 120, [
-    { enemy: 'stealth', count: 7, intervalMs: 1000 },
-    { enemy: 'drone', count: 16, intervalMs: 450, delayMs: 1500 },
+  waves.push(wave(6, 120, [
+    { enemy: 'drone', count: 18, intervalMs: 400 },
+    { enemy: 'shielded', count: 5, intervalMs: 950, delayMs: 2000 },
   ]));
-  waves.push(wave(10, 130, [
-    { enemy: 'walker', count: 6, intervalMs: 1100 },
-    { enemy: 'shielded', count: 6, intervalMs: 1000, delayMs: 1500 },
+
+  // 8–9: mixed pressure
+  waves.push(wave(7, 140, [
+    { enemy: 'walker', count: 6, intervalMs: 1000 },
+    { enemy: 'shielded', count: 6, intervalMs: 950, delayMs: 1500 },
     { enemy: 'stealth', count: 4, intervalMs: 1100, delayMs: 3000 },
   ]));
-  waves.push(wave(11, 140, [
-    { enemy: 'drone', count: 20, intervalMs: 400 },
+  waves.push(wave(8, 160, [
+    { enemy: 'shielded', count: 10, intervalMs: 800 },
     { enemy: 'walker', count: 6, intervalMs: 1000, delayMs: 1500 },
-    { enemy: 'shielded', count: 4, intervalMs: 1100, delayMs: 3500 },
   ]));
 
-  // 13–15: pressure ramp
-  waves.push(wave(12, 150, [
-    { enemy: 'shielded', count: 10, intervalMs: 850 },
-    { enemy: 'walker', count: 6, intervalMs: 1000, delayMs: 1500 },
+  // 10: BOSS #2
+  waves.push(wave(9, 240, [
+    { enemy: 'boss', count: 1, intervalMs: 1000 },
+    { enemy: 'walker', count: 5, intervalMs: 1100, delayMs: 4000 },
+    { enemy: 'shielded', count: 6, intervalMs: 1000, delayMs: 7000 },
   ]));
-  waves.push(wave(13, 160, [
+
+  // 11–12: ramp
+  waves.push(wave(10, 180, [
     { enemy: 'stealth', count: 10, intervalMs: 800 },
     { enemy: 'shielded', count: 6, intervalMs: 950, delayMs: 1500 },
   ]));
-  waves.push(wave(14, 170, [
-    { enemy: 'walker', count: 10, intervalMs: 900 },
-    { enemy: 'drone', count: 22, intervalMs: 350, delayMs: 1500 },
-    { enemy: 'shielded', count: 6, intervalMs: 950, delayMs: 4000 },
+  waves.push(wave(11, 200, [
+    { enemy: 'walker', count: 10, intervalMs: 850 },
+    { enemy: 'drone', count: 22, intervalMs: 320, delayMs: 1500 },
   ]));
 
-  // 16: BOSS #2
-  waves.push(wave(15, 260, [
-    { enemy: 'boss', count: 1, intervalMs: 1000 },
-    { enemy: 'shielded', count: 6, intervalMs: 1100, delayMs: 4000 },
-    { enemy: 'walker', count: 5, intervalMs: 1100, delayMs: 7000 },
+  // 13–14: heavy mixed
+  waves.push(wave(12, 220, [
+    { enemy: 'shielded', count: 12, intervalMs: 750 },
+    { enemy: 'stealth', count: 8, intervalMs: 900, delayMs: 1500 },
   ]));
-
-  // 17–22: heavy mixed
-  waves.push(wave(16, 180, [
-    { enemy: 'walker', count: 12, intervalMs: 850 },
-    { enemy: 'stealth', count: 6, intervalMs: 1000, delayMs: 1500 },
-  ]));
-  waves.push(wave(17, 190, [
-    { enemy: 'shielded', count: 12, intervalMs: 800 },
-    { enemy: 'stealth', count: 8, intervalMs: 950, delayMs: 1500 },
-  ]));
-  waves.push(wave(18, 200, [
-    { enemy: 'drone', count: 28, intervalMs: 320 },
-    { enemy: 'walker', count: 8, intervalMs: 950, delayMs: 1500 },
-    { enemy: 'shielded', count: 6, intervalMs: 950, delayMs: 4000 },
-  ]));
-  waves.push(wave(19, 210, [
+  waves.push(wave(13, 240, [
     { enemy: 'walker', count: 12, intervalMs: 800 },
-    { enemy: 'stealth', count: 10, intervalMs: 900, delayMs: 1500 },
+    { enemy: 'shielded', count: 8, intervalMs: 900, delayMs: 1500 },
+    { enemy: 'stealth', count: 6, intervalMs: 1000, delayMs: 4000 },
   ]));
-  waves.push(wave(20, 220, [
-    { enemy: 'shielded', count: 14, intervalMs: 750 },
-    { enemy: 'walker', count: 10, intervalMs: 850, delayMs: 1500 },
+
+  // 15: BOSS #3
+  waves.push(wave(14, 300, [
+    { enemy: 'boss', count: 1, intervalMs: 1000 },
+    { enemy: 'walker', count: 6, intervalMs: 1000, delayMs: 4000 },
+    { enemy: 'shielded', count: 8, intervalMs: 900, delayMs: 7500 },
   ]));
-  waves.push(wave(21, 230, [
-    { enemy: 'stealth', count: 12, intervalMs: 850 },
-    { enemy: 'shielded', count: 10, intervalMs: 900, delayMs: 2000 },
+
+  // 16–19: gauntlet
+  waves.push(wave(15, 260, [
+    { enemy: 'walker', count: 14, intervalMs: 750 },
+    { enemy: 'stealth', count: 10, intervalMs: 850, delayMs: 1500 },
+  ]));
+  waves.push(wave(16, 280, [
+    { enemy: 'drone', count: 30, intervalMs: 280 },
+    { enemy: 'shielded', count: 10, intervalMs: 800, delayMs: 1500 },
+  ]));
+  waves.push(wave(17, 300, [
+    { enemy: 'shielded', count: 14, intervalMs: 700 },
+    { enemy: 'walker', count: 10, intervalMs: 800, delayMs: 1500 },
+  ]));
+  waves.push(wave(18, 320, [
+    { enemy: 'stealth', count: 14, intervalMs: 750 },
+    { enemy: 'shielded', count: 12, intervalMs: 800, delayMs: 1500 },
     { enemy: 'walker', count: 8, intervalMs: 900, delayMs: 4500 },
   ]));
 
-  // 23–24: BOSS #3 + escort
-  waves.push(wave(22, 310, [
+  // 20: FINAL BOSS — single boss + escort (was 2 bosses; that was brutal)
+  waves.push(wave(19, 500, [
     { enemy: 'boss', count: 1, intervalMs: 1000 },
-    { enemy: 'walker', count: 6, intervalMs: 1000, delayMs: 4000 },
-    { enemy: 'shielded', count: 8, intervalMs: 950, delayMs: 7500 },
-  ]));
-  waves.push(wave(23, 240, [
-    { enemy: 'walker', count: 14, intervalMs: 750 },
-    { enemy: 'stealth', count: 10, intervalMs: 850, delayMs: 1500 },
-    { enemy: 'shielded', count: 8, intervalMs: 900, delayMs: 4000 },
-  ]));
-
-  // 25–29: gauntlet
-  waves.push(wave(24, 250, [
-    { enemy: 'drone', count: 36, intervalMs: 280 },
-    { enemy: 'walker', count: 10, intervalMs: 850, delayMs: 1500 },
-  ]));
-  waves.push(wave(25, 260, [
-    { enemy: 'shielded', count: 16, intervalMs: 700 },
-    { enemy: 'walker', count: 12, intervalMs: 800, delayMs: 1500 },
-  ]));
-  waves.push(wave(26, 270, [
-    { enemy: 'stealth', count: 16, intervalMs: 750 },
-    { enemy: 'shielded', count: 12, intervalMs: 800, delayMs: 1500 },
-  ]));
-  waves.push(wave(27, 280, [
-    { enemy: 'walker', count: 16, intervalMs: 750 },
-    { enemy: 'shielded', count: 14, intervalMs: 750, delayMs: 1500 },
-    { enemy: 'stealth', count: 12, intervalMs: 800, delayMs: 4000 },
-  ]));
-  waves.push(wave(28, 290, [
-    { enemy: 'drone', count: 48, intervalMs: 230 },
-    { enemy: 'walker', count: 14, intervalMs: 800, delayMs: 1500 },
-    { enemy: 'shielded', count: 12, intervalMs: 800, delayMs: 4500 },
-  ]));
-
-  // 30: FINAL BOSS WAVE
-  waves.push(wave(29, 500, [
-    { enemy: 'boss', count: 2, intervalMs: 5000 },
     { enemy: 'walker', count: 10, intervalMs: 800, delayMs: 3000 },
     { enemy: 'shielded', count: 12, intervalMs: 800, delayMs: 6000 },
-    { enemy: 'stealth', count: 12, intervalMs: 800, delayMs: 9000 },
+    { enemy: 'stealth', count: 10, intervalMs: 800, delayMs: 9000 },
   ]));
 
   return waves;
