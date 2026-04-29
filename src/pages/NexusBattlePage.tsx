@@ -547,13 +547,17 @@ export default function NexusBattlePage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Abandon mission?</AlertDialogTitle>
             <AlertDialogDescription>
-              Your current run will end and progress for this attempt will not be saved.
+              Your current run will be discarded. Closing the tab or backgrounding
+              the app instead keeps your progress — you'll resume right where you left off.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep playing</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => navigate('/nexus')}
+              onClick={() => {
+                if (mission) clearBattle(user?.id, mission.id);
+                navigate('/nexus');
+              }}
               className="bg-rose-500 text-rose-950 hover:bg-rose-400"
             >
               Abandon
