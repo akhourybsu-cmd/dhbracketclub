@@ -162,12 +162,14 @@ export default function NexusHomePage() {
           icon={<Users className="w-4 h-4" />}
           label="Co-op Op"
           accent="hsl(280 80% 65%)"
+          borderColor="hsl(280 80% 65% / 0.35)"
         />
         <NavTile
           to={`/nexus/loadout/${ENDLESS_MISSION_ID}`}
           icon={<Target className="w-4 h-4" />}
           label="Endless"
           accent="hsl(var(--nx-amber))"
+          borderColor="hsl(var(--nx-amber) / 0.3)"
         />
       </div>
       <div className="grid grid-cols-3 gap-2">
@@ -184,11 +186,13 @@ function NavTile({
   icon,
   label,
   accent = 'hsl(var(--nx-cyan))',
+  borderColor = 'hsl(var(--nx-cyan) / 0.2)',
 }: {
   to: string;
   icon: React.ReactNode;
   label: string;
   accent?: string;
+  borderColor?: string;
 }) {
   return (
     <Link
@@ -196,7 +200,7 @@ function NavTile({
       className="aspect-square nx-clip-sm flex flex-col items-center justify-center gap-1.5 active:scale-95 transition"
       style={{
         background: 'linear-gradient(180deg, hsl(218 35% 11%), hsl(218 38% 7%))',
-        border: `1px solid ${accent} / 0.2`.replace(' / 0.2', '33'),
+        border: `1px solid ${borderColor}`,
         boxShadow: 'inset 0 1px 0 hsl(0 0% 100% / 0.04)',
       }}
     >
