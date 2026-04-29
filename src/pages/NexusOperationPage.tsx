@@ -220,18 +220,26 @@ export default function NexusOperationPage() {
       {/* Recent runs */}
       {recentRuns.length > 0 && (
         <>
-          <h2 className="nx-title text-[9px] mb-1.5 text-foreground/55">◢ RECENT RUNS</h2>
+          <h2 className="nx-title text-[9px] mb-1.5 text-foreground/55">◢ RECENT ACTIVITY</h2>
           <div className="space-y-1 mb-4">
-            {recentRuns.slice(0, 8).map(r => (
-              <div key={r.id} className="flex items-center gap-2 px-2.5 py-1.5 text-[11px] border border-white/5 bg-white/[0.02] nx-clip-sm">
-                <Flame className="w-3 h-3 text-amber-300 shrink-0" />
-                <div className="truncate flex-1">
-                  <span className="font-bold">{r.display_name ?? 'Pilot'}</span>
-                  <span className="text-foreground/55"> · W{r.waves} · {fmt(r.kills)} kills</span>
+            {recentRuns.slice(0, 8).map(r => {
+              const name = r.display_name ?? 'Pilot';
+              // Pick the dominant verb based on what the run contributed most.
+              let verb = `added ${fmt(r.contribution_points)} pts`;
+              if ((r.boss_damage ?? 0) >= 1000) verb = `damaged the Siege Core (+${fmt(r.contribution_points)})`;
+              else if ((r.score ?? 0) >= 50000) verb = `pushed Phase 2 (+${fmt(r.contribution_points)})`;
+              else if ((r.kills ?? 0) >= 100) verb = `repelled ${fmt(r.kills)} enemies (+${fmt(r.contribution_points)})`;
+              return (
+                <div key={r.id} className="flex items-center gap-2 px-2.5 py-1.5 text-[11px] border border-white/5 bg-white/[0.02] nx-clip-sm">
+                  <Flame className="w-3 h-3 text-amber-300 shrink-0" />
+                  <div className="truncate flex-1 min-w-0">
+                    <span className="font-bold">{name}</span>
+                    <span className="text-foreground/65"> {verb}</span>
+                  </div>
+                  <div className="text-[10px] text-foreground/45 tabular-nums shrink-0">{timeAgo(r.created_at)}</div>
                 </div>
-                <div className="text-cyan-300 font-bold tabular-nums">+{fmt(r.contribution_points)}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}
