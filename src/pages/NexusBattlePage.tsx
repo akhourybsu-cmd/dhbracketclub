@@ -160,6 +160,12 @@ export default function NexusBattlePage() {
           status: string;
           duplicate: boolean;
           error?: string;
+          affectedPhase?: number;
+          priorProgress?: number;
+          newProgress?: number;
+          priorTarget?: number;
+          phaseAdvanced?: boolean;
+          operationComplete?: boolean;
         };
         let opSummary: OpSummary | null = null;
         if (endless && user) {
@@ -190,13 +196,21 @@ export default function NexusBattlePage() {
                   phase: res.phase ?? 1,
                   status: res.status ?? 'active',
                   duplicate: !!res.duplicate,
+                  affectedPhase: res.affectedPhase,
+                  priorProgress: res.priorProgress,
+                  newProgress: res.newProgress,
+                  priorTarget: res.priorTarget,
+                  phaseAdvanced: res.phaseAdvanced,
+                  operationComplete: res.operationComplete,
                 };
-                if (!res.duplicate && (res.pointsAwarded ?? 0) > 0) {
+                if (res.operationComplete) {
+                  toast.success('◆ Operation Complete — your run sealed it!');
+                } else if (res.phaseAdvanced) {
+                  toast.success(`Phase ${(res.affectedPhase ?? 1)} secured · +${res.pointsAwarded} pts`);
+                } else if (!res.duplicate && (res.pointsAwarded ?? 0) > 0) {
                   toast.success(`+${res.pointsAwarded} Operation points`);
                 }
               } else {
-                // RPC rejected (e.g. operation just ended). Still record so
-                // the results panel can explain rather than silently skip.
                 opSummary = {
                   operationId: op.id, pointsAwarded: 0, phase: 0,
                   status: 'error', duplicate: false,

@@ -161,17 +161,22 @@ export default function NexusOperationPage() {
 
       {/* CTA */}
       {!isComplete && (
-        <button
-          onClick={() => navigate(`/nexus/loadout/${ENDLESS_MISSION_ID}?op=${operation.id}`)}
-          className="w-full py-3.5 nx-clip-sm font-black text-sm active:scale-95 nx-title relative overflow-hidden mb-4"
-          style={{
-            background: 'linear-gradient(180deg, hsl(150 80% 55%), hsl(150 80% 42%))',
-            color: 'hsl(150 30% 8%)',
-            boxShadow: '0 0 18px hsl(150 80% 55% / 0.55), inset 0 1px 0 hsl(0 0% 100% / 0.35)',
-          }}
-        >
-          ▶ DEPLOY · CONTRIBUTE A RUN
-        </button>
+        <>
+          <div className="text-center text-[10px] mb-1.5 text-foreground/65">
+            Next run contributes: <span className="font-bold text-cyan-200">{phaseMeta.metric}</span>
+          </div>
+          <button
+            onClick={() => navigate(`/nexus/loadout/${ENDLESS_MISSION_ID}?op=${operation.id}`)}
+            className="w-full py-3.5 nx-clip-sm font-black text-sm active:scale-95 nx-title relative overflow-hidden mb-4"
+            style={{
+              background: 'linear-gradient(180deg, hsl(150 80% 55%), hsl(150 80% 42%))',
+              color: 'hsl(150 30% 8%)',
+              boxShadow: '0 0 18px hsl(150 80% 55% / 0.55), inset 0 1px 0 hsl(0 0% 100% / 0.35)',
+            }}
+          >
+            ▶ DEPLOY · CONTRIBUTE A RUN
+          </button>
+        </>
       )}
 
       {/* My contribution */}
@@ -220,18 +225,26 @@ export default function NexusOperationPage() {
       {/* Recent runs */}
       {recentRuns.length > 0 && (
         <>
-          <h2 className="nx-title text-[9px] mb-1.5 text-foreground/55">◢ RECENT RUNS</h2>
+          <h2 className="nx-title text-[9px] mb-1.5 text-foreground/55">◢ RECENT ACTIVITY</h2>
           <div className="space-y-1 mb-4">
-            {recentRuns.slice(0, 8).map(r => (
-              <div key={r.id} className="flex items-center gap-2 px-2.5 py-1.5 text-[11px] border border-white/5 bg-white/[0.02] nx-clip-sm">
-                <Flame className="w-3 h-3 text-amber-300 shrink-0" />
-                <div className="truncate flex-1">
-                  <span className="font-bold">{r.display_name ?? 'Pilot'}</span>
-                  <span className="text-foreground/55"> · W{r.waves} · {fmt(r.kills)} kills</span>
+            {recentRuns.slice(0, 8).map(r => {
+              const name = r.display_name ?? 'Pilot';
+              // Pick the dominant verb based on what the run contributed most.
+              let verb = `added ${fmt(r.contribution_points)} pts`;
+              if ((r.boss_damage ?? 0) >= 1000) verb = `damaged the Siege Core (+${fmt(r.contribution_points)})`;
+              else if ((r.score ?? 0) >= 50000) verb = `pushed Phase 2 (+${fmt(r.contribution_points)})`;
+              else if ((r.kills ?? 0) >= 100) verb = `repelled ${fmt(r.kills)} enemies (+${fmt(r.contribution_points)})`;
+              return (
+                <div key={r.id} className="flex items-center gap-2 px-2.5 py-1.5 text-[11px] border border-white/5 bg-white/[0.02] nx-clip-sm">
+                  <Flame className="w-3 h-3 text-amber-300 shrink-0" />
+                  <div className="truncate flex-1 min-w-0">
+                    <span className="font-bold">{name}</span>
+                    <span className="text-foreground/65"> {verb}</span>
+                  </div>
+                  <div className="text-[10px] text-foreground/45 tabular-nums shrink-0">{timeAgo(r.created_at)}</div>
                 </div>
-                <div className="text-cyan-300 font-bold tabular-nums">+{fmt(r.contribution_points)}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}
@@ -277,4 +290,15 @@ function MiniStat({ label, value }: { label: string; value: number | string }) {
       <div className="text-sm font-black tabular-nums">{value}</div>
     </div>
   );
+}
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const s = Math.max(0, Math.floor(diff / 1000));
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
 }
