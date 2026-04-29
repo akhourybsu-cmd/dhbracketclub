@@ -161,17 +161,22 @@ export default function NexusOperationPage() {
 
       {/* CTA */}
       {!isComplete && (
-        <button
-          onClick={() => navigate(`/nexus/loadout/${ENDLESS_MISSION_ID}?op=${operation.id}`)}
-          className="w-full py-3.5 nx-clip-sm font-black text-sm active:scale-95 nx-title relative overflow-hidden mb-4"
-          style={{
-            background: 'linear-gradient(180deg, hsl(150 80% 55%), hsl(150 80% 42%))',
-            color: 'hsl(150 30% 8%)',
-            boxShadow: '0 0 18px hsl(150 80% 55% / 0.55), inset 0 1px 0 hsl(0 0% 100% / 0.35)',
-          }}
-        >
-          ▶ DEPLOY · CONTRIBUTE A RUN
-        </button>
+        <>
+          <div className="text-center text-[10px] mb-1.5 text-foreground/65">
+            Next run contributes: <span className="font-bold text-cyan-200">{phaseMeta.metric}</span>
+          </div>
+          <button
+            onClick={() => navigate(`/nexus/loadout/${ENDLESS_MISSION_ID}?op=${operation.id}`)}
+            className="w-full py-3.5 nx-clip-sm font-black text-sm active:scale-95 nx-title relative overflow-hidden mb-4"
+            style={{
+              background: 'linear-gradient(180deg, hsl(150 80% 55%), hsl(150 80% 42%))',
+              color: 'hsl(150 30% 8%)',
+              boxShadow: '0 0 18px hsl(150 80% 55% / 0.55), inset 0 1px 0 hsl(0 0% 100% / 0.35)',
+            }}
+          >
+            ▶ DEPLOY · CONTRIBUTE A RUN
+          </button>
+        </>
       )}
 
       {/* My contribution */}
