@@ -198,7 +198,10 @@ export function tick(state: BattleState, mission: MissionDef): BattleState {
     const range = towerRangeAt(t.kind, t.level);
     const baseDamage = towerDamageAt(t.kind, t.level);
     const dmgMod = s.modTowerDamageMult?.[t.kind] ?? 1;
-    const damage = Math.max(1, Math.round(baseDamage * dmgMod));
+    // Boost: timed-window tower damage uplift (Overcharge Coil)
+    const boostActive = !!s.boostExpiresAtMs && s.elapsedMs <= s.boostExpiresAtMs;
+    const boostDmg = boostActive && s.boostTowerDamageMult ? s.boostTowerDamageMult : 1;
+    const damage = Math.max(1, Math.round(baseDamage * dmgMod * boostDmg));
     const fr = towerFireRateAt(t.kind, t.level);
     const cooldown = Math.max(80, Math.round(1000 / fr));
 
