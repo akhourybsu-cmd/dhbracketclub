@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, Trophy, Cpu } from 'lucide-react';
+import { ArrowLeft, BookOpen, Trophy, Cpu, Users } from 'lucide-react';
 import { useNexusProgress } from '@/hooks/useNexusProgress';
+import { useActiveOperation } from '@/hooks/useNexusOperation';
 import { NexusExitDialog } from './NexusExitDialog';
 import nexusEmblem from '@/assets/nexus-emblem.png';
 
@@ -20,6 +21,9 @@ export function NexusHUD() {
   if (location.pathname.startsWith('/nexus/battle/')) return null;
 
   const isHub = location.pathname === '/nexus';
+  const isOpHub = location.pathname.startsWith('/nexus/operation');
+  const { operation } = useActiveOperation();
+  const opActive = operation?.status === 'active';
 
   const handleBack = () => {
     if (isHub) {
@@ -40,6 +44,7 @@ export function NexusHUD() {
     if (p.startsWith('/nexus/codex')) return 'Tactical Codex';
     if (p.startsWith('/nexus/calibration')) return 'Calibration · Admin';
     if (p.startsWith('/nexus/balance')) return 'Telemetry · Admin';
+    if (p.startsWith('/nexus/operation')) return 'Co-op Operation';
     return 'Nexus Defense';
   })();
 
@@ -135,6 +140,26 @@ export function NexusHUD() {
               }}
             >
               <BookOpen className="w-4 h-4" />
+            </Link>
+          )}
+          {!isOpHub && (
+            <Link
+              to="/nexus/operation"
+              aria-label="Co-op Operation"
+              className="relative w-9 h-9 rounded-lg flex items-center justify-center btn-press"
+              style={{
+                background: opActive ? 'hsl(280 80% 65% / 0.18)' : 'hsl(280 50% 40% / 0.1)',
+                border: opActive ? '1px solid hsl(280 80% 65% / 0.5)' : '1px dashed hsl(280 60% 60% / 0.3)',
+                color: opActive ? 'hsl(280 90% 80%)' : 'hsl(280 60% 70% / 0.75)',
+              }}
+            >
+              <Users className="w-4 h-4" />
+              {opActive && (
+                <span
+                  className="nx-pulse-dot absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full"
+                  style={{ background: 'hsl(280 95% 70%)', boxShadow: '0 0 6px hsl(280 95% 70%)' }}
+                />
+              )}
             </Link>
           )}
         </div>

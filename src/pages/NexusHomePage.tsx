@@ -88,7 +88,7 @@ export default function NexusHomePage() {
         </div>
       </motion.div>
 
-      {operation && (() => {
+      {operation ? (() => {
         // Surface the active co-op operation as a prominent card so the friend
         // group sees shared progress without digging into a sub-page.
         const targets = [operation.phase1_target, operation.phase2_target, operation.phase3_target];
@@ -129,8 +129,49 @@ export default function NexusHomePage() {
             </div>
           </Link>
         );
-      })()}
+      })() : (
+        // Standby card — always visible so admins can start an op and players
+        // know the mode exists even when nothing is currently running.
+        <Link
+          to="/nexus/operation"
+          className="block mb-3 nx-clip-sm p-3 active:scale-[0.98] transition"
+          style={{
+            background: 'linear-gradient(180deg, hsl(280 25% 10%), hsl(280 35% 6%))',
+            border: '1px dashed hsl(280 80% 65% / 0.4)',
+            boxShadow: 'inset 0 1px 0 hsl(0 0% 100% / 0.04)',
+          }}
+        >
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5" style={{ color: 'hsl(280 70% 70% / 0.85)' }} />
+              <span className="nx-title text-[9px]" style={{ color: 'hsl(280 70% 70% / 0.85)', letterSpacing: '0.22em' }}>
+                CO-OP OPERATION · STANDBY
+              </span>
+            </div>
+            <span className="text-[9px] font-bold" style={{ color: 'hsl(280 70% 70% / 0.7)' }}>OPEN →</span>
+          </div>
+          <div className="text-[11px] text-foreground/65 leading-snug">
+            No active club operation. Open the hub to view past ops or start a new one.
+          </div>
+        </Link>
+      )}
 
+      <div className="grid grid-cols-2 gap-2 mb-2">
+        <NavTile
+          to="/nexus/operation"
+          icon={<Users className="w-4 h-4" />}
+          label="Co-op Op"
+          accent="hsl(280 80% 65%)"
+          borderColor="hsl(280 80% 65% / 0.35)"
+        />
+        <NavTile
+          to={`/nexus/loadout/${ENDLESS_MISSION_ID}`}
+          icon={<Target className="w-4 h-4" />}
+          label="Endless"
+          accent="hsl(var(--nx-amber))"
+          borderColor="hsl(var(--nx-amber) / 0.3)"
+        />
+      </div>
       <div className="grid grid-cols-3 gap-2">
         <NavTile to="/nexus/missions" icon={<Target className="w-4 h-4" />} label="Sector Map" />
         <NavTile to="/nexus/leaderboard" icon={<Trophy className="w-4 h-4" />} label="Leaderboard" />
@@ -140,18 +181,30 @@ export default function NexusHomePage() {
   );
 }
 
-function NavTile({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
+function NavTile({
+  to,
+  icon,
+  label,
+  accent = 'hsl(var(--nx-cyan))',
+  borderColor = 'hsl(var(--nx-cyan) / 0.2)',
+}: {
+  to: string;
+  icon: React.ReactNode;
+  label: string;
+  accent?: string;
+  borderColor?: string;
+}) {
   return (
     <Link
       to={to}
       className="aspect-square nx-clip-sm flex flex-col items-center justify-center gap-1.5 active:scale-95 transition"
       style={{
         background: 'linear-gradient(180deg, hsl(218 35% 11%), hsl(218 38% 7%))',
-        border: '1px solid hsl(var(--nx-cyan) / 0.2)',
+        border: `1px solid ${borderColor}`,
         boxShadow: 'inset 0 1px 0 hsl(0 0% 100% / 0.04)',
       }}
     >
-      <span style={{ color: 'hsl(var(--nx-cyan))' }}>{icon}</span>
+      <span style={{ color: accent }}>{icon}</span>
       <span className="nx-title text-[9px]">{label}</span>
     </Link>
   );

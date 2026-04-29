@@ -1,23 +1,107 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Lock, Check, Skull } from 'lucide-react';
+import { Lock, Check, Skull, Users, Infinity as InfinityIcon, ChevronRight } from 'lucide-react';
 import { useResolvedMissions } from '@/hooks/useMissionCalibrations';
 import { useNexusProgress } from '@/hooks/useNexusProgress';
 import { resolveModifiers, modifierTone } from '@/lib/nexus/modifiers';
+import { useActiveOperation } from '@/hooks/useNexusOperation';
+import { ENDLESS_MISSION_ID } from '@/lib/nexus/endless';
 import { cn } from '@/lib/utils';
 
 export default function NexusMissionsPage() {
   const { progress } = useNexusProgress();
   const { missions: MISSIONS } = useResolvedMissions();
+  const { operation } = useActiveOperation();
+  // Endless lives outside the campaign list; always exclude here.
+  const campaign = MISSIONS.filter(m => m.id !== ENDLESS_MISSION_ID);
   return (
     <div className="max-w-md mx-auto pb-6 px-1">
       <div className="mb-4 mt-1">
         <h1 className="text-2xl font-black">Outer Rim</h1>
-        <p className="text-sm text-muted-foreground">Sector I · 6 missions</p>
+        <p className="text-sm text-muted-foreground">Sector I · {campaign.length} missions</p>
       </div>
 
+      {/* ── Special Operations: Endless (solo) + Co-op hub ── */}
+      <div className="mb-4">
+        <h2 className="nx-title text-[9px] mb-2" style={{ color: 'hsl(0 0% 100% / 0.55)', letterSpacing: '0.22em' }}>
+          ◢ SPECIAL OPERATIONS
+        </h2>
+        <div className="space-y-2">
+          {/* Co-op Operation */}
+          <Link
+            to="/nexus/operation"
+            className="block p-3 nx-clip-sm active:scale-[0.99] transition"
+            style={{
+              background: operation
+                ? 'linear-gradient(180deg, hsl(280 50% 14%), hsl(280 60% 8%))'
+                : 'linear-gradient(180deg, hsl(280 25% 10%), hsl(280 35% 6%))',
+              border: operation
+                ? '1px solid hsl(280 80% 65% / 0.5)'
+                : '1px dashed hsl(280 80% 65% / 0.4)',
+              boxShadow: operation ? '0 0 14px -6px hsl(280 80% 60% / 0.5)' : undefined,
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 nx-clip-sm flex items-center justify-center shrink-0"
+                style={{
+                  background: 'hsl(280 80% 65% / 0.18)',
+                  border: '1.5px solid hsl(280 80% 65%)',
+                  color: 'hsl(280 90% 80%)',
+                }}
+              >
+                <Users className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-black truncate">Club Co-op Operation</div>
+                <div className="nx-title text-[9px] mt-0.5" style={{ color: operation ? 'hsl(280 90% 78%)' : 'hsl(280 70% 70% / 0.7)' }}>
+                  {operation
+                    ? `PHASE ${operation.current_phase} · ${operation.total_contributors} ALL${operation.total_contributors === 1 ? 'Y' : 'IES'}`
+                    : 'STANDBY · NO ACTIVE OP'}
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-foreground/50 shrink-0" />
+            </div>
+          </Link>
+
+          {/* Endless Solo */}
+          <Link
+            to={`/nexus/loadout/${ENDLESS_MISSION_ID}`}
+            className="block p-3 nx-clip-sm active:scale-[0.99] transition"
+            style={{
+              background: 'linear-gradient(180deg, hsl(38 50% 12%), hsl(38 60% 6%))',
+              border: '1px solid hsl(var(--nx-amber) / 0.5)',
+              boxShadow: '0 0 14px -6px hsl(var(--nx-amber) / 0.45)',
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 nx-clip-sm flex items-center justify-center shrink-0"
+                style={{
+                  background: 'hsl(var(--nx-amber) / 0.18)',
+                  border: '1.5px solid hsl(var(--nx-amber))',
+                  color: 'hsl(var(--nx-amber))',
+                }}
+              >
+                <InfinityIcon className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-black truncate">Endless Defense</div>
+                <div className="nx-title text-[9px] mt-0.5" style={{ color: 'hsl(var(--nx-amber))' }}>
+                  SOLO · STANDALONE LEADERBOARD
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-foreground/50 shrink-0" />
+            </div>
+          </Link>
+        </div>
+      </div>
+
+      <h2 className="nx-title text-[9px] mb-2" style={{ color: 'hsl(0 0% 100% / 0.55)', letterSpacing: '0.22em' }}>
+        ◢ CAMPAIGN MISSIONS
+      </h2>
       <div className="space-y-2">
-        {MISSIONS.map((m, idx) => {
+        {campaign.map((m, idx) => {
           const unlocked = m.id <= progress.highest_mission;
           const cleared = m.id < progress.highest_mission;
           return (

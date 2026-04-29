@@ -1,78 +1,84 @@
-## Daily Challenge → Endless Survival Mode
+# Surface Co-op Operation Navigation Across Nexus
 
-Replace the current "play a seeded level with daily modifiers" daily challenge with a **timed endless survival arena**: one continuous fight, no move limit, no chapters, no objectives — just the player vs. an unending stream of enemies until the timer hits zero or they die.
+## Problem
 
-### Core Design
+The new async co-op **Operation** mode is essentially hidden:
 
-**Format:**
-- Fixed time limit: **2:00 minutes** per attempt (single countdown, visible HUD timer)
-- One run per day per player (existing daily uniqueness preserved)
-- Player picks runes freely — **no turn/move limit**
-- Enemies spawn continuously: clear an enemy → next spawns shortly after, with difficulty ramping over time
-- Run ends when: (a) timer reaches 0, or (b) HP reaches 0
-- No level number, no chapters, no secondary objectives, no boss mechanics — pure combat loop
+- The Nexus Home card linking to `/nexus/operation` only renders when an operation is **already active**. If none exists, there's no way to reach the page (so admins can't start one, and players can't see the "next op coming" state).
+- The Home nav grid only has 3 tiles: Sector Map / Leaderboard / Codex.
+- The Sector Map (`NexusMissionsPage`) doesn't surface Endless or Co-op at all.
+- The HUD has no quick link.
+- There's no solo entry to Endless mode either — the only route into `ENDLESS_MISSION_ID` is the operation card, creating a chicken-and-egg loop.
+- The Admin Hub has shortcuts for Calibration and Balance, but not for Operations management.
 
-**Scoring & Rewards (kill-count driven):**
-- Score = enemies defeated × tier multiplier + bonus for damage dealt
-- Reward tiers based on kill count (scaled to encourage character investment):
-  - 0–4 kills → 25 shards (participation)
-  - 5–9 kills → 75 shards
-  - 10–14 kills → 150 shards
-  - 15–19 kills → 250 shards
-  - 20–29 kills → 400 shards + cosmetic title progress
-  - 30+ kills → 600 shards + "Endless Conqueror" title at 30+, "Eternal" title at 50+
-- XP scales linearly with kills (10 XP per kill, capped at 500)
+## Goal
 
-**Difficulty ramp (every 20 seconds):**
-- Wave 1 (0:00–0:20): basic enemies, single spawn
-- Wave 2 (0:20–0:40): +20% enemy HP, occasional 2-enemy spawns
-- Wave 3 (0:40–1:00): +50% enemy HP, mini-boss variants appear
-- Wave 4 (1:00–1:30): +100% enemy HP, all spawns are 2-enemy
-- Wave 5 (1:30–2:00): +200% enemy HP, boss variants in pool — "Final Push"
+Make the Co-op Operation hub reachable from every natural Nexus surface, in both "active op" and "no active op" states, on mobile-first layouts, without disturbing the existing solo campaign flow.
 
-**Why this incentivizes character investment:**
-- Stronger relics + class masteries = faster kills = more enemies cycled = bigger rewards
-- A weak loadout caps out around 5–10 kills; a tuned loadout pushes 25+
+## Changes
 
-### Streak & Leaderboard
+### 1. `src/pages/NexusHomePage.tsx` — always-visible Co-op tile
 
-- Streak still rewards consecutive **days played** (lower the bar from "cleared" to "attempted with ≥5 kills" since there's no clear/fail anymore)
-- Leaderboard ranks by **kill count** primarily, score as tiebreaker
-- "Stars" repurposed: ★ = 5+ kills, ★★ = 15+ kills, ★★★ = 25+ kills
+- Keep the rich "active operation" card when `operation` exists (unchanged).
+- When `operation` is null, render a **muted "Co-op Operation · standby"** card in the same slot that still links to `/nexus/operation`, so admins can enter and start a new one and players see the mode exists.
+- Expand the bottom nav grid from `grid-cols-3` to `grid-cols-2` on row 1 (Co-op + Sector Map prominent) and `grid-cols-3` on row 2 (Leaderboard / Codex / Endless), OR simpler: switch the existing 3-tile row to 4 tiles with Co-op added. Use the simpler 4-tile approach with `grid-cols-4` and tighter sizing — purple Co-op tile, distinguishable from the cyan campaign tiles.
 
-### Files Changed
+### 2. `src/pages/NexusMissionsPage.tsx` — surface Endless + Co-op
 
-**New:**
-- `src/pages/RuneDelveEndlessPage.tsx` — the new survival play screen (timer HUD, continuous enemy spawner, kill counter, end-of-run summary)
-- `src/lib/runedelve/endlessMode.ts` — wave config, enemy spawn pool by time, reward tier calculator, `endlessStarsFor(kills)` helper
+Add a "Special Operations" section above or below the campaign mission list with two cards:
 
-**Modified:**
-- `src/lib/runedelve/dailyChallenge.ts` — strip modifier rolling and `dailyLevelFor`; keep date helpers; add `endlessTimeLimit = 120` constant and `endlessRewardFor(kills)`
-- `src/hooks/useDailyChallenge.ts` — `useTodayDaily()` returns `{ dateStr, timeLimit }` only (no modifiers/level); `useSubmitDailyRun()` accepts `{ kills, score, heroClass }`; streak now bumps on attempts ≥5 kills
-- `src/pages/RuneDelveDailyPage.tsx` — remove the modifiers section and "Today's Trial" copy; show "Endless Survival · 2 minutes" hero, kill-count reward ladder, leaderboard ranked by kills
-- `src/pages/RuneDelvePlayPage.tsx` — remove `?daily=1` branch and all daily-modifier injection (lines 66–81, 144–153, daily mods in combat). Daily mode no longer routes here.
-- Routing: `/rune-delve/daily` "Begin" CTA points to a new `/rune-delve/endless` route registered in `src/App.tsx`
+- **Endless Defense (Solo)** → `/nexus/loadout/{ENDLESS_MISSION_ID}` — amber-themed, "Survive as long as you can. Standalone leaderboard."
+- **Club Co-op Operation** → `/nexus/operation` — purple-themed, shows live phase/progress chip when an op is active, "Standby" chip otherwise. Uses the existing `useActiveOperation` hook.
 
-### Database
+This also fixes the broken solo-Endless entry path.
 
-**Migration on `rune_delve_daily_runs`:**
-- Add `kills_count int not null default 0`
-- Repurpose existing `score` (still used) and `stars` (now derived from kills)
-- `dungeon_cleared` becomes legacy/unused — keep column for back-compat, always write `false`
-- `modifiers` jsonb — keep column, always write `[]`
-- No new table; the unique `(user_id, daily_date)` constraint still gates "one run per day"
+### 3. `src/components/nexus/NexusHUD.tsx` — quick link in HUD
 
-**Migration on `rune_delve_daily_streaks`:**
-- No schema change. Logic in `useSubmitDailyRun` updates streak when `kills ≥ 5` instead of when `cleared = true`.
+- Add a small purple **Users** icon button next to the Trophy/Codex button (or replacing one based on context). It pulses subtly when an operation is active. Links to `/nexus/operation`.
+- Visible on every Nexus screen except `/nexus/battle/*` (HUD already hides there).
+- Hide on `/nexus/operation` itself to avoid redundancy.
 
-### Technical Notes
+### 4. `src/components/profile/AdminHub.tsx` — admin shortcut
 
-- Endless page uses the existing `RuneBoard`, `combatEngine.applyChain`, `EnemyDisplay`, `HeroStatusBar` — no combat logic rewrite. We bypass `endTurn` move-limit checks and replace `enemiesAttack` cadence with a time-based enemy AI tick (every 4s an alive enemy attacks; faster as waves progress).
-- Enemy spawner picks from `ENEMY_ROSTER` filtered by current wave tier; uses `spawnWave()` helper already exported from `combatEngine`.
-- Run snapshot/rehydrate from `runSnapshot.ts` is **disabled** for endless (one continuous run, no resume — if the player closes the app, the run ends).
-- Class masteries, relics, and shards economy all still apply during the endless run, so character power directly drives kill throughput.
-- Streak rules: if last_completed_date == today → no change; if == yesterday → +1; else → 1. Lifetime counter increments on any attempted run with ≥5 kills.
+Add a third Nexus admin entry:
+- `{ icon: Users, label: 'Nexus Co-op Operations', description: 'Start, monitor, end club operations', to: '/nexus/operation', iconColor: 'primary' }`
 
-### Open Question
+### 5. `src/pages/NexusLoadoutPage.tsx` — context banner for Endless
 
-The plan uses **2:00** as the timer. If you'd prefer 1:30 (tighter, more frantic) or 3:00 (more room for slow class builds), say the word and I'll adjust the constant before building.
+When the loadout page is opened for `ENDLESS_MISSION_ID`:
+- If `?op=<id>` query param is present, show a small purple banner: "Contributing to: {operation.name} · Phase {n}".
+- Otherwise show: "Solo Endless run — standalone score, no co-op contribution." with a link to `/nexus/operation` to opt into the active op (if one exists).
+
+This makes the difference between solo-Endless and co-op-Endless explicit, and gives a soft cross-link.
+
+## Visual / Interaction Notes
+
+- Purple `hsl(280 80% 65%)` family is already established as the Co-op color (used in the existing home card).
+- All new touch targets ≥ 44px (per Mobile Interaction Standards memory).
+- "Standby" state uses muted purple (40% opacity surface, dotted border) to read as inactive without disappearing.
+- Pulse dot on HUD button only when `operation?.status === 'active'`.
+- No new realtime channels — reuse `useActiveOperation()` which is already deduped per-mount.
+
+## Out of Scope
+
+- No changes to the contribution formula, RPC, calibration, telemetry, modifiers, or battle engine.
+- No new realtime subscriptions or tables.
+- No changes to the solo campaign mission list ordering or unlock logic.
+- No redesign of the Operation hub page itself.
+
+## Files Touched
+
+- `src/pages/NexusHomePage.tsx` — standby card + 4-tile nav grid
+- `src/pages/NexusMissionsPage.tsx` — Special Operations section
+- `src/components/nexus/NexusHUD.tsx` — Co-op quick button
+- `src/components/profile/AdminHub.tsx` — admin shortcut row
+- `src/pages/NexusLoadoutPage.tsx` — Endless context banner
+
+## Manual Verification After Build
+
+1. Visit `/nexus` with no active op → Co-op standby card and tile both visible and tappable.
+2. Visit `/nexus` with an active op → existing rich card still shows + HUD button pulses.
+3. From `/nexus/missions`, both Special Operations cards lead to the right destinations.
+4. Open `/nexus/loadout/100` directly (solo) and via `?op=...` (co-op) — banner differs.
+5. Admin Hub shows new Co-op Operations row for global admin only (existing AdminHub gating).
+6. HUD Co-op button appears on Hub, Missions, Loadout, Results, Leaderboard, Codex; hidden on Battle and Operation pages.

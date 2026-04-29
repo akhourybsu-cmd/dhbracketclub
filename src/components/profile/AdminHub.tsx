@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, Activity, RefreshCw, Trophy, Bookmark, Bell, ChevronRight, Loader2, Swords, Building2, BarChart3, Sliders } from 'lucide-react';
+import { Shield, Activity, RefreshCw, Trophy, Bookmark, Bell, ChevronRight, Loader2, Swords, Building2, BarChart3, Sliders, Users } from 'lucide-react';
 import { useClub } from '@/contexts/ClubContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -264,6 +264,7 @@ export default function AdminHub() {
     { icon: BarChart3, label: 'Rune Delve Balance Report', description: 'Full-spectrum audit · sim + live data', to: '/rune-delve/balance', iconColor: 'gold' },
     { icon: BarChart3, label: 'Nexus Defense Balance', description: 'Mission, tower & ability telemetry', to: '/nexus/balance', iconColor: 'primary' },
     { icon: Sliders, label: 'Nexus Mission Calibration', description: 'Tune live mission difficulty', to: '/nexus/calibration', iconColor: 'warning' },
+    { icon: Users, label: 'Nexus Co-op Operations', description: 'Start, monitor & end club operations', to: '/nexus/operation', iconColor: 'accent' },
   ];
 
   const diagnostics: Tool[] = [
