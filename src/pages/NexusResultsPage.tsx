@@ -258,3 +258,197 @@ function Stat({
     </div>
   );
 }
+
+/* ----------------------- Operation Contribution Panel ----------------------- */
+
+function useCountUp(target: number, durationMs = 900) {
+  const [v, setV] = useState(0);
+  useEffect(() => {
+    if (!target) { setV(0); return; }
+    const start = performance.now();
+    let raf = 0;
+    const step = (t: number) => {
+      const p = Math.min(1, (t - start) / durationMs);
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - p, 3);
+      setV(Math.round(target * eased));
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, durationMs]);
+  return v;
+}
+
+function fmt(n: number) { return n.toLocaleString(); }
+
+function OperationContributionPanel({ insight, score }: { insight: RunInsight; score: number }) {
+  const op = insight.operation;
+  const purple = 'hsl(280 90% 78%)';
+  const purpleDim = 'hsl(280 60% 18%)';
+
+  // Headline copy for status
+  let headline = 'You pushed the Operation forward';
+  let headlineColor = purple;
+  if (op?.operationComplete) { headline = '◆ Operation Complete — your run sealed it'; headlineColor = 'hsl(150 80% 70%)'; }
+  else if (op?.phaseAdvanced) {
+    const pn = op.affectedPhase ?? 1;
+    headline = pn === 3 ? 'Siege Core damaged · Phase secured' : `Phase ${pn} secured · Phase ${pn + 1} unlocked`;
+    headlineColor = 'hsl(150 80% 72%)';
+  } else if (op?.duplicate) { headline = 'Already submitted — no duplicate points'; headlineColor = 'hsl(0 0% 70%)'; }
+  else if (op?.status === 'none' || !op) { headline = 'No active Operation'; headlineColor = 'hsl(0 0% 70%)'; }
+  else if (op?.status === 'error') { headline = 'Could not submit run'; headlineColor = 'hsl(15 85% 70%)'; }
+  else if (op?.affectedPhase) { headline = `You ${PHASE_LABELS[op.affectedPhase].verb}`; }
+
+  const showProgress = !!op && !op.duplicate && op.status !== 'none' && op.status !== 'error'
+    && typeof op.priorProgress === 'number' && typeof op.newProgress === 'number' && typeof op.priorTarget === 'number'
+    && (op.priorTarget ?? 0) > 0;
+
+  const priorPct = showProgress ? Math.min(100, ((op!.priorProgress! / op!.priorTarget!) * 100)) : 0;
+  const newPct = showProgress ? Math.min(100, ((op!.newProgress! / op!.priorTarget!) * 100)) : 0;
+  const movedPct = Math.max(0, newPct - priorPct);
+
+  const animatedPts = useCountUp(op?.duplicate ? 0 : (op?.pointsAwarded ?? 0));
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3 }}
+      className="relative nx-clip-sm p-3 mb-4 overflow-hidden"
+      style={{
+        background: 'linear-gradient(180deg, hsl(280 50% 14%), hsl(280 60% 8%))',
+        border: '1px solid hsl(280 80% 65% / 0.45)',
+        boxShadow: '0 0 16px -4px hsl(280 80% 60% / 0.4)',
+      }}
+    >
+      {/* sci-fi sweep */}
+      {!op?.duplicate && op?.status !== 'error' && op?.status !== 'none' && op && (
+        <motion.div
+          aria-hidden
+          className="absolute inset-y-0 -left-1/3 w-1/3 pointer-events-none"
+          style={{ background: 'linear-gradient(90deg, transparent, hsl(280 90% 75% / 0.18), transparent)' }}
+          initial={{ x: 0 }}
+          animate={{ x: '420%' }}
+          transition={{ duration: 1.2, ease: 'easeOut', delay: 0.35 }}
+        />
+      )}
+
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Users className="w-3.5 h-3.5 shrink-0" style={{ color: purple }} />
+          <span className="nx-title text-[10px] truncate" style={{ color: purple, letterSpacing: '0.22em' }}>
+            OPERATION CONTRIBUTION
+          </span>
+        </div>
+        {op && !op.duplicate && (op.pointsAwarded ?? 0) > 0 && (
+          <motion.span
+            initial={{ scale: 0.8 }}
+            animate={op.phaseAdvanced || op.operationComplete
+              ? { scale: [0.8, 1.18, 1] }
+              : { scale: 1 }}
+            transition={{ duration: 0.55 }}
+            className="text-sm font-black tabular-nums"
+            style={{ color: 'hsl(280 95% 85%)', textShadow: '0 0 8px hsl(280 90% 60% / 0.6)' }}
+          >
+            +{fmt(animatedPts)} PTS
+          </motion.span>
+        )}
+      </div>
+
+      {/* Headline */}
+      <div
+        className="text-[12px] font-black mb-2 leading-tight"
+        style={{ color: headlineColor }}
+      >
+        {headline}
+      </div>
+
+      {/* Per-run contribution stats */}
+      <div className="grid grid-cols-3 gap-2 text-center mb-2">
+        <div>
+          <div className="text-[9px] uppercase tracking-wider text-foreground/55">Kills</div>
+          <div className="text-base font-black tabular-nums text-foreground">{fmt(insight.kills ?? 0)}</div>
+        </div>
+        <div>
+          <div className="text-[9px] uppercase tracking-wider text-foreground/55">Score</div>
+          <div className="text-base font-black tabular-nums text-foreground">{fmt(score)}</div>
+        </div>
+        <div>
+          <div className="text-[9px] uppercase tracking-wider text-foreground/55">Boss Dmg</div>
+          <div className="text-base font-black tabular-nums text-foreground">{fmt(insight.bossDamage ?? 0)}</div>
+        </div>
+      </div>
+
+      {/* Phase progress before -> after */}
+      {showProgress && (
+        <div className="mt-2">
+          <div className="flex items-center justify-between text-[10px] mb-1">
+            <span className="flex items-center gap-1 text-foreground/70">
+              <Target className="w-3 h-3" style={{ color: purple }} />
+              <span className="font-bold">
+                Phase {op!.affectedPhase} · {PHASE_LABELS[op!.affectedPhase ?? 1].label}
+              </span>
+            </span>
+            <span className="tabular-nums text-foreground/65">
+              {fmt(op!.priorProgress!)} → {fmt(op!.newProgress!)}
+            </span>
+          </div>
+          <div className="relative h-2.5 rounded-full overflow-hidden bg-black/45 border border-white/10">
+            {/* prior baseline */}
+            <div
+              className="absolute inset-y-0 left-0"
+              style={{ width: `${priorPct}%`, background: 'hsl(280 40% 35%)' }}
+            />
+            {/* moved-by-this-run delta */}
+            <motion.div
+              className="absolute inset-y-0"
+              style={{
+                left: `${priorPct}%`,
+                background: 'linear-gradient(90deg, hsl(280 80% 65%), hsl(195 90% 60%))',
+                boxShadow: '0 0 10px hsl(280 90% 65%)',
+              }}
+              initial={{ width: 0 }}
+              animate={{ width: `${movedPct}%` }}
+              transition={{ duration: 0.9, ease: 'easeOut', delay: 0.25 }}
+            />
+          </div>
+          <div className="flex items-center justify-between text-[10px] mt-1">
+            <span className="text-foreground/55">
+              of {fmt(op!.priorTarget!)} target
+            </span>
+            <span className="flex items-center gap-1 font-bold" style={{ color: purple }}>
+              <TrendingUp className="w-3 h-3" />
+              +{movedPct.toFixed(movedPct < 1 ? 2 : 1)}%
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Edge state messages */}
+      {op?.duplicate && (
+        <div className="mt-2 text-[10px] text-foreground/60 text-center">
+          This run was already counted toward the Operation.
+        </div>
+      )}
+      {(op?.status === 'none' || !op) && insight.endless && (
+        <div className="mt-2 text-[10px] text-foreground/60 text-center">
+          No Operation is active right now — no points awarded.
+        </div>
+      )}
+      {op?.status === 'error' && (
+        <div className="mt-2 text-[10px] text-center" style={{ color: 'hsl(15 85% 70%)' }}>
+          ⚠ {op.error ?? 'Submission failed'} — try again from the hub.
+        </div>
+      )}
+
+      <Link
+        to="/nexus/operation"
+        className="mt-3 block text-center text-[11px] font-black uppercase tracking-widest py-2 nx-clip-sm"
+        style={{ background: purpleDim, color: 'hsl(280 95% 85%)', border: '1px solid hsl(280 80% 60% / 0.5)' }}
+      >
+        View Operation Hub →
+      </Link>
+    </motion.div>
+  );
+}
