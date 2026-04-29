@@ -14,6 +14,8 @@ import {
   withDefaults,
   applyCalibration,
 } from '@/lib/nexus/calibration';
+import { resolveEffective } from '@/lib/nexus/effectiveValues';
+import { EffectiveValuesPanel } from '@/components/nexus/EffectiveValuesPanel';
 import { resetCalibration, saveCalibration } from '@/hooks/useMissionCalibrations';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -100,6 +102,7 @@ export default function NexusCalibrationPage() {
 
   const baseMission = useMemo(() => MISSIONS.find(m => m.id === missionId)!, [missionId]);
   const previewMission = useMemo(() => applyCalibration(baseMission, draft), [baseMission, draft]);
+  const effective = useMemo(() => resolveEffective(baseMission, draft), [baseMission, draft]);
 
   const missionRuns = useMemo(() => runs.filter(r => r.mission_id === missionId), [runs, missionId]);
   const telemetry = useMemo(() => {
