@@ -121,9 +121,13 @@ export function useActiveOperation() {
   useEffect(() => { refresh(); }, [refresh]);
 
   // Realtime: any change to ops/contribs/runs triggers a soft refresh.
+  // Each mount gets a unique channel name so multiple instances of this
+  // hook (e.g. Nexus Home + Operation Hub mounted simultaneously) never
+  // collide on the Supabase channel registry.
   useEffect(() => {
+    const channelName = `nexus-operation-live-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
-      .channel('nexus-operation-live')
+      .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'nexus_operations' }, () => refresh())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'nexus_operation_contributions' }, () => refresh())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'nexus_operation_runs' }, () => refresh())
