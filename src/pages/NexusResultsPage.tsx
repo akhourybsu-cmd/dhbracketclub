@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trophy, X, Cpu, Zap, ShieldOff, Clock, ChevronRight, Users } from 'lucide-react';
+import { Trophy, X, Cpu, Zap, ShieldOff, Clock, ChevronRight, Users, Target, TrendingUp } from 'lucide-react';
 import { useResolvedMissions } from '@/hooks/useMissionCalibrations';
 import { TOWERS } from '@/lib/nexus/towers';
 import type { TowerKind, AbilityKind } from '@/lib/nexus/types';
@@ -24,8 +24,20 @@ interface RunInsight {
     status: string;
     duplicate: boolean;
     error?: string;
+    affectedPhase?: number;
+    priorProgress?: number;
+    newProgress?: number;
+    priorTarget?: number;
+    phaseAdvanced?: boolean;
+    operationComplete?: boolean;
   } | null;
 }
+
+const PHASE_LABELS: Record<number, { label: string; metric: string; verb: string }> = {
+  1: { label: 'Repel the Swarm', metric: 'Enemies neutralized', verb: 'pushed Phase 1' },
+  2: { label: 'Hold the Sector', metric: 'Score earned', verb: 'pushed Phase 2' },
+  3: { label: 'Crack the Siege Core', metric: 'Boss damage', verb: 'damaged the Siege Core' },
+};
 
 export default function NexusResultsPage() {
   const { missionId } = useParams<{ missionId: string }>();
