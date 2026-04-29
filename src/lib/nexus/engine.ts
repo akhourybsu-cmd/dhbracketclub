@@ -23,6 +23,18 @@ export interface InitBattleOptions {
   enemyHpMult?: Partial<Record<EnemyKind, number>>;
   enemyShieldMult?: Partial<Record<EnemyKind, number>>;
   enemySpeedMult?: number;
+  /** Active pre-run boost. Effects parsed from the catalog row. */
+  boost?: {
+    code: string;
+    towerDamageMult?: number;
+    buildCostMult?: number;
+    durationMs?: number;
+    hpMult?: number;
+    energyRegenMult?: number;
+    opPointsMult?: number;
+    coresMult?: number;
+    reconWaves?: number;
+  };
 }
 
 export function initBattle(missionId: number, abilities: AbilityKind[], opts: InitBattleOptions = {}): BattleState {
@@ -38,12 +50,17 @@ export function initBattle(missionId: number, abilities: AbilityKind[], opts: In
   const modDefs = resolveModifiers(mission.modifierIds);
   const mods = modDefs.length ? aggregateModifiers(modDefs) : emptyAggregated();
 
+  // Apply boost-driven base adjustments
+  const boost = opts.boost;
+  const hpMultBoost = boost?.hpMult ?? 1;
+  const baseHp = Math.max(1, Math.round(mission.baseHp * hpMultBoost));
+
   return {
     tickMs: TICK_MS,
     elapsedMs: 0,
     energy: Math.max(0, mission.startEnergy + mods.startEnergyDelta),
-    baseHp: mission.baseHp,
-    baseHpMax: mission.baseHp,
+    baseHp,
+    baseHpMax: baseHp,
     waveIndex: -1,
     totalWaves: mission.waves.length,
     waveTimeMs: 0,
@@ -76,6 +93,15 @@ export function initBattle(missionId: number, abilities: AbilityKind[], opts: In
     modAbilityCooldownMult: mods.abilityCooldownMult,
     modShieldRegen: mods.shieldRegen,
     modBossHpMult: mods.bossHpMult,
+    // boost fields
+    boostCode: boost?.code ?? null,
+    boostTowerDamageMult: boost?.towerDamageMult,
+    boostBuildCostMult: boost?.buildCostMult,
+    boostEnergyRegenMult: boost?.energyRegenMult ?? 1,
+    boostOpPointsMult: boost?.opPointsMult ?? 1,
+    boostCoresMult: boost?.coresMult ?? 1,
+    boostReconWaves: boost?.reconWaves ?? 0,
+    boostExpiresAtMs: boost?.durationMs ? boost.durationMs : undefined,
   };
 }
 
@@ -96,9 +122,11 @@ export function tick(state: BattleState, mission: MissionDef): BattleState {
   s.abilities.forEach(a => { a.cooldownMs = Math.max(0, a.cooldownMs - TICK_MS); });
 
   // Passive energy trickle: 1 energy every 1.5s during waves, 0.75s between waves.
-  // Smooths out mid-wave economy without trivializing kill bounties.
+  // Boosted runs may slow this to 90% (Reinforced Plating trade-off) by stretching the interval.
   if (s.status === 'in_wave' || s.status === 'between') {
-    const intervalMs = s.status === 'in_wave' ? 1500 : 750;
+    const baseInterval = s.status === 'in_wave' ? 1500 : 750;
+    const regenMult = s.boostEnergyRegenMult ?? 1;
+    const intervalMs = Math.max(100, Math.round(baseInterval / regenMult));
     if (Math.floor(s.elapsedMs / intervalMs) > Math.floor((s.elapsedMs - TICK_MS) / intervalMs)) {
       s.energy += 1;
     }
@@ -170,7 +198,10 @@ export function tick(state: BattleState, mission: MissionDef): BattleState {
     const range = towerRangeAt(t.kind, t.level);
     const baseDamage = towerDamageAt(t.kind, t.level);
     const dmgMod = s.modTowerDamageMult?.[t.kind] ?? 1;
-    const damage = Math.max(1, Math.round(baseDamage * dmgMod));
+    // Boost: timed-window tower damage uplift (Overcharge Coil)
+    const boostActive = !!s.boostExpiresAtMs && s.elapsedMs <= s.boostExpiresAtMs;
+    const boostDmg = boostActive && s.boostTowerDamageMult ? s.boostTowerDamageMult : 1;
+    const damage = Math.max(1, Math.round(baseDamage * dmgMod * boostDmg));
     const fr = towerFireRateAt(t.kind, t.level);
     const cooldown = Math.max(80, Math.round(1000 / fr));
 
