@@ -11,6 +11,7 @@ import { useNexusSfx } from '@/hooks/useNexusSfx';
 import { resolveModifiers, modifierTone } from '@/lib/nexus/modifiers';
 import { isEndlessMission } from '@/lib/nexus/endless';
 import { submitOperationContribution } from '@/hooks/useNexusOperation';
+import { usePendingBoost, consumeBoostForRun, awardEndlessRewards } from '@/hooks/useNexusRewards';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
@@ -34,18 +35,30 @@ export default function NexusBattlePage() {
     return raw.split(',').filter(Boolean) as AbilityKind[];
   }, [params]);
 
+  const { data: pendingBoost } = usePendingBoost();
+
   const [state, setState] = useState<BattleState | null>(null);
-  // Initialise battle once mission is resolved.
+  // Initialise battle once mission is resolved. Wait for boost query so we don't
+  // re-init mid-run if the boost loads slightly late.
   useEffect(() => {
     if (!mission || state) return;
-    setState(initBattle(mission.id, abilities, {
-      mission,
-      enemyHpMult: enemyMods.hpMult,
-      enemyShieldMult: enemyMods.shieldMult,
-      enemySpeedMult: enemyMods.speedMult,
-    }));
+    const boost = pendingBoost
+      ? {
+          code: pendingBoost.code,
+          ...(pendingBoost.effect_config ?? {}),
+        }
+      : undefined;
+    setState(
+      initBattle(mission.id, abilities, {
+        mission,
+        enemyHpMult: enemyMods.hpMult,
+        enemyShieldMult: enemyMods.shieldMult,
+        enemySpeedMult: enemyMods.speedMult,
+        boost,
+      }),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mission]);
+  }, [mission, pendingBoost]);
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -138,7 +151,7 @@ export default function NexusBattlePage() {
             wavesCleared,
             baseHpRemaining: state.baseHp,
             durationSeconds,
-            loadout: { towers: ['pulse','arc','cryo','rail'], abilities, modifierIds: state.modifierIds },
+            loadout: { towers: ['pulse','arc','cryo','rail'], abilities, modifierIds: state.modifierIds, boostCode: state.boostCode ?? null },
             failedWave: won ? null : state.waveIndex + 1,
             towerUsage: state.towerBuilds,
             towerUpgrades: state.towerUpgrades,
@@ -147,6 +160,12 @@ export default function NexusBattlePage() {
             energyStarvedMs: state.energyStarvedMs,
             leaks: state.leaks,
           }).catch(() => null);
+        }
+
+        // Consume the boost (binds it to this run id) so award_endless_rewards
+        // can read its salvageMult, and so it can't be reused on another run.
+        if (user && state.boostCode && nexusRunId) {
+          await consumeBoostForRun(nexusRunId).catch(() => null);
         }
 
         // Endless runs feed the active Operation. Even partial runs count.
@@ -227,6 +246,17 @@ export default function NexusBattlePage() {
           }
         }
 
+        // Endless milestone rewards (sigils + tokens for waves 10/20/30).
+        let endlessRewards: { sigils: Array<{ code: string; first_time: boolean }>; tokens: number } | null = null;
+        if (endless && user && nexusRunId && wavesCleared > 0) {
+          endlessRewards = await awardEndlessRewards(nexusRunId, wavesCleared);
+          if (endlessRewards && endlessRewards.tokens > 0) {
+            const newSigils = endlessRewards.sigils.filter(s => s.first_time).length;
+            if (newSigils > 0) toast.success(`+${endlessRewards.tokens}⬢ · ${newSigils} new sigil${newSigils > 1 ? 's' : ''}`);
+            else toast.success(`+${endlessRewards.tokens}⬢ Salvage Tokens`);
+          }
+        }
+
         // Stash run insight for the results page (avoids URL bloat).
         try {
           sessionStorage.setItem(`nexus_run_${mission.id}`, JSON.stringify({
@@ -242,6 +272,8 @@ export default function NexusBattlePage() {
             bossDamage: state.bossDamageDealt ?? 0,
             endless,
             operation: opSummary,
+            boostCode: state.boostCode ?? null,
+            endlessRewards,
           }));
         } catch {}
       };

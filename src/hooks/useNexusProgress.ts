@@ -69,7 +69,7 @@ export async function recordNexusRun(params: {
   wavesCleared: number;
   baseHpRemaining: number;
   durationSeconds: number;
-  loadout: { towers: string[]; abilities: string[]; modifierIds?: string[] };
+  loadout: { towers: string[]; abilities: string[]; modifierIds?: string[]; boostCode?: string | null };
   failedWave?: number | null;
   towerUsage?: Record<string, number>;
   towerUpgrades?: Record<string, number>;

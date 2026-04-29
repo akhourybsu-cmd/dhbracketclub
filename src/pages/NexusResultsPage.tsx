@@ -5,6 +5,7 @@ import { Trophy, X, Cpu, Zap, ShieldOff, Clock, ChevronRight, Users, Target, Tre
 import { useResolvedMissions } from '@/hooks/useMissionCalibrations';
 import { TOWERS } from '@/lib/nexus/towers';
 import type { TowerKind, AbilityKind } from '@/lib/nexus/types';
+import { NexusRewardsPanel } from '@/components/nexus/NexusRewardsPanel';
 
 interface RunInsight {
   towerBuilds: Record<TowerKind, number>;
@@ -17,6 +18,8 @@ interface RunInsight {
   kills?: number;
   bossDamage?: number;
   endless?: boolean;
+  boostCode?: string | null;
+  endlessRewards?: { sigils: Array<{ code: string; first_time: boolean }>; tokens: number } | null;
   operation?: {
     operationId: string | null;
     pointsAwarded: number;
@@ -215,6 +218,10 @@ export default function NexusResultsPage() {
 
       {insight?.endless && (
         <OperationContributionPanel insight={insight} score={score} />
+      )}
+
+      {insight && (
+        <NexusRewardsPanel rewards={insight.endlessRewards ?? null} boostCode={insight.boostCode} />
       )}
 
       {/* Actions */}
