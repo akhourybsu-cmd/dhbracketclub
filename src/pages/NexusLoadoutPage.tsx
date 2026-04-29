@@ -20,15 +20,12 @@ const TOWER_HSL: Record<TowerKind, { c: string; bg: string; text: string }> = {
 export default function NexusLoadoutPage() {
   const { missionId } = useParams<{ missionId: string }>();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const id = parseInt(missionId || '1', 10);
   const { mission, loading } = useResolvedMission(id);
   const isEndless = id === ENDLESS_MISSION_ID;
-  const opIdParam = searchParams.get('op');
   const { operation } = useActiveOperation();
-  // Endless runs auto-contribute to whichever op is active when the run finishes.
-  // The ?op= query param just signals "the player came from the op hub" — we use
-  // it to colour the banner, but the contribution itself is server-resolved.
+  // Endless runs auto-contribute to whichever op is active when the run finishes
+  // (server-side resolution). Banner just reflects current state.
   const contributingToOp = isEndless && operation?.status === 'active';
 
   if (loading) return <div className="p-6 text-center text-muted-foreground">Loading mission…</div>;
@@ -85,17 +82,8 @@ export default function NexusLoadoutPage() {
                   SOLO ENDLESS RUN
                 </div>
                 <div className="text-[11px] text-foreground/80 mt-0.5">
-                  Standalone score — won't push club operation progress.
+                  No active club operation. Standalone score only.
                 </div>
-                {operation?.status === 'active' && (
-                  <Link
-                    to={`/nexus/loadout/${ENDLESS_MISSION_ID}?op=${operation.id}`}
-                    className="inline-block mt-1.5 text-[10px] font-black nx-title"
-                    style={{ color: 'hsl(280 90% 78%)' }}
-                  >
-                    JOIN ACTIVE CO-OP OP →
-                  </Link>
-                )}
               </div>
             </div>
           )
