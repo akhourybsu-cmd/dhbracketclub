@@ -1,14 +1,19 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Shield, Trophy, Target } from 'lucide-react';
+import { Shield, Trophy, Target, Users } from 'lucide-react';
 import { useNexusProgress } from '@/hooks/useNexusProgress';
 import { useResolvedMissions } from '@/hooks/useMissionCalibrations';
+import { useActiveOperation } from '@/hooks/useNexusOperation';
+import { ENDLESS_MISSION_ID } from '@/lib/nexus/endless';
 
 export default function NexusHomePage() {
   const { progress } = useNexusProgress();
   const { missions } = useResolvedMissions();
-  const nextMission = missions.find(m => m.id === progress.highest_mission) ?? missions[0];
+  // Endless mission lives outside the campaign list; keep next-mission picker pure.
+  const campaign = missions.filter(m => m.id !== ENDLESS_MISSION_ID);
+  const nextMission = campaign.find(m => m.id === progress.highest_mission) ?? campaign[0];
   const cleared = Math.min(progress.highest_mission - 1, 6);
+  const { operation } = useActiveOperation();
 
   return (
     <div className="max-w-md mx-auto pb-6">
