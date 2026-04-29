@@ -1,11 +1,14 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Users, Infinity as InfinityIcon } from 'lucide-react';
 import { useResolvedMission } from '@/hooks/useMissionCalibrations';
 import { TOWER_LIST } from '@/lib/nexus/towers';
 import { ABILITY_LIST } from '@/lib/nexus/abilities';
 import { TowerIcon } from '@/components/nexus/TowerIcon';
 import { TowerKind } from '@/lib/nexus/types';
 import { resolveModifiers, modifierTone } from '@/lib/nexus/modifiers';
+import { ENDLESS_MISSION_ID } from '@/lib/nexus/endless';
+import { useActiveOperation } from '@/hooks/useNexusOperation';
 
 const TOWER_HSL: Record<TowerKind, { c: string; bg: string; text: string }> = {
   pulse: { c: 'hsl(188 92% 56%)', bg: 'hsl(188 92% 56% / 0.12)', text: 'hsl(188 92% 78%)' },
