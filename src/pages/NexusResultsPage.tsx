@@ -18,11 +18,12 @@ interface RunInsight {
   bossDamage?: number;
   endless?: boolean;
   operation?: {
-    operationId: string;
+    operationId: string | null;
     pointsAwarded: number;
     phase: number;
     status: string;
     duplicate: boolean;
+    error?: string;
   } | null;
 }
 
