@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { MISSIONS } from '@/lib/nexus/missions';
 import { Trophy, Clock, Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useDisplayedSigils } from '@/hooks/useNexusRewards';
+import { NexusAvatarWithSigil } from '@/components/nexus/NexusAvatarWithSigil';
 
 interface Row {
   user_id: string;
@@ -96,47 +98,55 @@ export default function NexusLeaderboardPage() {
           <div className="text-[11px] text-muted-foreground mt-1">Be the first pilot to hold the nexus.</div>
         </div>
       ) : (
-        <div className="space-y-1.5">
-          {rows.map((r, i) => {
-            const rankColor =
-              i === 0 ? 'text-amber-300' :
-              i === 1 ? 'text-cyan-200' :
-              i === 2 ? 'text-orange-300' : 'text-muted-foreground';
-            const rowGlow =
-              i === 0 ? 'border-amber-400/60 bg-amber-500/[0.08] shadow-[0_0_18px_-8px_hsl(45_100%_60%/0.7)]' :
-              i === 1 ? 'border-cyan-400/40 bg-cyan-500/[0.05]' :
-              i === 2 ? 'border-orange-400/40 bg-orange-500/[0.05]' :
-              'border-white/8 bg-white/[0.02]';
-            return (
-              <div key={r.user_id} className={cn('relative flex items-center gap-3 p-2.5 nx-clip border', rowGlow)}>
-                {i < 3 && <span className="nx-bracket nx-bracket-tl" />}
-                <div className={cn('w-7 text-center font-black text-sm tabular-nums', rankColor)}>
-                  {i < 3 ? <Trophy className="w-4 h-4 mx-auto" /> : `#${i + 1}`}
-                </div>
-                {r.avatar_url ? (
-                  <img src={r.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover border border-cyan-400/30" />
-                ) : (
-                  <div className="w-9 h-9 rounded-full bg-cyan-500/10 border border-cyan-400/30 flex items-center justify-center text-xs font-black text-cyan-200">
-                    {r.display_name?.[0]?.toUpperCase() ?? '?'}
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-bold truncate text-white">{r.display_name || 'Pilot'}</div>
-                  <div className="text-[10px] text-cyan-100/60 flex items-center gap-2 mt-0.5 tabular-nums">
-                    <span className="flex items-center gap-0.5"><Heart className="w-2.5 h-2.5" /> {r.base_hp_remaining}</span>
-                    <span className="flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" /> {Math.floor(r.duration_seconds / 60)}:{String(r.duration_seconds % 60).padStart(2, '0')}</span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className={cn('text-base font-black tabular-nums', i === 0 ? 'text-amber-300' : 'text-cyan-200')}>
-                    {r.score.toLocaleString()}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <LeaderboardRows rows={rows} />
       )}
+    </div>
+  );
+}
+
+function LeaderboardRows({ rows }: { rows: Row[] }) {
+  const userIds = useMemo(() => rows.map(r => r.user_id), [rows]);
+  const { data: displayedMap = {} } = useDisplayedSigils(userIds);
+  return (
+    <div className="space-y-1.5">
+      {rows.map((r, i) => {
+        const rankColor =
+          i === 0 ? 'text-amber-300' :
+          i === 1 ? 'text-cyan-200' :
+          i === 2 ? 'text-orange-300' : 'text-muted-foreground';
+        const rowGlow =
+          i === 0 ? 'border-amber-400/60 bg-amber-500/[0.08] shadow-[0_0_18px_-8px_hsl(45_100%_60%/0.7)]' :
+          i === 1 ? 'border-cyan-400/40 bg-cyan-500/[0.05]' :
+          i === 2 ? 'border-orange-400/40 bg-orange-500/[0.05]' :
+          'border-white/8 bg-white/[0.02]';
+        return (
+          <div key={r.user_id} className={cn('relative flex items-center gap-3 p-2.5 nx-clip border', rowGlow)}>
+            {i < 3 && <span className="nx-bracket nx-bracket-tl" />}
+            <div className={cn('w-7 text-center font-black text-sm tabular-nums', rankColor)}>
+              {i < 3 ? <Trophy className="w-4 h-4 mx-auto" /> : `#${i + 1}`}
+            </div>
+            <NexusAvatarWithSigil
+              userId={r.user_id}
+              src={r.avatar_url}
+              fallback={r.display_name?.[0]?.toUpperCase() ?? '?'}
+              size={36}
+              displayed={displayedMap}
+            />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-bold truncate text-white">{r.display_name || 'Pilot'}</div>
+              <div className="text-[10px] text-cyan-100/60 flex items-center gap-2 mt-0.5 tabular-nums">
+                <span className="flex items-center gap-0.5"><Heart className="w-2.5 h-2.5" /> {r.base_hp_remaining}</span>
+                <span className="flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" /> {Math.floor(r.duration_seconds / 60)}:{String(r.duration_seconds % 60).padStart(2, '0')}</span>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className={cn('text-base font-black tabular-nums', i === 0 ? 'text-amber-300' : 'text-cyan-200')}>
+                {r.score.toLocaleString()}
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
