@@ -90,7 +90,15 @@ export function resolveEffective(
   const defs = resolveModifiers(baseMission.modifierIds);
   const agg = aggregateModifiers(defs);
 
-  const startEnergy = additive(baseMission.startEnergy, cal.start_energy_delta, agg.startEnergyDelta, 0);
+  // Engine applies calibration first (clamped ≥0), then adds modifier delta. Match exactly.
+  const startEnergyAfterCal = Math.max(0, baseMission.startEnergy + cal.start_energy_delta);
+  const startEnergy: ScalarBreakdown = {
+    mode: 'additive',
+    base: baseMission.startEnergy,
+    calibration: cal.start_energy_delta,
+    modifier: agg.startEnergyDelta,
+    final: Math.max(0, startEnergyAfterCal + agg.startEnergyDelta),
+  };
   const baseHp = additive(baseMission.baseHp, cal.base_hp_delta, 0, 1);
   const rewardCores = additive(baseMission.rewardCores, cal.reward_cores_delta, 0, 0);
 
