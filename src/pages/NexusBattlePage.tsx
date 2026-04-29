@@ -170,7 +170,7 @@ export default function NexusBattlePage() {
               const res = await submitOperationContribution({
                 operationId: op.id,
                 nexusRunId,
-                kills: state.kills,
+                kills: totalKills,
                 score: state.score,
                 waves: wavesCleared,
                 bossDamage: state.bossDamageDealt ?? 0,
@@ -203,7 +203,7 @@ export default function NexusBattlePage() {
             leaks: state.leaks,
             durationSeconds,
             modifierIds: state.modifierIds,
-            kills: state.kills,
+            kills: totalKills,
             bossDamage: state.bossDamageDealt ?? 0,
             endless,
             operation: opSummary,
