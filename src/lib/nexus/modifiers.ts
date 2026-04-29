@@ -80,12 +80,12 @@ export const MODIFIERS: Record<string, ModifierDef> = {
   swarm_protocol: {
     id: 'swarm_protocol',
     label: 'Swarm Protocol',
-    short: 'Drones +20% speed',
-    description: 'Drone clouds run hot. Slows and AoE matter more than ever.',
+    short: 'All enemies +15% speed',
+    description: 'Hostile pack tactics. Every contact moves faster — slows and AoE matter more than ever.',
     category: 'enemies',
     tone: 'threat',
     glyph: '⟫',
-    effect: { enemySpeedMult: 1.0, enemyHpMultByKind: { drone: 0.9 } },
+    effect: { enemySpeedMult: 1.15 },
   },
   shielded_vanguard: {
     id: 'shielded_vanguard',
