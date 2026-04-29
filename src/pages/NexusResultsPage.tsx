@@ -251,6 +251,16 @@ export default function NexusResultsPage() {
               ◆ OPERATION COMPLETE — your run sealed it.
             </div>
           )}
+          {insight.operation?.status === 'none' && (
+            <div className="mt-2 text-[10px] text-foreground/60 text-center">
+              No active Operation — points were not awarded.
+            </div>
+          )}
+          {insight.operation?.status === 'error' && (
+            <div className="mt-2 text-[10px] text-center" style={{ color: 'hsl(15 85% 70%)' }}>
+              ⚠ Could not submit to Operation: {insight.operation.error ?? 'unknown error'}
+            </div>
+          )}
           {!insight.operation && (
             <div className="mt-2 text-[10px] text-foreground/60 text-center">
               No active Operation — points were not awarded.
