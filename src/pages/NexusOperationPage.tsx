@@ -242,28 +242,41 @@ export default function NexusOperationPage() {
         {leaderboard.length === 0 && (
           <div className="text-center text-xs text-foreground/50 py-4">Be the first to contribute.</div>
         )}
-        {leaderboard.slice(0, 10).map((c, i) => (
-          <div
-            key={c.user_id}
-            className={`flex items-center gap-2 px-2.5 py-2 nx-clip-sm border ${
-              c.user_id === user?.id ? 'bg-cyan-500/10 border-cyan-400/40' : 'bg-white/[0.02] border-white/5'
-            }`}
-          >
-            <div className="w-6 text-center text-xs font-black tabular-nums" style={{ color: i === 0 ? 'hsl(45 100% 60%)' : 'hsl(0 0% 100% / 0.5)' }}>
-              {i === 0 ? <Crown className="w-3.5 h-3.5 inline" /> : `#${i + 1}`}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-bold truncate">{c.display_name ?? 'Pilot'}</div>
-              <div className="text-[10px] text-foreground/55 tabular-nums">
-                {fmt(c.total_kills)} kills · best W{c.best_waves}
+        {leaderboard.slice(0, 10).map((c, i) => {
+          const isMvp = i === 0;
+          return (
+            <div
+              key={c.user_id}
+              className={`flex items-center gap-2 px-2.5 py-2 nx-clip-sm border ${
+                c.user_id === user?.id ? 'bg-cyan-500/10 border-cyan-400/40' : 'bg-white/[0.02] border-white/5'
+              }`}
+              style={isMvp ? { borderColor: 'hsl(45 100% 60% / 0.55)', background: 'hsl(45 100% 60% / 0.06)' } : undefined}
+            >
+              <div className="w-6 text-center text-xs font-black tabular-nums" style={{ color: isMvp ? 'hsl(45 100% 70%)' : 'hsl(0 0% 100% / 0.5)' }}>
+                {isMvp ? <Crown className="w-3.5 h-3.5 inline" /> : `#${i + 1}`}
+              </div>
+              <NexusAvatarWithSigil
+                userId={c.user_id}
+                src={c.avatar_url}
+                fallback={c.display_name?.[0]?.toUpperCase() ?? '?'}
+                size={32}
+                displayed={displayedMap}
+              />
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-bold truncate">{c.display_name ?? 'Pilot'}</div>
+                <div className="text-[10px] text-foreground/55 tabular-nums">
+                  {fmt(c.total_kills)} kills · best W{c.best_waves}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm font-black tabular-nums" style={{ color: isMvp ? 'hsl(45 100% 78%)' : 'hsl(195 95% 80%)' }}>
+                  {fmt(c.contribution_points)}
+                </div>
+                <div className="text-[9px] uppercase tracking-widest text-foreground/40">pts</div>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-sm font-black tabular-nums text-cyan-300">{fmt(c.contribution_points)}</div>
-              <div className="text-[9px] uppercase tracking-widest text-foreground/40">pts</div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Recent runs */}
