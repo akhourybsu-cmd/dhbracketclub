@@ -88,6 +88,49 @@ export default function NexusHomePage() {
         </div>
       </motion.div>
 
+      {operation && (() => {
+        // Surface the active co-op operation as a prominent card so the friend
+        // group sees shared progress without digging into a sub-page.
+        const targets = [operation.phase1_target, operation.phase2_target, operation.phase3_target];
+        const progresses = [operation.phase1_progress, operation.phase2_progress, operation.phase3_progress];
+        const phaseIdx = operation.current_phase - 1;
+        const t = Math.max(1, targets[phaseIdx]);
+        const pct = Math.min(100, Math.round((progresses[phaseIdx] / t) * 100));
+        const phaseLabel = ['Phase 1 · Eliminate', 'Phase 2 · Score', 'Phase 3 · Siege Core'][phaseIdx];
+        return (
+          <Link
+            to="/nexus/operation"
+            className="block mb-3 nx-clip-sm p-3 active:scale-[0.98] transition"
+            style={{
+              background: 'linear-gradient(180deg, hsl(280 50% 14%), hsl(280 60% 8%))',
+              border: '1px solid hsl(280 80% 65% / 0.45)',
+              boxShadow: '0 0 16px -4px hsl(280 80% 60% / 0.5), inset 0 1px 0 hsl(0 0% 100% / 0.06)',
+            }}
+          >
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5" style={{ color: 'hsl(280 90% 78%)' }} />
+                <span className="nx-title text-[9px]" style={{ color: 'hsl(280 90% 78%)', letterSpacing: '0.22em' }}>
+                  CO-OP OPERATION
+                </span>
+              </div>
+              <span className="text-[9px] font-bold tabular-nums" style={{ color: 'hsl(280 90% 78%)' }}>
+                {operation.total_contributors} ALLY{operation.total_contributors === 1 ? '' : 'IES'}
+              </span>
+            </div>
+            <div className="text-sm font-black tracking-tight text-foreground truncate">{operation.name}</div>
+            <div className="text-[10px] text-foreground/65 mt-0.5">{phaseLabel}</div>
+            <div className="mt-2 h-1.5 rounded-full overflow-hidden" style={{ background: 'hsl(280 30% 12%)' }}>
+              <div className="h-full" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, hsl(280 90% 65%), hsl(320 90% 65%))' }} />
+            </div>
+            <div className="flex items-center justify-between mt-1.5 text-[10px]">
+              <span className="text-foreground/60 tabular-nums">{progresses[phaseIdx].toLocaleString()} / {t.toLocaleString()}</span>
+              <span className="font-black" style={{ color: 'hsl(280 90% 78%)' }}>OPEN HUB →</span>
+            </div>
+          </Link>
+        );
+      })()}
+
       <div className="grid grid-cols-3 gap-2">
         <NavTile to="/nexus/missions" icon={<Target className="w-4 h-4" />} label="Sector Map" />
         <NavTile to="/nexus/leaderboard" icon={<Trophy className="w-4 h-4" />} label="Leaderboard" />
