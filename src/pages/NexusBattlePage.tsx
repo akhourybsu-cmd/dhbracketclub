@@ -173,6 +173,8 @@ export default function NexusBattlePage() {
     if (!state || !mission || savedRef.current) return;
     if (state.status === 'victory' || state.status === 'defeat') {
       savedRef.current = true;
+      // Run is terminal — drop any in-flight checkpoint.
+      clearBattle(user?.id, mission.id);
       const won = state.status === 'victory';
       const endless = isEndlessMission(mission.id);
       // Endless co-op runs do not award solo cores or unlock missions.
