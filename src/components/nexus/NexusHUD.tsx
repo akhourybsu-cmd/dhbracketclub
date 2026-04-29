@@ -142,6 +142,26 @@ export function NexusHUD() {
               <BookOpen className="w-4 h-4" />
             </Link>
           )}
+          {!isOpHub && (
+            <Link
+              to="/nexus/operation"
+              aria-label="Co-op Operation"
+              className="relative w-9 h-9 rounded-lg flex items-center justify-center btn-press"
+              style={{
+                background: opActive ? 'hsl(280 80% 65% / 0.18)' : 'hsl(280 50% 40% / 0.1)',
+                border: opActive ? '1px solid hsl(280 80% 65% / 0.5)' : '1px dashed hsl(280 60% 60% / 0.3)',
+                color: opActive ? 'hsl(280 90% 80%)' : 'hsl(280 60% 70% / 0.75)',
+              }}
+            >
+              <Users className="w-4 h-4" />
+              {opActive && (
+                <span
+                  className="nx-pulse-dot absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full"
+                  style={{ background: 'hsl(280 95% 70%)', boxShadow: '0 0 6px hsl(280 95% 70%)' }}
+                />
+              )}
+            </Link>
+          )}
         </div>
       </header>
 
