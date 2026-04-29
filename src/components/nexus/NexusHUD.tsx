@@ -21,6 +21,9 @@ export function NexusHUD() {
   if (location.pathname.startsWith('/nexus/battle/')) return null;
 
   const isHub = location.pathname === '/nexus';
+  const isOpHub = location.pathname.startsWith('/nexus/operation');
+  const { operation } = useActiveOperation();
+  const opActive = operation?.status === 'active';
 
   const handleBack = () => {
     if (isHub) {
