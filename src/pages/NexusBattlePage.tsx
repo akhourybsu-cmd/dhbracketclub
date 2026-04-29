@@ -14,6 +14,7 @@ import { submitOperationContribution } from '@/hooks/useNexusOperation';
 import { usePendingBoost, consumeBoostForRun, awardEndlessRewards } from '@/hooks/useNexusRewards';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { saveBattle, loadBattle, clearBattle, SAVE_THROTTLE_MS } from '@/lib/nexus/battlePersist';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
