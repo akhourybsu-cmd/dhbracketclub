@@ -62,6 +62,7 @@ export function initBattle(missionId: number, abilities: AbilityKind[], opts: In
     abilityUses: { ...zeroAbilities },
     energyStarvedMs: 0,
     leaks: 0,
+    bossDamageDealt: 0,
     enemyHpMult: hpMult,
     enemyShieldMult: shieldMult,
     enemySpeedMult: opts.enemySpeedMult ?? 1,
@@ -324,6 +325,7 @@ function applyDamage(e: ActiveEnemy, dmg: number, pierce: number, tower: PlacedT
     const absorbed = Math.min(e.shield, remaining);
     e.shield -= absorbed;
     remaining -= absorbed;
+    if (e.kind === 'boss') s.bossDamageDealt += absorbed;
   }
   if (remaining <= 0) return;
   const def = ENEMIES[e.kind];
@@ -331,6 +333,7 @@ function applyDamage(e: ActiveEnemy, dmg: number, pierce: number, tower: PlacedT
   const final = Math.max(1, remaining - effectiveArmor);
   e.hp -= final;
   tower.totalDamage += final;
+  if (e.kind === 'boss') s.bossDamageDealt += final;
 }
 
 // ---------- ACTIONS ----------
