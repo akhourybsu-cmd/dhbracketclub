@@ -24,6 +24,23 @@ export default function NexusOperationPage() {
   const { operation, leaderboard, recentRuns, loading } = useActiveOperation();
   const [busy, setBusy] = useState(false);
 
+  // IMPORTANT: All hooks must run on every render. Compute derived values with
+  // safe fallbacks before any early returns to keep hook order stable across
+  // loading → loaded → complete state transitions.
+  const myContrib = operation ? leaderboard.find(c => c.user_id === user?.id) : undefined;
+  const isComplete = operation?.status === 'complete';
+
+  const distributedRef = useRef(false);
+  useEffect(() => {
+    if (!operation || !isComplete || !user || distributedRef.current) return;
+    if (!myContrib) return;
+    distributedRef.current = true;
+    awardOperationRewards(operation.id);
+  }, [isComplete, operation, user, myContrib]);
+
+  const contributorIds = useMemo(() => leaderboard.map(c => c.user_id), [leaderboard]);
+  const { data: displayedMap = {} } = useDisplayedSigils(contributorIds);
+
   if (loading) return <div className="p-6 text-center text-cyan-200/70">Loading Operation…</div>;
 
   if (!operation) {
