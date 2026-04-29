@@ -141,16 +141,28 @@ export default function NexusBalancePage() {
         </div>
       </div>
 
-      <Link
-        to="/nexus/calibration"
-        className="flex items-center justify-between rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2.5 mb-4 active:bg-amber-500/20"
-      >
-        <div>
-          <div className="text-[10px] font-bold uppercase tracking-widest text-amber-300">Tune missions</div>
-          <div className="text-sm font-bold">Open mission calibration →</div>
-        </div>
-        <span className="text-amber-300 text-lg">⚙</span>
-      </Link>
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        <Link
+          to="/nexus/calibration"
+          className="flex items-center justify-between rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2.5 active:bg-amber-500/20"
+        >
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-amber-300">Tune missions</div>
+            <div className="text-sm font-bold">Calibration →</div>
+          </div>
+          <span className="text-amber-300 text-lg">⚙</span>
+        </Link>
+        <Link
+          to="/nexus/simulator"
+          className="flex items-center justify-between rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-3 py-2.5 active:bg-emerald-500/20"
+        >
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-300">Endless harness</div>
+            <div className="text-sm font-bold">Simulator →</div>
+          </div>
+          <span className="text-emerald-300 text-lg">🧪</span>
+        </Link>
+      </div>
 
       {/* Overview chips */}
       <div className="grid grid-cols-4 gap-2 mb-4">
