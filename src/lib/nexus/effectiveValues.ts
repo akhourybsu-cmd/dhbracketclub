@@ -90,7 +90,15 @@ export function resolveEffective(
   const defs = resolveModifiers(baseMission.modifierIds);
   const agg = aggregateModifiers(defs);
 
-  const startEnergy = additive(baseMission.startEnergy, cal.start_energy_delta, agg.startEnergyDelta, 0);
+  // Engine applies calibration first (clamped ≥0), then adds modifier delta. Match exactly.
+  const startEnergyAfterCal = Math.max(0, baseMission.startEnergy + cal.start_energy_delta);
+  const startEnergy: ScalarBreakdown = {
+    mode: 'additive',
+    base: baseMission.startEnergy,
+    calibration: cal.start_energy_delta,
+    modifier: agg.startEnergyDelta,
+    final: Math.max(0, startEnergyAfterCal + agg.startEnergyDelta),
+  };
   const baseHp = additive(baseMission.baseHp, cal.base_hp_delta, 0, 1);
   const rewardCores = additive(baseMission.rewardCores, cal.reward_cores_delta, 0, 0);
 
@@ -116,15 +124,23 @@ export function resolveEffective(
   const towerCost = {} as Record<TowerKind, ScalarBreakdown>;
   const towerDamage = {} as Record<TowerKind, ScalarBreakdown>;
   for (const k of TOWER_KINDS) {
-    towerCost[k] = mult(TOWERS[k].cost, 1, agg.towerCostMult[k]);
-    towerDamage[k] = mult(TOWERS[k].damage, 1, agg.towerDamageMult[k]);
+    // Engine: Math.max(1, Math.round(cost * mod)) — match exactly so admin sees true charged price.
+    const c = mult(TOWERS[k].cost, 1, agg.towerCostMult[k]);
+    c.final = Math.max(1, Math.round(c.final));
+    towerCost[k] = c;
+    // Engine: Math.max(1, Math.round(baseDamage * dmgMod)) at fire-time.
+    const d = mult(TOWERS[k].damage, 1, agg.towerDamageMult[k]);
+    d.final = Math.max(1, Math.round(d.final));
+    towerDamage[k] = d;
   }
   const abilityCooldown = {} as Record<AbilityKind, ScalarBreakdown>;
   const abilityCooldownMs = {} as Record<AbilityKind, { baseMs: number; finalMs: number }>;
   for (const k of ABILITY_KINDS) {
     const baseMs = ABILITIES[k].cooldownMs;
     abilityCooldown[k] = mult(1, 1, agg.abilityCooldownMult[k]);
-    abilityCooldownMs[k] = { baseMs, finalMs: Math.round(baseMs * agg.abilityCooldownMult[k]) };
+    // Engine: Math.max(1000, Math.round(def.cooldownMs * mult)) — apply same floor.
+    const finalMs = Math.max(1000, Math.round(baseMs * agg.abilityCooldownMult[k]));
+    abilityCooldownMs[k] = { baseMs, finalMs };
   }
 
   // Resolved waves
