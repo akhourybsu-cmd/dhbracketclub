@@ -2297,6 +2297,196 @@ export type Database = {
         }
         Relationships: []
       }
+      nexus_operation_contributions: {
+        Row: {
+          best_score: number
+          best_waves: number
+          contribution_points: number
+          created_at: string
+          id: string
+          last_contribution_at: string
+          operation_id: string
+          runs_submitted: number
+          total_boss_damage: number
+          total_kills: number
+          total_score: number
+          total_waves: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          best_score?: number
+          best_waves?: number
+          contribution_points?: number
+          created_at?: string
+          id?: string
+          last_contribution_at?: string
+          operation_id: string
+          runs_submitted?: number
+          total_boss_damage?: number
+          total_kills?: number
+          total_score?: number
+          total_waves?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          best_score?: number
+          best_waves?: number
+          contribution_points?: number
+          created_at?: string
+          id?: string
+          last_contribution_at?: string
+          operation_id?: string
+          runs_submitted?: number
+          total_boss_damage?: number
+          total_kills?: number
+          total_score?: number
+          total_waves?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nexus_operation_contributions_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "nexus_operations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nexus_operation_runs: {
+        Row: {
+          boss_damage: number
+          contribution_points: number
+          created_at: string
+          duration_seconds: number
+          id: string
+          kills: number
+          nexus_run_id: string | null
+          operation_id: string
+          score: number
+          user_id: string
+          waves: number
+        }
+        Insert: {
+          boss_damage?: number
+          contribution_points?: number
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          kills?: number
+          nexus_run_id?: string | null
+          operation_id: string
+          score?: number
+          user_id: string
+          waves?: number
+        }
+        Update: {
+          boss_damage?: number
+          contribution_points?: number
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          kills?: number
+          nexus_run_id?: string | null
+          operation_id?: string
+          score?: number
+          user_id?: string
+          waves?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nexus_operation_runs_nexus_run_id_fkey"
+            columns: ["nexus_run_id"]
+            isOneToOne: false
+            referencedRelation: "nexus_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nexus_operation_runs_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "nexus_operations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nexus_operations: {
+        Row: {
+          club_id: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          current_phase: number
+          flavor: string | null
+          id: string
+          name: string
+          phase1_progress: number
+          phase1_target: number
+          phase2_progress: number
+          phase2_target: number
+          phase3_progress: number
+          phase3_target: number
+          started_at: string
+          status: string
+          total_contributors: number
+          total_runs: number
+          updated_at: string
+        }
+        Insert: {
+          club_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_phase?: number
+          flavor?: string | null
+          id?: string
+          name: string
+          phase1_progress?: number
+          phase1_target?: number
+          phase2_progress?: number
+          phase2_target?: number
+          phase3_progress?: number
+          phase3_target?: number
+          started_at?: string
+          status?: string
+          total_contributors?: number
+          total_runs?: number
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_phase?: number
+          flavor?: string | null
+          id?: string
+          name?: string
+          phase1_progress?: number
+          phase1_target?: number
+          phase2_progress?: number
+          phase2_target?: number
+          phase3_progress?: number
+          phase3_target?: number
+          started_at?: string
+          status?: string
+          total_contributors?: number
+          total_runs?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nexus_operations_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nexus_progress: {
         Row: {
           cores: number
@@ -4755,6 +4945,18 @@ export type Database = {
       recompute_nfl_week_status: {
         Args: { _week_id: string }
         Returns: undefined
+      }
+      submit_operation_contribution: {
+        Args: {
+          _boss_damage: number
+          _duration_seconds: number
+          _kills: number
+          _nexus_run_id: string
+          _operation_id: string
+          _score: number
+          _waves: number
+        }
+        Returns: Json
       }
       toggle_message_pin: { Args: { p_message_id: string }; Returns: undefined }
     }
