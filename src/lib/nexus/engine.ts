@@ -50,12 +50,17 @@ export function initBattle(missionId: number, abilities: AbilityKind[], opts: In
   const modDefs = resolveModifiers(mission.modifierIds);
   const mods = modDefs.length ? aggregateModifiers(modDefs) : emptyAggregated();
 
+  // Apply boost-driven base adjustments
+  const boost = opts.boost;
+  const hpMultBoost = boost?.hpMult ?? 1;
+  const baseHp = Math.max(1, Math.round(mission.baseHp * hpMultBoost));
+
   return {
     tickMs: TICK_MS,
     elapsedMs: 0,
     energy: Math.max(0, mission.startEnergy + mods.startEnergyDelta),
-    baseHp: mission.baseHp,
-    baseHpMax: mission.baseHp,
+    baseHp,
+    baseHpMax: baseHp,
     waveIndex: -1,
     totalWaves: mission.waves.length,
     waveTimeMs: 0,
@@ -88,6 +93,15 @@ export function initBattle(missionId: number, abilities: AbilityKind[], opts: In
     modAbilityCooldownMult: mods.abilityCooldownMult,
     modShieldRegen: mods.shieldRegen,
     modBossHpMult: mods.bossHpMult,
+    // boost fields
+    boostCode: boost?.code ?? null,
+    boostTowerDamageMult: boost?.towerDamageMult,
+    boostBuildCostMult: boost?.buildCostMult,
+    boostEnergyRegenMult: boost?.energyRegenMult ?? 1,
+    boostOpPointsMult: boost?.opPointsMult ?? 1,
+    boostCoresMult: boost?.coresMult ?? 1,
+    boostReconWaves: boost?.reconWaves ?? 0,
+    boostExpiresAtMs: boost?.durationMs ? boost.durationMs : undefined,
   };
 }
 
