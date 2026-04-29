@@ -151,7 +151,7 @@ export default function NexusBattlePage() {
             wavesCleared,
             baseHpRemaining: state.baseHp,
             durationSeconds,
-            loadout: { towers: ['pulse','arc','cryo','rail'], abilities, modifierIds: state.modifierIds },
+            loadout: { towers: ['pulse','arc','cryo','rail'], abilities, modifierIds: state.modifierIds, boostCode: state.boostCode ?? null },
             failedWave: won ? null : state.waveIndex + 1,
             towerUsage: state.towerBuilds,
             towerUpgrades: state.towerUpgrades,
@@ -160,6 +160,12 @@ export default function NexusBattlePage() {
             energyStarvedMs: state.energyStarvedMs,
             leaks: state.leaks,
           }).catch(() => null);
+        }
+
+        // Consume the boost (binds it to this run id) so award_endless_rewards
+        // can read its salvageMult, and so it can't be reused on another run.
+        if (user && state.boostCode && nexusRunId) {
+          await consumeBoostForRun(nexusRunId).catch(() => null);
         }
 
         // Endless runs feed the active Operation. Even partial runs count.
@@ -240,6 +246,17 @@ export default function NexusBattlePage() {
           }
         }
 
+        // Endless milestone rewards (sigils + tokens for waves 10/20/30).
+        let endlessRewards: { sigils: Array<{ code: string; first_time: boolean }>; tokens: number } | null = null;
+        if (endless && user && nexusRunId && wavesCleared > 0) {
+          endlessRewards = await awardEndlessRewards(nexusRunId, wavesCleared);
+          if (endlessRewards && endlessRewards.tokens > 0) {
+            const newSigils = endlessRewards.sigils.filter(s => s.first_time).length;
+            if (newSigils > 0) toast.success(`+${endlessRewards.tokens}⬢ · ${newSigils} new sigil${newSigils > 1 ? 's' : ''}`);
+            else toast.success(`+${endlessRewards.tokens}⬢ Salvage Tokens`);
+          }
+        }
+
         // Stash run insight for the results page (avoids URL bloat).
         try {
           sessionStorage.setItem(`nexus_run_${mission.id}`, JSON.stringify({
@@ -255,6 +272,8 @@ export default function NexusBattlePage() {
             bossDamage: state.bossDamageDealt ?? 0,
             endless,
             operation: opSummary,
+            boostCode: state.boostCode ?? null,
+            endlessRewards,
           }));
         } catch {}
       };
