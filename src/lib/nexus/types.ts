@@ -143,6 +143,23 @@ export interface BattleState {
   modAbilityCooldownMult: Record<AbilityKind, number>;
   modShieldRegen: Partial<Record<EnemyKind, number>>;
   modBossHpMult: number;
+  // ---- pre-run boost (Salvage-Token consumable) ----
+  /** Boost code that was applied to this run, or null. Drives results-screen tag + server validation hooks. */
+  boostCode?: string | null;
+  /** Tower damage multiplier that decays after `boostExpiresAtMs`. */
+  boostTowerDamageMult?: number;
+  /** Build-cost multiplier that applies while boost is active. */
+  boostBuildCostMult?: number;
+  /** Energy regen multiplier (passive trickle), applied for the whole run. */
+  boostEnergyRegenMult?: number;
+  /** Co-op contribution points multiplier — read by battle page on submit. */
+  boostOpPointsMult?: number;
+  /** Cores multiplier — read by battle page when crediting cores. */
+  boostCoresMult?: number;
+  /** Number of upcoming wave previews exposed to UI (Tactical Recon). */
+  boostReconWaves?: number;
+  /** When the timed-window combat boost expires (engine elapsedMs). */
+  boostExpiresAtMs?: number;
 }
 
 export type BattleEvent =
