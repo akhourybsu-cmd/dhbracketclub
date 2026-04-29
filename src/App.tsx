@@ -89,6 +89,7 @@ const NexusCodexPage = lazy(() => import("./pages/NexusCodexPage"));
 const NexusBalancePage = lazy(() => import("./pages/NexusBalancePage"));
 const NexusCalibrationPage = lazy(() => import("./pages/NexusCalibrationPage"));
 const NexusOperationPage = lazy(() => import("./pages/NexusOperationPage"));
+const NexusSigilVaultPage = lazy(() => import("./pages/NexusSigilVaultPage"));
 import { RuneDelveLayout } from "./components/runedelve/RuneDelveLayout";
 import { NexusLayout } from "./components/nexus/NexusLayout";
 const NotFound = lazy(() => import("./pages/NotFound"));
