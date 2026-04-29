@@ -11,6 +11,7 @@ import { useNexusSfx } from '@/hooks/useNexusSfx';
 import { resolveModifiers, modifierTone } from '@/lib/nexus/modifiers';
 import { isEndlessMission } from '@/lib/nexus/endless';
 import { submitOperationContribution } from '@/hooks/useNexusOperation';
+import { usePendingBoost, consumeBoostForRun, awardEndlessRewards } from '@/hooks/useNexusRewards';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
@@ -34,18 +35,30 @@ export default function NexusBattlePage() {
     return raw.split(',').filter(Boolean) as AbilityKind[];
   }, [params]);
 
+  const { data: pendingBoost } = usePendingBoost();
+
   const [state, setState] = useState<BattleState | null>(null);
-  // Initialise battle once mission is resolved.
+  // Initialise battle once mission is resolved. Wait for boost query so we don't
+  // re-init mid-run if the boost loads slightly late.
   useEffect(() => {
     if (!mission || state) return;
-    setState(initBattle(mission.id, abilities, {
-      mission,
-      enemyHpMult: enemyMods.hpMult,
-      enemyShieldMult: enemyMods.shieldMult,
-      enemySpeedMult: enemyMods.speedMult,
-    }));
+    const boost = pendingBoost
+      ? {
+          code: pendingBoost.code,
+          ...(pendingBoost.effect_config ?? {}),
+        }
+      : undefined;
+    setState(
+      initBattle(mission.id, abilities, {
+        mission,
+        enemyHpMult: enemyMods.hpMult,
+        enemyShieldMult: enemyMods.shieldMult,
+        enemySpeedMult: enemyMods.speedMult,
+        boost,
+      }),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mission]);
+  }, [mission, pendingBoost]);
   const stateRef = useRef(state);
   stateRef.current = state;
 
