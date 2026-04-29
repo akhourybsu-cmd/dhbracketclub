@@ -100,8 +100,8 @@ export const MODIFIERS: Record<string, ModifierDef> = {
   cloaked_approach: {
     id: 'cloaked_approach',
     label: 'Cloaked Approach',
-    short: 'Stealth-only sightings',
-    description: 'Stealth units are common. Only Rail Battery can target them.',
+    short: 'Stealth-heavy assault',
+    description: 'Stealth units lead the assault — only Rail Battery can target them. Bring at least one Rail.',
     category: 'enemies',
     tone: 'threat',
     glyph: '◐',
