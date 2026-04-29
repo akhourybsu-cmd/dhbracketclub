@@ -39,7 +39,6 @@ export default function NexusBattlePage() {
   const { data: pendingBoost } = usePendingBoost();
 
   const [state, setState] = useState<BattleState | null>(null);
-  const [resumed, setResumed] = useState(false);
   // Initialise battle once mission is resolved. If we find a saved checkpoint
   // for this user+mission, resume from it (paused, so the player consents
   // before time starts again). Otherwise build a fresh BattleState.
@@ -48,7 +47,6 @@ export default function NexusBattlePage() {
     const saved = loadBattle(user?.id, mission.id);
     if (saved && saved.state.status !== 'victory' && saved.state.status !== 'defeat') {
       setState(saved.state);
-      setResumed(true);
       setPaused(true); // start paused so the player isn't blindsided
       // Surface a small confirmation that progress was restored.
       try { toast.message('Run restored — tap ▶ to resume'); } catch {}
