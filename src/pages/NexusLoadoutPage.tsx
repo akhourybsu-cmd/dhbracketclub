@@ -1,4 +1,4 @@
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Users, Infinity as InfinityIcon } from 'lucide-react';
 import { useResolvedMission } from '@/hooks/useMissionCalibrations';
