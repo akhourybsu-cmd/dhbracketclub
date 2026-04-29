@@ -2237,6 +2237,42 @@ export type Database = {
           },
         ]
       }
+      nexus_boosts: {
+        Row: {
+          code: string
+          cost_tokens: number
+          created_at: string
+          description: string
+          effect_config: Json
+          icon: string
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          code: string
+          cost_tokens?: number
+          created_at?: string
+          description: string
+          effect_config?: Json
+          icon?: string
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          code?: string
+          cost_tokens?: number
+          created_at?: string
+          description?: string
+          effect_config?: Json
+          icon?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
       nexus_mission_calibrations: {
         Row: {
           base_hp_delta: number
@@ -2429,6 +2465,7 @@ export type Database = {
           phase2_target: number
           phase3_progress: number
           phase3_target: number
+          rewards_distributed_at: string | null
           started_at: string
           status: string
           total_contributors: number
@@ -2450,6 +2487,7 @@ export type Database = {
           phase2_target?: number
           phase3_progress?: number
           phase3_target?: number
+          rewards_distributed_at?: string | null
           started_at?: string
           status?: string
           total_contributors?: number
@@ -2471,6 +2509,7 @@ export type Database = {
           phase2_target?: number
           phase3_progress?: number
           phase3_target?: number
+          rewards_distributed_at?: string | null
           started_at?: string
           status?: string
           total_contributors?: number
@@ -2579,6 +2618,163 @@ export type Database = {
           waves_cleared?: number
         }
         Relationships: []
+      }
+      nexus_salvage_ledger: {
+        Row: {
+          created_at: string
+          delta: number
+          id: string
+          note: string | null
+          reason: Database["public"]["Enums"]["nexus_ledger_reason"]
+          ref_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delta: number
+          id?: string
+          note?: string | null
+          reason: Database["public"]["Enums"]["nexus_ledger_reason"]
+          ref_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delta?: number
+          id?: string
+          note?: string | null
+          reason?: Database["public"]["Enums"]["nexus_ledger_reason"]
+          ref_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      nexus_salvage_wallet: {
+        Row: {
+          balance: number
+          lifetime_earned: number
+          lifetime_spent: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          lifetime_earned?: number
+          lifetime_spent?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          lifetime_earned?: number
+          lifetime_spent?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      nexus_sigils: {
+        Row: {
+          code: string
+          created_at: string
+          description: string
+          glow_color: string
+          icon: string
+          id: string
+          name: string
+          rarity: Database["public"]["Enums"]["nexus_sigil_rarity"]
+          source: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description: string
+          glow_color?: string
+          icon?: string
+          id?: string
+          name: string
+          rarity?: Database["public"]["Enums"]["nexus_sigil_rarity"]
+          source?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string
+          glow_color?: string
+          icon?: string
+          id?: string
+          name?: string
+          rarity?: Database["public"]["Enums"]["nexus_sigil_rarity"]
+          source?: string
+        }
+        Relationships: []
+      }
+      nexus_user_boosts: {
+        Row: {
+          boost_id: string
+          consumed_at: string | null
+          consumed_run_id: string | null
+          purchased_at: string
+          user_id: string
+        }
+        Insert: {
+          boost_id: string
+          consumed_at?: string | null
+          consumed_run_id?: string | null
+          purchased_at?: string
+          user_id: string
+        }
+        Update: {
+          boost_id?: string
+          consumed_at?: string | null
+          consumed_run_id?: string | null
+          purchased_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nexus_user_boosts_boost_id_fkey"
+            columns: ["boost_id"]
+            isOneToOne: false
+            referencedRelation: "nexus_boosts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nexus_user_sigils: {
+        Row: {
+          earned_at: string
+          id: string
+          is_displayed: boolean
+          sigil_id: string
+          source_ref: string | null
+          user_id: string
+        }
+        Insert: {
+          earned_at?: string
+          id?: string
+          is_displayed?: boolean
+          sigil_id: string
+          source_ref?: string | null
+          user_id: string
+        }
+        Update: {
+          earned_at?: string
+          id?: string
+          is_displayed?: boolean
+          sigil_id?: string
+          source_ref?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nexus_user_sigils_sigil_id_fkey"
+            columns: ["sigil_id"]
+            isOneToOne: false
+            referencedRelation: "nexus_sigils"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       nfl_games: {
         Row: {
@@ -4920,7 +5116,32 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _credit_salvage: {
+        Args: {
+          _amount: number
+          _note: string
+          _reason: Database["public"]["Enums"]["nexus_ledger_reason"]
+          _ref: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
+      _ensure_salvage_wallet: { Args: { _user_id: string }; Returns: undefined }
+      _grant_sigil: {
+        Args: { _code: string; _ref: string; _user_id: string }
+        Returns: boolean
+      }
+      award_endless_rewards: {
+        Args: { _run_id: string; _wave_reached: number }
+        Returns: Json
+      }
+      award_operation_rewards: {
+        Args: { _operation_id: string }
+        Returns: Json
+      }
+      consume_boost: { Args: { _run_id: string }; Returns: Json }
       current_user_club_id: { Args: never; Returns: string }
+      get_boost_for_run: { Args: never; Returns: Json }
       get_bracket_pool_id: { Args: { _bracket_id: string }; Returns: string }
       get_club_password: { Args: { _club_id: string }; Returns: string }
       is_app_admin: { Args: { _user_id: string }; Returns: boolean }
@@ -4942,10 +5163,12 @@ export type Database = {
         Args: { _password: string; _user_id: string }
         Returns: string
       }
+      purchase_boost: { Args: { _boost_code: string }; Returns: Json }
       recompute_nfl_week_status: {
         Args: { _week_id: string }
         Returns: undefined
       }
+      set_displayed_sigil: { Args: { _sigil_code: string }; Returns: undefined }
       submit_operation_contribution: {
         Args: {
           _boss_damage: number
@@ -4962,6 +5185,14 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user" | "owner"
+      nexus_ledger_reason:
+        | "endless_milestone"
+        | "operation_reward"
+        | "operation_mvp"
+        | "boost_purchase"
+        | "admin_grant"
+        | "admin_debit"
+      nexus_sigil_rarity: "common" | "rare" | "epic" | "legendary"
       rd_quest_scope: "daily" | "weekly"
       rd_quest_status: "active" | "completed" | "claimed"
     }
@@ -5092,6 +5323,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user", "owner"],
+      nexus_ledger_reason: [
+        "endless_milestone",
+        "operation_reward",
+        "operation_mvp",
+        "boost_purchase",
+        "admin_grant",
+        "admin_debit",
+      ],
+      nexus_sigil_rarity: ["common", "rare", "epic", "legendary"],
       rd_quest_scope: ["daily", "weekly"],
       rd_quest_status: ["active", "completed", "claimed"],
     },
