@@ -9,6 +9,9 @@ import { recordNexusRun, useNexusProgress } from '@/hooks/useNexusProgress';
 import { useResolvedMission } from '@/hooks/useMissionCalibrations';
 import { useNexusSfx } from '@/hooks/useNexusSfx';
 import { resolveModifiers, modifierTone } from '@/lib/nexus/modifiers';
+import { isEndlessMission } from '@/lib/nexus/endless';
+import { submitOperationContribution } from '@/hooks/useNexusOperation';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
