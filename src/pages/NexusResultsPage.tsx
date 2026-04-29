@@ -18,11 +18,12 @@ interface RunInsight {
   bossDamage?: number;
   endless?: boolean;
   operation?: {
-    operationId: string;
+    operationId: string | null;
     pointsAwarded: number;
     phase: number;
     status: string;
     duplicate: boolean;
+    error?: string;
   } | null;
 }
 
@@ -248,6 +249,16 @@ export default function NexusResultsPage() {
           {insight.operation?.status === 'complete' && (
             <div className="mt-2 text-[10px] text-center font-bold" style={{ color: 'hsl(280 95% 82%)' }}>
               ◆ OPERATION COMPLETE — your run sealed it.
+            </div>
+          )}
+          {insight.operation?.status === 'none' && (
+            <div className="mt-2 text-[10px] text-foreground/60 text-center">
+              No active Operation — points were not awarded.
+            </div>
+          )}
+          {insight.operation?.status === 'error' && (
+            <div className="mt-2 text-[10px] text-center" style={{ color: 'hsl(15 85% 70%)' }}>
+              ⚠ Could not submit to Operation: {insight.operation.error ?? 'unknown error'}
             </div>
           )}
           {!insight.operation && (

@@ -150,13 +150,18 @@ export default function NexusBattlePage() {
         }
 
         // Endless runs feed the active Operation. Even partial runs count.
-        let opSummary: {
-          operationId: string;
+        // We always stash *some* operation summary so the results panel
+        // can explain to the user what happened (success, no active op,
+        // op ended mid-flight, network error).
+        type OpSummary = {
+          operationId: string | null;
           pointsAwarded: number;
           phase: number;
           status: string;
           duplicate: boolean;
-        } | null = null;
+          error?: string;
+        };
+        let opSummary: OpSummary | null = null;
         if (endless && user) {
           try {
             const { data: op } = await (supabase as any)
@@ -166,10 +171,12 @@ export default function NexusBattlePage() {
               .order('started_at', { ascending: false })
               .limit(1)
               .maybeSingle();
-            if (op?.id) {
+            if (!op?.id) {
+              opSummary = { operationId: null, pointsAwarded: 0, phase: 0, status: 'none', duplicate: false };
+            } else {
               const res = await submitOperationContribution({
                 operationId: op.id,
-                nexusRunId,
+                nexusRunId: nexusRunId,
                 kills: totalKills,
                 score: state.score,
                 waves: wavesCleared,
@@ -187,9 +194,23 @@ export default function NexusBattlePage() {
                 if (!res.duplicate && (res.pointsAwarded ?? 0) > 0) {
                   toast.success(`+${res.pointsAwarded} Operation points`);
                 }
+              } else {
+                // RPC rejected (e.g. operation just ended). Still record so
+                // the results panel can explain rather than silently skip.
+                opSummary = {
+                  operationId: op.id, pointsAwarded: 0, phase: 0,
+                  status: 'error', duplicate: false,
+                  error: res.error ?? 'Submission rejected',
+                };
               }
             }
-          } catch {}
+          } catch (e: any) {
+            opSummary = {
+              operationId: null, pointsAwarded: 0, phase: 0,
+              status: 'error', duplicate: false,
+              error: e?.message ?? 'Network error',
+            };
+          }
         }
 
         // Stash run insight for the results page (avoids URL bloat).
