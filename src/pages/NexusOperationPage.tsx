@@ -1,9 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trophy, Users, Zap, ChevronRight, Crown, Flame } from 'lucide-react';
-import { useState } from 'react';
+import { Trophy, Users, Zap, ChevronRight, Crown, Flame, Sparkles } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useActiveOperation, useIsAppAdmin, startNewOperation, endOperation } from '@/hooks/useNexusOperation';
+import { useDisplayedSigils, awardOperationRewards } from '@/hooks/useNexusRewards';
+import { NexusAvatarWithSigil } from '@/components/nexus/NexusAvatarWithSigil';
 import { ENDLESS_MISSION_ID } from '@/lib/nexus/endless';
 import { toast } from 'sonner';
 
@@ -69,6 +71,22 @@ export default function NexusOperationPage() {
   const pct = Math.min(100, Math.round((progress / target) * 100));
   const myContrib = leaderboard.find(c => c.user_id === user?.id);
   const isComplete = operation.status === 'complete';
+  const mvpUserId = leaderboard[0]?.user_id ?? null;
+
+  // Auto-trigger reward distribution once when the op completes. RPC is idempotent
+  // (server-side `rewards_distributed_at` flag), so multiple contributors hitting
+  // this page won't double-award.
+  const distributedRef = useRef(false);
+  useEffect(() => {
+    if (!isComplete || !user || distributedRef.current) return;
+    if (!myContrib) return; // only contributors should trigger
+    distributedRef.current = true;
+    awardOperationRewards(operation.id);
+  }, [isComplete, operation.id, user, myContrib]);
+
+  // Pre-fetch displayed sigils for the contributor list (one query, no N+1).
+  const contributorIds = useMemo(() => leaderboard.map(c => c.user_id), [leaderboard]);
+  const { data: displayedMap = {} } = useDisplayedSigils(contributorIds);
 
   return (
     <div className="max-w-md mx-auto px-2 pt-3 pb-10">
