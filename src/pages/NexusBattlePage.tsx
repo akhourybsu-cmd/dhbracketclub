@@ -125,6 +125,8 @@ export default function NexusBattlePage() {
       const wavesCleared = won ? mission.waves.length : Math.max(0, state.waveIndex);
       const durationSeconds = Math.round(state.elapsedMs / 1000);
 
+      const totalKills = (state.towers ?? []).reduce((sum, t) => sum + (t.kills || 0), 0);
+
       const finalize = async () => {
         let nexusRunId: string | null = null;
         if (user) {
