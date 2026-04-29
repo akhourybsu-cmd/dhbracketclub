@@ -235,6 +235,7 @@ export default function NexusBattlePage() {
                   status: 'error', duplicate: false,
                   error: res.error ?? 'Submission rejected',
                 };
+                toast.message(res.error ?? 'Run did not count toward Operation');
               }
             }
           } catch (e: any) {
