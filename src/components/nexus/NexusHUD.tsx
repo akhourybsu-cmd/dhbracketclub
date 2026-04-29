@@ -44,6 +44,7 @@ export function NexusHUD() {
     if (p.startsWith('/nexus/codex')) return 'Tactical Codex';
     if (p.startsWith('/nexus/calibration')) return 'Calibration · Admin';
     if (p.startsWith('/nexus/balance')) return 'Telemetry · Admin';
+    if (p.startsWith('/nexus/operation')) return 'Co-op Operation';
     return 'Nexus Defense';
   })();
 
