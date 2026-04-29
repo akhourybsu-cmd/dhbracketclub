@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, Trophy, Cpu } from 'lucide-react';
+import { ArrowLeft, BookOpen, Trophy, Cpu, Users } from 'lucide-react';
 import { useNexusProgress } from '@/hooks/useNexusProgress';
+import { useActiveOperation } from '@/hooks/useNexusOperation';
 import { NexusExitDialog } from './NexusExitDialog';
 import nexusEmblem from '@/assets/nexus-emblem.png';
 
