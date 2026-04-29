@@ -26,9 +26,10 @@ export default function NexusLoadoutPage() {
   const isEndless = id === ENDLESS_MISSION_ID;
   const opIdParam = searchParams.get('op');
   const { operation } = useActiveOperation();
-  // Treat as a co-op-bound run only when the loadout was launched with ?op=
-  // AND that op matches the current active op. Otherwise it's a solo Endless run.
-  const contributingToOp = isEndless && !!opIdParam && operation?.id === opIdParam && operation?.status === 'active';
+  // Endless runs auto-contribute to whichever op is active when the run finishes.
+  // The ?op= query param just signals "the player came from the op hub" — we use
+  // it to colour the banner, but the contribution itself is server-resolved.
+  const contributingToOp = isEndless && operation?.status === 'active';
 
   if (loading) return <div className="p-6 text-center text-muted-foreground">Loading mission…</div>;
   if (!mission) return <div className="p-6">Mission not found.</div>;
