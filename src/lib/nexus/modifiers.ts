@@ -80,12 +80,12 @@ export const MODIFIERS: Record<string, ModifierDef> = {
   swarm_protocol: {
     id: 'swarm_protocol',
     label: 'Swarm Protocol',
-    short: 'Drones +20% speed',
-    description: 'Drone clouds run hot. Slows and AoE matter more than ever.',
+    short: 'All enemies +15% speed',
+    description: 'Hostile pack tactics. Every contact moves faster — slows and AoE matter more than ever.',
     category: 'enemies',
     tone: 'threat',
     glyph: '⟫',
-    effect: { enemySpeedMult: 1.0, enemyHpMultByKind: { drone: 0.9 } },
+    effect: { enemySpeedMult: 1.15 },
   },
   shielded_vanguard: {
     id: 'shielded_vanguard',
@@ -100,8 +100,8 @@ export const MODIFIERS: Record<string, ModifierDef> = {
   cloaked_approach: {
     id: 'cloaked_approach',
     label: 'Cloaked Approach',
-    short: 'Stealth-only sightings',
-    description: 'Stealth units are common. Only Rail Battery can target them.',
+    short: 'Stealth-heavy assault',
+    description: 'Stealth units lead the assault — only Rail Battery can target them. Bring at least one Rail.',
     category: 'enemies',
     tone: 'threat',
     glyph: '◐',
