@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sliders, RotateCcw, Save, AlertTriangle, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Sliders, RotateCcw, Save, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { MISSIONS } from '@/lib/nexus/missions';
@@ -12,8 +12,9 @@ import {
   isOverridden,
   MissionCalibration,
   withDefaults,
-  applyCalibration,
 } from '@/lib/nexus/calibration';
+import { resolveEffective } from '@/lib/nexus/effectiveValues';
+import { EffectiveValuesPanel } from '@/components/nexus/EffectiveValuesPanel';
 import { resetCalibration, saveCalibration } from '@/hooks/useMissionCalibrations';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -99,7 +100,7 @@ export default function NexusCalibrationPage() {
   }, [missionId, calibrations]);
 
   const baseMission = useMemo(() => MISSIONS.find(m => m.id === missionId)!, [missionId]);
-  const previewMission = useMemo(() => applyCalibration(baseMission, draft), [baseMission, draft]);
+  const effective = useMemo(() => resolveEffective(baseMission, draft), [baseMission, draft]);
 
   const missionRuns = useMemo(() => runs.filter(r => r.mission_id === missionId), [runs, missionId]);
   const telemetry = useMemo(() => {
@@ -178,12 +179,7 @@ export default function NexusCalibrationPage() {
   }
   if (!authorized) return null;
 
-  const wavesNote = previewMission.waves.map((w, i) => {
-    const baseWave = baseMission.waves[i];
-    const totalCount = w.spawns.reduce((a, s) => a + s.count, 0);
-    const baseCount = baseWave.spawns.reduce((a, s) => a + s.count, 0);
-    return { i: i + 1, totalCount, baseCount, reward: w.rewardEnergy, baseReward: baseWave.rewardEnergy };
-  });
+
 
   return (
     <div className="max-w-2xl mx-auto pb-32 px-3 pt-4">
@@ -309,35 +305,8 @@ export default function NexusCalibrationPage() {
         </section>
       ))}
 
-      {/* Resolved preview */}
-      <section className="mb-5 rounded-xl border border-border bg-card p-3">
-        <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Resolved live mission</h3>
-        <div className="grid grid-cols-3 gap-2 text-center text-[11px] mb-2">
-          <Compare label="Start energy" base={baseMission.startEnergy} now={previewMission.startEnergy} />
-          <Compare label="Base HP" base={baseMission.baseHp} now={previewMission.baseHp} />
-          <Compare label="Cores reward" base={baseMission.rewardCores} now={previewMission.rewardCores} />
-        </div>
-        <div className="space-y-1">
-          {wavesNote.map(w => (
-            <div key={w.i} className="flex items-center justify-between text-[11px]">
-              <span className="text-muted-foreground">Wave {w.i}</span>
-              <span className="tabular-nums">
-                {w.totalCount} foes
-                {w.totalCount !== w.baseCount && <span className="text-amber-300"> (was {w.baseCount})</span>}
-                {' · '}
-                +{w.reward} energy
-                {w.reward !== w.baseReward && <span className="text-amber-300"> (was {w.baseReward})</span>}
-              </span>
-            </div>
-          ))}
-        </div>
-        {(draft.enemy_hp_mult !== 1 || draft.enemy_shield_mult !== 1 || draft.enemy_speed_mult !== 1 || draft.boss_hp_mult !== 1 || draft.boss_shield_mult !== 1) && (
-          <div className="mt-2 flex items-start gap-1.5 text-[10px] text-amber-200">
-            <AlertTriangle className="w-3 h-3 flex-shrink-0 mt-0.5" />
-            <span>Enemy stat multipliers apply at spawn time and aren't reflected in the wave preview above.</span>
-          </div>
-        )}
-      </section>
+      {/* Effective live values: base × calibration × modifiers */}
+      <EffectiveValuesPanel eff={effective} />
 
       {/* Notes */}
       <div className="mb-5">
@@ -389,14 +358,5 @@ function Stat({ label, value, accent }: { label: string; value: React.ReactNode;
   );
 }
 
-function Compare({ label, base, now }: { label: string; base: number; now: number }) {
-  const changed = base !== now;
-  return (
-    <div className="rounded-md bg-muted/30 px-1.5 py-1.5">
-      <div className={`text-sm font-black tabular-nums ${changed ? 'text-amber-300' : ''}`}>
-        {now}{changed && <span className="text-[9px] text-muted-foreground font-normal"> /{base}</span>}
-      </div>
-      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{label}</div>
-    </div>
-  );
-}
+
+
