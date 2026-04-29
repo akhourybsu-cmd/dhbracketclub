@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Trophy, X, Cpu, Zap, ShieldOff, Clock, ChevronRight } from 'lucide-react';
+import { Trophy, X, Cpu, Zap, ShieldOff, Clock, ChevronRight, Users } from 'lucide-react';
 import { useResolvedMissions } from '@/hooks/useMissionCalibrations';
 import { TOWERS } from '@/lib/nexus/towers';
 import type { TowerKind, AbilityKind } from '@/lib/nexus/types';
@@ -14,6 +14,16 @@ interface RunInsight {
   energyStarvedMs: number;
   leaks: number;
   durationSeconds: number;
+  kills?: number;
+  bossDamage?: number;
+  endless?: boolean;
+  operation?: {
+    operationId: string;
+    pointsAwarded: number;
+    phase: number;
+    status: string;
+    duplicate: boolean;
+  } | null;
 }
 
 export default function NexusResultsPage() {
