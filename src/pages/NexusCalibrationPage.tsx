@@ -312,35 +312,8 @@ export default function NexusCalibrationPage() {
         </section>
       ))}
 
-      {/* Resolved preview */}
-      <section className="mb-5 rounded-xl border border-border bg-card p-3">
-        <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Resolved live mission</h3>
-        <div className="grid grid-cols-3 gap-2 text-center text-[11px] mb-2">
-          <Compare label="Start energy" base={baseMission.startEnergy} now={previewMission.startEnergy} />
-          <Compare label="Base HP" base={baseMission.baseHp} now={previewMission.baseHp} />
-          <Compare label="Cores reward" base={baseMission.rewardCores} now={previewMission.rewardCores} />
-        </div>
-        <div className="space-y-1">
-          {wavesNote.map(w => (
-            <div key={w.i} className="flex items-center justify-between text-[11px]">
-              <span className="text-muted-foreground">Wave {w.i}</span>
-              <span className="tabular-nums">
-                {w.totalCount} foes
-                {w.totalCount !== w.baseCount && <span className="text-amber-300"> (was {w.baseCount})</span>}
-                {' · '}
-                +{w.reward} energy
-                {w.reward !== w.baseReward && <span className="text-amber-300"> (was {w.baseReward})</span>}
-              </span>
-            </div>
-          ))}
-        </div>
-        {(draft.enemy_hp_mult !== 1 || draft.enemy_shield_mult !== 1 || draft.enemy_speed_mult !== 1 || draft.boss_hp_mult !== 1 || draft.boss_shield_mult !== 1) && (
-          <div className="mt-2 flex items-start gap-1.5 text-[10px] text-amber-200">
-            <AlertTriangle className="w-3 h-3 flex-shrink-0 mt-0.5" />
-            <span>Enemy stat multipliers apply at spawn time and aren't reflected in the wave preview above.</span>
-          </div>
-        )}
-      </section>
+      {/* Effective live values: base × calibration × modifiers */}
+      <EffectiveValuesPanel eff={effective} />
 
       {/* Notes */}
       <div className="mb-5">
