@@ -23,6 +23,18 @@ export interface InitBattleOptions {
   enemyHpMult?: Partial<Record<EnemyKind, number>>;
   enemyShieldMult?: Partial<Record<EnemyKind, number>>;
   enemySpeedMult?: number;
+  /** Active pre-run boost. Effects parsed from the catalog row. */
+  boost?: {
+    code: string;
+    towerDamageMult?: number;
+    buildCostMult?: number;
+    durationMs?: number;
+    hpMult?: number;
+    energyRegenMult?: number;
+    opPointsMult?: number;
+    coresMult?: number;
+    reconWaves?: number;
+  };
 }
 
 export function initBattle(missionId: number, abilities: AbilityKind[], opts: InitBattleOptions = {}): BattleState {
