@@ -1,0 +1,2 @@
+REVOKE EXECUTE ON FUNCTION public.submit_operation_contribution(uuid, uuid, integer, integer, integer, integer, integer) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.submit_operation_contribution(uuid, uuid, integer, integer, integer, integer, integer) TO authenticated;
