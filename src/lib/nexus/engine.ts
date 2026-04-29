@@ -122,9 +122,11 @@ export function tick(state: BattleState, mission: MissionDef): BattleState {
   s.abilities.forEach(a => { a.cooldownMs = Math.max(0, a.cooldownMs - TICK_MS); });
 
   // Passive energy trickle: 1 energy every 1.5s during waves, 0.75s between waves.
-  // Smooths out mid-wave economy without trivializing kill bounties.
+  // Boosted runs may slow this to 90% (Reinforced Plating trade-off) by stretching the interval.
   if (s.status === 'in_wave' || s.status === 'between') {
-    const intervalMs = s.status === 'in_wave' ? 1500 : 750;
+    const baseInterval = s.status === 'in_wave' ? 1500 : 750;
+    const regenMult = s.boostEnergyRegenMult ?? 1;
+    const intervalMs = Math.max(100, Math.round(baseInterval / regenMult));
     if (Math.floor(s.elapsedMs / intervalMs) > Math.floor((s.elapsedMs - TICK_MS) / intervalMs)) {
       s.energy += 1;
     }
