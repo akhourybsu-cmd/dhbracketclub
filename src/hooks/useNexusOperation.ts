@@ -214,9 +214,9 @@ export async function startNewOperation(input: {
       flavor: input.flavor ?? null,
       status: 'active',
       current_phase: 1,
-      phase1_target: input.phase1_target ?? 5000,
-      phase2_target: input.phase2_target ?? 500000,
-      phase3_target: input.phase3_target ?? 1000000,
+      phase1_target: input.phase1_target ?? 2500,
+      phase2_target: input.phase2_target ?? 250000,
+      phase3_target: input.phase3_target ?? 25000,
       created_by: input.userId,
     })
     .select('id')
