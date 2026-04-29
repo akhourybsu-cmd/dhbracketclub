@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Shield, Trophy, Target, Users } from 'lucide-react';
+import { Shield, Trophy, Target, Users, Sparkles } from 'lucide-react';
 import { useNexusProgress } from '@/hooks/useNexusProgress';
 import { useResolvedMissions } from '@/hooks/useMissionCalibrations';
 import { useActiveOperation } from '@/hooks/useNexusOperation';
@@ -172,9 +172,18 @@ export default function NexusHomePage() {
           borderColor="hsl(var(--nx-amber) / 0.3)"
         />
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2 mb-2">
         <NavTile to="/nexus/missions" icon={<Target className="w-4 h-4" />} label="Sector Map" />
         <NavTile to="/nexus/leaderboard" icon={<Trophy className="w-4 h-4" />} label="Leaderboard" />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <NavTile
+          to="/nexus/sigils"
+          icon={<Sparkles className="w-4 h-4" />}
+          label="Sigil Vault"
+          accent="hsl(45 100% 70%)"
+          borderColor="hsl(45 100% 60% / 0.35)"
+        />
         <NavTile to="/nexus/codex" icon={<Shield className="w-4 h-4" />} label="Codex" />
       </div>
     </div>
