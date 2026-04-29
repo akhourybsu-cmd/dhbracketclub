@@ -147,7 +147,20 @@ export async function submitOperationContribution(args: {
   waves: number;
   bossDamage: number;
   durationSeconds: number;
-}): Promise<{ ok: boolean; duplicate?: boolean; pointsAwarded?: number; phase?: number; status?: string; error?: string }> {
+}): Promise<{
+  ok: boolean;
+  duplicate?: boolean;
+  pointsAwarded?: number;
+  phase?: number;
+  status?: string;
+  error?: string;
+  affectedPhase?: number;
+  priorProgress?: number;
+  newProgress?: number;
+  priorTarget?: number;
+  phaseAdvanced?: boolean;
+  operationComplete?: boolean;
+}> {
   const { data, error } = await (supabase as any).rpc('submit_operation_contribution', {
     _operation_id: args.operationId,
     _nexus_run_id: args.nexusRunId,
@@ -164,6 +177,12 @@ export async function submitOperationContribution(args: {
     pointsAwarded: data?.points_awarded,
     phase: data?.phase,
     status: data?.status,
+    affectedPhase: data?.affected_phase,
+    priorProgress: data?.prior_progress,
+    newProgress: data?.new_progress,
+    priorTarget: data?.prior_target,
+    phaseAdvanced: !!data?.phase_advanced,
+    operationComplete: !!data?.operation_complete,
   };
 }
 
