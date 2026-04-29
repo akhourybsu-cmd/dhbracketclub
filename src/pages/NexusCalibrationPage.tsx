@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sliders, RotateCcw, Save, AlertTriangle, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Sliders, RotateCcw, Save, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { MISSIONS } from '@/lib/nexus/missions';
@@ -12,7 +12,6 @@ import {
   isOverridden,
   MissionCalibration,
   withDefaults,
-  applyCalibration,
 } from '@/lib/nexus/calibration';
 import { resolveEffective } from '@/lib/nexus/effectiveValues';
 import { EffectiveValuesPanel } from '@/components/nexus/EffectiveValuesPanel';
@@ -101,7 +100,6 @@ export default function NexusCalibrationPage() {
   }, [missionId, calibrations]);
 
   const baseMission = useMemo(() => MISSIONS.find(m => m.id === missionId)!, [missionId]);
-  const previewMission = useMemo(() => applyCalibration(baseMission, draft), [baseMission, draft]);
   const effective = useMemo(() => resolveEffective(baseMission, draft), [baseMission, draft]);
 
   const missionRuns = useMemo(() => runs.filter(r => r.mission_id === missionId), [runs, missionId]);
@@ -181,12 +179,7 @@ export default function NexusCalibrationPage() {
   }
   if (!authorized) return null;
 
-  const wavesNote = previewMission.waves.map((w, i) => {
-    const baseWave = baseMission.waves[i];
-    const totalCount = w.spawns.reduce((a, s) => a + s.count, 0);
-    const baseCount = baseWave.spawns.reduce((a, s) => a + s.count, 0);
-    return { i: i + 1, totalCount, baseCount, reward: w.rewardEnergy, baseReward: baseWave.rewardEnergy };
-  });
+
 
   return (
     <div className="max-w-2xl mx-auto pb-32 px-3 pt-4">
@@ -365,14 +358,5 @@ function Stat({ label, value, accent }: { label: string; value: React.ReactNode;
   );
 }
 
-function Compare({ label, base, now }: { label: string; base: number; now: number }) {
-  const changed = base !== now;
-  return (
-    <div className="rounded-md bg-muted/30 px-1.5 py-1.5">
-      <div className={`text-sm font-black tabular-nums ${changed ? 'text-amber-300' : ''}`}>
-        {now}{changed && <span className="text-[9px] text-muted-foreground font-normal"> /{base}</span>}
-      </div>
-      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{label}</div>
-    </div>
-  );
-}
+
+
