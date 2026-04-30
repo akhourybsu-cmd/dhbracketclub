@@ -224,9 +224,10 @@ export default function NexusResultsPage() {
         <NexusRewardsPanel rewards={insight.endlessRewards ?? null} boostCode={insight.boostCode} />
       )}
 
-      {/* Actions */}
+      {/* Actions — three flows: solo win (advance), solo loss (retry/browse), endless (run again / op hub) */}
       <div className="flex flex-col gap-2">
-        {won && next && (
+        {/* Solo WIN with a next mission unlocked */}
+        {won && next && !insight?.endless && (
           <button
             onClick={() => navigate(`/nexus/loadout/${next.id}`)}
             className="relative w-full py-3.5 nx-clip bg-gradient-to-r from-cyan-500 to-indigo-500 text-[hsl(218_45%_5%)] font-black uppercase tracking-wider text-sm active:scale-[0.98] flex items-center justify-center gap-2"
@@ -234,15 +235,42 @@ export default function NexusResultsPage() {
             Deploy Mission {next.id} <ChevronRight className="w-4 h-4" />
           </button>
         )}
+
+        {/* Endless mode primary CTA — always offer "Run Again" prominently */}
+        {insight?.endless && (
+          <button
+            onClick={() => navigate(`/nexus/loadout/100`)}
+            className="relative w-full py-3.5 nx-clip bg-gradient-to-r from-emerald-500 to-cyan-500 text-[hsl(218_45%_5%)] font-black uppercase tracking-wider text-sm active:scale-[0.98] flex items-center justify-center gap-2"
+          >
+            ▶ Run Another Endless <ChevronRight className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* Solo LOSS — give a clear secondary "browse missions" option */}
+        {!won && !insight?.endless && (
+          <button
+            onClick={() => navigate('/nexus/missions')}
+            className="w-full py-3 nx-clip bg-cyan-500/15 border border-cyan-400/50 text-cyan-100 font-bold uppercase tracking-wider text-xs active:scale-[0.98]"
+          >
+            ◢ Browse Missions
+          </button>
+        )}
+
+        {/* Retry — always available, but label differs by mode */}
         <button
           onClick={() => navigate(`/nexus/battle/${id}`)}
-          className="w-full py-3 nx-clip bg-cyan-500/10 border border-cyan-400/50 text-cyan-200 font-bold uppercase tracking-wider text-xs active:scale-[0.98]"
+          className="w-full py-3 nx-clip bg-white/[0.04] border border-white/15 text-foreground/85 font-bold uppercase tracking-wider text-xs active:scale-[0.98]"
         >
-          ↻ Retry Mission
+          ↻ {insight?.endless ? 'Retry Same Loadout' : 'Retry Mission'}
         </button>
-        <Link to="/nexus" className="text-[11px] text-muted-foreground py-2 text-center uppercase tracking-widest hover:text-cyan-300 transition-colors">
+
+        {/* Always offer a clear closeout to the hub */}
+        <button
+          onClick={() => navigate('/nexus')}
+          className="w-full py-2.5 nx-clip-sm border border-white/10 bg-transparent text-[11px] font-bold uppercase tracking-[0.22em] text-foreground/65 hover:text-cyan-200 hover:border-cyan-400/30 transition-colors active:scale-[0.98]"
+        >
           ← Return to Hub
-        </Link>
+        </button>
       </div>
     </div>
   );
