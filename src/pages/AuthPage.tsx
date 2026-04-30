@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { KeyRound, Sparkles, LogIn } from 'lucide-react';
 import dhMonogram from '@/assets/dh-monogram.png';
 import { getAndClearIntendedDestination } from '@/lib/share';
+import { lovable } from '@/integrations/lovable';
 
 type Mode = 'signin' | 'join' | 'request';
 
@@ -294,6 +295,42 @@ export default function AuthPage() {
                   : 'Submit Request'}
           </Button>
         </form>
+
+        {mode === 'signin' && (
+          <>
+            <div className="flex items-center gap-3 my-4">
+              <div className="flex-1 h-px bg-border/40" />
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-bold">or</span>
+              <div className="flex-1 h-px bg-border/40" />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-11 font-semibold rounded-xl btn-press gap-2"
+              disabled={loading}
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  const result = await lovable.auth.signInWithOAuth('google', {
+                    redirect_uri: window.location.origin,
+                  });
+                  if (result.error) throw result.error;
+                  if (result.redirected) return;
+                  const redirect = getAndClearIntendedDestination();
+                  navigate(redirect || '/dashboard');
+                } catch (err: any) {
+                  toast.error(err?.message || 'Google sign-in failed');
+                  setLoading(false);
+                }
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="#EA4335" d="M12 10.2v3.9h5.4c-.2 1.4-1.6 4.1-5.4 4.1-3.3 0-5.9-2.7-5.9-6.1S8.7 6 12 6c1.9 0 3.1.8 3.8 1.5L18.6 5C16.9 3.4 14.6 2.5 12 2.5 6.7 2.5 2.5 6.7 2.5 12s4.2 9.5 9.5 9.5c5.5 0 9.1-3.9 9.1-9.3 0-.6-.1-1.1-.2-1.6H12z"/>
+              </svg>
+              Continue with Google
+            </Button>
+          </>
+        )}
 
         {mode === 'signin' && (
           <p className="text-center text-[11px] text-muted-foreground/70 mt-3">
