@@ -9,6 +9,8 @@ import {
   withDefaults,
 } from '@/lib/nexus/calibration';
 import { MissionDef } from '@/lib/nexus/types';
+import { refreshLiveEndlessCache } from '@/lib/nexus/missionDrafts';
+import { ENDLESS_MISSION_ID } from '@/lib/nexus/endless';
 
 let cachedRows: MissionCalibration[] | null = null;
 let cacheLoadedAt = 0;
