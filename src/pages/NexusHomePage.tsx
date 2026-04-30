@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import { Shield, Trophy, Target, Users, Sparkles, Sliders, BarChart3, FlaskConical } from 'lucide-react';
+import { Shield, Trophy, Target, Users, Sparkles, Sliders, BarChart3, FlaskConical, ChevronRight, Lock } from 'lucide-react';
 import { useNexusProgress } from '@/hooks/useNexusProgress';
 import { useResolvedMissions } from '@/hooks/useMissionCalibrations';
 import { useActiveOperation } from '@/hooks/useNexusOperation';
