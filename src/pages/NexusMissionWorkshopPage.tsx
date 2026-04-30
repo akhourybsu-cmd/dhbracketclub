@@ -266,6 +266,15 @@ export default function NexusMissionWorkshopPage() {
                 <Trash2 className="w-3.5 h-3.5" /> Delete
               </button>
               <button
+                onClick={() => navigate('/nexus/simulator', {
+                  state: { source: 'workshop', draftId: active.id, draftName: active.name, kind: active.kind },
+                })}
+                className="px-3 py-2.5 rounded-xl bg-cyan-500/15 border border-cyan-500/40 text-cyan-100 text-xs flex items-center gap-1.5 active:scale-95"
+                title="Open simulator with this draft as context"
+              >
+                <FlaskConical className="w-3.5 h-3.5" /> Test
+              </button>
+              <button
                 onClick={handleApplyLive}
                 disabled={active.status === 'live'}
                 className="flex-1 px-3 py-2.5 rounded-xl bg-emerald-500 text-emerald-950 text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-40"
