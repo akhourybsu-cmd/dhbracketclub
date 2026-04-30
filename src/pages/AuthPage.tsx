@@ -355,6 +355,37 @@ export default function AuthPage() {
               </svg>
               Continue with Apple
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-11 font-semibold rounded-xl btn-press gap-2 mt-2"
+              disabled={loading}
+              onClick={async () => {
+                if (!email) {
+                  toast.error('Enter your email above first');
+                  return;
+                }
+                setLoading(true);
+                try {
+                  const { error } = await supabase.auth.signInWithOtp({
+                    email,
+                    options: {
+                      emailRedirectTo: window.location.origin,
+                      shouldCreateUser: false,
+                    },
+                  });
+                  if (error) throw error;
+                  toast.success('Sign-in link sent! Check your email.');
+                } catch (err: any) {
+                  toast.error(err?.message || 'Could not send sign-in link');
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              <Mail className="w-4 h-4" />
+              Email me a sign-in link
+            </Button>
           </>
         )}
 
