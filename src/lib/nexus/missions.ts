@@ -161,8 +161,12 @@ export const MISSIONS: MissionDef[] = [
 ];
 
 import { ENDLESS_MISSION, ENDLESS_MISSION_ID } from './endless';
+import { getLiveEndlessMission } from './missionDrafts';
 
 export function getMission(id: number): MissionDef | undefined {
-  if (id === ENDLESS_MISSION_ID) return ENDLESS_MISSION;
+  // Endless: prefer the admin-applied live draft if one is loaded; otherwise
+  // fall back to the canonical hardcoded mission. The live draft cache is
+  // refreshed at app start (see src/main.tsx) and after admin "Apply Live".
+  if (id === ENDLESS_MISSION_ID) return getLiveEndlessMission();
   return MISSIONS.find(m => m.id === id);
 }
