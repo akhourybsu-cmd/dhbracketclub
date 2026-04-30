@@ -214,6 +214,9 @@ export interface SimAggregate {
   recommendations: string[];
   // Operation pacing (computed at the end against current targets)
   operationPacing: OperationPacing;
+  // Human realism diagnostics (only meaningful when a human profile is used).
+  abandonRate: number; // 0..1 — fraction of runs that quit before defeat
+  archetypeMix?: Record<string, number>; // realmix only
 }
 
 export interface OperationPacing {
