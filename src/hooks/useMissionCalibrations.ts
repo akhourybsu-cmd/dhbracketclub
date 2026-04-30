@@ -76,7 +76,10 @@ export function useResolvedMission(missionId: number): {
 
   useEffect(() => {
     let cancelled = false;
-    fetchAll().then(rows => {
+    // Endless mission honors admin-applied live drafts. Refresh the cache
+    // before resolving so getMission() returns the live config if any.
+    const pre = missionId === ENDLESS_MISSION_ID ? refreshLiveEndlessCache() : Promise.resolve();
+    pre.then(() => fetchAll()).then(rows => {
       if (cancelled) return;
       setCal(rows.find(r => r.mission_id === missionId) ?? null);
       setLoading(false);
