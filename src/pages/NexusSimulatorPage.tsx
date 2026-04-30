@@ -23,7 +23,10 @@ type RunCountPreset = 50 | 250 | 1000 | 5000;
 type Mode = 'fixed' | 'adaptive';
 
 const RUN_PRESETS: RunCountPreset[] = [50, 250, 1000, 5000];
-const STRATEGIES: StrategyId[] = ['basic', 'balanced', 'optimizer', 'random'];
+const STRATEGIES: StrategyId[] = [
+  'realmix', 'tourist', 'hoarder', 'spammer', 'distracted', 'learner',
+  'basic', 'balanced', 'optimizer', 'random',
+];
 
 const VERDICT_STYLES: Record<SimAggregate['verdict'], string> = {
   TooEasy: 'bg-amber-500/15 text-amber-300 border-amber-500/40',
