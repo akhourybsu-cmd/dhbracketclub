@@ -392,7 +392,8 @@ function pickRandom(ctx: PolicyCtx): BotAction[] {
   return acts;
 }
 
-const POLICIES: Record<StrategyId, (ctx: PolicyCtx) => BotAction[]> = {
+type BasePolicyId = 'basic' | 'balanced' | 'optimizer' | 'random';
+const POLICIES: Record<BasePolicyId, (ctx: PolicyCtx) => BotAction[]> = {
   basic: pickBasic,
   balanced: pickBalanced,
   optimizer: pickOptimizer,
@@ -405,8 +406,38 @@ const TICK_MS = 100;
 const DECISION_INTERVAL_MS = 500; // bot acts twice per simulated second
 const MAX_SIM_MS = 25 * 60_000;   // hard safety cap: 25 sim minutes
 
+/** Apply misclick: with probability p, swap the placement to a neighboring
+ *  valid build tile (same column ±1 / row ±1) if one is empty. Mirrors a
+ *  real player's thumb landing on the wrong cell on a small phone screen. */
+function applyMisclick(
+  state: BattleState,
+  action: Extract<BotAction, { kind: 'place' }>,
+  rng: () => number,
+  rate: number,
+): Extract<BotAction, { kind: 'place' }> {
+  if (rate <= 0 || rng() >= rate) return action;
+  const occupied = new Set(state.towers.map(t => `${t.cell.col},${t.cell.row}`));
+  const neighbors = BUILD_TILES.filter(t => {
+    const dc = Math.abs(t.col - action.col);
+    const dr = Math.abs(t.row - action.row);
+    return (dc + dr) > 0 && dc <= 1 && dr <= 1 && !occupied.has(`${t.col},${t.row}`);
+  });
+  if (!neighbors.length) return action;
+  const pick = neighbors[Math.floor(rng() * neighbors.length)];
+  return { ...action, col: pick.col, row: pick.row };
+}
+
 export function runOne(strategy: StrategyId, seed: number): SimRunResult {
   const rng = mulberry32(seed);
+
+  // Resolve to a base policy + optional human profile.
+  let resolved: StrategyId = strategy;
+  if (strategy === 'realmix') resolved = sampleMix(rng);
+  const profile: HumanProfile | null = (resolved in HUMAN_PROFILES)
+    ? HUMAN_PROFILES[resolved as keyof typeof HUMAN_PROFILES]
+    : null;
+  const basePolicy: BasePolicyId = profile ? profile.base : (resolved as BasePolicyId);
+
   // Default loadout: both abilities, no boost. This mirrors the actual default
   // selection for endless runs.
   const abilities: AbilityKind[] = ['orbital', 'emp'];
@@ -415,6 +446,9 @@ export function runOne(strategy: StrategyId, seed: number): SimRunResult {
   // Auto-start the first wave (humans tap "begin"; bots start immediately).
   state = startWave(state, ENDLESS_MISSION);
   let lastDecisionAt = 0;
+  let nextDecisionDelay = 0; // extra "thinking time" before next decision tick
+  let abandoned = false;
+  let lastAbandonCheckWave = -1;
 
   while (state.elapsedMs < MAX_SIM_MS && state.status !== 'defeat' && state.status !== 'victory') {
     // Auto-advance wave breaks immediately so we don't waste 5s of sim time.
@@ -422,20 +456,67 @@ export function runOne(strategy: StrategyId, seed: number): SimRunResult {
       state = { ...state, betweenWaveMs: 1000 };
     }
 
+    // Per-wave abandonment check (humans rage-quit / get bored).
+    if (profile && state.waveIndex !== lastAbandonCheckWave) {
+      lastAbandonCheckWave = state.waveIndex;
+      const hpFrac = state.baseHp / Math.max(1, state.baseHpMax);
+      const pQuit = profile.abandon(state.waveIndex + 1, hpFrac);
+      if (pQuit > 0 && rng() < pQuit) {
+        abandoned = true;
+        break;
+      }
+    }
+
     // Decision phase
-    if (state.elapsedMs - lastDecisionAt >= DECISION_INTERVAL_MS) {
+    if (state.elapsedMs - lastDecisionAt >= DECISION_INTERVAL_MS + nextDecisionDelay) {
       lastDecisionAt = state.elapsedMs;
-      const actions = POLICIES[strategy]({ state, rng });
-      for (const a of actions) {
-        if (a.kind === 'place') {
-          const r = placeTower(state, a.tower, a.col, a.row);
-          if (r.ok) state = r.state;
-        } else if (a.kind === 'upgrade') {
-          const r = upgradeTower(state, a.towerId);
-          if (r.ok) state = r.state;
-        } else if (a.kind === 'ability') {
-          const r = castAbility(state, a.ability);
-          if (r.ok) state = r.state;
+      // Re-roll thinking time per profile.
+      if (profile) {
+        const [lo, hi] = profile.reactionMs;
+        nextDecisionDelay = lo + rng() * (hi - lo);
+      } else {
+        nextDecisionDelay = 0;
+      }
+
+      // Profile-aware skip: distracted players miss whole decision windows.
+      const shouldSkip = profile ? rng() < profile.skipTickRate : false;
+
+      if (!shouldSkip) {
+        let actions = POLICIES[basePolicy]({ state, rng });
+
+        if (profile) {
+          // Hoarding bias — drop tower placements during "calm" periods
+          // (no enemies on screen and base HP healthy).
+          const calm = state.enemies.length <= 2 && state.baseHp / state.baseHpMax > 0.7;
+          if (calm && rng() < profile.hoardBias) {
+            actions = actions.filter(a => a.kind !== 'place');
+          }
+          // Ability attention — sometimes ignore valid ability windows.
+          if (rng() >= profile.abilityAttention) {
+            actions = actions.filter(a => a.kind !== 'ability');
+          }
+          // Learner gets a small bump after the threshold wave.
+          if (profile.improvesAfterWave != null && state.waveIndex + 1 > profile.improvesAfterWave) {
+            // Improved players act more reliably (cut hoarding & skip tail).
+            // No-op past this point — already applied; left as documentation.
+          }
+          // Misclick mutation on placements.
+          actions = actions.map(a =>
+            a.kind === 'place' ? applyMisclick(state, a, rng, profile.misclickRate) : a
+          );
+        }
+
+        for (const a of actions) {
+          if (a.kind === 'place') {
+            const r = placeTower(state, a.tower, a.col, a.row);
+            if (r.ok) state = r.state;
+          } else if (a.kind === 'upgrade') {
+            const r = upgradeTower(state, a.towerId);
+            if (r.ok) state = r.state;
+          } else if (a.kind === 'ability') {
+            const r = castAbility(state, a.ability);
+            if (r.ok) state = r.state;
+          }
         }
       }
     }
@@ -450,7 +531,9 @@ export function runOne(strategy: StrategyId, seed: number): SimRunResult {
   const wavesCleared = state.status === 'victory'
     ? state.totalWaves
     : Math.max(0, state.waveIndex); // index = next wave attempted; 0 if died on first
-  const failedWave = state.status === 'defeat' ? state.waveIndex + 1 : null;
+  const failedWave = state.status === 'defeat'
+    ? state.waveIndex + 1
+    : (abandoned ? state.waveIndex + 1 : null);
 
   const durationSec = Math.round(state.elapsedMs / 1000);
   const kills = state.killedThisRun;
@@ -475,6 +558,8 @@ export function runOne(strategy: StrategyId, seed: number): SimRunResult {
     towerDamage,
     abilityUses: state.abilityUses,
     contributionPoints: points,
+    abandoned,
+    sampledArchetype: profile ? resolved : null,
   };
 }
 
