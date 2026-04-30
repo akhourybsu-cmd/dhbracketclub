@@ -249,21 +249,22 @@ export function endlessWaveScaling(waveIndex: number, kind: EnemyKind): {
 } {
   const w = Math.max(0, waveIndex); // 0-indexed
   if (kind === 'boss') {
-    // Boss HP grows slowly so each boss wave is roughly survivable.
-    const hp = 1 + Math.min(0.5, w * 0.025); // up to +50% by wave 20+
+    // Boss HP grows meaningfully — wave 25/30 bosses must threaten optimizers.
+    const hp = 1 + Math.min(1.0, w * 0.04); // up to +100% by wave 25+
     return { hp, shield: 1, speed: 1 };
   }
   let hp = 1;
   let shield = 1;
   let speed = 1;
-  // HP curve in 3 segments
-  if (w >= 3 && w < 10) hp = 1 + (w - 2) * 0.08;
-  else if (w >= 10 && w < 20) hp = 1 + 7 * 0.08 + (w - 9) * 0.10;
-  else if (w >= 20) hp = 1 + 7 * 0.08 + 10 * 0.10 + (w - 19) * 0.12;
-  // Shield curve — only relevant for shielded units, but we apply to all
-  if (w >= 10 && w < 20) shield = 1 + (w - 9) * 0.05;
-  else if (w >= 20) shield = 1 + 10 * 0.05 + (w - 19) * 0.06;
-  // Speed curve — capped to avoid pathing weirdness
-  if (w >= 7) speed = Math.min(1.30, 1 + (w - 6) * 0.012);
+  // HP curve in 3 segments — steeper than the first pass after sim showed
+  // optimizers cleared 30/30 with zero damage.
+  if (w >= 3 && w < 10) hp = 1 + (w - 2) * 0.10;        // up to ~1.7× by wave 9
+  else if (w >= 10 && w < 20) hp = 1.7 + (w - 9) * 0.15; // up to ~3.2× by wave 19
+  else if (w >= 20) hp = 3.2 + (w - 19) * 0.22;          // up to ~5.6× by wave 30
+  // Shield curve — only relevant for shielded units, but we apply to all.
+  if (w >= 8 && w < 20) shield = 1 + (w - 7) * 0.08;     // up to ~2.0× by wave 19
+  else if (w >= 20) shield = 2.0 + (w - 19) * 0.10;      // up to ~3.1× by wave 30
+  // Speed curve — capped to avoid pathing weirdness.
+  if (w >= 7) speed = Math.min(1.40, 1 + (w - 6) * 0.018);
   return { hp, shield, speed };
 }
