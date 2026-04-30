@@ -449,6 +449,9 @@ export default function ProfilePage() {
 
       <NotificationPreferencesSection />
 
+      {/* Linked sign-in providers */}
+      <LinkedAccounts />
+
       {/* Sound & Haptics */}
       <SoundSettingsCard />
 
