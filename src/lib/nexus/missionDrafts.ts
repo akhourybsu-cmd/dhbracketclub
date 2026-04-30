@@ -49,7 +49,28 @@ export interface EndlessDraftConfig {
   waves: Wave[];
   /** Wave-tier enemy stat scaling curve. Pure data, applied at spawn time. */
   scaling: EndlessScalingConfig;
+  /** Optional milestone reward overrides. Read by award_endless_rewards SQL. */
+  endlessRewards?: EndlessRewardsConfig;
 }
+
+export interface EndlessRewardMilestone {
+  wave: number;
+  tokens: number;
+  /** Optional sigil code to grant first-time at this milestone. */
+  sigilCode?: string | null;
+}
+
+export interface EndlessRewardsConfig {
+  milestones: EndlessRewardMilestone[];
+}
+
+export const DEFAULT_ENDLESS_REWARDS: EndlessRewardsConfig = {
+  milestones: [
+    { wave: 10, tokens: 10, sigilCode: 'endless_wave_10' },
+    { wave: 20, tokens: 20, sigilCode: 'endless_wave_20' },
+    { wave: 30, tokens: 40, sigilCode: 'endless_wave_30' },
+  ],
+};
 
 export interface EndlessScalingConfig {
   /** Wave at which non-boss HP scaling begins (1-indexed inclusive). */
@@ -189,6 +210,7 @@ export function defaultEndlessDraftConfig(): EndlessDraftConfig {
       spawns: w.spawns.map(s => ({ ...s })),
     })),
     scaling: { ...DEFAULT_ENDLESS_SCALING },
+    endlessRewards: { milestones: DEFAULT_ENDLESS_REWARDS.milestones.map(m => ({ ...m })) },
   };
 }
 
