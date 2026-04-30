@@ -162,7 +162,7 @@ export function tick(state: BattleState, mission: MissionDef): BattleState {
     }
     const def = ENEMIES[e.kind];
     const slowFactor = e.slowMs > 0 ? (1 - e.slowFactor) : 1;
-    const cellsThisTick = (def.speed * (s.enemySpeedMult ?? 1) * (s.modEnemySpeedMult ?? 1) * slowFactor) * (TICK_MS / 1000);
+    const cellsThisTick = (def.speed * (e.speedMult ?? 1) * (s.enemySpeedMult ?? 1) * (s.modEnemySpeedMult ?? 1) * slowFactor) * (TICK_MS / 1000);
     let progress = e.progress + cellsThisTick;
     while (progress >= 1 && e.pathIndex < PATH.length - 1) {
       progress -= 1;
