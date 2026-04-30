@@ -352,6 +352,14 @@ export function validateEndlessConfig(cfg: EndlessDraftConfig): ValidationIssue[
   }
   if (cfg.scaling.hpCap < 1) issues.push({ level: 'error', message: 'HP cap must be ≥1.' });
   if (cfg.scaling.speedCap > 2) issues.push({ level: 'warn', message: 'Speed cap >2× can break enemy pathing visuals.' });
+  if (cfg.endlessRewards?.milestones?.length) {
+    const sorted = [...cfg.endlessRewards.milestones].sort((a, b) => a.wave - b.wave);
+    sorted.forEach((m, i) => {
+      if (m.wave < 1) issues.push({ level: 'error', message: `Milestone ${i + 1}: wave must be ≥1.` });
+      if (m.tokens < 0) issues.push({ level: 'error', message: `Milestone ${i + 1}: tokens cannot be negative.` });
+      if (m.tokens > 500) issues.push({ level: 'warn', message: `Milestone wave ${m.wave}: ${m.tokens} tokens is unusually high.` });
+    });
+  }
   return issues;
 }
 
