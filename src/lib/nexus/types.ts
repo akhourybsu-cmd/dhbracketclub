@@ -97,6 +97,8 @@ export interface ActiveEnemy {
   stunnedMs: number;
   /** Per-enemy speed multiplier baked at spawn time (e.g. endless wave-tier scaling). */
   speedMult?: number;
+  /** Id of the last tower that landed HP damage on this enemy. Used to credit kills. */
+  lastHitBy?: string;
 }
 
 export interface AbilityRuntime {

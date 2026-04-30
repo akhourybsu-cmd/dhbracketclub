@@ -274,6 +274,13 @@ export function tick(state: BattleState, mission: MissionDef): BattleState {
       s.energy += bounty;
       s.score += bounty;
       s.killedThisRun += 1;
+      // Credit the kill to the tower that landed the killing blow (if any).
+      // Ability-based kills (orbital / EMP-then-leak) won't have lastHitBy
+      // and simply don't credit a tower — that's correct.
+      if (e.lastHitBy) {
+        const killer = s.towers.find(t => t.id === e.lastHitBy);
+        if (killer) killer.kills += 1;
+      }
       const pos = pathToXY(e.pathIndex, e.progress);
       s.events.push({ type: 'kill', at: pos, t: s.elapsedMs });
     } else {
@@ -369,6 +376,7 @@ function applyDamage(e: ActiveEnemy, dmg: number, pierce: number, tower: PlacedT
   const effectiveArmor = Math.max(0, def.armor - pierce);
   const final = Math.max(1, remaining - effectiveArmor);
   e.hp -= final;
+  e.lastHitBy = tower.id;
   tower.totalDamage += final;
   if (e.kind === 'boss') s.bossDamageDealt += final;
 }
