@@ -53,7 +53,7 @@ export const TOWERS: Record<TowerKind, TowerDef> = {
     range: 6,
     fireRate: 0.5,
     armorPierce: 8,
-    upgradeCost: 110,
+    upgradeCost: 140,
     upgradeMultiplier: 1.7,
     color: 'amber',
     glyph: 'R',
