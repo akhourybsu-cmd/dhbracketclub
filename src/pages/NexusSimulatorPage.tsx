@@ -5,7 +5,7 @@
 // no leaderboard impact.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Play, Square, FlaskConical, Download, ChevronDown, ChevronUp, AlertTriangle, Wrench,
 } from 'lucide-react';
@@ -39,6 +39,8 @@ const VERDICT_STYLES: Record<SimAggregate['verdict'], string> = {
 export default function NexusSimulatorPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const workshopCtx = (location.state ?? {}) as { source?: string; draftId?: string; draftName?: string; kind?: string };
   const [authorized, setAuthorized] = useState<boolean | null>(null);
 
   const [strategy, setStrategy] = useState<StrategyId>('realmix');
