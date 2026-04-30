@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    webpush.setVapidDetails("https://dhbracketclub.lovable.app", vapidPublicKey, vapidPrivateKey);
+    webpush.setVapidDetails("https://dryhorse.app", vapidPublicKey, vapidPrivateKey);
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     // Find today's lockbox day

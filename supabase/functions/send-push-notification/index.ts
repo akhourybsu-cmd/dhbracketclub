@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Missing required push configuration" }, 500);
     }
 
-    webpush.setVapidDetails("https://dhbracketclub.lovable.app", vapidPublicKey, vapidPrivateKey);
+    webpush.setVapidDetails("https://dryhorse.app", vapidPublicKey, vapidPrivateKey);
     const supabase = getSupabase();
 
     // ══════════════════════════════════════════
