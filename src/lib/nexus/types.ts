@@ -95,6 +95,8 @@ export interface ActiveEnemy {
   slowMs: number;            // remaining ms slowed
   slowFactor: number;        // 0..1
   stunnedMs: number;
+  /** Per-enemy speed multiplier baked at spawn time (e.g. endless wave-tier scaling). */
+  speedMult?: number;
 }
 
 export interface AbilityRuntime {
