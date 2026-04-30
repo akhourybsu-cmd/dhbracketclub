@@ -2333,6 +2333,62 @@ export type Database = {
         }
         Relationships: []
       }
+      nexus_mission_drafts: {
+        Row: {
+          applied_at: string | null
+          archived_at: string | null
+          config: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          name: string
+          notes: string | null
+          parent_id: string | null
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          applied_at?: string | null
+          archived_at?: string | null
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind: string
+          name: string
+          notes?: string | null
+          parent_id?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          applied_at?: string | null
+          archived_at?: string | null
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          name?: string
+          notes?: string | null
+          parent_id?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nexus_mission_drafts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "nexus_mission_drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nexus_operation_contributions: {
         Row: {
           best_score: number
@@ -5133,6 +5189,10 @@ export type Database = {
       _grant_sigil: {
         Args: { _code: string; _ref: string; _user_id: string }
         Returns: boolean
+      }
+      apply_mission_draft_live: {
+        Args: { _also_update_active_op?: boolean; _draft_id: string }
+        Returns: Json
       }
       award_endless_rewards: {
         Args: { _run_id: string; _wave_reached: number }

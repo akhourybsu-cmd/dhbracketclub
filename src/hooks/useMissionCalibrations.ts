@@ -9,6 +9,8 @@ import {
   withDefaults,
 } from '@/lib/nexus/calibration';
 import { MissionDef } from '@/lib/nexus/types';
+import { refreshLiveEndlessCache } from '@/lib/nexus/missionDrafts';
+import { ENDLESS_MISSION_ID } from '@/lib/nexus/endless';
 
 let cachedRows: MissionCalibration[] | null = null;
 let cacheLoadedAt = 0;
@@ -74,7 +76,10 @@ export function useResolvedMission(missionId: number): {
 
   useEffect(() => {
     let cancelled = false;
-    fetchAll().then(rows => {
+    // Endless mission honors admin-applied live drafts. Refresh the cache
+    // before resolving so getMission() returns the live config if any.
+    const pre = missionId === ENDLESS_MISSION_ID ? refreshLiveEndlessCache() : Promise.resolve();
+    pre.then(() => fetchAll()).then(rows => {
       if (cancelled) return;
       setCal(rows.find(r => r.mission_id === missionId) ?? null);
       setLoading(false);

@@ -4,7 +4,11 @@ import { PATH, distanceCells, isBuildable, pathToXY } from './grid';
 import { MISSIONS, getMission } from './missions';
 import { TOWERS, towerDamageAt, towerFireRateAt, towerRangeAt, towerSellValue, towerUpgradeCost } from './towers';
 import { aggregateModifiers, emptyAggregated, resolveModifiers } from './modifiers';
-import { endlessWaveScaling, isEndlessMission } from './endless';
+import { isEndlessMission } from './endless';
+// Use the live-draft-aware scaling resolver so admin overrides take effect on
+// new runs without rearchitecting the engine. Falls back to the hardcoded
+// curve when no live endless draft exists.
+import { liveEndlessWaveScaling } from './missionDrafts';
 import {
   AbilityKind, ActiveEnemy, BattleEvent, BattleState, EnemyKind, MissionDef, PlacedTower, TowerKind,
 } from './types';
@@ -343,7 +347,7 @@ function spawnEnemy(s: BattleState, kind: EnemyKind, mission: MissionDef) {
   const shieldMult = (s.enemyShieldMult?.[kind] ?? 1) * (s.modEnemyShieldMult?.[kind] ?? 1);
   // Endless mode adds a per-wave-tier scaling layer that grows enemies with the wave index.
   const endlessScale = isEndlessMission(mission.id)
-    ? endlessWaveScaling(s.waveIndex, kind)
+    ? liveEndlessWaveScaling(s.waveIndex, kind)
     : { hp: 1, shield: 1, speed: 1 };
   hp = Math.max(1, Math.round(hp * hpMult * endlessScale.hp));
   if (kind === 'boss') hp = Math.max(1, Math.round(hp * (s.modBossHpMult ?? 1)));
