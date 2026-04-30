@@ -17,6 +17,18 @@ export default function NexusHomePage() {
   const nextMission = campaign.find(m => m.id === progress.highest_mission) ?? campaign[0];
   const cleared = Math.min(progress.highest_mission - 1, 6);
   const { operation } = useActiveOperation();
+  const { user } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    (supabase as any)
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .maybeSingle()
+      .then(({ data }: any) => setIsAdmin(!!data));
+  }, [user]);
 
   return (
     <div className="max-w-md mx-auto pb-6">
