@@ -146,6 +146,24 @@ export default function NexusSimulatorPage() {
       </header>
 
       <main className="px-4 py-4 space-y-4 max-w-2xl mx-auto">
+        {workshopCtx.source === 'workshop' && workshopCtx.draftId && (
+          <section className="rounded-2xl border border-cyan-500/40 bg-cyan-500/5 p-4 flex items-center gap-3">
+            <Wrench className="w-4 h-4 text-cyan-300 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-semibold text-cyan-100">Testing draft</div>
+              <div className="text-[11px] text-muted-foreground truncate">
+                {workshopCtx.draftName} · {workshopCtx.kind}
+                {workshopCtx.kind === 'endless' ? ' — apply to Live first to simulate against draft scaling.' : ''}
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/nexus/mission-workshop', { state: { returnedFromSim: true } })}
+              className="px-2.5 py-1.5 rounded-lg bg-cyan-500/15 border border-cyan-500/40 text-cyan-100 text-xs flex items-center gap-1 active:scale-95"
+            >
+              ← Workshop
+            </button>
+          </section>
+        )}
         {/* Controls */}
         <section className="rounded-2xl border border-border/60 bg-card/60 p-4 space-y-4">
           <div>
