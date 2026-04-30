@@ -661,6 +661,13 @@ export function aggregate(strategy: StrategyId, runs: SimRunResult[]): SimAggreg
     balanced: [8, 14],
     optimizer: [14, 22],
     random: [4, 10],
+    tourist: [3, 6],
+    hoarder: [6, 11],
+    spammer: [4, 8],
+    distracted: [4, 9],
+    learner: [6, 12],
+    // Population mix expectation — tuned to a small friend group avg.
+    realmix: [5, 10],
   };
   const [lo, hi] = targets[strategy];
   let verdict: SimAggregate['verdict'];
