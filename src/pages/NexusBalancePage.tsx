@@ -141,26 +141,27 @@ export default function NexusBalancePage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 mb-4">
+      <div className="grid grid-cols-3 gap-2 mb-4">
         <Link
           to="/nexus/calibration"
-          className="flex items-center justify-between rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2.5 active:bg-amber-500/20"
+          className="flex flex-col items-start justify-between rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2.5 active:bg-amber-500/20"
         >
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-widest text-amber-300">Tune missions</div>
-            <div className="text-sm font-bold">Calibration →</div>
-          </div>
-          <span className="text-amber-300 text-lg">⚙</span>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-amber-300">Tune</div>
+          <div className="text-sm font-bold mt-1">Calibration →</div>
         </Link>
         <Link
           to="/nexus/simulator"
-          className="flex items-center justify-between rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-3 py-2.5 active:bg-emerald-500/20"
+          className="flex flex-col items-start justify-between rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-3 py-2.5 active:bg-emerald-500/20"
         >
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-300">Endless harness</div>
-            <div className="text-sm font-bold">Simulator →</div>
-          </div>
-          <span className="text-emerald-300 text-lg">🧪</span>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-300">Harness</div>
+          <div className="text-sm font-bold mt-1">Simulator →</div>
+        </Link>
+        <Link
+          to="/nexus/mission-workshop"
+          className="flex flex-col items-start justify-between rounded-xl border border-cyan-400/40 bg-cyan-500/10 px-3 py-2.5 active:bg-cyan-500/20"
+        >
+          <div className="text-[10px] font-bold uppercase tracking-widest text-cyan-300">Edit</div>
+          <div className="text-sm font-bold mt-1">Workshop →</div>
         </Link>
       </div>
 

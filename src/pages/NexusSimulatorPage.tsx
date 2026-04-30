@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Play, Square, FlaskConical, Download, ChevronDown, ChevronUp, AlertTriangle,
+  ArrowLeft, Play, Square, FlaskConical, Download, ChevronDown, ChevronUp, AlertTriangle, Wrench,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -281,9 +281,30 @@ export default function NexusSimulatorPage() {
               <ul className="mt-3 space-y-1.5 text-sm text-foreground/80">
                 {result.diagnostics.map((d, i) => <li key={i}>• {d}</li>)}
               </ul>
-              <div className="mt-3 flex items-center gap-2">
+              <div className="mt-3 flex items-center gap-2 flex-wrap">
                 <button onClick={exportSummary} className="px-3 py-1.5 rounded-lg bg-muted/40 border border-border/60 text-xs flex items-center gap-1.5">
                   <Download className="w-3.5 h-3.5" /> Copy JSON
+                </button>
+                <button
+                  onClick={() => navigate('/nexus/mission-workshop', {
+                    state: {
+                      source: 'simulator',
+                      strategy: STRATEGY_LABELS[result.strategy],
+                      verdict: result.verdict,
+                      diagnostics: result.diagnostics,
+                      recommendations: result.recommendations,
+                      operationPacing: {
+                        ...result.operationPacing,
+                        avgKillsPerRun: result.avgKills,
+                        avgScorePerRun: result.avgWaves > 0 ? Math.round(result.avgKills * 50) : 0,
+                        avgBossDmgPerRun: result.avgBossDamage,
+                      },
+                      avgUnspentAtEnd: result.avgUnspentAtEnd,
+                    },
+                  })}
+                  className="px-3 py-1.5 rounded-lg bg-cyan-500/15 border border-cyan-500/40 text-cyan-100 text-xs font-semibold flex items-center gap-1.5 active:scale-95"
+                >
+                  <Wrench className="w-3.5 h-3.5" /> Tune in Workshop
                 </button>
               </div>
             </Section>
