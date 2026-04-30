@@ -19,6 +19,7 @@ import NotificationPreferencesSection from '@/components/profile/NotificationPre
 import SecurityInfoPanel from '@/components/profile/SecurityInfoPanel';
 import AdminHub from '@/components/profile/AdminHub';
 import SoundSettingsCard from '@/components/profile/SoundSettingsCard';
+import LinkedAccounts from '@/components/profile/LinkedAccounts';
 
 export default function ProfilePage() {
   const { theme, setTheme } = useTheme();
@@ -447,6 +448,9 @@ export default function ProfilePage() {
       <AdminHub />
 
       <NotificationPreferencesSection />
+
+      {/* Linked sign-in providers */}
+      <LinkedAccounts />
 
       {/* Sound & Haptics */}
       <SoundSettingsCard />
