@@ -203,33 +203,83 @@ export default function NexusHomePage() {
       </div>
 
       {isAdmin && (
-        <div className="mt-4">
-          <div className="flex items-center gap-1.5 mb-2 px-1">
-            <span className="nx-pulse-dot inline-block w-1.5 h-1.5 rounded-full" style={{ background: 'hsl(var(--nx-amber))', boxShadow: '0 0 6px hsl(var(--nx-amber))' }} />
-            <p className="nx-title text-[9px]" style={{ color: 'hsl(var(--nx-amber))' }}>ADMIN TOOLS</p>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <NavTile
-              to="/nexus/balance"
-              icon={<BarChart3 className="w-4 h-4" />}
-              label="Telemetry"
-              accent="hsl(var(--nx-amber))"
-              borderColor="hsl(var(--nx-amber) / 0.35)"
-            />
-            <NavTile
-              to="/nexus/calibration"
-              icon={<Sliders className="w-4 h-4" />}
-              label="Calibration"
-              accent="hsl(var(--nx-amber))"
-              borderColor="hsl(var(--nx-amber) / 0.35)"
-            />
-            <NavTile
-              to="/nexus/simulator"
-              icon={<FlaskConical className="w-4 h-4" />}
-              label="Simulator"
-              accent="hsl(150 80% 70%)"
-              borderColor="hsl(150 80% 60% / 0.35)"
-            />
+        <div
+          className="relative mt-6 nx-clip overflow-hidden"
+          style={{
+            background:
+              'radial-gradient(ellipse 70% 60% at 80% 0%, hsl(var(--nx-amber) / 0.18), transparent 60%),' +
+              'linear-gradient(160deg, hsl(35 40% 10%), hsl(220 60% 5%))',
+            border: '1px solid hsl(var(--nx-amber) / 0.4)',
+            boxShadow:
+              '0 0 24px -8px hsl(var(--nx-amber) / 0.5), inset 0 1px 0 hsl(var(--nx-amber) / 0.18)',
+          }}
+        >
+          {/* Decorative grid */}
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none opacity-[0.10]"
+            style={{
+              backgroundImage:
+                'linear-gradient(hsl(var(--nx-amber)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--nx-amber)) 1px, transparent 1px)',
+              backgroundSize: '24px 24px',
+              maskImage: 'radial-gradient(ellipse 60% 60% at 100% 0%, black, transparent 80%)',
+              WebkitMaskImage: 'radial-gradient(ellipse 60% 60% at 100% 0%, black, transparent 80%)',
+            }}
+          />
+
+          <div className="relative p-4">
+            {/* Header */}
+            <div className="flex items-center gap-2 mb-3">
+              <div
+                className="w-8 h-8 nx-clip-sm flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(var(--nx-amber) / 0.28), hsl(var(--nx-amber) / 0.08))',
+                  border: '1px solid hsl(var(--nx-amber) / 0.4)',
+                  boxShadow: '0 0 12px hsl(var(--nx-amber) / 0.25)',
+                }}
+              >
+                <Lock className="w-4 h-4" style={{ color: 'hsl(var(--nx-amber))' }} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="nx-pulse-dot inline-block w-1.5 h-1.5 rounded-full" style={{ background: 'hsl(var(--nx-amber))', boxShadow: '0 0 6px hsl(var(--nx-amber))' }} />
+                  <p className="nx-title text-[9px]" style={{ color: 'hsl(var(--nx-amber))', letterSpacing: '0.22em' }}>RESTRICTED · ADMIN PORTAL</p>
+                </div>
+                <p className="text-[13px] font-black leading-tight text-foreground">Nexus Command</p>
+              </div>
+            </div>
+
+            {/* Tools list */}
+            <div className="space-y-1.5">
+              <AdminPortalRow
+                to="/nexus/balance"
+                icon={<BarChart3 className="w-4 h-4" />}
+                label="Telemetry"
+                description="Mission, tower & ability stats"
+                accent="hsl(var(--nx-amber))"
+              />
+              <AdminPortalRow
+                to="/nexus/calibration"
+                icon={<Sliders className="w-4 h-4" />}
+                label="Mission Calibration"
+                description="Tune live mission difficulty"
+                accent="hsl(var(--nx-amber))"
+              />
+              <AdminPortalRow
+                to="/nexus/simulator"
+                icon={<FlaskConical className="w-4 h-4" />}
+                label="Balance Simulator"
+                description="Run human-realistic playtests"
+                accent="hsl(150 80% 70%)"
+              />
+              <AdminPortalRow
+                to="/nexus/operation"
+                icon={<Users className="w-4 h-4" />}
+                label="Co-op Operations"
+                description="Start, monitor & end ops"
+                accent="hsl(280 90% 78%)"
+              />
+            </div>
           </div>
         </div>
       )}
