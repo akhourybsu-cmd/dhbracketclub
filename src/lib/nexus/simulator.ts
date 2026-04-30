@@ -173,6 +173,10 @@ export interface SimRunResult {
   towerDamage: Record<TowerKind, number>;
   abilityUses: Record<AbilityKind, number>;
   contributionPoints: number; // mirror of SQL formula
+  /** Human-profile only: did this player rage-quit / get bored before defeat? */
+  abandoned?: boolean;
+  /** When realmix is selected, which archetype was sampled for this run. */
+  sampledArchetype?: StrategyId | null;
 }
 
 export interface SimAggregate {
