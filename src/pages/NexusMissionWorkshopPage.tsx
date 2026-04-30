@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Wrench, FlaskConical, Save, Upload, Trash2, AlertTriangle, CheckCircle2, Plus, Copy, Sparkles } from 'lucide-react';
+import { ArrowLeft, Wrench, FlaskConical, Save, Upload, Trash2, AlertTriangle, CheckCircle2, Plus, Copy, Sparkles, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -14,7 +14,8 @@ import { cn } from '@/lib/utils';
 import {
   DraftKind, MissionDraftRow,
   EndlessDraftConfig, OperationDraftConfig,
-  DEFAULT_ENDLESS_SCALING, DEFAULT_OPERATION_CONFIG,
+  DEFAULT_ENDLESS_SCALING, DEFAULT_OPERATION_CONFIG, DEFAULT_ENDLESS_REWARDS,
+  EndlessRewardMilestone,
   defaultEndlessDraftConfig,
   listDrafts, getLiveDraft, createDraft, updateDraft, deleteDraft, applyDraftLive,
   validateEndlessConfig, validateOperationConfig, refreshLiveEndlessCache, clearLiveEndlessCache,
