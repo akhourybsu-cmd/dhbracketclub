@@ -188,7 +188,10 @@ export default function NexusBattlePage() {
       const wavesCleared = won ? mission.waves.length : Math.max(0, state.waveIndex);
       const durationSeconds = Math.round(state.elapsedMs / 1000);
 
-      const totalKills = (state.towers ?? []).reduce((sum, t) => sum + (t.kills || 0), 0);
+      // Use the engine's authoritative kill counter. Per-tower `kills` is
+      // never incremented by the engine, so summing it always returned 0 —
+      // which silently broke Operation Phase 1 progression.
+      const totalKills = state.killedThisRun ?? 0;
 
       const finalize = async () => {
         let nexusRunId: string | null = null;
@@ -209,6 +212,7 @@ export default function NexusBattlePage() {
             abilityUsage: state.abilityUses,
             energyStarvedMs: state.energyStarvedMs,
             leaks: state.leaks,
+            kills: totalKills,
           }).catch(() => null);
         }
 
