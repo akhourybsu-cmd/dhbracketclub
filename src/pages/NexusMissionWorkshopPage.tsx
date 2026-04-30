@@ -450,6 +450,89 @@ function EndlessEditor({ draft, onSave, saving }: { draft: MissionDraftRow; onSa
 
       <div>
         <div className="text-xs font-semibold mb-1 flex items-center justify-between">
+          <span>Milestone rewards</span>
+          <button
+            onClick={() => {
+              const list = cfg.endlessRewards?.milestones ?? [];
+              const last = list[list.length - 1];
+              const nextWave = last ? last.wave + 10 : 10;
+              setCfg(c => ({
+                ...c,
+                endlessRewards: { milestones: [...(c.endlessRewards?.milestones ?? []), { wave: nextWave, tokens: 25, sigilCode: null }] },
+              }));
+            }}
+            className="px-2 py-1 rounded-md bg-emerald-500/15 border border-emerald-500/40 text-emerald-200 text-[11px] flex items-center gap-1"
+          >
+            <Plus className="w-3 h-3" /> Add
+          </button>
+        </div>
+        <p className="text-[11px] text-muted-foreground mb-2">
+          Salvage tokens awarded when a player reaches a wave milestone. Optional sigil code grants a one-time sigil. Falls back to defaults (10/20/30) if empty.
+        </p>
+        <div className="space-y-2">
+          {(cfg.endlessRewards?.milestones ?? []).map((m, i) => (
+            <div key={i} className="rounded-xl border border-border/60 bg-background/40 p-2.5 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Milestone {i + 1}</span>
+                <div className="flex-1" />
+                <button
+                  onClick={() => setCfg(c => ({
+                    ...c,
+                    endlessRewards: { milestones: (c.endlessRewards?.milestones ?? []).filter((_, idx) => idx !== i) },
+                  }))}
+                  className="p-1 rounded-md text-rose-300 hover:bg-rose-500/10"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="text-[11px] text-muted-foreground">
+                  Wave
+                  <input type="number" min={1} max={200} value={m.wave}
+                    onChange={e => {
+                      const v = parseInt(e.target.value, 10) || 1;
+                      setCfg(c => ({
+                        ...c,
+                        endlessRewards: { milestones: (c.endlessRewards?.milestones ?? []).map((mm, idx) => idx === i ? { ...mm, wave: v } : mm) },
+                      }));
+                    }}
+                    className="w-full mt-1 px-2 py-1.5 rounded-lg bg-background/60 border border-border/60 text-sm tabular-nums" />
+                </label>
+                <label className="text-[11px] text-muted-foreground">
+                  Tokens
+                  <input type="number" min={0} max={1000} value={m.tokens}
+                    onChange={e => {
+                      const v = parseInt(e.target.value, 10) || 0;
+                      setCfg(c => ({
+                        ...c,
+                        endlessRewards: { milestones: (c.endlessRewards?.milestones ?? []).map((mm, idx) => idx === i ? { ...mm, tokens: v } : mm) },
+                      }));
+                    }}
+                    className="w-full mt-1 px-2 py-1.5 rounded-lg bg-background/60 border border-border/60 text-sm tabular-nums" />
+                </label>
+              </div>
+              <label className="text-[11px] text-muted-foreground block">
+                Sigil code (optional)
+                <input type="text" value={m.sigilCode ?? ''} placeholder="endless_wave_10"
+                  onChange={e => {
+                    const v = e.target.value.trim() || null;
+                    setCfg(c => ({
+                      ...c,
+                      endlessRewards: { milestones: (c.endlessRewards?.milestones ?? []).map((mm, idx) => idx === i ? { ...mm, sigilCode: v } : mm) },
+                    }));
+                  }}
+                  className="w-full mt-1 px-2 py-1.5 rounded-lg bg-background/60 border border-border/60 text-xs font-mono" />
+              </label>
+            </div>
+          ))}
+          {(!cfg.endlessRewards?.milestones?.length) && (
+            <div className="text-[11px] text-muted-foreground italic">No milestones — defaults will apply (waves 10/20/30).</div>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <div className="text-xs font-semibold mb-1 flex items-center justify-between">
           <span>Waves</span>
           <span className="text-[10px] text-muted-foreground font-normal tabular-nums">
             {cfg.waves.length} waves · {cfg.waves.reduce((a, w) => a + w.spawns.reduce((s, x) => s + x.count, 0), 0)} enemies
