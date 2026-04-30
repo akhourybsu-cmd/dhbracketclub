@@ -369,6 +369,7 @@ function applyDamage(e: ActiveEnemy, dmg: number, pierce: number, tower: PlacedT
   const effectiveArmor = Math.max(0, def.armor - pierce);
   const final = Math.max(1, remaining - effectiveArmor);
   e.hp -= final;
+  e.lastHitBy = tower.id;
   tower.totalDamage += final;
   if (e.kind === 'boss') s.bossDamageDealt += final;
 }
