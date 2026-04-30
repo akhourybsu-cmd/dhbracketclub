@@ -21,14 +21,127 @@ import {
 } from './types';
 
 // ─── Strategy profiles ──────────────────────────────────────────────────────
-export type StrategyId = 'basic' | 'balanced' | 'optimizer' | 'random';
+export type StrategyId =
+  | 'basic' | 'balanced' | 'optimizer' | 'random'
+  // Human archetypes — wrap a base policy with realistic flaws.
+  | 'tourist' | 'hoarder' | 'spammer' | 'distracted' | 'learner'
+  // Population mix — samples archetypes per run with realistic weights.
+  | 'realmix';
 
 export const STRATEGY_LABELS: Record<StrategyId, string> = {
   basic: 'Basic Player',
   balanced: 'Balanced Player',
-  optimizer: 'Optimizer',
+  optimizer: 'Optimizer (ceiling)',
   random: 'Randomized',
+  tourist: 'Tourist (1–2 towers, abandons)',
+  hoarder: 'Hoarder (saves energy, panics late)',
+  spammer: 'Spammer (cheap towers, no upgrades)',
+  distracted: 'Distracted (random pauses)',
+  learner: 'Learner (improves mid-run)',
+  realmix: 'Realistic Friend Group Mix',
 };
+
+// ─── Human realism layer ────────────────────────────────────────────────────
+// Wraps a base policy with traits that mirror how actual mobile players behave:
+// reaction delay, misclicks, hoarding bias, attention drops, ability misses,
+// and per-wave abandonment probability.
+interface HumanProfile {
+  base: 'basic' | 'balanced' | 'optimizer' | 'random';
+  /** Min/max ms of "thinking time" added to every decision tick. */
+  reactionMs: [number, number];
+  /** Probability a placed tower lands on a neighboring valid tile. 0..1 */
+  misclickRate: number;
+  /** Fraction of energy the bot prefers to leave unspent during calm waves. */
+  hoardBias: number;
+  /** Ability-cast probability when conditions are met (real players miss windows). 0..1 */
+  abilityAttention: number;
+  /** Probability a single decision tick is skipped entirely (phone, distraction). 0..1 */
+  skipTickRate: number;
+  /** Per-wave abandonment probability — return value is p(quit at this wave). */
+  abandon: (wave: number, hpFrac: number) => number;
+  /** If true, perf improves after wave 3 (Learner). */
+  improvesAfterWave?: number;
+  /** Loadout noise — small chance to swap one ability for the other. (Currently both abilities are default, so this is a no-op placeholder for future loadout variance.) */
+  loadoutNoise: number;
+}
+
+const HUMAN_PROFILES: Record<Exclude<StrategyId, 'basic' | 'balanced' | 'optimizer' | 'random' | 'realmix'>, HumanProfile> = {
+  tourist: {
+    base: 'basic',
+    reactionMs: [800, 2500],
+    misclickRate: 0.18,
+    hoardBias: 0.45,
+    abilityAttention: 0.25,
+    skipTickRate: 0.15,
+    // Quits hard around wave 5–7 even if alive.
+    abandon: (w) => (w >= 4 ? 0.08 : 0) + (w >= 6 ? 0.18 : 0),
+    loadoutNoise: 0.3,
+  },
+  hoarder: {
+    base: 'balanced',
+    reactionMs: [600, 2000],
+    misclickRate: 0.10,
+    hoardBias: 0.55,
+    abilityAttention: 0.45,
+    skipTickRate: 0.08,
+    // Sticks around longer but rage-quits if base HP < 30%.
+    abandon: (w, hp) => (hp < 0.3 && w >= 6 ? 0.12 : 0) + (w >= 12 ? 0.05 : 0),
+    loadoutNoise: 0.15,
+  },
+  spammer: {
+    base: 'basic',
+    reactionMs: [300, 900],
+    misclickRate: 0.22,
+    hoardBias: 0.05, // never hoards
+    abilityAttention: 0.7,
+    skipTickRate: 0.05,
+    abandon: (w) => (w >= 7 ? 0.08 : 0),
+    loadoutNoise: 0.2,
+  },
+  distracted: {
+    base: 'balanced',
+    reactionMs: [1200, 4500],
+    misclickRate: 0.16,
+    hoardBias: 0.25,
+    abilityAttention: 0.4,
+    skipTickRate: 0.30,
+    // Rarely abandons; just plays badly.
+    abandon: (w) => (w >= 10 ? 0.04 : 0),
+    loadoutNoise: 0.2,
+  },
+  learner: {
+    base: 'balanced',
+    reactionMs: [700, 2200],
+    misclickRate: 0.14,
+    hoardBias: 0.20,
+    abilityAttention: 0.55,
+    skipTickRate: 0.10,
+    abandon: (w, hp) => (hp < 0.25 && w < 4 ? 0.10 : 0),
+    improvesAfterWave: 3,
+    loadoutNoise: 0.1,
+  },
+};
+
+// Realistic mix — sampled per run. Tuned to a small friend group:
+// most players are casual/distracted, a few are decent, one min-maxer.
+const REAL_MIX: Array<{ id: StrategyId; weight: number }> = [
+  { id: 'tourist',    weight: 0.30 },
+  { id: 'hoarder',    weight: 0.20 },
+  { id: 'spammer',    weight: 0.15 },
+  { id: 'distracted', weight: 0.15 },
+  { id: 'learner',    weight: 0.10 },
+  { id: 'balanced',   weight: 0.07 },
+  { id: 'optimizer',  weight: 0.03 },
+];
+
+function sampleMix(rng: () => number): Exclude<StrategyId, 'realmix'> {
+  let r = rng();
+  for (const m of REAL_MIX) {
+    r -= m.weight;
+    if (r <= 0) return m.id as Exclude<StrategyId, 'realmix'>;
+  }
+  return 'balanced';
+}
 
 // Cheap deterministic PRNG (mulberry32) so seed→result is reproducible.
 function mulberry32(seed: number) {
