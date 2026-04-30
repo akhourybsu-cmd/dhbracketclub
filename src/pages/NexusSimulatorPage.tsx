@@ -23,7 +23,10 @@ type RunCountPreset = 50 | 250 | 1000 | 5000;
 type Mode = 'fixed' | 'adaptive';
 
 const RUN_PRESETS: RunCountPreset[] = [50, 250, 1000, 5000];
-const STRATEGIES: StrategyId[] = ['basic', 'balanced', 'optimizer', 'random'];
+const STRATEGIES: StrategyId[] = [
+  'realmix', 'tourist', 'hoarder', 'spammer', 'distracted', 'learner',
+  'basic', 'balanced', 'optimizer', 'random',
+];
 
 const VERDICT_STYLES: Record<SimAggregate['verdict'], string> = {
   TooEasy: 'bg-amber-500/15 text-amber-300 border-amber-500/40',
@@ -38,7 +41,7 @@ export default function NexusSimulatorPage() {
   const navigate = useNavigate();
   const [authorized, setAuthorized] = useState<boolean | null>(null);
 
-  const [strategy, setStrategy] = useState<StrategyId>('balanced');
+  const [strategy, setStrategy] = useState<StrategyId>('realmix');
   const [mode, setMode] = useState<Mode>('fixed');
   const [runCount, setRunCount] = useState<RunCountPreset>(250);
   const [seed, setSeed] = useState<string>('42');
@@ -302,6 +305,34 @@ export default function NexusSimulatorPage() {
                 ))}
               </div>
             </Section>
+
+            {/* Human realism — only meaningful when a profile/mix was used */}
+            {(result.abandonRate > 0 || result.archetypeMix) && (
+              <Section id="human" title="Human realism" open={openSection === 'human'} onToggle={() => toggle('human')}>
+                <Stat label="Abandon rate" value={`${(result.abandonRate * 100).toFixed(1)}%`} />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Share of runs that quit before defeat (boredom, rage-quit, distracted) — these still contribute partial Operation points based on what they accomplished.
+                </p>
+                {result.archetypeMix && (
+                  <div className="mt-3">
+                    <div className="text-xs text-muted-foreground mb-1.5">Sampled archetype mix:</div>
+                    <div className="space-y-1">
+                      {Object.entries(result.archetypeMix).sort((a, b) => b[1] - a[1]).map(([k, v]) => (
+                        <div key={k}>
+                          <div className="flex justify-between text-xs">
+                            <span className="capitalize">{k}</span>
+                            <span className="text-muted-foreground">{(v * 100).toFixed(0)}%</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden">
+                            <div className="h-full bg-emerald-500" style={{ width: `${v * 100}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </Section>
+            )}
 
             {/* Economy */}
             <Section id="economy" title="Economy & combat" open={openSection === 'economy'} onToggle={() => toggle('economy')}>

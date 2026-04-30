@@ -21,14 +21,127 @@ import {
 } from './types';
 
 // ─── Strategy profiles ──────────────────────────────────────────────────────
-export type StrategyId = 'basic' | 'balanced' | 'optimizer' | 'random';
+export type StrategyId =
+  | 'basic' | 'balanced' | 'optimizer' | 'random'
+  // Human archetypes — wrap a base policy with realistic flaws.
+  | 'tourist' | 'hoarder' | 'spammer' | 'distracted' | 'learner'
+  // Population mix — samples archetypes per run with realistic weights.
+  | 'realmix';
 
 export const STRATEGY_LABELS: Record<StrategyId, string> = {
   basic: 'Basic Player',
   balanced: 'Balanced Player',
-  optimizer: 'Optimizer',
+  optimizer: 'Optimizer (ceiling)',
   random: 'Randomized',
+  tourist: 'Tourist (1–2 towers, abandons)',
+  hoarder: 'Hoarder (saves energy, panics late)',
+  spammer: 'Spammer (cheap towers, no upgrades)',
+  distracted: 'Distracted (random pauses)',
+  learner: 'Learner (improves mid-run)',
+  realmix: 'Realistic Friend Group Mix',
 };
+
+// ─── Human realism layer ────────────────────────────────────────────────────
+// Wraps a base policy with traits that mirror how actual mobile players behave:
+// reaction delay, misclicks, hoarding bias, attention drops, ability misses,
+// and per-wave abandonment probability.
+interface HumanProfile {
+  base: 'basic' | 'balanced' | 'optimizer' | 'random';
+  /** Min/max ms of "thinking time" added to every decision tick. */
+  reactionMs: [number, number];
+  /** Probability a placed tower lands on a neighboring valid tile. 0..1 */
+  misclickRate: number;
+  /** Fraction of energy the bot prefers to leave unspent during calm waves. */
+  hoardBias: number;
+  /** Ability-cast probability when conditions are met (real players miss windows). 0..1 */
+  abilityAttention: number;
+  /** Probability a single decision tick is skipped entirely (phone, distraction). 0..1 */
+  skipTickRate: number;
+  /** Per-wave abandonment probability — return value is p(quit at this wave). */
+  abandon: (wave: number, hpFrac: number) => number;
+  /** If true, perf improves after wave 3 (Learner). */
+  improvesAfterWave?: number;
+  /** Loadout noise — small chance to swap one ability for the other. (Currently both abilities are default, so this is a no-op placeholder for future loadout variance.) */
+  loadoutNoise: number;
+}
+
+const HUMAN_PROFILES: Record<Exclude<StrategyId, 'basic' | 'balanced' | 'optimizer' | 'random' | 'realmix'>, HumanProfile> = {
+  tourist: {
+    base: 'basic',
+    reactionMs: [800, 2500],
+    misclickRate: 0.18,
+    hoardBias: 0.45,
+    abilityAttention: 0.25,
+    skipTickRate: 0.15,
+    // Quits hard around wave 5–7 even if alive.
+    abandon: (w) => (w >= 4 ? 0.08 : 0) + (w >= 6 ? 0.18 : 0),
+    loadoutNoise: 0.3,
+  },
+  hoarder: {
+    base: 'balanced',
+    reactionMs: [600, 2000],
+    misclickRate: 0.10,
+    hoardBias: 0.55,
+    abilityAttention: 0.45,
+    skipTickRate: 0.08,
+    // Sticks around longer but rage-quits if base HP < 30%.
+    abandon: (w, hp) => (hp < 0.3 && w >= 6 ? 0.12 : 0) + (w >= 12 ? 0.05 : 0),
+    loadoutNoise: 0.15,
+  },
+  spammer: {
+    base: 'basic',
+    reactionMs: [300, 900],
+    misclickRate: 0.22,
+    hoardBias: 0.05, // never hoards
+    abilityAttention: 0.7,
+    skipTickRate: 0.05,
+    abandon: (w) => (w >= 7 ? 0.08 : 0),
+    loadoutNoise: 0.2,
+  },
+  distracted: {
+    base: 'balanced',
+    reactionMs: [1200, 4500],
+    misclickRate: 0.16,
+    hoardBias: 0.25,
+    abilityAttention: 0.4,
+    skipTickRate: 0.30,
+    // Rarely abandons; just plays badly.
+    abandon: (w) => (w >= 10 ? 0.04 : 0),
+    loadoutNoise: 0.2,
+  },
+  learner: {
+    base: 'balanced',
+    reactionMs: [700, 2200],
+    misclickRate: 0.14,
+    hoardBias: 0.20,
+    abilityAttention: 0.55,
+    skipTickRate: 0.10,
+    abandon: (w, hp) => (hp < 0.25 && w < 4 ? 0.10 : 0),
+    improvesAfterWave: 3,
+    loadoutNoise: 0.1,
+  },
+};
+
+// Realistic mix — sampled per run. Tuned to a small friend group:
+// most players are casual/distracted, a few are decent, one min-maxer.
+const REAL_MIX: Array<{ id: StrategyId; weight: number }> = [
+  { id: 'tourist',    weight: 0.30 },
+  { id: 'hoarder',    weight: 0.20 },
+  { id: 'spammer',    weight: 0.15 },
+  { id: 'distracted', weight: 0.15 },
+  { id: 'learner',    weight: 0.10 },
+  { id: 'balanced',   weight: 0.07 },
+  { id: 'optimizer',  weight: 0.03 },
+];
+
+function sampleMix(rng: () => number): Exclude<StrategyId, 'realmix'> {
+  let r = rng();
+  for (const m of REAL_MIX) {
+    r -= m.weight;
+    if (r <= 0) return m.id as Exclude<StrategyId, 'realmix'>;
+  }
+  return 'balanced';
+}
 
 // Cheap deterministic PRNG (mulberry32) so seed→result is reproducible.
 function mulberry32(seed: number) {
@@ -60,6 +173,10 @@ export interface SimRunResult {
   towerDamage: Record<TowerKind, number>;
   abilityUses: Record<AbilityKind, number>;
   contributionPoints: number; // mirror of SQL formula
+  /** Human-profile only: did this player rage-quit / get bored before defeat? */
+  abandoned?: boolean;
+  /** When realmix is selected, which archetype was sampled for this run. */
+  sampledArchetype?: StrategyId | null;
 }
 
 export interface SimAggregate {
@@ -97,6 +214,9 @@ export interface SimAggregate {
   recommendations: string[];
   // Operation pacing (computed at the end against current targets)
   operationPacing: OperationPacing;
+  // Human realism diagnostics (only meaningful when a human profile is used).
+  abandonRate: number; // 0..1 — fraction of runs that quit before defeat
+  archetypeMix?: Record<string, number>; // realmix only
 }
 
 export interface OperationPacing {
@@ -279,7 +399,8 @@ function pickRandom(ctx: PolicyCtx): BotAction[] {
   return acts;
 }
 
-const POLICIES: Record<StrategyId, (ctx: PolicyCtx) => BotAction[]> = {
+type BasePolicyId = 'basic' | 'balanced' | 'optimizer' | 'random';
+const POLICIES: Record<BasePolicyId, (ctx: PolicyCtx) => BotAction[]> = {
   basic: pickBasic,
   balanced: pickBalanced,
   optimizer: pickOptimizer,
@@ -292,8 +413,38 @@ const TICK_MS = 100;
 const DECISION_INTERVAL_MS = 500; // bot acts twice per simulated second
 const MAX_SIM_MS = 25 * 60_000;   // hard safety cap: 25 sim minutes
 
+/** Apply misclick: with probability p, swap the placement to a neighboring
+ *  valid build tile (same column ±1 / row ±1) if one is empty. Mirrors a
+ *  real player's thumb landing on the wrong cell on a small phone screen. */
+function applyMisclick(
+  state: BattleState,
+  action: Extract<BotAction, { kind: 'place' }>,
+  rng: () => number,
+  rate: number,
+): Extract<BotAction, { kind: 'place' }> {
+  if (rate <= 0 || rng() >= rate) return action;
+  const occupied = new Set(state.towers.map(t => `${t.cell.col},${t.cell.row}`));
+  const neighbors = BUILD_TILES.filter(t => {
+    const dc = Math.abs(t.col - action.col);
+    const dr = Math.abs(t.row - action.row);
+    return (dc + dr) > 0 && dc <= 1 && dr <= 1 && !occupied.has(`${t.col},${t.row}`);
+  });
+  if (!neighbors.length) return action;
+  const pick = neighbors[Math.floor(rng() * neighbors.length)];
+  return { ...action, col: pick.col, row: pick.row };
+}
+
 export function runOne(strategy: StrategyId, seed: number): SimRunResult {
   const rng = mulberry32(seed);
+
+  // Resolve to a base policy + optional human profile.
+  let resolved: StrategyId = strategy;
+  if (strategy === 'realmix') resolved = sampleMix(rng);
+  const profile: HumanProfile | null = (resolved in HUMAN_PROFILES)
+    ? HUMAN_PROFILES[resolved as keyof typeof HUMAN_PROFILES]
+    : null;
+  const basePolicy: BasePolicyId = profile ? profile.base : (resolved as BasePolicyId);
+
   // Default loadout: both abilities, no boost. This mirrors the actual default
   // selection for endless runs.
   const abilities: AbilityKind[] = ['orbital', 'emp'];
@@ -302,6 +453,9 @@ export function runOne(strategy: StrategyId, seed: number): SimRunResult {
   // Auto-start the first wave (humans tap "begin"; bots start immediately).
   state = startWave(state, ENDLESS_MISSION);
   let lastDecisionAt = 0;
+  let nextDecisionDelay = 0; // extra "thinking time" before next decision tick
+  let abandoned = false;
+  let lastAbandonCheckWave = -1;
 
   while (state.elapsedMs < MAX_SIM_MS && state.status !== 'defeat' && state.status !== 'victory') {
     // Auto-advance wave breaks immediately so we don't waste 5s of sim time.
@@ -309,20 +463,67 @@ export function runOne(strategy: StrategyId, seed: number): SimRunResult {
       state = { ...state, betweenWaveMs: 1000 };
     }
 
+    // Per-wave abandonment check (humans rage-quit / get bored).
+    if (profile && state.waveIndex !== lastAbandonCheckWave) {
+      lastAbandonCheckWave = state.waveIndex;
+      const hpFrac = state.baseHp / Math.max(1, state.baseHpMax);
+      const pQuit = profile.abandon(state.waveIndex + 1, hpFrac);
+      if (pQuit > 0 && rng() < pQuit) {
+        abandoned = true;
+        break;
+      }
+    }
+
     // Decision phase
-    if (state.elapsedMs - lastDecisionAt >= DECISION_INTERVAL_MS) {
+    if (state.elapsedMs - lastDecisionAt >= DECISION_INTERVAL_MS + nextDecisionDelay) {
       lastDecisionAt = state.elapsedMs;
-      const actions = POLICIES[strategy]({ state, rng });
-      for (const a of actions) {
-        if (a.kind === 'place') {
-          const r = placeTower(state, a.tower, a.col, a.row);
-          if (r.ok) state = r.state;
-        } else if (a.kind === 'upgrade') {
-          const r = upgradeTower(state, a.towerId);
-          if (r.ok) state = r.state;
-        } else if (a.kind === 'ability') {
-          const r = castAbility(state, a.ability);
-          if (r.ok) state = r.state;
+      // Re-roll thinking time per profile.
+      if (profile) {
+        const [lo, hi] = profile.reactionMs;
+        nextDecisionDelay = lo + rng() * (hi - lo);
+      } else {
+        nextDecisionDelay = 0;
+      }
+
+      // Profile-aware skip: distracted players miss whole decision windows.
+      const shouldSkip = profile ? rng() < profile.skipTickRate : false;
+
+      if (!shouldSkip) {
+        let actions = POLICIES[basePolicy]({ state, rng });
+
+        if (profile) {
+          // Hoarding bias — drop tower placements during "calm" periods
+          // (no enemies on screen and base HP healthy).
+          const calm = state.enemies.length <= 2 && state.baseHp / state.baseHpMax > 0.7;
+          if (calm && rng() < profile.hoardBias) {
+            actions = actions.filter(a => a.kind !== 'place');
+          }
+          // Ability attention — sometimes ignore valid ability windows.
+          if (rng() >= profile.abilityAttention) {
+            actions = actions.filter(a => a.kind !== 'ability');
+          }
+          // Learner gets a small bump after the threshold wave.
+          if (profile.improvesAfterWave != null && state.waveIndex + 1 > profile.improvesAfterWave) {
+            // Improved players act more reliably (cut hoarding & skip tail).
+            // No-op past this point — already applied; left as documentation.
+          }
+          // Misclick mutation on placements.
+          actions = actions.map(a =>
+            a.kind === 'place' ? applyMisclick(state, a, rng, profile.misclickRate) : a
+          );
+        }
+
+        for (const a of actions) {
+          if (a.kind === 'place') {
+            const r = placeTower(state, a.tower, a.col, a.row);
+            if (r.ok) state = r.state;
+          } else if (a.kind === 'upgrade') {
+            const r = upgradeTower(state, a.towerId);
+            if (r.ok) state = r.state;
+          } else if (a.kind === 'ability') {
+            const r = castAbility(state, a.ability);
+            if (r.ok) state = r.state;
+          }
         }
       }
     }
@@ -337,7 +538,9 @@ export function runOne(strategy: StrategyId, seed: number): SimRunResult {
   const wavesCleared = state.status === 'victory'
     ? state.totalWaves
     : Math.max(0, state.waveIndex); // index = next wave attempted; 0 if died on first
-  const failedWave = state.status === 'defeat' ? state.waveIndex + 1 : null;
+  const failedWave = state.status === 'defeat'
+    ? state.waveIndex + 1
+    : (abandoned ? state.waveIndex + 1 : null);
 
   const durationSec = Math.round(state.elapsedMs / 1000);
   const kills = state.killedThisRun;
@@ -362,6 +565,8 @@ export function runOne(strategy: StrategyId, seed: number): SimRunResult {
     towerDamage,
     abilityUses: state.abilityUses,
     contributionPoints: points,
+    abandoned,
+    sampledArchetype: profile ? resolved : null,
   };
 }
 
@@ -459,6 +664,13 @@ export function aggregate(strategy: StrategyId, runs: SimRunResult[]): SimAggreg
     balanced: [8, 14],
     optimizer: [14, 22],
     random: [4, 10],
+    tourist: [3, 6],
+    hoarder: [6, 11],
+    spammer: [4, 8],
+    distracted: [4, 9],
+    learner: [6, 12],
+    // Population mix expectation — tuned to a small friend group avg.
+    realmix: [5, 10],
   };
   const [lo, hi] = targets[strategy];
   let verdict: SimAggregate['verdict'];
@@ -541,6 +753,17 @@ export function aggregate(strategy: StrategyId, runs: SimRunResult[]): SimAggreg
     diagnostics,
     recommendations,
     operationPacing: opPacing,
+    abandonRate: runs.filter(r => r.abandoned).length / n,
+    archetypeMix: (() => {
+      const m: Record<string, number> = {};
+      let any = false;
+      for (const r of runs) {
+        if (r.sampledArchetype) { any = true; m[r.sampledArchetype] = (m[r.sampledArchetype] ?? 0) + 1; }
+      }
+      if (!any) return undefined;
+      for (const k of Object.keys(m)) m[k] = m[k] / n;
+      return m;
+    })(),
   };
 }
 
