@@ -4,6 +4,7 @@ import { PATH, distanceCells, isBuildable, pathToXY } from './grid';
 import { MISSIONS, getMission } from './missions';
 import { TOWERS, towerDamageAt, towerFireRateAt, towerRangeAt, towerSellValue, towerUpgradeCost } from './towers';
 import { aggregateModifiers, emptyAggregated, resolveModifiers } from './modifiers';
+import { endlessWaveScaling, isEndlessMission } from './endless';
 import {
   AbilityKind, ActiveEnemy, BattleEvent, BattleState, EnemyKind, MissionDef, PlacedTower, TowerKind,
 } from './types';
