@@ -2,9 +2,12 @@
   "name": "DH",
   "short_name": "DH",
   "description": "Brackets, rankings, polls, and drafts with your crew — for fun, not funds.",
+  "id": "/?source=pwa",
+  "scope": "/",
   "theme_color": "#0D1210",
   "background_color": "#0D1210",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "start_url": "/?source=pwa",
   "icons": [
@@ -12,7 +15,13 @@
       "src": "/pwa-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

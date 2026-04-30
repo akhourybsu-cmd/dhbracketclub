@@ -27,7 +27,8 @@ const CONTENT_CONFIG: Record<ShareableContentType, ShareContentConfig> = {
 };
 
 // ─── Link Generation ───
-const PUBLISHED_ORIGIN = 'https://dhbracketclub.lovable.app';
+// Canonical public origin. Update if you change the primary custom domain.
+const PUBLISHED_ORIGIN = 'https://dryhorse.app';
 
 function getShareOrigin(): string {
   // Always use the published URL for share links so recipients
