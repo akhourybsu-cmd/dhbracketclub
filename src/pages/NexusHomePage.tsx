@@ -315,3 +315,43 @@ function NavTile({
     </Link>
   );
 }
+
+function AdminPortalRow({
+  to,
+  icon,
+  label,
+  description,
+  accent,
+}: {
+  to: string;
+  icon: React.ReactNode;
+  label: string;
+  description: string;
+  accent: string;
+}) {
+  return (
+    <Link
+      to={to}
+      className="flex items-center gap-3 min-h-[48px] px-2.5 py-2 nx-clip-sm active:scale-[0.98] transition"
+      style={{
+        background: 'linear-gradient(180deg, hsl(35 30% 9%), hsl(35 35% 6%))',
+        border: '1px solid hsl(var(--nx-amber) / 0.22)',
+      }}
+    >
+      <div
+        className="w-8 h-8 nx-clip-sm flex items-center justify-center flex-shrink-0"
+        style={{
+          background: `linear-gradient(135deg, ${accent.replace(')', ' / 0.2)')}, ${accent.replace(')', ' / 0.04)')})`,
+          border: `1px solid ${accent.replace(')', ' / 0.3)')}`,
+        }}
+      >
+        <span style={{ color: accent }}>{icon}</span>
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[12px] font-black leading-tight text-foreground">{label}</p>
+        <p className="text-[10px] text-foreground/55 truncate">{description}</p>
+      </div>
+      <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(var(--nx-amber) / 0.5)' }} />
+    </Link>
+  );
+}
