@@ -4,6 +4,7 @@ import { PATH, distanceCells, isBuildable, pathToXY } from './grid';
 import { MISSIONS, getMission } from './missions';
 import { TOWERS, towerDamageAt, towerFireRateAt, towerRangeAt, towerSellValue, towerUpgradeCost } from './towers';
 import { aggregateModifiers, emptyAggregated, resolveModifiers } from './modifiers';
+import { endlessWaveScaling, isEndlessMission } from './endless';
 import {
   AbilityKind, ActiveEnemy, BattleEvent, BattleState, EnemyKind, MissionDef, PlacedTower, TowerKind,
 } from './types';
@@ -161,7 +162,7 @@ export function tick(state: BattleState, mission: MissionDef): BattleState {
     }
     const def = ENEMIES[e.kind];
     const slowFactor = e.slowMs > 0 ? (1 - e.slowFactor) : 1;
-    const cellsThisTick = (def.speed * (s.enemySpeedMult ?? 1) * (s.modEnemySpeedMult ?? 1) * slowFactor) * (TICK_MS / 1000);
+    const cellsThisTick = (def.speed * (e.speedMult ?? 1) * (s.enemySpeedMult ?? 1) * (s.modEnemySpeedMult ?? 1) * slowFactor) * (TICK_MS / 1000);
     let progress = e.progress + cellsThisTick;
     while (progress >= 1 && e.pathIndex < PATH.length - 1) {
       progress -= 1;
@@ -333,9 +334,13 @@ function spawnEnemy(s: BattleState, kind: EnemyKind, mission: MissionDef) {
   // Apply calibration multipliers (default 1× = no change), then modifier mults.
   const hpMult = (s.enemyHpMult?.[kind] ?? 1) * (s.modEnemyHpMult?.[kind] ?? 1);
   const shieldMult = (s.enemyShieldMult?.[kind] ?? 1) * (s.modEnemyShieldMult?.[kind] ?? 1);
-  hp = Math.max(1, Math.round(hp * hpMult));
+  // Endless mode adds a per-wave-tier scaling layer that grows enemies with the wave index.
+  const endlessScale = isEndlessMission(mission.id)
+    ? endlessWaveScaling(s.waveIndex, kind)
+    : { hp: 1, shield: 1, speed: 1 };
+  hp = Math.max(1, Math.round(hp * hpMult * endlessScale.hp));
   if (kind === 'boss') hp = Math.max(1, Math.round(hp * (s.modBossHpMult ?? 1)));
-  const shield = Math.max(0, Math.round((def.shield ?? 0) * shieldMult));
+  const shield = Math.max(0, Math.round((def.shield ?? 0) * shieldMult * endlessScale.shield));
   s.enemies.push({
     id: nextId('e'),
     kind,
@@ -346,6 +351,7 @@ function spawnEnemy(s: BattleState, kind: EnemyKind, mission: MissionDef) {
     slowMs: 0,
     slowFactor: 0,
     stunnedMs: 0,
+    speedMult: endlessScale.speed,
   });
 }
 
