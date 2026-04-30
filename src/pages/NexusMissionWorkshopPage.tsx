@@ -438,12 +438,20 @@ function EndlessEditor({ draft, onSave, saving }: { draft: MissionDraftRow; onSa
         <NumField label="Boss HP cap (×)" value={cfg.scaling.bossHpCap} min={1} max={5} step={0.1} onChange={v => setScaling({ bossHpCap: v })} />
       </div>
 
-      <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
-        <div className="text-xs font-semibold text-amber-200">Wave list</div>
-        <p className="text-[11px] text-muted-foreground mt-1">
-          {cfg.waves.length} waves · total enemies {cfg.waves.reduce((a, w) => a + w.spawns.reduce((s, x) => s + x.count, 0), 0)}.
-          Inline wave editing ships in the next workshop pass — current draft preserves the live wave list and only re-tunes scaling.
+      <div>
+        <div className="text-xs font-semibold mb-1 flex items-center justify-between">
+          <span>Waves</span>
+          <span className="text-[10px] text-muted-foreground font-normal tabular-nums">
+            {cfg.waves.length} waves · {cfg.waves.reduce((a, w) => a + w.spawns.reduce((s, x) => s + x.count, 0), 0)} enemies
+          </span>
+        </div>
+        <p className="text-[11px] text-muted-foreground mb-2">
+          Edit early waves to shape pacing. Late waves rely on the scaling curves above.
         </p>
+        <WaveEditor
+          waves={cfg.waves}
+          onChange={(waves: Wave[]) => setCfg(c => ({ ...c, waves }))}
+        />
       </div>
 
       <div className="rounded-xl border border-border/60 bg-background/40 p-3">
