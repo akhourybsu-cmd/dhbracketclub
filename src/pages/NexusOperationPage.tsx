@@ -306,6 +306,28 @@ export default function NexusOperationPage() {
         </>
       )}
 
+      {/* Closeout — always offer a clear way back to the hub */}
+      {isComplete ? (
+        <button
+          onClick={() => navigate('/nexus')}
+          className="w-full py-3.5 nx-clip-sm font-black text-sm active:scale-95 nx-title relative overflow-hidden mt-2"
+          style={{
+            background: 'linear-gradient(180deg, hsl(45 90% 60%), hsl(45 95% 48%))',
+            color: 'hsl(45 30% 8%)',
+            boxShadow: '0 0 18px hsl(45 100% 60% / 0.55), inset 0 1px 0 hsl(0 0% 100% / 0.35)',
+          }}
+        >
+          ◆ RETURN TO HUB
+        </button>
+      ) : (
+        <button
+          onClick={() => navigate('/nexus')}
+          className="w-full py-2.5 nx-clip-sm border border-white/10 text-[11px] font-bold uppercase tracking-[0.22em] text-foreground/65 hover:text-cyan-200 hover:border-cyan-400/30 transition-colors active:scale-[0.98] mt-2"
+        >
+          ← Return to Hub
+        </button>
+      )}
+
       {/* Admin */}
       {isAdmin && (
         <div className="mt-6 pt-4 border-t border-white/10">
