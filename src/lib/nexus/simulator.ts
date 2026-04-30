@@ -753,6 +753,17 @@ export function aggregate(strategy: StrategyId, runs: SimRunResult[]): SimAggreg
     diagnostics,
     recommendations,
     operationPacing: opPacing,
+    abandonRate: runs.filter(r => r.abandoned).length / n,
+    archetypeMix: (() => {
+      const m: Record<string, number> = {};
+      let any = false;
+      for (const r of runs) {
+        if (r.sampledArchetype) { any = true; m[r.sampledArchetype] = (m[r.sampledArchetype] ?? 0) + 1; }
+      }
+      if (!any) return undefined;
+      for (const k of Object.keys(m)) m[k] = m[k] / n;
+      return m;
+    })(),
   };
 }
 
