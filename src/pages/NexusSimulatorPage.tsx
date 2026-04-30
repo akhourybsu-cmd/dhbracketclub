@@ -41,7 +41,7 @@ export default function NexusSimulatorPage() {
   const navigate = useNavigate();
   const [authorized, setAuthorized] = useState<boolean | null>(null);
 
-  const [strategy, setStrategy] = useState<StrategyId>('balanced');
+  const [strategy, setStrategy] = useState<StrategyId>('realmix');
   const [mode, setMode] = useState<Mode>('fixed');
   const [runCount, setRunCount] = useState<RunCountPreset>(250);
   const [seed, setSeed] = useState<string>('42');
