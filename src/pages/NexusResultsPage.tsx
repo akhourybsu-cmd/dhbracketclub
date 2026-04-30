@@ -118,7 +118,7 @@ export default function NexusResultsPage() {
 
       <div className="text-center mb-4">
         <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-cyan-300/70">
-          Mission {id} · After-Action
+          {insight?.endless ? 'Endless · After-Action' : `Mission ${id} · After-Action`}
         </div>
         <h1 className="text-2xl font-black mt-1 tracking-tight">{mission?.name}</h1>
         <div
@@ -128,8 +128,14 @@ export default function NexusResultsPage() {
               : 'bg-rose-500/15 border border-rose-400/60 text-rose-200'
           }`}
         >
-          {won ? '◆ Nexus Held' : '◆ Nexus Breached'}
+          {won ? (insight?.endless ? '◆ Sector Defended' : '◆ Nexus Held') : '◆ Nexus Breached'}
         </div>
+        {/* Sector cleared note for last solo mission win */}
+        {won && !insight?.endless && !next && (
+          <div className="mt-2 text-[11px] text-amber-300/90 font-bold">
+            ◆ Sector I cleared — try Endless / Co-op next.
+          </div>
+        )}
       </div>
 
       {/* Primary stats */}
