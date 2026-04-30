@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { KeyRound, Sparkles, LogIn } from 'lucide-react';
+import { KeyRound, Sparkles, LogIn, Mail } from 'lucide-react';
 import dhMonogram from '@/assets/dh-monogram.png';
 import { getAndClearIntendedDestination } from '@/lib/share';
 import { lovable } from '@/integrations/lovable';
@@ -354,6 +354,37 @@ export default function AuthPage() {
                 <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zM256.6 105.5c30.3-36 27.6-68.8 26.7-80.5-26.8 1.6-57.8 18.3-75.5 38.8-19.5 22-31 49.2-28.5 79.9 29 2.2 55.4-12.7 77.3-38.2z"/>
               </svg>
               Continue with Apple
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-11 font-semibold rounded-xl btn-press gap-2 mt-2"
+              disabled={loading}
+              onClick={async () => {
+                if (!email) {
+                  toast.error('Enter your email above first');
+                  return;
+                }
+                setLoading(true);
+                try {
+                  const { error } = await supabase.auth.signInWithOtp({
+                    email,
+                    options: {
+                      emailRedirectTo: window.location.origin,
+                      shouldCreateUser: false,
+                    },
+                  });
+                  if (error) throw error;
+                  toast.success('Sign-in link sent! Check your email.');
+                } catch (err: any) {
+                  toast.error(err?.message || 'Could not send sign-in link');
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              <Mail className="w-4 h-4" />
+              Email me a sign-in link
             </Button>
           </>
         )}
