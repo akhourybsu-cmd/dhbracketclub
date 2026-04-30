@@ -1,19 +1,27 @@
 // Nexus Defense — Endless / Co-op mission generator
 //
-// Builds a long, escalating mission used by the cooperative Operation
-// mode. Each "endless" mission shares the same engine, grid, towers,
-// and abilities as solo play — only the wave list changes.
+// Builds the long-form mission used by the cooperative Operation. Same
+// engine, towers, abilities, and grid as solo play — only the wave list
+// (and a per-wave enemy scaling layer in the engine) differs.
 //
-// Design rules:
-//   • 30 waves of progressively harder spawns.
-//   • A boss appears every 8 waves so every meaningful run produces
-//     boss damage that contributes to Operation Phase 3.
-//   • Scaling is gentle enough that a small friend group can produce
-//     useful contribution from short runs (10–15 minutes), but the
-//     final waves remain genuinely difficult.
+// REBALANCE 2026-04-30 — Simulator (12 runs/strategy) showed competent
+// players (balanced / optimizer / distracted) cleared every wave with
+// 28/28 base HP. That is not a "tower defense" — it's a cinematic. This
+// pass:
+//   • Expands the mission to 30 waves (was 20).
+//   • Tightens early economy (less starting energy, less wave reward).
+//   • Adds 6 boss waves (5 / 10 / 15 / 20 / 25 / 30) — the 30 wave is a
+//     dual-boss finisher.
+//   • Layers a wave-tier enemy scaling curve (HP / shield / speed) that
+//     the engine applies at spawn time (see endlessWaveScaling()). This
+//     keeps the wave list readable while making wave 25 enemies legitimately
+//     scarier than wave 5 enemies of the same kind.
 //
-// The generator is pure & deterministic so admin balancing & telemetry
-// see the same wave list a player runs.
+// Pacing target on mobile (10 ticks/sec engine):
+//   - Bad run (waves 1–5):       ~3 min, dies before boss #1
+//   - Average run (waves 6–15):  ~6–9 min, kills 1–2 bosses
+//   - Strong run (waves 16–25):  ~11–14 min, kills 3–5 bosses
+//   - Mythic (waves 26–30):      ~16–20 min, full clear is rare
 
 import { MissionDef, Wave, EnemyKind } from './types';
 
@@ -30,142 +38,232 @@ function wave(index: number, rewardEnergy: number, spawns: SpawnTemplate[]): Wav
   return { index, rewardEnergy, spawns };
 }
 
-/** Build the 20-wave endless gauntlet (mobile-tuned).
- *
- * Pacing target on mobile (10 ticks/sec engine):
- *   - Weak run (waves 1–5):    ~3 minutes
- *   - Normal run (waves 6–10): ~5–7 minutes
- *   - Strong run (waves 11–15):~9–11 minutes
- *   - Excellent (waves 16–20): ~12–14 minutes
- *
- * Bosses appear on waves 5, 10, 15, 20 — every meaningful run produces
- * boss damage so Phase 3 contribution is reachable from average play.
- */
+/** 30-wave gauntlet. Bosses on waves 5/10/15/20/25/30. */
 function buildWaves(): Wave[] {
-  const waves: Wave[] = [];
+  const w: Wave[] = [];
 
-  // 1–2: warm-up
-  waves.push(wave(0, 50, [{ enemy: 'drone', count: 10, intervalMs: 750 }]));
-  waves.push(wave(1, 60, [
-    { enemy: 'drone', count: 12, intervalMs: 650 },
+  // ── Tier 1: Onboarding (waves 1–4) ─────────────────────────────────
+  // Player learns layout, places 1–2 towers. Almost no pressure.
+  w.push(wave(0, 40, [{ enemy: 'drone', count: 10, intervalMs: 800 }]));
+  w.push(wave(1, 50, [
+    { enemy: 'drone', count: 14, intervalMs: 650 },
     { enemy: 'walker', count: 2, intervalMs: 1400, delayMs: 1500 },
   ]));
-
-  // 3–4: shielded intro
-  waves.push(wave(2, 70, [
-    { enemy: 'shielded', count: 4, intervalMs: 1000 },
-    { enemy: 'drone', count: 12, intervalMs: 500, delayMs: 1500 },
+  w.push(wave(2, 55, [
+    { enemy: 'shielded', count: 4, intervalMs: 1100 },
+    { enemy: 'drone', count: 12, intervalMs: 550, delayMs: 1500 },
   ]));
-  waves.push(wave(3, 85, [
+  w.push(wave(3, 65, [
     { enemy: 'shielded', count: 6, intervalMs: 950 },
     { enemy: 'walker', count: 4, intervalMs: 1100, delayMs: 1500 },
   ]));
 
-  // 5: BOSS #1 (early — proves Phase 3 contribution is real)
-  waves.push(wave(4, 200, [
+  // ── Tier 2: First boss (wave 5) — proves Phase 3 contribution is reachable
+  w.push(wave(4, 140, [
     { enemy: 'boss', count: 1, intervalMs: 1000 },
     { enemy: 'shielded', count: 4, intervalMs: 1200, delayMs: 3500 },
   ]));
 
-  // 6–7: stealth intro + swarm
-  waves.push(wave(5, 100, [
+  // ── Tier 3: Pressure rises (waves 6–9) ────────────────────────────
+  w.push(wave(5, 80, [
     { enemy: 'stealth', count: 5, intervalMs: 1000 },
     { enemy: 'walker', count: 3, intervalMs: 1200, delayMs: 1500 },
   ]));
-  waves.push(wave(6, 120, [
-    { enemy: 'drone', count: 18, intervalMs: 400 },
-    { enemy: 'shielded', count: 5, intervalMs: 950, delayMs: 2000 },
+  w.push(wave(6, 90, [
+    { enemy: 'drone', count: 18, intervalMs: 380 },
+    { enemy: 'shielded', count: 6, intervalMs: 950, delayMs: 2000 },
   ]));
-
-  // 8–9: mixed pressure
-  waves.push(wave(7, 140, [
-    { enemy: 'walker', count: 6, intervalMs: 1000 },
+  w.push(wave(7, 100, [
+    { enemy: 'walker', count: 7, intervalMs: 950 },
     { enemy: 'shielded', count: 6, intervalMs: 950, delayMs: 1500 },
     { enemy: 'stealth', count: 4, intervalMs: 1100, delayMs: 3000 },
   ]));
-  waves.push(wave(8, 160, [
+  w.push(wave(8, 110, [
     { enemy: 'shielded', count: 10, intervalMs: 800 },
     { enemy: 'walker', count: 6, intervalMs: 1000, delayMs: 1500 },
   ]));
 
-  // 10: BOSS #2
-  waves.push(wave(9, 240, [
-    { enemy: 'boss', count: 1, intervalMs: 1000 },
-    { enemy: 'walker', count: 5, intervalMs: 1100, delayMs: 4000 },
-    { enemy: 'shielded', count: 6, intervalMs: 1000, delayMs: 7000 },
-  ]));
-
-  // 11–12: ramp
-  waves.push(wave(10, 180, [
-    { enemy: 'stealth', count: 10, intervalMs: 800 },
-    { enemy: 'shielded', count: 6, intervalMs: 950, delayMs: 1500 },
-  ]));
-  waves.push(wave(11, 200, [
-    { enemy: 'walker', count: 10, intervalMs: 850 },
-    { enemy: 'drone', count: 22, intervalMs: 320, delayMs: 1500 },
-  ]));
-
-  // 13–14: heavy mixed
-  waves.push(wave(12, 220, [
-    { enemy: 'shielded', count: 12, intervalMs: 750 },
-    { enemy: 'stealth', count: 8, intervalMs: 900, delayMs: 1500 },
-  ]));
-  waves.push(wave(13, 240, [
-    { enemy: 'walker', count: 12, intervalMs: 800 },
-    { enemy: 'shielded', count: 8, intervalMs: 900, delayMs: 1500 },
-    { enemy: 'stealth', count: 6, intervalMs: 1000, delayMs: 4000 },
-  ]));
-
-  // 15: BOSS #3
-  waves.push(wave(14, 300, [
+  // ── Tier 4: Second boss (wave 10) — first survival check
+  w.push(wave(9, 180, [
     { enemy: 'boss', count: 1, intervalMs: 1000 },
     { enemy: 'walker', count: 6, intervalMs: 1000, delayMs: 4000 },
-    { enemy: 'shielded', count: 8, intervalMs: 900, delayMs: 7500 },
+    { enemy: 'shielded', count: 8, intervalMs: 950, delayMs: 7000 },
   ]));
 
-  // 16–19: gauntlet
-  waves.push(wave(15, 260, [
-    { enemy: 'walker', count: 14, intervalMs: 750 },
-    { enemy: 'stealth', count: 10, intervalMs: 850, delayMs: 1500 },
+  // ── Tier 5: Mid-game ramp (waves 11–14) — wave-tier mults kick in
+  w.push(wave(10, 120, [
+    { enemy: 'stealth', count: 10, intervalMs: 800 },
+    { enemy: 'shielded', count: 7, intervalMs: 900, delayMs: 1500 },
   ]));
-  waves.push(wave(16, 280, [
-    { enemy: 'drone', count: 30, intervalMs: 280 },
-    { enemy: 'shielded', count: 10, intervalMs: 800, delayMs: 1500 },
+  w.push(wave(11, 130, [
+    { enemy: 'walker', count: 11, intervalMs: 800 },
+    { enemy: 'drone', count: 24, intervalMs: 280, delayMs: 1500 },
   ]));
-  waves.push(wave(17, 300, [
-    { enemy: 'shielded', count: 14, intervalMs: 700 },
-    { enemy: 'walker', count: 10, intervalMs: 800, delayMs: 1500 },
+  w.push(wave(12, 140, [
+    { enemy: 'shielded', count: 13, intervalMs: 700 },
+    { enemy: 'stealth', count: 8, intervalMs: 900, delayMs: 1500 },
   ]));
-  waves.push(wave(18, 320, [
-    { enemy: 'stealth', count: 14, intervalMs: 750 },
-    { enemy: 'shielded', count: 12, intervalMs: 800, delayMs: 1500 },
-    { enemy: 'walker', count: 8, intervalMs: 900, delayMs: 4500 },
+  w.push(wave(13, 150, [
+    { enemy: 'walker', count: 13, intervalMs: 750 },
+    { enemy: 'shielded', count: 9, intervalMs: 850, delayMs: 1500 },
+    { enemy: 'stealth', count: 7, intervalMs: 950, delayMs: 4000 },
   ]));
 
-  // 20: FINAL BOSS — single boss + escort (was 2 bosses; that was brutal)
-  waves.push(wave(19, 500, [
+  // ── Tier 6: Third boss (wave 15) — separates strong runs from average
+  w.push(wave(14, 220, [
     { enemy: 'boss', count: 1, intervalMs: 1000 },
-    { enemy: 'walker', count: 10, intervalMs: 800, delayMs: 3000 },
-    { enemy: 'shielded', count: 12, intervalMs: 800, delayMs: 6000 },
-    { enemy: 'stealth', count: 10, intervalMs: 800, delayMs: 9000 },
+    { enemy: 'walker', count: 7, intervalMs: 950, delayMs: 4000 },
+    { enemy: 'shielded', count: 9, intervalMs: 900, delayMs: 7500 },
   ]));
 
-  return waves;
+  // ── Tier 7: Late game (waves 16–19) — heavy mixed
+  w.push(wave(15, 170, [
+    { enemy: 'walker', count: 16, intervalMs: 700 },
+    { enemy: 'stealth', count: 12, intervalMs: 800, delayMs: 1500 },
+  ]));
+  w.push(wave(16, 180, [
+    { enemy: 'drone', count: 34, intervalMs: 230 },
+    { enemy: 'shielded', count: 12, intervalMs: 750, delayMs: 1500 },
+  ]));
+  w.push(wave(17, 190, [
+    { enemy: 'shielded', count: 16, intervalMs: 650 },
+    { enemy: 'walker', count: 12, intervalMs: 750, delayMs: 1500 },
+  ]));
+  w.push(wave(18, 200, [
+    { enemy: 'stealth', count: 16, intervalMs: 700 },
+    { enemy: 'shielded', count: 14, intervalMs: 750, delayMs: 1500 },
+    { enemy: 'walker', count: 10, intervalMs: 850, delayMs: 4500 },
+  ]));
+
+  // ── Tier 8: Fourth boss (wave 20) — first major wall
+  w.push(wave(19, 280, [
+    { enemy: 'boss', count: 1, intervalMs: 1000 },
+    { enemy: 'walker', count: 12, intervalMs: 800, delayMs: 3000 },
+    { enemy: 'shielded', count: 14, intervalMs: 800, delayMs: 6000 },
+    { enemy: 'stealth', count: 10, intervalMs: 850, delayMs: 9000 },
+  ]));
+
+  // ── Tier 9: Mythic ramp (waves 21–24)
+  w.push(wave(20, 220, [
+    { enemy: 'walker', count: 18, intervalMs: 650 },
+    { enemy: 'stealth', count: 14, intervalMs: 750, delayMs: 1500 },
+  ]));
+  w.push(wave(21, 230, [
+    { enemy: 'drone', count: 40, intervalMs: 200 },
+    { enemy: 'shielded', count: 14, intervalMs: 700, delayMs: 1500 },
+  ]));
+  w.push(wave(22, 240, [
+    { enemy: 'shielded', count: 18, intervalMs: 600 },
+    { enemy: 'walker', count: 14, intervalMs: 700, delayMs: 1500 },
+    { enemy: 'stealth', count: 10, intervalMs: 850, delayMs: 5000 },
+  ]));
+  w.push(wave(23, 250, [
+    { enemy: 'stealth', count: 18, intervalMs: 650 },
+    { enemy: 'shielded', count: 16, intervalMs: 700, delayMs: 1500 },
+    { enemy: 'walker', count: 12, intervalMs: 800, delayMs: 4500 },
+  ]));
+
+  // ── Tier 10: Fifth boss (wave 25) — wall #2
+  w.push(wave(24, 320, [
+    { enemy: 'boss', count: 1, intervalMs: 1000 },
+    { enemy: 'walker', count: 14, intervalMs: 750, delayMs: 3000 },
+    { enemy: 'shielded', count: 16, intervalMs: 750, delayMs: 6000 },
+    { enemy: 'stealth', count: 12, intervalMs: 800, delayMs: 9000 },
+  ]));
+
+  // ── Tier 11: Endgame (waves 26–29) — punishing
+  w.push(wave(25, 260, [
+    { enemy: 'walker', count: 22, intervalMs: 600 },
+    { enemy: 'stealth', count: 16, intervalMs: 700, delayMs: 1500 },
+  ]));
+  w.push(wave(26, 270, [
+    { enemy: 'drone', count: 48, intervalMs: 180 },
+    { enemy: 'shielded', count: 18, intervalMs: 650, delayMs: 1500 },
+    { enemy: 'walker', count: 12, intervalMs: 800, delayMs: 4500 },
+  ]));
+  w.push(wave(27, 280, [
+    { enemy: 'shielded', count: 22, intervalMs: 550 },
+    { enemy: 'stealth', count: 16, intervalMs: 700, delayMs: 1500 },
+    { enemy: 'walker', count: 14, intervalMs: 800, delayMs: 4500 },
+  ]));
+  w.push(wave(28, 290, [
+    { enemy: 'stealth', count: 22, intervalMs: 600 },
+    { enemy: 'shielded', count: 20, intervalMs: 650, delayMs: 1500 },
+    { enemy: 'walker', count: 16, intervalMs: 750, delayMs: 4500 },
+  ]));
+
+  // ── Tier 12: FINAL — dual boss + heavy escort (wave 30)
+  w.push(wave(29, 600, [
+    { enemy: 'boss', count: 1, intervalMs: 1000 },
+    { enemy: 'walker', count: 14, intervalMs: 750, delayMs: 3000 },
+    { enemy: 'boss', count: 1, intervalMs: 1000, delayMs: 8000 },
+    { enemy: 'shielded', count: 18, intervalMs: 700, delayMs: 11000 },
+    { enemy: 'stealth', count: 14, intervalMs: 800, delayMs: 15000 },
+  ]));
+
+  return w;
 }
 
-/** The Endless / Co-op mission definition. Same engine, longer gauntlet. */
+/** The Endless / Co-op mission. Tighter economy + 30 waves + scaling layer. */
 export const ENDLESS_MISSION: MissionDef = {
   id: ENDLESS_MISSION_ID,
   name: 'Sector Defense',
   sector: 'Co-op Operation',
-  startEnergy: 260,
-  baseHp: 28,
-  rewardCores: 0, // co-op runs don't grant solo cores; they fuel the operation
-  modifier: { label: 'Endless gauntlet', description: '20 escalating waves with 4 boss encounters (waves 5/10/15/20). Survive as long as you can — kills, score and boss damage all feed the active Operation.' },
+  startEnergy: 220,           // was 260 — fewer free turrets up front
+  baseHp: 24,                 // was 28 — leaks matter more
+  rewardCores: 0,
+  modifier: {
+    label: 'Endless gauntlet',
+    description:
+      '30 escalating waves with 6 boss encounters (waves 5/10/15/20/25/30). Enemies grow stronger every wave — kills, score, waves and boss damage all feed the active Operation.',
+  },
   modifierIds: ['mixed_assault', 'bonus_bounty'],
   waves: buildWaves(),
 };
 
 export function isEndlessMission(missionId: number): boolean {
   return missionId === ENDLESS_MISSION_ID;
+}
+
+/**
+ * Per-wave enemy stat scaling for the Endless mission. Applied at spawn-time
+ * by the engine (see `spawnEnemy` in engine.ts). Returns multipliers that
+ * stack ON TOP of the base enemy stats and any active calibration / modifier
+ * multipliers.
+ *
+ * Curve goals:
+ *   • Waves 1–3: no scaling (1.0×) — fair onboarding.
+ *   • Waves 4–10: gentle HP creep (~+8%/wave) and minimal speed change.
+ *   • Waves 11–20: stronger HP curve (+10%/wave), shield grows (+5%/wave),
+ *     speed begins (+1%/wave).
+ *   • Waves 21–30: brutal scaling — HP +12%/wave, shield +6%/wave, speed
+ *     capped at +30% so frame-rate / pathing doesn't break.
+ *
+ * Bosses get a smaller HP curve (+5%/wave from boss #1) so they remain
+ * roughly killable per their boss wave; Phase 3 (boss damage) stays meaningful.
+ */
+export function endlessWaveScaling(waveIndex: number, kind: EnemyKind): {
+  hp: number;
+  shield: number;
+  speed: number;
+} {
+  const w = Math.max(0, waveIndex); // 0-indexed
+  if (kind === 'boss') {
+    // Boss HP grows slowly so each boss wave is roughly survivable.
+    const hp = 1 + Math.min(0.5, w * 0.025); // up to +50% by wave 20+
+    return { hp, shield: 1, speed: 1 };
+  }
+  let hp = 1;
+  let shield = 1;
+  let speed = 1;
+  // HP curve in 3 segments
+  if (w >= 3 && w < 10) hp = 1 + (w - 2) * 0.08;
+  else if (w >= 10 && w < 20) hp = 1 + 7 * 0.08 + (w - 9) * 0.10;
+  else if (w >= 20) hp = 1 + 7 * 0.08 + 10 * 0.10 + (w - 19) * 0.12;
+  // Shield curve — only relevant for shielded units, but we apply to all
+  if (w >= 10 && w < 20) shield = 1 + (w - 9) * 0.05;
+  else if (w >= 20) shield = 1 + 10 * 0.05 + (w - 19) * 0.06;
+  // Speed curve — capped to avoid pathing weirdness
+  if (w >= 7) speed = Math.min(1.30, 1 + (w - 6) * 0.012);
+  return { hp, shield, speed };
 }
