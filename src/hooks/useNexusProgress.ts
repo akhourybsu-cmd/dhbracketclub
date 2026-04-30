@@ -77,6 +77,7 @@ export async function recordNexusRun(params: {
   abilityUsage?: Record<string, number>;
   energyStarvedMs?: number;
   leaks?: number;
+  kills?: number;
 }): Promise<string | null> {
   const { data, error } = await (supabase as any).from('nexus_runs').insert({
     user_id: params.userId,
@@ -94,6 +95,7 @@ export async function recordNexusRun(params: {
     ability_usage: params.abilityUsage ?? {},
     energy_starved_ms: params.energyStarvedMs ?? 0,
     leaks: params.leaks ?? 0,
+    kills: params.kills ?? 0,
   }).select('id').single();
   if (error) {
     console.warn('[nexus] recordNexusRun failed', error.message);

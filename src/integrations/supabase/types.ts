@@ -2568,6 +2568,7 @@ export type Database = {
           energy_starved_ms: number
           failed_wave: number | null
           id: string
+          kills: number
           leaks: number
           loadout: Json
           mission_id: number
@@ -2587,6 +2588,7 @@ export type Database = {
           energy_starved_ms?: number
           failed_wave?: number | null
           id?: string
+          kills?: number
           leaks?: number
           loadout?: Json
           mission_id: number
@@ -2606,6 +2608,7 @@ export type Database = {
           energy_starved_ms?: number
           failed_wave?: number | null
           id?: string
+          kills?: number
           leaks?: number
           loadout?: Json
           mission_id?: number
