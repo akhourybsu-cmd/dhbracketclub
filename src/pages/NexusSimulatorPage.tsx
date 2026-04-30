@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Play, Square, FlaskConical, Download, ChevronDown, ChevronUp, AlertTriangle,
+  ArrowLeft, Play, Square, FlaskConical, Download, ChevronDown, ChevronUp, AlertTriangle, Wrench,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
