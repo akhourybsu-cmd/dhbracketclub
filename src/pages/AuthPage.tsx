@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { KeyRound, Sparkles, LogIn } from 'lucide-react';
 import dhMonogram from '@/assets/dh-monogram.png';
 import { getAndClearIntendedDestination } from '@/lib/share';
+import { lovable } from '@/integrations/lovable';
 
 type Mode = 'signin' | 'join' | 'request';
 
