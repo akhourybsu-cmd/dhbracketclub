@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { KeyRound, Sparkles, LogIn } from 'lucide-react';
+import { KeyRound, Sparkles, LogIn, Mail } from 'lucide-react';
 import dhMonogram from '@/assets/dh-monogram.png';
 import { getAndClearIntendedDestination } from '@/lib/share';
 import { lovable } from '@/integrations/lovable';
