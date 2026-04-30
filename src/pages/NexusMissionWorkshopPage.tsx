@@ -19,6 +19,8 @@ import {
   listDrafts, getLiveDraft, createDraft, updateDraft, deleteDraft, applyDraftLive,
   validateEndlessConfig, validateOperationConfig, refreshLiveEndlessCache, clearLiveEndlessCache,
 } from '@/lib/nexus/missionDrafts';
+import { WaveEditor } from '@/components/nexus/WaveEditor';
+import { Wave } from '@/lib/nexus/types';
 
 type Tab = DraftKind;
 
