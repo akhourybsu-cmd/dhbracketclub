@@ -201,6 +201,38 @@ export default function NexusHomePage() {
         />
         <NavTile to="/nexus/codex" icon={<Shield className="w-4 h-4" />} label="Codex" />
       </div>
+
+      {isAdmin && (
+        <div className="mt-4">
+          <div className="flex items-center gap-1.5 mb-2 px-1">
+            <span className="nx-pulse-dot inline-block w-1.5 h-1.5 rounded-full" style={{ background: 'hsl(var(--nx-amber))', boxShadow: '0 0 6px hsl(var(--nx-amber))' }} />
+            <p className="nx-title text-[9px]" style={{ color: 'hsl(var(--nx-amber))' }}>ADMIN TOOLS</p>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <NavTile
+              to="/nexus/balance"
+              icon={<BarChart3 className="w-4 h-4" />}
+              label="Telemetry"
+              accent="hsl(var(--nx-amber))"
+              borderColor="hsl(var(--nx-amber) / 0.35)"
+            />
+            <NavTile
+              to="/nexus/calibration"
+              icon={<Sliders className="w-4 h-4" />}
+              label="Calibration"
+              accent="hsl(var(--nx-amber))"
+              borderColor="hsl(var(--nx-amber) / 0.35)"
+            />
+            <NavTile
+              to="/nexus/simulator"
+              icon={<FlaskConical className="w-4 h-4" />}
+              label="Simulator"
+              accent="hsl(150 80% 70%)"
+              borderColor="hsl(150 80% 60% / 0.35)"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
