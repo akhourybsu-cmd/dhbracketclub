@@ -15,6 +15,7 @@ import { WeekNavigator } from '@/components/pickem/WeekNavigator';
 import { TurfBackdrop } from '@/components/pickem/TurfBackdrop';
 import { KickoffCountdown } from '@/components/pickem/KickoffCountdown';
 import { PickSlipBar } from '@/components/pickem/PickSlipBar';
+import { PickemShell } from '@/components/pickem/PickemShell';
 
 export default function PickemWeekPage() {
   const { weekNumber } = useParams<{ weekNumber: string }>();
