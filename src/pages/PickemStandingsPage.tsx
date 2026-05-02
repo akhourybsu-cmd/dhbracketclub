@@ -18,9 +18,6 @@ export default function PickemStandingsPage() {
   return (
     <PickemShell>
     <div className="space-y-4 pb-6">
-      <Link to="/pickem" className="text-[12px] text-white/55 flex items-center gap-1 btn-press">
-        <ChevronLeft className="w-4 h-4" /> Pick Center
-      </Link>
 
       {/* Hero header — turf */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>

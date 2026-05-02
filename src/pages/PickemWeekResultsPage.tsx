@@ -43,12 +43,9 @@ export default function PickemWeekResultsPage() {
     <div className="space-y-4 pb-6">
       <Confetti active={podiumed} duration={2200} />
 
-      <div className="flex items-center justify-between">
-        <Link to="/pickem" className="text-[12px] text-white/55 flex items-center gap-1 btn-press">
-          <ChevronLeft className="w-4 h-4" /> Pick Center
-        </Link>
+      <div className="flex items-center justify-end">
         <Link to={`/pickem/week/${num}`} className="text-[12px] text-gold font-extrabold btn-press">
-          Slate
+          View Slate
         </Link>
       </div>
 
