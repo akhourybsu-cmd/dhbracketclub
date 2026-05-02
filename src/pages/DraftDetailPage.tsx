@@ -80,6 +80,11 @@ interface Pick {
   profiles?: { display_name: string };
 }
 
+function PickCount({ value }: { value: number }) {
+  const animated = useCountUp(value, 500);
+  return <>{Math.round(animated)}</>;
+}
+
 export default function DraftDetailPage() {
   const { draftId } = useParams<{ draftId: string }>();
   const { user } = useAuth();
