@@ -129,6 +129,7 @@ export default function DraftDetailPage() {
   const [submittingDispute, setSubmittingDispute] = useState(false);
   const [resolvingDisputeId, setResolvingDisputeId] = useState<string | null>(null);
   const pickIds = picks.map(p => p.id);
+  const freshPickIds = useFirstSeen(pickIds);
   const { enrichments, loading: enrichmentsLoading, fetchEnrichments } = useItemEnrichments(pickIds, 'draft_pick');
   const { enriching, enrichDraftPicks } = useEnrichDraftPicks();
 
