@@ -41,7 +41,14 @@ export function PickAnnouncement({ pick }: PickAnnouncementProps) {
               border: '1px solid hsl(var(--gold) / 0.2)',
             }}
           >
-            <Flame className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(var(--gold))' }} />
+            <motion.span
+              initial={{ rotate: -90, scale: 0.6 }}
+              animate={{ rotate: 0, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 18 }}
+              className="flex-shrink-0"
+            >
+              <Flame className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
+            </motion.span>
             <p className="text-[12px] font-bold flex-1 min-w-0">
               <span style={{ color: 'hsl(var(--gold))' }}>{currentPick.displayName}</span>
               <span className="text-foreground"> picks </span>

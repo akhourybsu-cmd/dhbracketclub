@@ -7,11 +7,17 @@ import { Bookmark, Plus, ArrowRight, Users, Play, Trophy, Award, Target, Archive
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { getDerivedDraftTurn } from '@/lib/draftTurn';
+import { springSnap, useCountUp } from '@/lib/draft/animations';
 import { formatDistanceToNow } from 'date-fns';
 import { useDraftListUpdates } from '@/hooks/useRealtimeSubscription';
 import { useCurrentSeason, useSeasonEntries, usePlayoffMatchByDraftIds } from '@/hooks/useDraftSeasons';
 import { PlayoffBadge } from '@/components/draft/PlayoffBadge';
 import { getPlayoffGameLabel } from '@/lib/playoffStyle';
+
+function CountedNumber({ value }: { value: number }) {
+  const animated = useCountUp(value);
+  return <>{Math.round(animated)}</>;
+}
 
 export default function DraftsListPage() {
   const { user } = useAuth();
@@ -184,15 +190,21 @@ export default function DraftsListPage() {
         <div className="glass-card p-4 mb-4">
           <div className="grid grid-cols-3 gap-2 mb-3">
             <div className="text-center">
-              <p className="text-lg font-extrabold leading-none">{myDraftStats.totalPoints}</p>
+              <p className="text-lg font-extrabold leading-none tabular-nums">
+                <CountedNumber value={myDraftStats.totalPoints} />
+              </p>
               <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Total Pts</p>
             </div>
             <div className="text-center">
-              <p className="text-lg font-extrabold leading-none">{myDraftStats.wins}</p>
+              <p className="text-lg font-extrabold leading-none tabular-nums">
+                <CountedNumber value={myDraftStats.wins} />
+              </p>
               <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Wins</p>
             </div>
             <div className="text-center">
-              <p className="text-lg font-extrabold leading-none">{myDraftStats.podiums}</p>
+              <p className="text-lg font-extrabold leading-none tabular-nums">
+                <CountedNumber value={myDraftStats.podiums} />
+              </p>
               <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Podiums</p>
             </div>
           </div>
@@ -240,18 +252,41 @@ export default function DraftsListPage() {
           </Link>
         </motion.div>
       ) : (
-        <div className="space-y-2">
+        <motion.div
+          className="space-y-2"
+          initial="hidden"
+          animate="show"
+          variants={{
+            hidden: {},
+            show: { transition: { staggerChildren: 0.05, delayChildren: 0.04 } },
+          }}
+        >
           {drafts.map((d, i) => {
             const count = participantCounts.get(d.id) || 0;
             const sc = statusConfig[d.status] || statusConfig.setup;
             const winner = draftWinners.get(d.id);
             const playoffMatch = playoffMatchByDraft.get(d.id);
             const isPlayoff = !!playoffMatch;
+            const isLive = d.status === 'in_progress';
+            const isMyTurn = isLive && d.current_pick_user_id === user?.id;
+            // Cap stagger so long lists don't crawl in.
+            const staggerIdx = Math.min(i, 8);
             return (
-              <motion.div key={d.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 + i * 0.04 }}>
+              <motion.div
+                key={d.id}
+                variants={{
+                  hidden: { opacity: 0, y: 10 },
+                  show: { opacity: 1, y: 0, transition: { ...springSnap, delay: staggerIdx * 0.04 } },
+                }}
+              >
                 <Link to={`/drafts/${d.id}`} className="block group">
                   <div
-                    className={cn("glass-card p-4 hover-lift cursor-pointer relative overflow-hidden", isPlayoff && "arena-edge")}
+                    className={cn(
+                      "glass-card p-4 hover-lift cursor-pointer relative overflow-hidden",
+                      isPlayoff && "arena-edge",
+                      isLive && !isPlayoff && "draft-row-live",
+                      isMyTurn && !isPlayoff && "draft-row-mine",
+                    )}
                     style={isPlayoff ? {
                       borderLeft: '3px solid hsl(45 93% 52%)',
                       background: 'linear-gradient(135deg, hsl(45 93% 52% / 0.06), transparent 60%), hsl(var(--card))',
@@ -261,6 +296,14 @@ export default function DraftsListPage() {
                     {isPlayoff && (
                       <div
                         className="absolute -right-2 -top-2 text-3xl opacity-10 select-none pointer-events-none"
+                        aria-hidden
+                      >
+                        ✦
+                      </div>
+                    )}
+                    {isLive && !isPlayoff && (
+                      <div
+                        className="absolute -right-2 -top-2 text-2xl opacity-[0.07] select-none pointer-events-none"
                         aria-hidden
                       >
                         ✦
@@ -317,9 +360,15 @@ export default function DraftsListPage() {
                             )}
                           </div>
                           {d.status === 'in_progress' && d.current_pick_user_id && (
-                            <p className="text-[10px] font-semibold mt-0.5" style={{ color: d.current_pick_user_id === user?.id ? 'hsl(var(--gold))' : 'hsl(var(--success))' }}>
-                              🎯 {d.current_pick_user_id === user?.id ? 'Your pick!' : `${(d as any).current_pick_profiles?.display_name || 'Someone'}'s pick`}
-                            </p>
+                            <motion.p
+                              initial={isMyTurn ? { y: 0 } : false}
+                              animate={isMyTurn ? { y: [0, -2, 0] } : undefined}
+                              transition={{ duration: 0.6, ease: 'easeOut' }}
+                              className="text-[10px] font-semibold mt-0.5"
+                              style={{ color: isMyTurn ? 'hsl(var(--gold))' : 'hsl(var(--success))' }}
+                            >
+                              🎯 {isMyTurn ? 'Your pick!' : `${(d as any).current_pick_profiles?.display_name || 'Someone'}'s pick`}
+                            </motion.p>
                           )}
                         </div>
                       </div>
@@ -335,7 +384,7 @@ export default function DraftsListPage() {
                           {d.status === 'in_progress' && <Play className="w-2.5 h-2.5 mr-0.5" />}
                           {sc.label}
                         </span>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground/60 group-hover:text-muted-foreground transition-all" />
+                        <ArrowRight className="w-4 h-4 text-muted-foreground/60 group-hover:text-muted-foreground draft-chevron" />
                       </div>
                     </div>
                   </div>
@@ -343,7 +392,7 @@ export default function DraftsListPage() {
               </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       )}
     </div>
   );
