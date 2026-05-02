@@ -99,11 +99,8 @@ export default function PickemWeekPage() {
   return (
     <PickemShell>
     <div className="space-y-4 pb-32">{/* extra bottom space for sticky slip */}
-      {/* Top bar */}
-      <div className="flex items-center justify-between">
-        <Link to="/pickem" className="text-[12px] text-muted-foreground flex items-center gap-1 btn-press">
-          <ChevronLeft className="w-4 h-4" /> Pick Center
-        </Link>
+      {/* Top bar — HUD already provides back nav; show only week status */}
+      <div className="flex items-center justify-end">
         <WeekStatusPill status={weekStatus} />
       </div>
 
