@@ -278,14 +278,14 @@ export default function DraftsListPage() {
                 <Link to={`/drafts/${d.id}`} className="block group">
                   <div
                     className={cn(
-                      "glass-card p-4 hover-lift cursor-pointer relative overflow-hidden",
+                      "da-glass p-4 hover-lift cursor-pointer relative overflow-hidden transition-transform",
                       isPlayoff && "arena-edge",
                       isLive && !isPlayoff && "draft-row-live",
                       isMyTurn && !isPlayoff && "draft-row-mine",
                     )}
                     style={isPlayoff ? {
                       borderLeft: '3px solid hsl(45 93% 52%)',
-                      background: 'linear-gradient(135deg, hsl(45 93% 52% / 0.06), transparent 60%), hsl(var(--card))',
+                      background: 'linear-gradient(135deg, hsl(45 93% 52% / 0.08), transparent 60%), linear-gradient(180deg, hsl(160 35% 7% / 0.88), hsl(160 50% 4% / 0.94))',
                       boxShadow: '0 0 18px -4px hsl(45 93% 52% / 0.25)',
                     } : undefined}
                   >
@@ -370,12 +370,7 @@ export default function DraftsListPage() {
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         <span
-                          className={cn("status-pill", isPlayoff ? '' : sc.cls)}
-                          style={isPlayoff ? {
-                            background: 'hsl(45 93% 52% / 0.15)',
-                            color: 'hsl(45 93% 52%)',
-                            border: '1px solid hsl(45 93% 52% / 0.35)',
-                          } : undefined}
+                          className={cn(isPlayoff ? 'da-status-complete' : sc.cls)}
                         >
                           {d.status === 'in_progress' && <Play className="w-2.5 h-2.5 mr-0.5" />}
                           {sc.label}
