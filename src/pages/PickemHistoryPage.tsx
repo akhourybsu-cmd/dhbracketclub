@@ -137,6 +137,7 @@ export default function PickemHistoryPage() {
         })}
       </div>
     </div>
+    </PickemShell>
   );
 }
 
