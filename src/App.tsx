@@ -95,6 +95,7 @@ const NexusMissionWorkshopPage = lazy(() => import("./pages/NexusMissionWorkshop
 import { RuneDelveLayout } from "./components/runedelve/RuneDelveLayout";
 import { NexusLayout } from "./components/nexus/NexusLayout";
 import { PickemLayout } from "./components/pickem/PickemLayout";
+import { DraftArenaLayout } from "./components/drafts/DraftArenaLayout";
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -193,12 +194,12 @@ function AnimatedRoutes() {
         <Route path="/polls/create" element={<ProtectedPage><CreatePollPage /></ProtectedPage>} />
         <Route path="/polls/:pollId" element={<ProtectedPage><PollDetailPage /></ProtectedPage>} />
 
-        {/* Drafts module */}
-        <Route path="/drafts" element={<ProtectedPage><DraftsListPage /></ProtectedPage>} />
-        <Route path="/drafts/seasons" element={<ProtectedPage><SeasonsArchivePage /></ProtectedPage>} />
-        <Route path="/drafts/seasons/:seasonId" element={<ProtectedPage><SeasonArchiveDetailPage /></ProtectedPage>} />
-        <Route path="/drafts/create" element={<ProtectedPage><CreateDraftPage /></ProtectedPage>} />
-        <Route path="/drafts/:draftId" element={<ProtectedPage><DraftDetailPage /></ProtectedPage>} />
+        {/* Drafts module — standalone Draft Arena shell (own boot, HUD, no DH chrome) */}
+        <Route path="/drafts" element={<ProtectedPage><DraftArenaLayout><DraftsListPage /></DraftArenaLayout></ProtectedPage>} />
+        <Route path="/drafts/seasons" element={<ProtectedPage><DraftArenaLayout><SeasonsArchivePage /></DraftArenaLayout></ProtectedPage>} />
+        <Route path="/drafts/seasons/:seasonId" element={<ProtectedPage><DraftArenaLayout><SeasonArchiveDetailPage /></DraftArenaLayout></ProtectedPage>} />
+        <Route path="/drafts/create" element={<ProtectedPage><DraftArenaLayout><CreateDraftPage /></DraftArenaLayout></ProtectedPage>} />
+        <Route path="/drafts/:draftId" element={<ProtectedPage><DraftArenaLayout><DraftDetailPage /></DraftArenaLayout></ProtectedPage>} />
 
         {/* NFL Pick'em module — standalone shell (own boot, HUD, no DH chrome) */}
         <Route path="/pickem" element={<ProtectedPage><PickemLayout><PickemHomePage /></PickemLayout></ProtectedPage>} />
