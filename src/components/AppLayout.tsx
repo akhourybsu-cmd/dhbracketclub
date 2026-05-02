@@ -130,7 +130,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const isChatRoute = location.pathname.startsWith('/chat');
   const isRuneDelve = location.pathname.startsWith('/rune-delve');
   const isNexus = location.pathname.startsWith('/nexus');
-  const isGameShell = isRuneDelve || isNexus;
+  const isPickem = location.pathname.startsWith('/pickem');
+  const isGameShell = isRuneDelve || isNexus || isPickem;
 
   const isNavActive = (path: string) => {
     if (path === '/brackets') {

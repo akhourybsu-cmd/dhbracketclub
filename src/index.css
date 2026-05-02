@@ -1962,6 +1962,89 @@
 }
 
 /* ═══════════════════════════════════════════════════════════
+   Pick'em — Standalone shell skin (.pk-mode / .pk-shell)
+   Forces the stadium look across every /pickem/* route regardless
+   of the user's chosen DH Club theme. Matches the Nexus / RuneDelve
+   "loading into another app" pattern.
+   ═══════════════════════════════════════════════════════════ */
+.pk-mode {
+  --pk-field:    160 50% 3%;
+  --pk-edge:     152 30% 18%;
+  --pk-gold:     45 95% 55%;
+  --pk-emerald:  152 72% 46%;
+
+  /* Force dark stadium palette so every surface inside the shell reads
+     like night-game broadcast regardless of the app theme. */
+  --background: 160 50% 3%;
+  --card: 160 35% 7%;
+  --popover: 160 38% 8%;
+  --muted: 160 25% 12%;
+  --border: 152 30% 18%;
+  --input: 152 30% 18%;
+  --secondary: 160 25% 10%;
+  --foreground: 0 0% 100%;
+  --card-foreground: 0 0% 100%;
+  --popover-foreground: 0 0% 100%;
+  --secondary-foreground: 0 0% 100%;
+  --muted-foreground: 150 12% 72%;
+
+  color: hsl(0 0% 100%);
+  position: relative;
+  isolation: isolate;
+}
+
+.pk-mode .text-muted-foreground { color: hsl(150 12% 72%); }
+
+/* Ambient stadium backdrop — radial vignette + faint hash marks */
+.pk-mode::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 45% at 50% 0%, hsl(152 70% 22% / 0.45), transparent 60%),
+    radial-gradient(ellipse 60% 35% at 100% 100%, hsl(45 95% 50% / 0.06), transparent 60%),
+    radial-gradient(ellipse 70% 40% at 0% 80%, hsl(172 60% 30% / 0.05), transparent 65%),
+    linear-gradient(180deg, hsl(160 50% 3%), hsl(160 60% 2%));
+}
+
+.pk-mode::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent 56px,
+      hsl(0 0% 100% / 0.025) 56px,
+      hsl(0 0% 100% / 0.025) 57px
+    );
+  mask-image: linear-gradient(180deg, transparent 0%, #000 12%, #000 88%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 12%, #000 88%, transparent 100%);
+}
+
+.pk-shell { background: transparent; }
+
+/* Force readable surfaces in the shell even under light theme */
+.pk-mode .glass-card {
+  background: linear-gradient(180deg, hsl(160 25% 9% / 0.92), hsl(160 35% 5% / 0.92)) !important;
+  border: 1px solid hsl(152 35% 18% / 0.7) !important;
+  color: hsl(0 0% 100%) !important;
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 0.04),
+    0 4px 14px hsl(160 60% 2% / 0.5) !important;
+  backdrop-filter: none !important;
+}
+
+.pk-mode .text-muted-foreground\/70,
+.pk-mode .text-muted-foreground\/60,
+.pk-mode .text-muted-foreground\/50 { color: hsl(150 8% 55%) !important; }
+
+/* ═══════════════════════════════════════════════════════════
    Pick'em — Stadium page shell + broadcast components (v2)
    ═══════════════════════════════════════════════════════════ */
 

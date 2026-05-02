@@ -94,6 +94,7 @@ const NexusSimulatorPage = lazy(() => import("./pages/NexusSimulatorPage"));
 const NexusMissionWorkshopPage = lazy(() => import("./pages/NexusMissionWorkshopPage"));
 import { RuneDelveLayout } from "./components/runedelve/RuneDelveLayout";
 import { NexusLayout } from "./components/nexus/NexusLayout";
+import { PickemLayout } from "./components/pickem/PickemLayout";
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -199,14 +200,14 @@ function AnimatedRoutes() {
         <Route path="/drafts/create" element={<ProtectedPage><CreateDraftPage /></ProtectedPage>} />
         <Route path="/drafts/:draftId" element={<ProtectedPage><DraftDetailPage /></ProtectedPage>} />
 
-        {/* NFL Pick'em module */}
-        <Route path="/pickem" element={<ProtectedPage><PickemHomePage /></ProtectedPage>} />
-        <Route path="/pickem/week/:weekNumber" element={<ProtectedPage><PickemWeekPage /></ProtectedPage>} />
-        <Route path="/pickem/week/:weekNumber/results" element={<ProtectedPage><PickemWeekResultsPage /></ProtectedPage>} />
-        <Route path="/pickem/standings" element={<ProtectedPage><PickemStandingsPage /></ProtectedPage>} />
-        <Route path="/pickem/history" element={<ProtectedPage><PickemHistoryPage /></ProtectedPage>} />
-        <Route path="/pickem/rules" element={<ProtectedPage><PickemRulesPage /></ProtectedPage>} />
-        <Route path="/pickem/admin" element={<ProtectedPage><PickemAdminPage /></ProtectedPage>} />
+        {/* NFL Pick'em module — standalone shell (own boot, HUD, no DH chrome) */}
+        <Route path="/pickem" element={<ProtectedPage><PickemLayout><PickemHomePage /></PickemLayout></ProtectedPage>} />
+        <Route path="/pickem/week/:weekNumber" element={<ProtectedPage><PickemLayout><PickemWeekPage /></PickemLayout></ProtectedPage>} />
+        <Route path="/pickem/week/:weekNumber/results" element={<ProtectedPage><PickemLayout><PickemWeekResultsPage /></PickemLayout></ProtectedPage>} />
+        <Route path="/pickem/standings" element={<ProtectedPage><PickemLayout><PickemStandingsPage /></PickemLayout></ProtectedPage>} />
+        <Route path="/pickem/history" element={<ProtectedPage><PickemLayout><PickemHistoryPage /></PickemLayout></ProtectedPage>} />
+        <Route path="/pickem/rules" element={<ProtectedPage><PickemLayout><PickemRulesPage /></PickemLayout></ProtectedPage>} />
+        <Route path="/pickem/admin" element={<ProtectedPage><PickemLayout><PickemAdminPage /></PickemLayout></ProtectedPage>} />
 
         {/* Rune Delve module — campaign */}
         <Route path="/rune-delve" element={<ProtectedPage><RuneDelveLayout><RuneDelveHomePage /></RuneDelveLayout></ProtectedPage>} />

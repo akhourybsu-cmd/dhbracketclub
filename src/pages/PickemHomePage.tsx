@@ -119,7 +119,7 @@ export default function PickemHomePage() {
               <WeekStatusPill status={weekStatus} />
             </div>
 
-            <h1 className="text-[26px] sm:text-[28px] font-black tracking-tight leading-[1.05] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.65)]">
+            <h1 className="text-[22px] sm:text-[26px] font-black tracking-tight leading-[1.05] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.65)]">
               {season.name}
             </h1>
             <p className="text-[12px] text-white/70 mt-1 max-w-[34ch] leading-snug">

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronLeft, History, ChevronRight } from 'lucide-react';
+import { History, ChevronRight } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useActiveSeason, useSeasonWeeks } from '@/hooks/usePickem';
@@ -68,9 +68,6 @@ export default function PickemHistoryPage() {
   return (
     <PickemShell>
     <div className="space-y-4 pb-6">
-      <Link to="/pickem" className="text-[12px] text-white/55 flex items-center gap-1 btn-press">
-        <ChevronLeft className="w-4 h-4" /> Pick Center
-      </Link>
 
       {/* Hero header with overall record — turf */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronLeft, Info, Lock, Trophy, Star, Zap } from 'lucide-react';
+import { Info, Lock, Trophy, Star, Zap } from 'lucide-react';
 import { TurfBackdrop } from '@/components/pickem/TurfBackdrop';
 import { PickemShell } from '@/components/pickem/PickemShell';
 
@@ -8,9 +8,6 @@ export default function PickemRulesPage() {
   return (
     <PickemShell>
     <div className="space-y-4 pb-6">
-      <Link to="/pickem" className="text-[12px] text-white/55 flex items-center gap-1 btn-press">
-        <ChevronLeft className="w-4 h-4" /> Pick Center
-      </Link>
 
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
         <TurfBackdrop className="px-5 py-4">
