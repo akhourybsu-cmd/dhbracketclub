@@ -1768,13 +1768,17 @@
    Mobile-first, GPU-friendly, respects reduced motion.
    ═══════════════════════════════════════════════════════════ */
 
-/* Turf base — deep stadium green w/ subtle vignette */
+/* Turf base — deep stadium night, near-black w/ emerald glow */
 .pk-turf {
   background:
-    radial-gradient(ellipse 120% 70% at 50% -10%, hsl(152 60% 22% / 0.55), transparent 65%),
-    radial-gradient(ellipse 100% 80% at 50% 110%, hsl(160 30% 4% / 0.85), transparent 60%),
-    linear-gradient(180deg, hsl(152 35% 10%), hsl(160 25% 6% 95%));
+    radial-gradient(ellipse 90% 55% at 50% 0%, hsl(152 80% 30% / 0.45), transparent 65%),
+    radial-gradient(ellipse 60% 40% at 95% 100%, hsl(45 95% 55% / 0.10), transparent 70%),
+    radial-gradient(ellipse 100% 80% at 50% 115%, hsl(160 60% 2% / 0.95), transparent 55%),
+    linear-gradient(180deg, hsl(160 35% 7%) 0%, hsl(158 45% 4%) 55%, hsl(160 50% 3%) 100%);
+  color: hsl(0 0% 100%);
 }
+/* Force white-ish text inside any turf surface so light theme can't wash it out */
+.pk-turf, .pk-turf * { color: inherit; }
 
 /* Yard-line texture overlay (chalk hashes) */
 .pk-yardlines::before {
