@@ -578,7 +578,7 @@ export default function DashboardPage() {
                   boxShadow: '0 0 18px hsl(var(--gold) / 0.12)',
                 } : undefined}
               >
-                <Plus className="w-3 h-3 absolute top-2 right-2 text-muted-foreground/70" />
+                
                 <item.icon className="w-5 h-5 mx-auto mb-1.5 relative z-10" style={{ color: `hsl(var(--${item.color}))` }} />
                 <p className="text-[10px] font-bold relative z-10">{item.label}</p>
               </div>
