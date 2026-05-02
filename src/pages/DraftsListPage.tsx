@@ -14,6 +14,11 @@ import { useCurrentSeason, useSeasonEntries, usePlayoffMatchByDraftIds } from '@
 import { PlayoffBadge } from '@/components/draft/PlayoffBadge';
 import { getPlayoffGameLabel } from '@/lib/playoffStyle';
 
+function CountedNumber({ value }: { value: number }) {
+  const animated = useCountUp(value);
+  return <>{Math.round(animated)}</>;
+}
+
 export default function DraftsListPage() {
   const { user } = useAuth();
   const [drafts, setDrafts] = useState<any[]>([]);
