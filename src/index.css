@@ -2316,3 +2316,92 @@
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   Drafts polish — motion utilities for DraftsListPage and
+   DraftDetailPage. Namespaced under `.draft-*` so they don't
+   leak to other modules.
+   ═══════════════════════════════════════════════════════════ */
+
+@keyframes draftHeroBreath {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50%      { opacity: 0.85; transform: scale(1.04); }
+}
+
+@keyframes draftEdgeShimmer {
+  0%, 100% { box-shadow: 0 0 0 1px hsl(var(--gold) / 0.18), 0 0 12px -2px hsl(var(--gold) / 0.18); }
+  50%      { box-shadow: 0 0 0 1px hsl(var(--gold) / 0.45), 0 0 22px -2px hsl(var(--gold) / 0.45); }
+}
+
+@keyframes draftHeroShake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-3px); }
+  40%      { transform: translateX(3px); }
+  60%      { transform: translateX(-2px); }
+  80%      { transform: translateX(2px); }
+}
+
+@keyframes draftRowBreath {
+  0%, 100% { box-shadow: 0 0 0 1px hsl(var(--success) / 0.18); }
+  50%      { box-shadow: 0 0 0 1px hsl(var(--success) / 0.42), 0 0 18px -4px hsl(var(--success) / 0.32); }
+}
+
+.draft-hero-breath { animation: draftHeroBreath 3.2s ease-in-out infinite; }
+.draft-edge-shimmer { animation: draftEdgeShimmer 4s ease-in-out infinite; }
+.draft-hero-shake { animation: draftHeroShake 0.6s ease-out 1; }
+.draft-row-live { animation: draftRowBreath 3s ease-in-out infinite; }
+
+.draft-row-mine {
+  position: relative;
+}
+.draft-row-mine::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 8px; bottom: 8px;
+  width: 2px;
+  background: linear-gradient(180deg, transparent, hsl(var(--gold)), transparent);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.draft-chevron {
+  transition: transform 200ms ease-out;
+}
+.group:hover .draft-chevron { transform: translateX(2px); }
+
+.draft-pick-fresh {
+  background: hsl(var(--gold) / 0.12);
+  animation: draftPickFreshFade 1.6s ease-out forwards;
+}
+@keyframes draftPickFreshFade {
+  0%   { background-color: hsl(var(--gold) / 0.18); }
+  100% { background-color: transparent; }
+}
+
+.draft-round-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: hsl(var(--muted-foreground) / 0.55);
+  background: linear-gradient(90deg, transparent, hsl(var(--muted) / 0.3), transparent);
+}
+.draft-round-divider::before,
+.draft-round-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, hsl(var(--border)), transparent);
+}
+
+.draft-start-pulse {
+  animation: draftStartPulse 3s ease-in-out infinite;
+}
+@keyframes draftStartPulse {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0); }
+  50%      { box-shadow: 0 0 0 6px hsl(var(--primary) / 0.18), 0 0 24px -4px hsl(var(--primary) / 0.5); }
+}
