@@ -83,14 +83,16 @@ export default function PickemWeekPage() {
 
   if (!season || !week) {
     return (
-      <div className="space-y-3">
-        <Link to="/pickem" className="text-[12px] text-muted-foreground flex items-center gap-1">
-          <ChevronLeft className="w-4 h-4" /> Back
-        </Link>
-        <div className="glass-card p-6 text-center">
-          <p className="text-sm font-bold">{season ? 'Week not found' : 'No active season'}</p>
+      <PickemShell>
+        <div className="space-y-3">
+          <Link to="/pickem" className="text-[12px] text-white/55 flex items-center gap-1">
+            <ChevronLeft className="w-4 h-4" /> Back
+          </Link>
+          <div className="glass-card p-6 text-center">
+            <p className="text-sm font-bold text-white">{season ? 'Week not found' : 'No active season'}</p>
+          </div>
         </div>
-      </div>
+      </PickemShell>
     );
   }
 
