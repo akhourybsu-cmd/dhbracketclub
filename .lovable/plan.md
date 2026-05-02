@@ -1,120 +1,104 @@
-## Goal
 
-Make the Drafts experience feel more **alive and intriguing** by adding purposeful motion and a few high-signal visual elements. Keep density low: the rule is "one hero moment per screen, everything else calms down."
+# Plan: Drafts → Standalone "Draft Arena" Experience
 
-This focuses on three surfaces, in priority order:
+Goal: keep all draft logic, pages, and routes intact, but wrap every `/drafts/*` route in a full-screen game shell (own HUD, boot intro, skinned background, no DH bottom nav/sidebar) — exactly like Pick'em / Nexus / Rune Delve. The Compete → League tab becomes a glossy front-facing standings hub with a flashy "Enter Draft Arena" banner that launches into the shell.
 
-1. `DraftsListPage` — the lobby
-2. `DraftDetailPage` live phase — the **On the Clock** hero, pick input, and pick history
-3. `DraftDetailPage` complete phase — small podium / MVP polish
+## What stays untouched
 
-No schema changes, no new pages. All existing layouts stay intact; only animation, depth, and a couple of new compact components are added.
+- All draft data, hooks, realtime subscriptions, season logic, playoff logic.
+- `DraftsListPage`, `DraftDetailPage`, `CreateDraftPage`, `SeasonsArchivePage`, `SeasonArchiveDetailPage` — internals unchanged. They simply render inside a new shell.
+- All routes keep the same paths. Deep links, push notifications, share URLs continue to work.
 
----
+## 1. New shell components (mirrors Pick'em)
 
-## 1. Drafts List — feel like a living lobby
+Create `src/components/drafts/`:
 
-Today the list is informationally good but visually flat: identical cards, small status pill, no sense of momentum.
+- `DraftArenaLayout.tsx` — wraps children in `.da-mode .da-shell`, mounts HUD + Boot, owns `min-h-[100dvh]` and safe-area padding. Same structure as `PickemLayout`.
+- `DraftArenaHUD.tsx` — sticky 12-px header with Back button, gold-on-charcoal skin, emblem, contextual subtitle per route ("Live Draft Room", "Season Archive", "New Draft", "All Drafts"), and a season chip (e.g. `S4 · D7`) pulled from `useCurrentSeason`. Right-side icon button to "Standings" (jumps back to `/compete` league tab).
+- `DraftArenaBoot.tsx` — one-shot per session boot intro (sessionStorage key `da_boot_played_v1`) with the existing Bookmark/trophy emblem, gold/emerald glow, rotating dashed ring, 3-stage progress strip ("Loading league data…", "Syncing standings…", "Draft Arena online").
+- `DraftArenaExitDialog.tsx` — confirms exit back to `/compete` from the hub route. Copy: "Leave the Draft Arena?".
 
-Changes:
+Skin: reuse the **gold + charcoal** identity already used by SeasonHeaderCard (`hsl(var(--gold))` + `hsl(160 50% 4%)`). This visually distinguishes it from Pick'em (gold+emerald) and Nexus (cyan).
 
-- **Live row pulse**: rows where `status === 'in_progress'` get a soft, slow gold edge-glow that breathes (~3s loop), and the gold corner ✦ that today only renders for playoff rows is reused (low-opacity Bookmark glyph) to give every live card a subtle decorative spark. Already-styled playoff rows keep their stronger amber treatment.
-- **"Your pick" emphasis**: when `current_pick_user_id === user.id`, prepend a tiny animated `🎯` badge that gently bobs once on mount (`y: [0, -2, 0]`, 600ms), and add a faint left-edge gold bar (2px) so the user can scan their turn at a glance. The existing "🎯 Your pick!" line stays, just with motion.
-- **Stagger + spring**: replace the linear `delay: 0.04 + i * 0.04` with a Framer parent `staggerChildren` and a `spring` (stiffness ~260, damping ~24) so cards "snap" in instead of fading. Cap stagger at 8 children so long lists don't crawl.
-- **Stat strip restyle**: the three big numbers (Total Pts / Wins / Podiums) get a `CountUp`-style number animation on first mount (60-frame ease-out from 0). Bottom row (Avg / Best / Rated) stays static. No new card, just internal motion.
-- **Hover**: rows get `hover-lift` (already present) plus a subtle `transform: translateX(2px)` on the `ArrowRight` chevron — a 150ms tease that signals "tap to enter."
+## 2. CSS additions in `src/index.css`
 
-No new rows, no extra metadata, no new cards. Density unchanged.
+Namespaced under `.da-mode`:
 
----
+- `.da-shell` ambient background — radial gold glow at top, subtle emerald floor glow, layered charcoal gradient.
+- `.da-mote` decorative drifting gold particles (analogous to `.rd-mote`).
+- `@keyframes daBootRingSpin`, `daHudShimmer` — already partially covered by existing draft animations; reuse `draftEdgeShimmer` from the previous pass.
+- `.da-card`, `.da-pill`, `.da-cta` utility classes so existing draft pages can be lightly upgraded without rewrites.
 
-## 2. Draft Detail — the Live phase (the most important screen)
+## 3. Route wrapping in `src/App.tsx`
 
-This is where the magic should live. Today the **On the Clock** banner is the centerpiece but it's quite static for non-playoff drafts. The playoff version is already premium; we want regular drafts to feel ~80% as exciting without copying the gold treatment (we keep that special).
+Wrap the five draft routes:
 
-### 2a. New "Pulse Hero" for the standard On the Clock banner
+```text
+/drafts                       → <DraftArenaLayout><DraftsListPage/></DraftArenaLayout>
+/drafts/create                → <DraftArenaLayout><CreateDraftPage/></DraftArenaLayout>
+/drafts/:draftId              → <DraftArenaLayout><DraftDetailPage/></DraftArenaLayout>
+/drafts/seasons               → <DraftArenaLayout><SeasonsArchivePage/></DraftArenaLayout>
+/drafts/seasons/:seasonId     → <DraftArenaLayout><SeasonArchiveDetailPage/></DraftArenaLayout>
+```
 
-Replace the plain `glass-card` On-the-Clock block (lines ~1115-1136) with a refined hero that has:
+## 4. Hide DH chrome on `/drafts/*`
 
-- A soft **breathing radial gradient** behind the text — emerald when waiting on someone else, gold when it's your turn — that pulses ~3s. Implemented with a single absolutely-positioned div + CSS `@keyframes pulseGlow` (no JS).
-- A **2-stop top edge rule** (1px, gradient gold→transparent) — the same pattern playoff hero already uses, just thinner and emerald for non-playoff "waiting" state.
-- An **avatar disc** for the current picker (32px, initial-based, already available in the pick history rows). Shows whose turn it is at a glance instead of just a name.
-- Existing `OnTheClockTimer` stays where it is, but when `isUrgent` (>= 60s) the whole hero gets a single horizontal **shake** (60ms, 3px) on the second the timer crosses 60s. One-shot, never repeats.
-- "Your turn" state animates the headline text with a one-time scale pop (`scale: [0.95, 1.04, 1]`, 400ms).
+In `src/components/AppLayout.tsx`, extend the `isGameShell` check:
 
-This is the one allowed "hero moment" on the screen — everything else stays muted.
+```ts
+const isDrafts = location.pathname.startsWith('/drafts');
+const isGameShell = isRuneDelve || isNexus || isPickem || isDrafts;
+```
 
-### 2b. Pick input — make submitting feel rewarding
+Bottom nav and desktop sidebar disappear, exactly as they do for Pick'em.
 
-- The Send button gets a **press ripple** identical to Rune Delve's `rd-btn-juice` pattern (already in `src/lib/runedelve/btnRipple.ts`). Scope it to just this button via a `data-draft-juice` attr; no global delegation.
-- On successful submit, the input shrinks to `scale: 0.96` then snaps back (200ms total) before clearing — gives tactile "sent" feedback before the optimistic pick row appears.
-- The existing `PickAnnouncement` banner (other people's picks) gets a tiny `Flame` glyph that rotates 180° on entry — already styled for fire; just needs `motion` rotation.
+## 5. Compete → League tab redesign
 
-### 2c. Pick History — timeline feel
+The "League" tab in `CompetePage.tsx` becomes a **front-facing showcase**, not a launcher to scattered pages. Layout, top to bottom:
 
-Today picks are a vertical scroll of `EnrichedItemCard`s with `AnimatePresence`. The timeline is good but new picks don't pop.
+1. **Draft Arena Enter Banner** (new, top of column) — flashy hero card mirroring the Rune Delve / Nexus / Pick'em banners but in the gold skin. Emblem (Bookmark/trophy), title "Draft Arena", subline derived from current state ("S4 · Draft 7 of 12 — You're on the clock", or "S4 Playoffs · Round 1 in progress", or "S4 Complete · View champion"), big gold "Enter Arena" CTA → `/drafts`. Pulse glow when there's a draft user can act on.
+2. **Season hero** (existing `SeasonHeaderCard`) — kept as-is.
+3. **Standings card** (existing `StandingsCard`) — kept as-is, this is the "front-facing standings information".
+4. **Playoff picture / control center** — kept.
+5. **Season draft history** (existing `SeasonDraftHistory`) — kept; each row still deep-links into `/drafts/:id` (which now opens inside the shell).
+6. **Lifetime stats** — kept.
+7. **Footer chip row**: trim to a single "Seasons Archive" link; remove the redundant "New Draft" pill (now lives in the Arena HUD/list page).
 
-- Newly inserted picks (top of the reversed list) get a **sweep highlight**: a 1.5s gold-tinted background that fades from `hsl(var(--gold) / 0.12)` → transparent. Implemented as `initial={{ backgroundColor: 'hsl(var(--gold) / 0.12)' }} animate={{ backgroundColor: 'transparent' }} transition={{ duration: 1.5 }}` on the wrapper. Only applied when `pick.id` is the most recent and was added after mount (compare to a `useRef<Set<string>>` of seen IDs).
-- Round dividers: insert a tiny **"Round N" pill** between picks when `pick.round` changes during the iteration. Style: 9px, uppercase, `tracking-[0.2em]`, muted. Visually breaks up long lists into chapters without adding a new section.
-- Header: the `picks.length` counter on the right gets the same `CountUp` treatment as the lobby stats — small detail but it makes the screen feel reactive when picks stream in via realtime.
+The League tab keeps DH chrome (it's part of Compete), but every link out goes into the shelled `/drafts/*` routes.
 
-### 2d. Setup phase — friendlier waiting room
+## 6. Polish inside the shelled draft pages
 
-Small, contained changes (the screen is already calm):
+No structural changes — purely surface upgrades that ride on the existing animation utilities from `src/lib/draft/animations.ts`:
 
-- Participant rows in the Setup list get a sequenced fade-in (60ms stagger) when the page mounts, then a **subtle shimmer** sweeps once across the "Waiting for players…" copy when a new participant joins (detect via `participants.length` change in a ref). Same pattern as the existing `skeleton-shimmer` keyframe, just one-shot.
-- The "Start Draft" button (creator only) gets a soft, slow `box-shadow` pulse — a single emerald ring breathing at 3s — once `participants.length >= 2`. Signals "ready to go."
+- `DraftsListPage`: outer container gets `.da-shell-section` padding tweaks; existing live-row glow and stagger spring already in place from the previous pass — keep.
+- `DraftDetailPage`: existing On-the-Clock pulse hero, round dividers, and fresh-pick sweep already in place — keep. Add a subtle gold edge shimmer on the hero card so it feels "in the arena". Realtime is already wired through `useDraftUpdates`.
+- `CreateDraftPage`, `SeasonsArchivePage`, `SeasonArchiveDetailPage`: wrap content in a `.da-card` shell so they pick up the arena chrome without touching internal logic.
 
----
+## 7. Loading / realtime story
 
-## 3. Draft Detail — Complete phase
+- `DraftArenaLayout` renders HUD immediately so navigating between draft pages never shows a blank header (matches Pick'em).
+- Each page keeps its own React Query loaders; we add a unified high-fidelity skeleton in `DraftsListPage` and `DraftDetailPage` headers so the layout never shifts during data fetch.
+- Realtime: `useDraftListUpdates` + `useDraftUpdates` already update in place. No changes needed — the shell does not interrupt subscriptions.
 
-The podium and AI report sections are already strong. Two small touches:
+## 8. Files touched
 
-- **Podium reveal**: the three pillars (currently rendered with fixed heights and 2nd-1st-3rd ordering) animate up from height 0 to their target with a 120ms stagger and a `spring` (already partial; tighten the spring params and add a `Trophy` glyph that drops onto 1st place with a small bounce after the pillars settle).
-- **MVP pick highlight**: the `mvpPick` row in the per-user pick list gets a slow gold edge-shimmer (`box-shadow` keyframe, 4s loop, very low intensity) so the eye returns to it on subsequent views.
+New:
+- `src/components/drafts/DraftArenaLayout.tsx`
+- `src/components/drafts/DraftArenaHUD.tsx`
+- `src/components/drafts/DraftArenaBoot.tsx`
+- `src/components/drafts/DraftArenaExitDialog.tsx`
 
-No new sections, no extra cards.
+Edited:
+- `src/App.tsx` — wrap 5 draft routes in `DraftArenaLayout`.
+- `src/components/AppLayout.tsx` — add `/drafts` to `isGameShell`.
+- `src/pages/CompetePage.tsx` — add `DraftArenaEnterBanner` at top of League tab; trim redundant footer chips.
+- `src/index.css` — add `.da-mode`, `.da-shell`, `.da-mote`, `.da-card`, `.da-cta` keyframes/utilities.
+- Light surface tweaks to `DraftsListPage.tsx` / `DraftDetailPage.tsx` headers (skeletons + arena-edge hero shimmer).
 
----
+## 9. Out of scope (will not change)
 
-## 4. Shared infrastructure
+- Draft engine, snake logic, randomization, AI suggestions, enrichment, scoring, repick, dispute system, podium logic, league standings math.
+- Push notification payloads, share URLs, deep-link routes.
+- Any database schema or edge function.
 
-Add a small `src/lib/draft/animations.ts` exporting:
-
-- `pulseGlow` — Framer variants for the breathing radial used by the On-the-Clock hero.
-- `springSnap` — the shared `{ type: 'spring', stiffness: 260, damping: 24 }` used by list rows and the pick input.
-- `useCountUp(value, duration?)` — a tiny hook returning the animated number (uses `requestAnimationFrame`, no deps).
-- `useFirstSeen<T>(ids: T[])` — returns the set of IDs newly added since last render. Drives the "sweep highlight" in pick history.
-
-Add ~25 lines of new keyframes in `src/index.css` under a `/* Drafts polish */` block:
-
-- `@keyframes draftHeroBreath` — opacity 0.5 → 0.8 → 0.5 over 3s.
-- `@keyframes draftEdgeShimmer` — used for live row glow and MVP highlight.
-- `@keyframes draftHeroShake` — single 60ms horizontal shake for the urgent timer crossover.
-
-All new utilities are namespaced (`.draft-*`) so they don't leak.
-
----
-
-## What we are NOT doing
-
-- No new tabs, sections, or cards added to either page.
-- No changes to data fetching, schemas, or RLS.
-- No always-on heavy animations — every motion is either one-shot, on-event, or a slow ≥3s breath at low alpha.
-- No new icons in the lobby rows beyond what's already there (one decorative ✦ at low opacity for live rows).
-- No sound effects (drafts intentionally don't use the SFX system, unlike Nexus / Rune Delve).
-- The playoff hero, podium, and AI report layouts stay structurally identical — only motion/depth refinements.
-
----
-
-## Files touched
-
-- `src/pages/DraftsListPage.tsx` — lobby polish (stagger spring, live-row glow, your-turn bar, CountUp stats)
-- `src/pages/DraftDetailPage.tsx` — new On-the-Clock hero block, pick input ripple, pick history sweep + round dividers, setup polish, podium reveal tightening
-- `src/components/draft/OnTheClockTimer.tsx` — emit a "crossed urgent threshold" event the new hero subscribes to (single shake)
-- `src/components/draft/PickAnnouncement.tsx` — flame rotation on entry
-- `src/lib/draft/animations.ts` — **new**, shared variants + hooks
-- `src/index.css` — `~25` lines of new keyframes under a `/* Drafts polish */` block
-
-Total scope: 1 new small file, 5 edits. No backend.
+After approval, I'll implement in this order: shell components → CSS → AppLayout chrome guard → App.tsx route wrap → CompetePage banner & League trim → header skeleton polish.
