@@ -8,6 +8,7 @@ import {
 } from '@/hooks/usePickem';
 import { TeamLogo } from '@/components/pickem/TeamLogo';
 import { TurfBackdrop } from '@/components/pickem/TurfBackdrop';
+import { PickemShell } from '@/components/pickem/PickemShell';
 import { Confetti } from '@/components/Confetti';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -38,12 +39,13 @@ export default function PickemWeekResultsPage() {
   }, [podiumed]);
 
   return (
+    <PickemShell>
     <div className="space-y-4 pb-6">
       <Confetti active={podiumed} duration={2200} />
 
       <div className="flex items-center justify-between">
-        <Link to="/pickem" className="text-[12px] text-muted-foreground flex items-center gap-1 btn-press">
-          <ChevronLeft className="w-4 h-4" /> Pick'em
+        <Link to="/pickem" className="text-[12px] text-white/55 flex items-center gap-1 btn-press">
+          <ChevronLeft className="w-4 h-4" /> Pick Center
         </Link>
         <Link to={`/pickem/week/${num}`} className="text-[12px] text-gold font-extrabold btn-press">
           Slate
@@ -163,6 +165,7 @@ export default function PickemWeekResultsPage() {
         )}
       </div>
     </div>
+    </PickemShell>
   );
 }
 

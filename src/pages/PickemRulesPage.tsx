@@ -2,12 +2,14 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronLeft, Info, Lock, Trophy, Star, Zap } from 'lucide-react';
 import { TurfBackdrop } from '@/components/pickem/TurfBackdrop';
+import { PickemShell } from '@/components/pickem/PickemShell';
 
 export default function PickemRulesPage() {
   return (
+    <PickemShell>
     <div className="space-y-4 pb-6">
-      <Link to="/pickem" className="text-[12px] text-muted-foreground flex items-center gap-1 btn-press">
-        <ChevronLeft className="w-4 h-4" /> Pick'em
+      <Link to="/pickem" className="text-[12px] text-white/55 flex items-center gap-1 btn-press">
+        <ChevronLeft className="w-4 h-4" /> Pick Center
       </Link>
 
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
@@ -50,6 +52,7 @@ export default function PickemRulesPage() {
         For fun, not funds. No money, no gambling — just bragging rights with your crew.
       </p>
     </div>
+    </PickemShell>
   );
 }
 

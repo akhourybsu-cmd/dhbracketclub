@@ -15,6 +15,7 @@ import { WeekNavigator } from '@/components/pickem/WeekNavigator';
 import { TurfBackdrop } from '@/components/pickem/TurfBackdrop';
 import { KickoffCountdown } from '@/components/pickem/KickoffCountdown';
 import { PickSlipBar } from '@/components/pickem/PickSlipBar';
+import { PickemShell } from '@/components/pickem/PickemShell';
 
 export default function PickemWeekPage() {
   const { weekNumber } = useParams<{ weekNumber: string }>();
@@ -82,18 +83,21 @@ export default function PickemWeekPage() {
 
   if (!season || !week) {
     return (
-      <div className="space-y-3">
-        <Link to="/pickem" className="text-[12px] text-muted-foreground flex items-center gap-1">
-          <ChevronLeft className="w-4 h-4" /> Back
-        </Link>
-        <div className="glass-card p-6 text-center">
-          <p className="text-sm font-bold">{season ? 'Week not found' : 'No active season'}</p>
+      <PickemShell>
+        <div className="space-y-3">
+          <Link to="/pickem" className="text-[12px] text-white/55 flex items-center gap-1">
+            <ChevronLeft className="w-4 h-4" /> Back
+          </Link>
+          <div className="glass-card p-6 text-center">
+            <p className="text-sm font-bold text-white">{season ? 'Week not found' : 'No active season'}</p>
+          </div>
         </div>
-      </div>
+      </PickemShell>
     );
   }
 
   return (
+    <PickemShell>
     <div className="space-y-4 pb-32">{/* extra bottom space for sticky slip */}
       {/* Top bar */}
       <div className="flex items-center justify-between">
@@ -224,5 +228,6 @@ export default function PickemWeekPage() {
         />
       )}
     </div>
+    </PickemShell>
   );
 }

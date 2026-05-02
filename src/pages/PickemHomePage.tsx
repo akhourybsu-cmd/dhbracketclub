@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ChevronRight, Trophy, History as HistoryIcon, Info, Shield, ArrowRight,
-  Calendar, Sparkles, ListChecks, BarChart3, Flame,
+  Sparkles, ListChecks, BarChart3, Flame, ShieldCheck,
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,9 +12,39 @@ import {
 } from '@/hooks/usePickem';
 import { WeekStatusPill } from '@/components/pickem/WeekStatusPill';
 import { TurfBackdrop } from '@/components/pickem/TurfBackdrop';
-import { KickoffCountdown } from '@/components/pickem/KickoffCountdown';
+import { PickemShell } from '@/components/pickem/PickemShell';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+
+/* ──────────── Compact split-cell countdown for the scoreboard ──────────── */
+function CountdownCells({ target }: { target: string | Date }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000 * 30);
+    return () => clearInterval(id);
+  }, []);
+  const targetMs = typeof target === 'string' ? new Date(target).getTime() : target.getTime();
+  const diff = Math.max(0, targetMs - now);
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff / 3600000) % 24);
+  const mins = Math.floor((diff / 60000) % 60);
+  return (
+    <div className="flex items-stretch gap-1.5">
+      <div className="pk-digit">
+        <span className="pk-digit-num">{days}</span>
+        <span className="pk-digit-label">Days</span>
+      </div>
+      <div className="pk-digit">
+        <span className="pk-digit-num">{String(hours).padStart(2, '0')}</span>
+        <span className="pk-digit-label">Hrs</span>
+      </div>
+      <div className="pk-digit">
+        <span className="pk-digit-num">{String(mins).padStart(2, '0')}</span>
+        <span className="pk-digit-label">Min</span>
+      </div>
+    </div>
+  );
+}
 
 export default function PickemHomePage() {
   const { user } = useAuth();
@@ -43,9 +73,19 @@ export default function PickemHomePage() {
   const isPreseasonInaugural = season && season.status === 'upcoming' && totalGames === 0;
   const daysToKickoff = season ? differenceInDays(new Date(season.starts_at), new Date()) : 0;
 
+  // Primary CTA target & label
+  const ctaHref = week ? `/pickem/week/${week.week_number}` : '/pickem/rules';
+  const ctaLabel =
+    !season ? 'Season Soon'
+    : isPreseasonInaugural ? 'Enter Pick Center'
+    : weekStatus === 'open' || weekStatus === 'partially_locked' ? 'Lock Your Picks'
+    : weekStatus === 'scored' ? 'View Weekly Slate'
+    : 'Enter Pick Center';
+
   return (
-    <div className="space-y-4 pb-6">
-      {/* ─────────── Pick Center hero (turf) ─────────── */}
+    <PickemShell>
+      <div className="space-y-4 pb-6">
+      {/* ─────────── Pick Center hero ─────────── */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         {seasonLoading ? (
           <div className="glass-card p-5">
@@ -55,103 +95,97 @@ export default function PickemHomePage() {
         ) : !season ? (
           <div className="glass-card p-8 text-center">
             <Trophy className="w-7 h-7 mx-auto mb-2 text-muted-foreground/40" />
-            <p className="text-sm font-bold mb-1">No season yet</p>
+            <p className="text-sm font-bold mb-1 text-white">No season yet</p>
             <p className="text-xs text-muted-foreground">An admin needs to set up the season schedule.</p>
           </div>
         ) : (
-          <TurfBackdrop className="px-5 pt-5 pb-4">
-            {/* Broadcast lower-third label */}
+          <TurfBackdrop className="px-5 pt-4 pb-5">
+            {/* Field-stripe trim */}
+            <div className="pk-field-stripe mb-3" aria-hidden />
+
+            {/* Broadcast lower-third row */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-[hsl(45_95%_55%/0.15)] border border-[hsl(45_95%_55%/0.4)]">
-                  <Trophy className="w-3.5 h-3.5 text-gold" />
+                <span className="pk-shield">
+                  <ShieldCheck className="w-4 h-4" />
                 </span>
-                <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-gold/95">
-                  Pick Center
-                </p>
+                <div className="leading-tight">
+                  <p className="pk-section-label">Pick Center</p>
+                  <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white/55 mt-0.5">
+                    {season.year} NFL Season
+                  </p>
+                </div>
               </div>
               <WeekStatusPill status={weekStatus} />
             </div>
 
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.20em] text-white/55">
-              {season.year} NFL Season
-            </p>
-            <h1 className="text-[24px] sm:text-[26px] font-extrabold tracking-tight leading-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]">
+            <h1 className="text-[26px] sm:text-[28px] font-black tracking-tight leading-[1.05] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.65)]">
               {season.name}
             </h1>
+            <p className="text-[12px] text-white/70 mt-1 max-w-[34ch] leading-snug">
+              {isPreseasonInaugural
+                ? 'Season HQ is live. Picks open at kickoff — track standings, history, and bragging rights all year.'
+                : week
+                  ? `${week.label} · ${remaining > 0 ? `${remaining} pick${remaining === 1 ? '' : 's'} to lock` : 'Card complete'}`
+                  : 'Weekly slate drops once the schedule syncs.'}
+            </p>
 
-            {isPreseasonInaugural ? (
-              /* ── Preseason: kickoff countdown ── */
-              <div className="mt-4 space-y-3">
-                <div className="rounded-xl px-4 py-3 bg-black/30 border border-[hsl(45_95%_55%/0.35)] flex items-center gap-3">
-                  <Sparkles className="w-4 h-4 text-gold pk-pulse shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-gold/90">
-                      Kickoff Countdown
+            {/* ── Kickoff scoreboard (preseason) ── */}
+            {isPreseasonInaugural && (
+              <div className="pk-scoreboard mt-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="pk-scoreboard-label flex items-center gap-1.5">
+                      <Sparkles className="w-3 h-3 text-gold" /> Kickoff Countdown
                     </p>
-                    <p className="text-[15px] font-extrabold text-white tabular-nums leading-tight mt-0.5">
-                      <KickoffCountdown target={season.starts_at} />
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] text-white/60 font-bold">Sep</p>
-                    <p className="text-[18px] font-extrabold text-white tabular-nums leading-none">
-                      {format(new Date(season.starts_at), 'd')}
+                    <p className="text-[11px] text-white/65 mt-1">
+                      {format(new Date(season.starts_at), 'EEE, MMM d')}
                     </p>
                   </div>
+                  <CountdownCells target={season.starts_at} />
                 </div>
-                <p className="text-[11px] text-white/65 leading-relaxed">
-                  The slate drops in May 2026. Standings, picks, and bragging rights start at kickoff.
-                </p>
-              </div>
-            ) : week ? (
-              <Link to={`/pickem/week/${week.week_number}`} className="block group mt-4">
-                <motion.div
-                  whileTap={{ scale: 0.985 }}
-                  className="rounded-xl p-3.5 bg-black/35 border border-[hsl(45_95%_55%/0.40)] relative overflow-hidden"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-gold">
-                        {weekStatus === 'open' || weekStatus === 'partially_locked' ? 'Lock In Picks' : 'View Slate'}
-                      </p>
-                      <p className="text-[18px] font-extrabold mt-0.5 tabular-nums text-white leading-none">
-                        {pickedCount}<span className="text-white/55 font-bold">/{totalGames}</span>{' '}
-                        <span className="text-white/55 font-bold text-[12px] uppercase tracking-wider">picked</span>
-                      </p>
-                      <p className="text-[11px] text-white/60 mt-1">{week.label}</p>
-                    </div>
-                    <div className="shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gold/20 border border-gold/40">
-                      <ArrowRight className="w-5 h-5 text-gold group-hover:translate-x-0.5 transition-transform" />
-                    </div>
-                  </div>
-                  {totalGames > 0 && (
-                    <div className="mt-3 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${Math.round((pickedCount / totalGames) * 100)}%` }}
-                        transition={{ duration: 0.7, ease: 'easeOut' }}
-                        className="h-full rounded-full bg-gold"
-                        style={{ boxShadow: '0 0 8px hsl(var(--gold) / 0.6)' }}
-                      />
-                    </div>
-                  )}
-                  {remaining > 0 && (weekStatus === 'open' || weekStatus === 'partially_locked') && (
-                    <p className="text-[11px] text-gold/85 mt-2 font-bold">
-                      {remaining} game{remaining === 1 ? '' : 's'} still need a pick
-                    </p>
-                  )}
-                </motion.div>
-              </Link>
-            ) : (
-              <div className="mt-4 rounded-xl p-4 bg-black/30 border border-white/10">
-                <p className="text-[13px] font-extrabold text-white">Slate not yet imported</p>
-                <p className="text-[11px] text-white/60 mt-0.5">An admin will sync games soon.</p>
               </div>
             )}
 
-            {/* stat chip strip */}
-            <div className="mt-4 flex flex-wrap gap-1.5">
+            {/* ── Active-week progress scoreboard ── */}
+            {!isPreseasonInaugural && week && totalGames > 0 && (
+              <div className="pk-scoreboard mt-4">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <p className="pk-scoreboard-label">Pick Status · {week.label}</p>
+                  <p className="text-[11px] font-extrabold text-white/85 tabular-nums">
+                    {pickedCount}<span className="text-white/45">/{totalGames}</span>
+                  </p>
+                </div>
+                <div className="h-2 rounded-full bg-black/60 overflow-hidden border border-white/5">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.round((pickedCount / totalGames) * 100)}%` }}
+                    transition={{ duration: 0.7, ease: 'easeOut' }}
+                    className="h-full rounded-full bg-gradient-to-r from-gold via-gold to-[hsl(45_100%_70%)]"
+                    style={{ boxShadow: '0 0 10px hsl(var(--gold) / 0.65)' }}
+                  />
+                </div>
+                {nextLockGame && (
+                  <p className="text-[10px] text-white/55 mt-2 flex items-center gap-1">
+                    <Flame className="w-3 h-3 text-gold" />
+                    Next lock {format(new Date(nextLockGame.kickoff_at), 'EEE h:mm a')}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* ── Primary CTA ── */}
+            {(week || isPreseasonInaugural) && (
+              <Link to={ctaHref} className="block mt-4">
+                <button type="button" className="pk-cta">
+                  {ctaLabel}
+                  <ArrowRight className="w-4 h-4" strokeWidth={3} />
+                </button>
+              </Link>
+            )}
+
+            {/* ── Stat chip strip ── */}
+            <div className="mt-3 flex flex-wrap gap-1.5">
               {me?.rank != null && (
                 <span className="pk-chip pk-chip-gold">
                   <Trophy className="w-3 h-3" /> Rank #{me.rank}
@@ -167,14 +201,9 @@ export default function PickemHomePage() {
                   <ListChecks className="w-3 h-3" /> {totalGames} games
                 </span>
               )}
-              {nextLockGame && (
-                <span className="pk-chip">
-                  <Calendar className="w-3 h-3" /> Locks {format(new Date(nextLockGame.kickoff_at), 'EEE h:mm a')}
-                </span>
-              )}
               {isPreseasonInaugural && daysToKickoff > 0 && (
                 <span className="pk-chip pk-chip-gold">
-                  <Flame className="w-3 h-3" /> {daysToKickoff}d to kickoff
+                  <Flame className="w-3 h-3" /> Week 1 · {daysToKickoff}d
                 </span>
               )}
             </div>
@@ -183,58 +212,61 @@ export default function PickemHomePage() {
       </motion.div>
 
       {/* ─────────── Action tiles ─────────── */}
-      <div className="grid grid-cols-2 gap-2">
-        <ActionTile
-          to="/pickem/standings"
-          icon={<Trophy className="w-4 h-4 text-gold" />}
-          label="Standings"
-          sub="See the race"
-          stat={me?.rank ? `#${me.rank}` : null}
-        />
-        <ActionTile
-          to="/pickem/history"
-          icon={<HistoryIcon className="w-4 h-4 text-foreground/80" />}
-          label="My History"
-          sub="Past picks"
-          stat={me ? `${me.total_correct}/${me.total_picked}` : null}
-        />
-        <ActionTile
-          to="/pickem/rules"
-          icon={<Info className="w-4 h-4 text-primary" />}
-          label="Rules"
-          sub="How scoring works"
-        />
-        {isAdmin ? (
+      <div>
+        <div className="pk-broadcast-divider" aria-hidden />
+        <p className="pk-section-label mb-2 px-0.5">Pick Center Hub</p>
+        <div className="grid grid-cols-2 gap-2">
           <ActionTile
-            to="/pickem/admin"
-            icon={<Shield className="w-4 h-4 text-destructive" />}
-            label="Admin"
-            sub="Schedule & finals"
+            to="/pickem/standings"
+            icon={<Trophy className="w-4 h-4 text-gold" />}
+            label="Standings"
+            sub="The race"
+            stat={me?.rank ? `#${me.rank}` : null}
           />
-        ) : week ? (
           <ActionTile
-            to={`/pickem/week/${week.week_number}`}
-            icon={<Flame className="w-4 h-4 text-gold" />}
-            label="Pick Center"
-            sub="Lock this week"
-            highlight
+            to="/pickem/history"
+            icon={<HistoryIcon className="w-4 h-4 text-primary" />}
+            label="My History"
+            sub="Week record"
+            stat={me ? `${me.total_correct}/${me.total_picked}` : null}
           />
-        ) : (
           <ActionTile
             to="/pickem/rules"
-            icon={<Sparkles className="w-4 h-4 text-gold" />}
-            label="Get Ready"
-            sub="Review the rules"
+            icon={<Info className="w-4 h-4 text-white/85" />}
+            label="Playbook"
+            sub="Rules & scoring"
           />
-        )}
+          {isAdmin ? (
+            <ActionTile
+              to="/pickem/admin"
+              icon={<Shield className="w-4 h-4 text-destructive" />}
+              label="Admin"
+              sub="Schedule & finals"
+            />
+          ) : week ? (
+            <ActionTile
+              to={`/pickem/week/${week.week_number}`}
+              icon={<Flame className="w-4 h-4 text-gold" />}
+              label="Weekly Slate"
+              sub="Lock this week"
+              highlight
+            />
+          ) : (
+            <ActionTile
+              to="/pickem/rules"
+              icon={<Sparkles className="w-4 h-4 text-gold" />}
+              label="Get Ready"
+              sub="Review the rules"
+            />
+          )}
+        </div>
       </div>
 
       {/* ─────────── Recent results ─────────── */}
       {recentScored.length > 0 && (
         <div>
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-muted-foreground mb-2 px-1">
-            Recent Results
-          </p>
+          <div className="pk-broadcast-divider" aria-hidden />
+          <p className="pk-section-label mb-2 px-0.5">Recent Results</p>
           <div className="space-y-1.5">
             {recentScored.map((w, i) => (
               <motion.div key={w.id}
@@ -242,15 +274,15 @@ export default function PickemHomePage() {
                 transition={{ delay: i * 0.05 }}>
                 <Link to={`/pickem/week/${w.week_number}/results`}>
                   <div className="glass-card p-3 flex items-center gap-3 hover:bg-muted/30 transition-colors">
-                    <div className="w-9 h-9 rounded-lg flex flex-col items-center justify-center bg-gold/10 border border-gold/25">
+                    <div className="w-9 h-9 rounded-lg flex flex-col items-center justify-center bg-gold/10 border border-gold/30">
                       <p className="text-[7px] text-gold font-extrabold uppercase tracking-wider leading-none">Wk</p>
                       <p className="text-[12px] text-gold font-extrabold tabular-nums leading-none mt-0.5">{w.week_number}</p>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-extrabold truncate">{w.label}</p>
-                      <p className="text-[10px] text-muted-foreground">Final results in</p>
+                      <p className="text-[13px] font-extrabold truncate text-white">{w.label}</p>
+                      <p className="text-[10px] text-white/55">Final results in</p>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
+                    <ChevronRight className="w-4 h-4 text-white/40" />
                   </div>
                 </Link>
               </motion.div>
@@ -258,7 +290,8 @@ export default function PickemHomePage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </PickemShell>
   );
 }
 
@@ -275,24 +308,18 @@ function ActionTile({
 }) {
   return (
     <Link to={to} className="block">
-      <div
-        className="pk-tile btn-press"
-        style={highlight ? {
-          borderColor: 'hsl(45 95% 55% / 0.45)',
-          boxShadow: '0 0 14px hsl(45 95% 55% / 0.18)',
-        } : undefined}
-      >
+      <div className={`pk-tile btn-press ${highlight ? 'pk-tile-hot' : ''}`}>
         <div className="flex items-start justify-between relative">
-          <div className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-white/5 border border-white/10">
+          <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 border border-white/10">
             {icon}
           </div>
           {stat && (
-            <span className="text-[11px] font-extrabold tabular-nums text-gold">{stat}</span>
+            <span className="text-[12px] font-extrabold tabular-nums text-gold drop-shadow-[0_0_6px_hsl(45_95%_55%/0.4)]">{stat}</span>
           )}
         </div>
         <div className="relative">
-          <p className="text-[13px] font-extrabold tracking-tight text-white">{label}</p>
-          <p className="text-[10px] text-white/55 mt-0.5">{sub}</p>
+          <p className="text-[14px] font-extrabold tracking-tight text-white">{label}</p>
+          <p className="text-[10px] text-white/55 mt-0.5 uppercase tracking-wider font-bold">{sub}</p>
         </div>
       </div>
     </Link>

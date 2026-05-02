@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useActiveSeason, useSeasonWeeks } from '@/hooks/usePickem';
 import { TurfBackdrop } from '@/components/pickem/TurfBackdrop';
+import { PickemShell } from '@/components/pickem/PickemShell';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
@@ -65,9 +66,10 @@ export default function PickemHistoryPage() {
   }, [stats]);
 
   return (
+    <PickemShell>
     <div className="space-y-4 pb-6">
-      <Link to="/pickem" className="text-[12px] text-muted-foreground flex items-center gap-1 btn-press">
-        <ChevronLeft className="w-4 h-4" /> Pick'em
+      <Link to="/pickem" className="text-[12px] text-white/55 flex items-center gap-1 btn-press">
+        <ChevronLeft className="w-4 h-4" /> Pick Center
       </Link>
 
       {/* Hero header with overall record — turf */}
@@ -135,6 +137,7 @@ export default function PickemHistoryPage() {
         })}
       </div>
     </div>
+    </PickemShell>
   );
 }
 
