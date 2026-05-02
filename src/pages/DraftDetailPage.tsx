@@ -1683,11 +1683,11 @@ export default function DraftDetailPage() {
                                 return (
                                 <div key={pr.pick_id} className="px-4 py-2.5 flex items-start gap-3">
                                   <div className={cn(
-                                    "flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-[12px] font-extrabold",
-                                    pr.score >= 8 && "bg-success/15 text-success",
-                                    pr.score >= 6 && pr.score < 8 && "bg-primary/15 text-primary",
-                                    pr.score >= 4 && pr.score < 6 && "bg-warning/15 text-warning",
-                                    pr.score < 4 && "bg-destructive/15 text-destructive",
+                                    "flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-[12px] font-extrabold border",
+                                    pr.score >= 8 && "bg-gold/15 text-gold border-gold/40",
+                                    pr.score >= 6 && pr.score < 8 && "bg-success/15 text-success border-success/30",
+                                    pr.score >= 4 && pr.score < 6 && "bg-warning/15 text-warning border-warning/30",
+                                    pr.score < 4 && "bg-destructive/15 text-destructive border-destructive/30",
                                   )}>
                                     {pr.score.toFixed(1)}
                                   </div>
