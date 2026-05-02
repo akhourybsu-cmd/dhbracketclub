@@ -2192,6 +2192,14 @@ export default function CompetePage() {
           </TabsList>
 
           <TabsContent value="league" className="space-y-3">
+            {/* Flashy launcher into the standalone Draft Arena shell — always pinned at top */}
+            <DraftArenaEnterBanner
+              season={season}
+              entries={entries}
+              totalDrafts={totalDrafts}
+              myUserId={user?.id}
+            />
+
             {seasonLoading ? (
               <div className="space-y-3">
                 {[1, 2, 3].map(i => (
