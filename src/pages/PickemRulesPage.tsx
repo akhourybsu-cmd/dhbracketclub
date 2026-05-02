@@ -52,6 +52,7 @@ export default function PickemRulesPage() {
         For fun, not funds. No money, no gambling — just bragging rights with your crew.
       </p>
     </div>
+    </PickemShell>
   );
 }
 
