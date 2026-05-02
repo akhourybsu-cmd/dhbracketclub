@@ -2298,3 +2298,21 @@
   border-radius: 9999px;
   opacity: 0.55;
 }
+
+/* Pick'em banner skeleton — gold/emerald shimmer matching Pick Center palette */
+.pk-skeleton {
+  background:
+    linear-gradient(
+      90deg,
+      hsl(45 50% 55% / 0.10) 0%,
+      hsl(45 95% 65% / 0.28) 50%,
+      hsl(45 50% 55% / 0.10) 100%
+    );
+  background-size: 200% 100%;
+  animation: pk-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes pk-skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

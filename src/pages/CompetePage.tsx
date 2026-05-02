@@ -1627,6 +1627,7 @@ function LifetimeStatsCard({ userId }: { userId?: string }) {
 /* ── NFL Pick'em featured card — standalone "Pick Center" enter banner ── */
 function PickemCompeteCard() {
   const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
   const [season, setSeason] = useState<any>(null);
   const [week, setWeek] = useState<any>(null);
   const [pickedCount, setPickedCount] = useState(0);
@@ -1636,46 +1637,54 @@ function PickemCompeteCard() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const { data: s } = await (supabase as any)
-        .from('nfl_seasons').select('*')
-        .order('year', { ascending: false }).limit(1).maybeSingle();
-      if (!mounted || !s) return;
-      setSeason(s);
+      try {
+        const { data: s } = await (supabase as any)
+          .from('nfl_seasons').select('*')
+          .order('year', { ascending: false }).limit(1).maybeSingle();
+        if (!mounted) return;
+        if (!s) { setLoading(false); return; }
+        setSeason(s);
 
-      const { data: w } = await (supabase as any)
-        .from('nfl_weeks').select('*')
-        .eq('season_id', s.id).eq('week_number', s.current_week).maybeSingle();
-      if (!mounted) return;
-      setWeek(w);
+        const { data: w } = await (supabase as any)
+          .from('nfl_weeks').select('*')
+          .eq('season_id', s.id).eq('week_number', s.current_week).maybeSingle();
+        if (!mounted) return;
+        setWeek(w);
 
-      if (w) {
-        const { count: gameCount } = await (supabase as any)
-          .from('nfl_games').select('id', { count: 'exact', head: true }).eq('week_id', w.id);
-        setTotalGames(gameCount || 0);
+        if (w) {
+          const { count: gameCount } = await (supabase as any)
+            .from('nfl_games').select('id', { count: 'exact', head: true }).eq('week_id', w.id);
+          if (!mounted) return;
+          setTotalGames(gameCount || 0);
+
+          if (user) {
+            const { count: pickCount } = await (supabase as any)
+              .from('nfl_picks').select('id', { count: 'exact', head: true })
+              .eq('week_id', w.id).eq('user_id', user.id);
+            if (!mounted) return;
+            setPickedCount(pickCount || 0);
+          }
+        }
 
         if (user) {
-          const { count: pickCount } = await (supabase as any)
-            .from('nfl_picks').select('id', { count: 'exact', head: true })
-            .eq('week_id', w.id).eq('user_id', user.id);
-          setPickedCount(pickCount || 0);
+          const { data: st } = await (supabase as any)
+            .from('nfl_season_standings').select('rank, total_correct, total_picked')
+            .eq('season_id', s.id).eq('user_id', user.id).maybeSingle();
+          if (!mounted) return;
+          setMyStanding(st);
         }
-      }
-
-      if (user) {
-        const { data: st } = await (supabase as any)
-          .from('nfl_season_standings').select('rank, total_correct, total_picked')
-          .eq('season_id', s.id).eq('user_id', user.id).maybeSingle();
-        if (mounted) setMyStanding(st);
+      } finally {
+        if (mounted) setLoading(false);
       }
     })();
     return () => { mounted = false; };
   }, [user]);
 
-  const isLive = season?.status === 'active' && week?.status !== 'upcoming';
+  const isLive = !loading && season?.status === 'active' && week?.status !== 'upcoming';
   const remaining = Math.max(0, totalGames - pickedCount);
 
   const subline = !season
-    ? 'Loading broadcast feed…'
+    ? 'Tuning broadcast feed…'
     : isLive
       ? `${week?.label || `Week ${season.current_week}`} · ${remaining > 0 ? `${remaining} games left` : 'All picks in'}`
       : season.status === 'upcoming'
@@ -1744,20 +1753,25 @@ function PickemCompeteCard() {
 
             {/* Title + meta + CTA */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
+              <div className="flex items-center gap-2 mb-0.5 h-3">
                 <span
                   className="text-[9px] font-extrabold uppercase tracking-[0.22em]"
                   style={{ color: 'hsl(45 95% 65%)' }}
                 >
                   ◆ NFL Pick'em
                 </span>
-                {isLive && (
+                {loading ? (
+                  <span
+                    aria-hidden
+                    className="inline-block h-2.5 w-10 rounded-full pk-skeleton"
+                  />
+                ) : isLive ? (
                   <span className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider"
                     style={{ color: 'hsl(152 70% 65%)' }}>
                     <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'hsl(152 70% 55%)' }} />
                     Live
                   </span>
-                )}
+                ) : null}
               </div>
               <h2
                 className="font-extrabold text-[22px] leading-none tracking-tight mb-1.5"
@@ -1771,14 +1785,21 @@ function PickemCompeteCard() {
               >
                 Pick Center
               </h2>
-              <p className="text-[10px] font-semibold mb-2.5 truncate" style={{ color: 'hsl(150 12% 78%)' }}>
-                {subline}
-                {myStanding && (
-                  <span className="ml-1.5" style={{ color: 'hsl(45 95% 65%)' }}>
-                    · #{myStanding.rank ?? '—'} · {myStanding.total_correct}/{myStanding.total_picked}
-                  </span>
+              {/* Reserve fixed line height to prevent layout shift */}
+              <div className="mb-2.5 h-3.5 flex items-center">
+                {loading ? (
+                  <span aria-hidden className="inline-block h-2.5 w-44 max-w-full rounded-full pk-skeleton" />
+                ) : (
+                  <p className="text-[10px] font-semibold truncate" style={{ color: 'hsl(150 12% 78%)' }}>
+                    {subline}
+                    {myStanding && (
+                      <span className="ml-1.5" style={{ color: 'hsl(45 95% 65%)' }}>
+                        · #{myStanding.rank ?? '—'} · {myStanding.total_correct}/{myStanding.total_picked}
+                      </span>
+                    )}
+                  </p>
                 )}
-              </p>
+              </div>
               <div
                 className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider"
                 style={{
