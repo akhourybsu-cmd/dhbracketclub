@@ -2642,12 +2642,39 @@
    pre-existing utility classes automatically render with arena-correct
    contrast. This avoids touching dozens of components individually. */
 .da-mode {
+  /* Force the dark arena palette regardless of app light/dark theme —
+     Draft Arena is always a gold-lit charcoal coliseum. This keeps every
+     bg-card, bg-background, bg-muted, bg-popover surface dark so the
+     near-white text below always has correct contrast (matches the
+     Pick'em / Nexus / Rune Delve standalone shell pattern). */
+  --background: 160 50% 4%;
+  --card: 160 35% 7%;
+  --popover: 160 38% 8%;
+  --muted: 160 25% 12%;
+  --border: 45 30% 18%;
+  --input: 45 30% 18%;
+  --secondary: 160 25% 10%;
+  --foreground: 0 0% 100%;
+  --card-foreground: 0 0% 100%;
+  --popover-foreground: 0 0% 100%;
+  --secondary-foreground: 0 0% 100%;
   /* Warm ivory grey — readable at 60% opacity over the gold-tinted dark surface */
   --muted-foreground: 45 25% 78%;
   /* Gold primary accents inside arena */
   --primary: 45 95% 60%;
   --primary-foreground: 160 40% 6%;
+
+  color: hsl(0 0% 100%);
 }
+
+/* Belt-and-suspenders: low-opacity foreground utility floors so titles and
+   info text inside the arena always read crisp on the charcoal surface,
+   even when the global app theme is light. */
+.da-mode [class*="text-foreground/5"],
+.da-mode [class*="text-foreground/6"] { color: hsl(45 20% 80%) !important; }
+.da-mode [class*="text-foreground/7"] { color: hsl(45 20% 86%) !important; }
+.da-mode [class*="text-foreground/8"] { color: hsl(45 15% 92%) !important; }
+.da-mode [class*="text-foreground/9"] { color: hsl(45 10% 97%) !important; }
 /* Replace stray emerald primary tints with gold */
 .da-mode .text-primary { color: hsl(45 95% 65%); }
 .da-mode .bg-primary\/10 { background-color: hsl(45 95% 55% / 0.14); }
