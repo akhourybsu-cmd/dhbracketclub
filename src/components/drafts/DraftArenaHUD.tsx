@@ -30,8 +30,10 @@ export function DraftArenaHUD() {
     return 'Draft Arena';
   })();
 
-  // Season chip — short tag like "S4"
-  const seasonChip = season ? `S${season.season_number ?? ''}`.trim() : null;
+  // Season chip — short tag (uses season_label like "S4" if available, else year)
+  const seasonChip = season
+    ? (season.season_label || (season.year ? `'${String(season.year).slice(-2)}` : null))
+    : null;
 
   const handleBack = () => {
     if (isHub) {
