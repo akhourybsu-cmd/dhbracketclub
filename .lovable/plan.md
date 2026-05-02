@@ -1,104 +1,118 @@
 
-# Plan: Drafts → Standalone "Draft Arena" Experience
+# Draft Arena — Visual Consistency Pass
 
-Goal: keep all draft logic, pages, and routes intact, but wrap every `/drafts/*` route in a full-screen game shell (own HUD, boot intro, skinned background, no DH bottom nav/sidebar) — exactly like Pick'em / Nexus / Rune Delve. The Compete → League tab becomes a glossy front-facing standings hub with a flashy "Enter Draft Arena" banner that launches into the shell.
+The shell (`DraftArenaLayout` + HUD + Boot + `.da-mode`) is in place and the gold/charcoal palette renders correctly inside `/drafts/*`. But the five draft pages still use generic DH chrome (`glass-card`, `bg-muted/40` back buttons, emerald `text-primary` accents, `bg-success` status pills). Inside the gold arena shell those primitives feel borrowed from the main app instead of from the Arena.
 
-## What stays untouched
+Goal: push the gold + charcoal identity all the way down through every draft page, while keeping every hook, query, realtime subscription, status string, and route exactly as-is.
 
-- All draft data, hooks, realtime subscriptions, season logic, playoff logic.
-- `DraftsListPage`, `DraftDetailPage`, `CreateDraftPage`, `SeasonsArchivePage`, `SeasonArchiveDetailPage` — internals unchanged. They simply render inside a new shell.
-- All routes keep the same paths. Deep links, push notifications, share URLs continue to work.
+## What changes (and what doesn't)
 
-## 1. New shell components (mirrors Pick'em)
+Changed: surface colors, status-pill palette, back-button skin, page-header icon tints, "season chip" treatment, skeleton shimmer color, hero card glow on `DraftDetailPage`, and a few cross-page `text-primary` → gold swaps **only where it visually clashes inside the arena**. Status meaning and labels stay identical ("Setup" / "In Progress" / "Complete").
 
-Create `src/components/drafts/`:
+Not touched: `DraftArenaLayout`, `DraftArenaHUD`, `DraftArenaBoot`, `DraftArenaExitDialog`, `App.tsx` routing, `AppLayout.tsx` chrome guard, `CompetePage` Draft Arena enter banner, draft engine, snake logic, AI suggestions, enrichment, scoring, repick, dispute system, podium logic, league standings math, push payloads, share URLs, db schema.
 
-- `DraftArenaLayout.tsx` — wraps children in `.da-mode .da-shell`, mounts HUD + Boot, owns `min-h-[100dvh]` and safe-area padding. Same structure as `PickemLayout`.
-- `DraftArenaHUD.tsx` — sticky 12-px header with Back button, gold-on-charcoal skin, emblem, contextual subtitle per route ("Live Draft Room", "Season Archive", "New Draft", "All Drafts"), and a season chip (e.g. `S4 · D7`) pulled from `useCurrentSeason`. Right-side icon button to "Standings" (jumps back to `/compete` league tab).
-- `DraftArenaBoot.tsx` — one-shot per session boot intro (sessionStorage key `da_boot_played_v1`) with the existing Bookmark/trophy emblem, gold/emerald glow, rotating dashed ring, 3-stage progress strip ("Loading league data…", "Syncing standings…", "Draft Arena online").
-- `DraftArenaExitDialog.tsx` — confirms exit back to `/compete` from the hub route. Copy: "Leave the Draft Arena?".
+## 1. New shared CSS utilities (`src/index.css`, append to the existing `.da-mode` block)
 
-Skin: reuse the **gold + charcoal** identity already used by SeasonHeaderCard (`hsl(var(--gold))` + `hsl(160 50% 4%)`). This visually distinguishes it from Pick'em (gold+emerald) and Nexus (cyan).
+Add a small set of reusable arena-flavored primitives so pages can opt into the look without inline-styling every card:
 
-## 2. CSS additions in `src/index.css`
+- `.da-glass` — gold-tinted variant of `glass-card` (charcoal gradient, hairline gold border, soft inner highlight). Used for primary content cards inside `/drafts/*`.
+- `.da-back` — back-button skin for the gold-on-charcoal aesthetic (replaces inline `bg-muted/40`).
+- `.da-page-icon` — gradient-filled icon tile (gold radial → emerald floor) for page headers.
+- `.da-status-setup`, `.da-status-live`, `.da-status-complete` — three status pill variants tuned for the arena background. Live = emerald (kept), Complete = **gold** (instead of emerald primary) to read as "trophy", Setup = neutral charcoal.
+- `.da-divider` — 1px gold/8% horizontal rule for in-card section breaks.
+- `.da-shimmer` — overrides `skeleton-shimmer` color stops so loading skeletons inside `/drafts/*` shimmer in warm gold instead of cool grey.
 
-Namespaced under `.da-mode`:
+These additions are namespaced inside `.da-mode` selectors where appropriate, so they only apply inside the Arena shell. DH Club pages remain untouched.
 
-- `.da-shell` ambient background — radial gold glow at top, subtle emerald floor glow, layered charcoal gradient.
-- `.da-mote` decorative drifting gold particles (analogous to `.rd-mote`).
-- `@keyframes daBootRingSpin`, `daHudShimmer` — already partially covered by existing draft animations; reuse `draftEdgeShimmer` from the previous pass.
-- `.da-card`, `.da-pill`, `.da-cta` utility classes so existing draft pages can be lightly upgraded without rewrites.
+## 2. `DraftsListPage.tsx`
 
-## 3. Route wrapping in `src/App.tsx`
+- Replace the page-header icon block with `.da-page-icon` (already gold-tinted; removes inline `style={{ background: ... }}`).
+- Swap "Seasons" / "Create" buttons to the gold arena treatment (`.da-cta` for Create, ghost-gold outline for Seasons). Keeps icons and routes.
+- Cumulative stats card: `glass-card` → `.da-glass`. Divider line uses `.da-divider`.
+- Draft row cards: keep the existing `.draft-row-live` / `.draft-row-mine` / `.arena-edge` modifiers (they already work in arena), but switch the base `glass-card` to `.da-glass` and update `statusConfig`:
+  - `setup` → `.da-status-setup`
+  - `in_progress` → `.da-status-live` (still emerald — reads as "live now")
+  - `complete` → `.da-status-complete` (gold instead of emerald primary)
+- Skeleton shimmer rows use `.da-shimmer`.
+- Empty state icon tile re-uses `.da-page-icon`.
 
-Wrap the five draft routes:
+## 3. `DraftDetailPage.tsx` (surgical, large file)
 
-```text
-/drafts                       → <DraftArenaLayout><DraftsListPage/></DraftArenaLayout>
-/drafts/create                → <DraftArenaLayout><CreateDraftPage/></DraftArenaLayout>
-/drafts/:draftId              → <DraftArenaLayout><DraftDetailPage/></DraftArenaLayout>
-/drafts/seasons               → <DraftArenaLayout><SeasonsArchivePage/></DraftArenaLayout>
-/drafts/seasons/:seasonId     → <DraftArenaLayout><SeasonArchiveDetailPage/></DraftArenaLayout>
-```
+Only the **chrome** changes; nothing in the pick/edit/dispute/playoff logic moves.
 
-## 4. Hide DH chrome on `/drafts/*`
+- Header card wrapper (around L818): `glass-card` → `.da-glass`, with the gold edge shimmer (`draft-edge-shimmer`) re-enabled on the hero so it reads as "in the arena".
+- Status pill (L862–871): swap the three branch classes to `.da-status-setup` / `.da-status-live` / `.da-status-complete`.
+- Stat cards row (Players / Picks / Round, L906–922): keep structure, but the three icons standardize on gold (`hsl(var(--gold))`) — `Trophy` for Round currently uses `text-primary`, switch to gold for arena consistency.
+- "Season Draft #" chip (L924–928) and "Add to Season" CTA (L929–947): already gold — leave as-is.
+- "Spectating" pill (L949–956): change `bg-muted/40 border-border/40` → `.da-pill` variant (muted charcoal with gold hairline) so it doesn't look like a stray DH chip.
+- "Enriching picks with AI…" strip (L989–991): `text-primary` → gold for arena consistency.
+- Pick-history round dividers and the fresh-pick sweep keep their existing animations (already arena-flavored from the previous pass).
+- Inline pick input cards (L1316, L1141 backgrounds): the inline `hsl(var(--card))` backdrops get a subtle gold inner-glow when it's the active picker's row — uses an extra `style` layer, no structural changes.
+- Report card "Draft Complete 🎉" + "Generating draft report…" (L1502–1521): emerald `text-primary` → gold so the trophy moment reads as gold-trophy, not emerald-active.
+- Per-pick rating chips (L1690): keep emerald for mid-scores, but elevate the 8+ "elite" tier to gold border to feel arena-special.
 
-In `src/components/AppLayout.tsx`, extend the `isGameShell` check:
+All `bg-muted/30 border-border/30` "card-on-card" sub-blocks (disputes list, pick rows in the report) get a quieter charcoal recipe so they don't fight the gold arena background.
 
-```ts
-const isDrafts = location.pathname.startsWith('/drafts');
-const isGameShell = isRuneDelve || isNexus || isPickem || isDrafts;
-```
+## 4. `CreateDraftPage.tsx`
 
-Bottom nav and desktop sidebar disappear, exactly as they do for Pick'em.
+- Back link `<Link to="/drafts" className="back-link">` → `.da-back` styling (kept as a Link, just restyled).
+- `page-header-icon` → `.da-page-icon`.
+- Form card `glass-card` → `.da-glass`.
+- Round-selector active state: `bg-primary text-primary-foreground` (emerald) → gold (`background: linear-gradient(...gold...)`, dark text). This single change makes the form feel arena-native.
+- Submit button: `Button` keeps its component but gains `.da-cta` className for the gold gradient.
 
-## 5. Compete → League tab redesign
+## 5. `SeasonsArchivePage.tsx`
 
-The "League" tab in `CompetePage.tsx` becomes a **front-facing showcase**, not a launcher to scattered pages. Layout, top to bottom:
+- Back button `bg-muted/40` → `.da-back`.
+- `page-header-icon` already gold via inline style — leave as-is, but add `boxShadow` consistency via `.da-page-icon`.
+- `STATUS_PRESET` palette swap:
+  - `upcoming.cls` → `.da-status-setup`
+  - `regular_season.cls` → `.da-status-live` (kept emerald = active)
+  - `playoffs.cls` → keeps gold (already gold)
+  - `complete.cls` → `.da-status-complete` (gold trophy, not emerald primary)
+- Skeleton rows use `.da-shimmer`.
+- `SeasonCard` `glass-card` → `.da-glass`. The active-season gold left-border stays. Archived rows get a subtle silver left-border (`hsl(var(--silver))`) so the active vs archived distinction stays sharp inside the gold shell.
 
-1. **Draft Arena Enter Banner** (new, top of column) — flashy hero card mirroring the Rune Delve / Nexus / Pick'em banners but in the gold skin. Emblem (Bookmark/trophy), title "Draft Arena", subline derived from current state ("S4 · Draft 7 of 12 — You're on the clock", or "S4 Playoffs · Round 1 in progress", or "S4 Complete · View champion"), big gold "Enter Arena" CTA → `/drafts`. Pulse glow when there's a draft user can act on.
-2. **Season hero** (existing `SeasonHeaderCard`) — kept as-is.
-3. **Standings card** (existing `StandingsCard`) — kept as-is, this is the "front-facing standings information".
-4. **Playoff picture / control center** — kept.
-5. **Season draft history** (existing `SeasonDraftHistory`) — kept; each row still deep-links into `/drafts/:id` (which now opens inside the shell).
-6. **Lifetime stats** — kept.
-7. **Footer chip row**: trim to a single "Seasons Archive" link; remove the redundant "New Draft" pill (now lives in the Arena HUD/list page).
+## 6. `SeasonArchiveDetailPage.tsx`
 
-The League tab keeps DH chrome (it's part of Compete), but every link out goes into the shelled `/drafts/*` routes.
+- Back button `bg-muted/40` → `.da-back`.
+- All `glass-card` → `.da-glass`.
+- "Final" podium strip (L99–131) and "Season in progress" card (L142–160): already gold-tinted via inline styles — keep, but standardize the inline `border` to use the same `hsl(45 80% 50% / 0.18)` as `.da-glass` so they sit flush with surrounding cards.
+- Sub-sections (`bg-muted/20`, `bg-muted/30`) inside Standings, Playoff Bracket, Drafts list: replace with a tokenized `.da-subcard` (charcoal 35% over arena bg, 1px gold-8 hairline) — same density, but reads as one continuous arena material.
+- Top-3 standings rows (L205): keep `bg-gold/5 border-gold/15` — already on-palette.
+- "View Live" mini-button (L154–158) → `.da-cta` (small variant via inline height override).
 
-## 6. Polish inside the shelled draft pages
+## 7. Skeleton + loading polish across all five pages
 
-No structural changes — purely surface upgrades that ride on the existing animation utilities from `src/lib/draft/animations.ts`:
+Every existing skeleton block (`.skeleton-shimmer`) renders cool grey, which clashes inside the warm gold shell. Adding `.da-shimmer` overrides the gradient stops to a faint gold sweep over charcoal. No layout shift, no extra DOM — purely a class swap.
 
-- `DraftsListPage`: outer container gets `.da-shell-section` padding tweaks; existing live-row glow and stagger spring already in place from the previous pass — keep.
-- `DraftDetailPage`: existing On-the-Clock pulse hero, round dividers, and fresh-pick sweep already in place — keep. Add a subtle gold edge shimmer on the hero card so it feels "in the arena". Realtime is already wired through `useDraftUpdates`.
-- `CreateDraftPage`, `SeasonsArchivePage`, `SeasonArchiveDetailPage`: wrap content in a `.da-card` shell so they pick up the arena chrome without touching internal logic.
+## 8. Accessibility / contrast checks
 
-## 7. Loading / realtime story
+- Gold-on-charcoal status pills: tuned to AA at 12px/600 — `hsl(45 95% 65%)` text on `hsl(45 95% 55% / 0.12)` background passes against the charcoal arena floor.
+- Live emerald pill stays at current contrast (already AA).
+- Back-button focus ring: `.da-back` adds `focus-visible:ring-1 ring-gold/40` so keyboard nav remains visible on the dark shell.
 
-- `DraftArenaLayout` renders HUD immediately so navigating between draft pages never shows a blank header (matches Pick'em).
-- Each page keeps its own React Query loaders; we add a unified high-fidelity skeleton in `DraftsListPage` and `DraftDetailPage` headers so the layout never shifts during data fetch.
-- Realtime: `useDraftListUpdates` + `useDraftUpdates` already update in place. No changes needed — the shell does not interrupt subscriptions.
-
-## 8. Files touched
-
-New:
-- `src/components/drafts/DraftArenaLayout.tsx`
-- `src/components/drafts/DraftArenaHUD.tsx`
-- `src/components/drafts/DraftArenaBoot.tsx`
-- `src/components/drafts/DraftArenaExitDialog.tsx`
+## 9. Files touched
 
 Edited:
-- `src/App.tsx` — wrap 5 draft routes in `DraftArenaLayout`.
-- `src/components/AppLayout.tsx` — add `/drafts` to `isGameShell`.
-- `src/pages/CompetePage.tsx` — add `DraftArenaEnterBanner` at top of League tab; trim redundant footer chips.
-- `src/index.css` — add `.da-mode`, `.da-shell`, `.da-mote`, `.da-card`, `.da-cta` keyframes/utilities.
-- Light surface tweaks to `DraftsListPage.tsx` / `DraftDetailPage.tsx` headers (skeletons + arena-edge hero shimmer).
+- `src/index.css` — append `.da-glass`, `.da-back`, `.da-page-icon`, `.da-status-*`, `.da-divider`, `.da-shimmer`, `.da-subcard` inside the existing `.da-mode` block.
+- `src/pages/DraftsListPage.tsx` — class swaps + `statusConfig` palette.
+- `src/pages/DraftDetailPage.tsx` — chrome-only swaps in the header/stat-row/status-pill/report sections.
+- `src/pages/CreateDraftPage.tsx` — back link, form card, round selector, submit button.
+- `src/pages/SeasonsArchivePage.tsx` — back button, status preset palette, season card surfaces.
+- `src/pages/SeasonArchiveDetailPage.tsx` — back button, all card surfaces, sub-card recipe.
 
-## 9. Out of scope (will not change)
+Not edited:
+- `src/components/drafts/DraftArenaLayout.tsx`, `DraftArenaHUD.tsx`, `DraftArenaBoot.tsx`, `DraftArenaExitDialog.tsx`.
+- `src/App.tsx`, `src/components/AppLayout.tsx`.
+- `src/pages/CompetePage.tsx` (the enter banner is already correct).
+- Any draft hook, lib, or edge function.
 
-- Draft engine, snake logic, randomization, AI suggestions, enrichment, scoring, repick, dispute system, podium logic, league standings math.
-- Push notification payloads, share URLs, deep-link routes.
-- Any database schema or edge function.
+## 10. Implementation order after approval
 
-After approval, I'll implement in this order: shell components → CSS → AppLayout chrome guard → App.tsx route wrap → CompetePage banner & League trim → header skeleton polish.
+1. Add the new `.da-*` utilities to `src/index.css`.
+2. Reskin `DraftsListPage` (most-visited surface, fastest visual win).
+3. Reskin `DraftDetailPage` chrome (largest file, surgical).
+4. Reskin `CreateDraftPage`, `SeasonsArchivePage`, `SeasonArchiveDetailPage` (small, parallelizable edits).
+5. Visual QA: viewport 411×734 and 390×844, walk `/drafts → /drafts/:id (setup, live, complete) → /drafts/seasons → /drafts/seasons/:id → /drafts/create`, confirm no DH-blue/emerald chrome leaks into the arena and no layout shift.
+
