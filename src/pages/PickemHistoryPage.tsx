@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronLeft, History, ChevronRight } from 'lucide-react';
+import { History, ChevronRight } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useActiveSeason, useSeasonWeeks } from '@/hooks/usePickem';

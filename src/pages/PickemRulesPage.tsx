@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronLeft, Info, Lock, Trophy, Star, Zap } from 'lucide-react';
+import { Info, Lock, Trophy, Star, Zap } from 'lucide-react';
 import { TurfBackdrop } from '@/components/pickem/TurfBackdrop';
 import { PickemShell } from '@/components/pickem/PickemShell';
 

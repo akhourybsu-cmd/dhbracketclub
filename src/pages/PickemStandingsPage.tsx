@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronLeft, Trophy, Crown, Flame } from 'lucide-react';
+import { Trophy, Crown, Flame } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useActiveSeason, useSeasonStandings } from '@/hooks/usePickem';
 import { TurfBackdrop } from '@/components/pickem/TurfBackdrop';

@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronLeft, Trophy, Check, X } from 'lucide-react';
+import { Trophy, Check, X } from 'lucide-react';
 import { useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
