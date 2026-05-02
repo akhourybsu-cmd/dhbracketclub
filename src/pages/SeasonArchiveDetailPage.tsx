@@ -100,7 +100,7 @@ export default function SeasonArchiveDetailPage() {
           <motion.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            className="glass-card p-3 flex items-center gap-2.5 overflow-x-auto"
+            className="da-glass p-3 flex items-center gap-2.5 overflow-x-auto"
             style={{
               background: 'linear-gradient(135deg, hsl(var(--gold) / 0.08), transparent 60%), hsl(var(--card))',
               border: '1px solid hsl(var(--gold) / 0.18)',
@@ -141,7 +141,7 @@ export default function SeasonArchiveDetailPage() {
 
         {!isComplete && (
           <div
-            className="glass-card p-4 flex items-center gap-3 border-gold/15"
+            className="da-glass p-4 flex items-center gap-3 border-gold/15"
             style={{ background: 'linear-gradient(135deg, hsl(var(--gold) / 0.06), transparent 60%), hsl(var(--card))' }}
           >
             <Sparkles className="w-5 h-5 flex-shrink-0" style={{ color: 'hsl(var(--gold))' }} />
@@ -160,7 +160,7 @@ export default function SeasonArchiveDetailPage() {
         )}
 
         {/* Season summary stats */}
-        <div className="glass-card p-4">
+        <div className="da-glass p-4">
           <div className="flex items-center gap-1.5 mb-3">
             <BarChart3 className="w-3.5 h-3.5 text-muted-foreground" />
             <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground/70">
@@ -185,7 +185,7 @@ export default function SeasonArchiveDetailPage() {
 
         {/* Final Standings */}
         {standings.length > 0 && (
-          <div className="glass-card p-4">
+          <div className="da-glass p-4">
             <div className="flex items-center gap-1.5 mb-3">
               <Trophy className="w-3.5 h-3.5" style={{ color: 'hsl(var(--gold))' }} />
               <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground/70">
@@ -233,7 +233,7 @@ export default function SeasonArchiveDetailPage() {
 
         {/* Playoff results */}
         {matches.length > 0 && (
-          <div className="glass-card p-4">
+          <div className="da-glass p-4">
             <div className="flex items-center gap-1.5 mb-3">
               <Swords className="w-3.5 h-3.5" style={{ color: 'hsl(var(--gold))' }} />
               <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground/70">
@@ -298,7 +298,7 @@ export default function SeasonArchiveDetailPage() {
 
         {/* Regular season drafts */}
         {allDrafts.length > 0 && (
-          <div className="glass-card p-4">
+          <div className="da-glass p-4">
             <div className="flex items-center gap-1.5 mb-3">
               <Bookmark className="w-3.5 h-3.5" style={{ color: 'hsl(var(--gold))' }} />
               <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground/70">
