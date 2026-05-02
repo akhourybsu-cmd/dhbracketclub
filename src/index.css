@@ -2635,3 +2635,25 @@
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+/* ── Arena legibility overrides ──
+   Inside the Draft Arena shell, lift the muted-foreground token and recolor
+   any leftover emerald `text-primary` / `bg-primary` accents to gold so all
+   pre-existing utility classes automatically render with arena-correct
+   contrast. This avoids touching dozens of components individually. */
+.da-mode {
+  /* Warm ivory grey — readable at 60% opacity over the gold-tinted dark surface */
+  --muted-foreground: 45 25% 78%;
+  /* Gold primary accents inside arena */
+  --primary: 45 95% 60%;
+  --primary-foreground: 160 40% 6%;
+}
+/* Replace stray emerald primary tints with gold */
+.da-mode .text-primary { color: hsl(45 95% 65%); }
+.da-mode .bg-primary\/10 { background-color: hsl(45 95% 55% / 0.14); }
+.da-mode .bg-primary\/20 { background-color: hsl(45 95% 55% / 0.22); }
+.da-mode .border-primary\/20 { border-color: hsl(45 95% 55% / 0.32); }
+.da-mode .border-primary\/30 { border-color: hsl(45 95% 55% / 0.42); }
+.da-mode .hover\:text-primary:hover { color: hsl(45 100% 70%); }
+.da-mode .active\:text-primary:active { color: hsl(45 100% 70%); }
+.da-mode .active\:bg-primary\/10:active { background-color: hsl(45 95% 55% / 0.18); }
