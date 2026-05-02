@@ -165,6 +165,7 @@ export default function PickemWeekResultsPage() {
         )}
       </div>
     </div>
+    </PickemShell>
   );
 }
 
