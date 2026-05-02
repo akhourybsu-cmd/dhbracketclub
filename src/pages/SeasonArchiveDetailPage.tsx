@@ -71,7 +71,7 @@ export default function SeasonArchiveDetailPage() {
     <div className="pb-6">
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <Link to="/drafts/seasons" className="w-9 h-9 rounded-xl bg-muted/40 flex items-center justify-center btn-press">
+        <Link to="/drafts/seasons" className="da-back" aria-label="Back to Seasons">
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div className="flex-1 min-w-0">
@@ -100,7 +100,7 @@ export default function SeasonArchiveDetailPage() {
           <motion.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            className="glass-card p-3 flex items-center gap-2.5 overflow-x-auto"
+            className="da-glass p-3 flex items-center gap-2.5 overflow-x-auto"
             style={{
               background: 'linear-gradient(135deg, hsl(var(--gold) / 0.08), transparent 60%), hsl(var(--card))',
               border: '1px solid hsl(var(--gold) / 0.18)',
@@ -141,7 +141,7 @@ export default function SeasonArchiveDetailPage() {
 
         {!isComplete && (
           <div
-            className="glass-card p-4 flex items-center gap-3 border-gold/15"
+            className="da-glass p-4 flex items-center gap-3 border-gold/15"
             style={{ background: 'linear-gradient(135deg, hsl(var(--gold) / 0.06), transparent 60%), hsl(var(--card))' }}
           >
             <Sparkles className="w-5 h-5 flex-shrink-0" style={{ color: 'hsl(var(--gold))' }} />
@@ -152,7 +152,7 @@ export default function SeasonArchiveDetailPage() {
               </p>
             </div>
             <Link to="/compete">
-              <button className="text-[11px] font-bold px-3 py-1.5 rounded-lg btn-press" style={{ background: 'hsl(var(--gold) / 0.15)', color: 'hsl(var(--gold))' }}>
+              <button className="da-cta" style={{ height: '2rem', fontSize: '10px' }}>
                 View Live
               </button>
             </Link>
@@ -160,7 +160,7 @@ export default function SeasonArchiveDetailPage() {
         )}
 
         {/* Season summary stats */}
-        <div className="glass-card p-4">
+        <div className="da-glass p-4">
           <div className="flex items-center gap-1.5 mb-3">
             <BarChart3 className="w-3.5 h-3.5 text-muted-foreground" />
             <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground/70">
@@ -173,7 +173,7 @@ export default function SeasonArchiveDetailPage() {
             <Stat label="Players" value={`${standings.length}`} />
           </div>
           {regChamp && (
-            <div className="mt-3 pt-3 border-t border-border/30 flex items-center gap-2">
+            <div className="mt-3 pt-3 border-t border-gold/15 flex items-center gap-2">
               <Crown className="w-3.5 h-3.5" style={{ color: 'hsl(var(--gold))' }} />
               <span className="text-[10px] text-muted-foreground/70 font-medium">Regular Season Champion</span>
               <span className="text-[11px] font-extrabold ml-auto" style={{ color: 'hsl(var(--gold))' }}>
@@ -185,7 +185,7 @@ export default function SeasonArchiveDetailPage() {
 
         {/* Final Standings */}
         {standings.length > 0 && (
-          <div className="glass-card p-4">
+          <div className="da-glass p-4">
             <div className="flex items-center gap-1.5 mb-3">
               <Trophy className="w-3.5 h-3.5" style={{ color: 'hsl(var(--gold))' }} />
               <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground/70">
@@ -202,7 +202,7 @@ export default function SeasonArchiveDetailPage() {
                     key={s.id}
                     className={cn(
                       'flex items-center gap-2 px-2.5 py-2 rounded-lg',
-                      isTop3 ? 'bg-gold/5 border border-gold/15' : 'bg-muted/20'
+                      isTop3 ? 'bg-gold/5 border border-gold/15' : 'da-subcard'
                     )}
                   >
                     <span
@@ -233,7 +233,7 @@ export default function SeasonArchiveDetailPage() {
 
         {/* Playoff results */}
         {matches.length > 0 && (
-          <div className="glass-card p-4">
+          <div className="da-glass p-4">
             <div className="flex items-center gap-1.5 mb-3">
               <Swords className="w-3.5 h-3.5" style={{ color: 'hsl(var(--gold))' }} />
               <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground/70">
@@ -247,7 +247,7 @@ export default function SeasonArchiveDetailPage() {
                 const winnerIsA = m.winner_user_id && m.winner_user_id === m.user_a;
                 const winnerIsB = m.winner_user_id && m.winner_user_id === m.user_b;
                 return (
-                  <div key={m.id} className="bg-muted/20 rounded-lg p-2.5">
+                  <div key={m.id} className="da-subcard p-2.5">
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-[9px] font-extrabold uppercase tracking-wider text-muted-foreground/60">
                         {getPlayoffRoundLabel(m.round as any)}{' '}
@@ -255,12 +255,11 @@ export default function SeasonArchiveDetailPage() {
                       </span>
                       <span
                         className={cn(
-                          'text-[8px] font-bold uppercase px-1.5 py-0.5 rounded',
                           m.status === 'complete'
-                            ? 'bg-success/15 text-success'
+                            ? 'da-status-complete'
                             : m.status === 'in_progress'
-                            ? 'bg-gold/15 text-gold'
-                            : 'bg-muted text-muted-foreground'
+                            ? 'da-status-live'
+                            : 'da-status-setup'
                         )}
                       >
                         {m.status === 'complete' ? 'Final' : m.status === 'in_progress' ? 'Live' : m.status}
@@ -299,7 +298,7 @@ export default function SeasonArchiveDetailPage() {
 
         {/* Regular season drafts */}
         {allDrafts.length > 0 && (
-          <div className="glass-card p-4">
+          <div className="da-glass p-4">
             <div className="flex items-center gap-1.5 mb-3">
               <Bookmark className="w-3.5 h-3.5" style={{ color: 'hsl(var(--gold))' }} />
               <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground/70">
@@ -309,7 +308,7 @@ export default function SeasonArchiveDetailPage() {
             <div className="space-y-1">
               {allDrafts.map(e => (
                 <Link to={`/drafts/${e.draft_id}`} key={e.id} className="block">
-                  <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors">
+                  <div className="flex items-center gap-2 px-2.5 py-2 da-subcard hover:bg-gold/10 transition-colors">
                     <span className="text-[10px] font-extrabold text-muted-foreground/60 w-6">
                       #{e.week_number}
                     </span>
@@ -330,7 +329,7 @@ export default function SeasonArchiveDetailPage() {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="text-center bg-muted/20 rounded-lg py-2">
+    <div className="text-center da-subcard py-2">
       <p className="text-[14px] font-extrabold tabular-nums leading-none">{value}</p>
       <p className="text-[8px] text-muted-foreground/60 font-bold uppercase tracking-wider mt-1">{label}</p>
     </div>

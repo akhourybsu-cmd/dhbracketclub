@@ -861,10 +861,10 @@ export default function DraftDetailPage() {
               )}
               <span
                 className={cn(
-                  "status-pill flex-shrink-0",
-                  isSetup && 'bg-muted text-muted-foreground',
-                  isInProgress && 'bg-success/10 text-success',
-                  isDraftComplete && 'bg-primary/10 text-primary',
+                  "flex-shrink-0",
+                  isSetup && 'da-status-setup',
+                  isInProgress && !isDraftComplete && 'da-status-live',
+                  isDraftComplete && 'da-status-complete',
                 )}
               >
                 {isSetup ? 'Setup' : isInProgress && !isDraftComplete ? 'In Progress' : 'Complete'}
@@ -915,7 +915,7 @@ export default function DraftDetailPage() {
               <span className="stat-label">Picks</span>
             </div>
             <div className="stat-card py-2 flex-1">
-              <Trophy className="w-3 h-3 text-primary" />
+              <Trophy className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />
               <span className="stat-value text-xs">{currentRound > draft.num_rounds ? draft.num_rounds : currentRound}</span>
               <span className="stat-label">Round</span>
             </div>
@@ -947,11 +947,9 @@ export default function DraftDetailPage() {
           ) : null}
 
           {!isParticipant && user && (
-            <div className="flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full self-start bg-muted/40 border border-border/40">
-              <span className="text-[11px]">👁</span>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Spectating
-              </span>
+            <div className="da-pill mt-2 self-start" style={{ background: 'hsl(160 30% 9% / 0.7)', color: 'hsl(45 95% 65%)', borderColor: 'hsl(45 80% 50% / 0.22)' }}>
+              <span>👁</span>
+              <span>Spectating</span>
             </div>
           )}
         </motion.div>
@@ -985,10 +983,10 @@ export default function DraftDetailPage() {
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           className="mb-4 flex items-center gap-2 px-4 py-3 rounded-xl"
-          style={{ background: 'hsl(var(--primary) / 0.08)', border: '1px solid hsl(var(--primary) / 0.15)' }}
+          style={{ background: 'hsl(45 95% 55% / 0.10)', border: '1px solid hsl(45 95% 55% / 0.22)' }}
         >
-          <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-          <span className="text-[11px] font-semibold text-primary">Enriching picks with AI…</span>
+          <Sparkles className="w-4 h-4 animate-pulse" style={{ color: 'hsl(var(--gold))' }} />
+          <span className="text-[11px] font-semibold" style={{ color: 'hsl(45 95% 70%)' }}>Enriching picks with AI…</span>
         </motion.div>
       )}
 
@@ -1510,15 +1508,15 @@ export default function DraftDetailPage() {
           })()}
 
           <div className="text-center mb-5">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Draft Complete 🎉</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'hsl(var(--gold))' }}>Draft Complete 🎉</p>
           </div>
 
           {/* AI Report Section */}
           {resultsGenerating ? (
-            <div className="glass-card p-6 mb-5">
+            <div className="da-glass p-6 mb-5">
               <div className="flex items-center justify-center gap-2 mb-4">
-                <Sparkles className="w-5 h-5 text-primary animate-pulse" />
-                <p className="text-sm font-bold text-primary">Generating draft report…</p>
+                <Sparkles className="w-5 h-5 animate-pulse" style={{ color: 'hsl(var(--gold))' }} />
+                <p className="text-sm font-bold" style={{ color: 'hsl(var(--gold))' }}>Generating draft report…</p>
               </div>
               <div className="space-y-3">
                 {[1, 2, 3].map(i => (
@@ -1685,11 +1683,11 @@ export default function DraftDetailPage() {
                                 return (
                                 <div key={pr.pick_id} className="px-4 py-2.5 flex items-start gap-3">
                                   <div className={cn(
-                                    "flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-[12px] font-extrabold",
-                                    pr.score >= 8 && "bg-success/15 text-success",
-                                    pr.score >= 6 && pr.score < 8 && "bg-primary/15 text-primary",
-                                    pr.score >= 4 && pr.score < 6 && "bg-warning/15 text-warning",
-                                    pr.score < 4 && "bg-destructive/15 text-destructive",
+                                    "flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-[12px] font-extrabold border",
+                                    pr.score >= 8 && "bg-gold/15 text-gold border-gold/40",
+                                    pr.score >= 6 && pr.score < 8 && "bg-success/15 text-success border-success/30",
+                                    pr.score >= 4 && pr.score < 6 && "bg-warning/15 text-warning border-warning/30",
+                                    pr.score < 4 && "bg-destructive/15 text-destructive border-destructive/30",
                                   )}>
                                     {pr.score.toFixed(1)}
                                   </div>
@@ -1736,7 +1734,7 @@ export default function DraftDetailPage() {
                       // Find the pick text from results
                       const pickInfo = draftResults.flatMap(r => (r.pick_ratings as any[]).map((pr: any) => pr)).find((pr: any) => pr.pick_id === dispute.pick_id);
                       return (
-                        <div key={dispute.id} className="p-3 rounded-lg bg-muted/30 border border-border/30 space-y-2">
+                        <div key={dispute.id} className="da-subcard p-3 space-y-2">
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 flex-1">
                               <p className="text-[11px] font-semibold">{pickInfo?.pick_text || 'Unknown pick'}</p>
@@ -1957,7 +1955,7 @@ export default function DraftDetailPage() {
           </DialogHeader>
           {disputeDialogPick && (
             <div className="space-y-4">
-              <div className="p-3 rounded-lg bg-muted/30 border border-border/30">
+              <div className="da-subcard p-3">
                 <p className="text-[13px] font-semibold">{disputeDialogPick.pick_text}</p>
                 <p className="text-[11px] text-muted-foreground mt-1">
                   Current score: {disputeDialogPick.score.toFixed(1)} — {disputeDialogPick.explanation}

@@ -77,27 +77,28 @@ export default function CreateDraftPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto">
-      <Link to="/drafts" className="back-link">
-        <ArrowLeft /> Back to Drafts
-      </Link>
-
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="page-header">
-          <div className="page-header-icon" style={{
-            background: 'linear-gradient(135deg, hsl(var(--gold) / 0.2), hsl(var(--gold) / 0.05))',
-          }}>
-            <Bookmark className="w-5 h-5" style={{ color: 'hsl(var(--gold))' }} />
+    <div className="max-w-md mx-auto pb-6">
+      <div className="flex items-center gap-2 mb-4">
+        <Link to="/drafts" className="da-back" aria-label="Back to Drafts">
+          <ArrowLeft className="w-4 h-4" />
+        </Link>
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="page-header mb-0 flex-1"
+        >
+          <div className="da-page-icon">
+            <Bookmark className="w-5 h-5" />
           </div>
           <div>
             <h1 className="page-header-title">Create Draft</h1>
             <p className="page-header-subtitle">Set up a snake draft for the crew</p>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
 
       <motion.form onSubmit={handleCreate} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="space-y-5">
-        <div className="glass-card p-5 space-y-4">
+        <div className="da-glass p-5 space-y-4">
           <div>
             <label className="form-label">Topic</label>
             <Input
@@ -127,12 +128,18 @@ export default function CreateDraftPage() {
                   key={n}
                   type="button"
                   onClick={() => setNumRounds(n)}
-                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                    numRounds === n
-                      ? 'bg-primary text-primary-foreground shadow-md'
-                      : 'text-muted-foreground'
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all btn-press ${
+                    numRounds === n ? 'shadow-md' : 'text-muted-foreground'
                   }`}
-                  style={numRounds !== n ? { background: 'hsl(var(--surface-elevated))', border: '1px solid hsl(var(--border) / 0.3)' } : undefined}
+                  style={
+                    numRounds === n
+                      ? {
+                          background: 'linear-gradient(135deg, hsl(45 100% 65%), hsl(40 95% 50%))',
+                          color: 'hsl(160 30% 6%)',
+                          boxShadow: '0 4px 14px hsl(45 95% 40% / 0.45), inset 0 1px 0 hsl(45 100% 90% / 0.55)',
+                        }
+                      : { background: 'hsl(160 30% 9% / 0.7)', border: '1px solid hsl(45 80% 50% / 0.18)' }
+                  }
                 >
                   {n}
                 </button>
@@ -141,7 +148,7 @@ export default function CreateDraftPage() {
           </div>
         </div>
 
-        <Button type="submit" className="w-full h-11 rounded-xl font-bold btn-press" disabled={loading || !topic.trim()}>
+        <Button type="submit" className="w-full h-11 rounded-xl font-bold btn-press da-cta" style={{ height: '2.75rem' }} disabled={loading || !topic.trim()}>
           {loading ? 'Creating…' : 'Create Draft'}
         </Button>
       </motion.form>

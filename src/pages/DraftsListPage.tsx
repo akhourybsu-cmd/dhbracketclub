@@ -151,20 +151,17 @@ export default function DraftsListPage() {
   useDraftListUpdates(fetchDrafts, !!user);
 
   const statusConfig: Record<string, { label: string; cls: string }> = {
-    setup: { label: 'Setup', cls: 'bg-muted text-muted-foreground' },
-    in_progress: { label: 'In Progress', cls: 'bg-success/10 text-success' },
-    complete: { label: 'Complete', cls: 'bg-primary/10 text-primary' },
+    setup: { label: 'Setup', cls: 'da-status-setup' },
+    in_progress: { label: 'In Progress', cls: 'da-status-live' },
+    complete: { label: 'Complete', cls: 'da-status-complete' },
   };
 
   return (
     <div className="pb-6">
       <div className="flex items-center justify-between mb-6">
         <div className="page-header mb-0">
-          <div className="page-header-icon" style={{
-            background: 'linear-gradient(135deg, hsl(var(--gold) / 0.2), hsl(var(--gold) / 0.05))',
-            boxShadow: '0 0 12px hsl(var(--gold) / 0.15)',
-          }}>
-            <Bookmark className="w-5 h-5" style={{ color: 'hsl(var(--gold))' }} />
+          <div className="da-page-icon">
+            <Bookmark className="w-5 h-5" />
           </div>
           <div>
             <h1 className="page-header-title">Drafts</h1>
@@ -173,12 +170,12 @@ export default function DraftsListPage() {
         </div>
         <div className="flex items-center gap-1.5">
           <Link to="/drafts/seasons">
-            <Button size="sm" variant="outline" className="gap-1.5 rounded-lg font-bold btn-press">
+            <Button size="sm" variant="outline" className="gap-1.5 rounded-lg font-bold btn-press border-gold/30 text-gold hover:bg-gold/10 hover:text-gold">
               <Archive className="w-3.5 h-3.5" /> Seasons
             </Button>
           </Link>
           <Link to="/drafts/create">
-            <Button size="sm" className="gap-1.5 rounded-lg font-bold btn-press">
+            <Button size="sm" className="gap-1.5 rounded-lg font-bold btn-press da-cta">
               <Plus className="w-4 h-4" /> Create
             </Button>
           </Link>
@@ -187,7 +184,7 @@ export default function DraftsListPage() {
 
       {/* Cumulative Draft Stats */}
       {myDraftStats.draftsRated > 0 && (
-        <div className="glass-card p-4 mb-4">
+        <div className="da-glass p-4 mb-4">
           <div className="grid grid-cols-3 gap-2 mb-3">
             <div className="text-center">
               <p className="text-lg font-extrabold leading-none tabular-nums">
@@ -208,17 +205,18 @@ export default function DraftsListPage() {
               <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Podiums</p>
             </div>
           </div>
-          <div className="border-t border-border/20 pt-2.5 flex items-center justify-around">
+          <hr className="da-divider mb-2.5" />
+          <div className="pt-0.5 flex items-center justify-around">
             <div className="text-center">
               <p className="text-sm font-bold leading-none">{myDraftStats.avgScore.toFixed(1)}</p>
               <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Avg Score</p>
             </div>
-            <div className="w-px h-6 bg-border/20" />
+            <div className="w-px h-6 bg-gold/15" />
             <div className="text-center">
               <p className="text-sm font-bold leading-none">{myDraftStats.bestFinish > 0 ? `${myDraftStats.bestFinish}${myDraftStats.bestFinish === 1 ? 'st' : myDraftStats.bestFinish === 2 ? 'nd' : myDraftStats.bestFinish === 3 ? 'rd' : 'th'}` : '—'}</p>
               <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Best Finish</p>
             </div>
-            <div className="w-px h-6 bg-border/20" />
+            <div className="w-px h-6 bg-gold/15" />
             <div className="text-center">
               <p className="text-sm font-bold leading-none">{myDraftStats.draftsRated}</p>
               <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Rated</p>
@@ -230,23 +228,21 @@ export default function DraftsListPage() {
       {loading ? (
         <div className="space-y-2.5">
           {[1, 2].map(i => (
-            <div key={i} className="glass-card p-5">
-              <div className="h-4 rounded-lg w-1/3 mb-2.5 skeleton-shimmer" />
-              <div className="h-3 rounded-lg w-1/2 skeleton-shimmer" />
+            <div key={i} className="da-glass p-5">
+              <div className="h-4 rounded-lg w-1/3 mb-2.5 da-shimmer" />
+              <div className="h-3 rounded-lg w-1/2 da-shimmer" />
             </div>
           ))}
         </div>
       ) : drafts.length === 0 ? (
         <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} className="empty-state">
-          <div className="empty-state-icon" style={{
-            background: 'linear-gradient(135deg, hsl(var(--gold) / 0.12), hsl(var(--gold) / 0.04))',
-          }}>
-            <Bookmark className="w-7 h-7" style={{ color: 'hsl(var(--gold) / 0.6)' }} />
+          <div className="da-page-icon" style={{ width: '3.5rem', height: '3.5rem', borderRadius: '1rem' }}>
+            <Bookmark className="w-7 h-7" />
           </div>
           <p className="empty-state-title">No drafts yet</p>
           <p className="empty-state-desc mb-6">Run a snake draft on any topic with your crew.</p>
           <Link to="/drafts/create">
-            <Button className="font-bold rounded-xl gap-2 btn-press">
+            <Button className="font-bold rounded-xl gap-2 btn-press da-cta">
               <Plus className="w-4 h-4" /> Create Draft
             </Button>
           </Link>
@@ -282,14 +278,14 @@ export default function DraftsListPage() {
                 <Link to={`/drafts/${d.id}`} className="block group">
                   <div
                     className={cn(
-                      "glass-card p-4 hover-lift cursor-pointer relative overflow-hidden",
+                      "da-glass p-4 hover-lift cursor-pointer relative overflow-hidden transition-transform",
                       isPlayoff && "arena-edge",
                       isLive && !isPlayoff && "draft-row-live",
                       isMyTurn && !isPlayoff && "draft-row-mine",
                     )}
                     style={isPlayoff ? {
                       borderLeft: '3px solid hsl(45 93% 52%)',
-                      background: 'linear-gradient(135deg, hsl(45 93% 52% / 0.06), transparent 60%), hsl(var(--card))',
+                      background: 'linear-gradient(135deg, hsl(45 93% 52% / 0.08), transparent 60%), linear-gradient(180deg, hsl(160 35% 7% / 0.88), hsl(160 50% 4% / 0.94))',
                       boxShadow: '0 0 18px -4px hsl(45 93% 52% / 0.25)',
                     } : undefined}
                   >
@@ -374,12 +370,7 @@ export default function DraftsListPage() {
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         <span
-                          className={cn("status-pill", isPlayoff ? '' : sc.cls)}
-                          style={isPlayoff ? {
-                            background: 'hsl(45 93% 52% / 0.15)',
-                            color: 'hsl(45 93% 52%)',
-                            border: '1px solid hsl(45 93% 52% / 0.35)',
-                          } : undefined}
+                          className={cn(isPlayoff ? 'da-status-complete' : sc.cls)}
                         >
                           {d.status === 'in_progress' && <Play className="w-2.5 h-2.5 mr-0.5" />}
                           {sc.label}

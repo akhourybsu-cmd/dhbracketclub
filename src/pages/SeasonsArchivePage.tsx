@@ -6,10 +6,10 @@ import { useAllSeasons, useProfilesByIds, type DraftSeason } from '@/hooks/useDr
 import { cn } from '@/lib/utils';
 
 const STATUS_PRESET: Record<string, { label: string; cls: string; live: boolean }> = {
-  upcoming: { label: 'Upcoming', cls: 'bg-muted text-muted-foreground', live: false },
-  regular_season: { label: 'Active', cls: 'bg-success/15 text-success border border-success/20', live: true },
-  playoffs: { label: 'Playoffs Live', cls: 'bg-gold/15 text-gold border border-gold/20', live: true },
-  complete: { label: 'Complete', cls: 'bg-primary/10 text-primary', live: false },
+  upcoming: { label: 'Upcoming', cls: 'da-status-setup', live: false },
+  regular_season: { label: 'Active', cls: 'da-status-live', live: true },
+  playoffs: { label: 'Playoffs Live', cls: 'da-status-complete', live: true },
+  complete: { label: 'Complete', cls: 'da-status-complete', live: false },
 };
 
 export default function SeasonsArchivePage() {
@@ -26,18 +26,12 @@ export default function SeasonsArchivePage() {
     <div className="pb-6">
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <Link to="/drafts" className="w-9 h-9 rounded-xl bg-muted/40 flex items-center justify-center btn-press">
+        <Link to="/drafts" className="da-back" aria-label="Back to Drafts">
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div className="page-header mb-0 flex-1">
-          <div
-            className="page-header-icon"
-            style={{
-              background: 'linear-gradient(135deg, hsl(var(--gold) / 0.2), hsl(var(--gold) / 0.05))',
-              boxShadow: '0 0 12px hsl(var(--gold) / 0.15)',
-            }}
-          >
-            <Archive className="w-5 h-5" style={{ color: 'hsl(var(--gold))' }} />
+          <div className="da-page-icon">
+            <Archive className="w-5 h-5" />
           </div>
           <div>
             <h1 className="page-header-title">Seasons</h1>
@@ -49,19 +43,16 @@ export default function SeasonsArchivePage() {
       {loading ? (
         <div className="space-y-2.5">
           {[1, 2, 3].map(i => (
-            <div key={i} className="glass-card p-5">
-              <div className="h-4 rounded-lg w-1/3 mb-2.5 skeleton-shimmer" />
-              <div className="h-3 rounded-lg w-1/2 skeleton-shimmer" />
+            <div key={i} className="da-glass p-5">
+              <div className="h-4 rounded-lg w-1/3 mb-2.5 da-shimmer" />
+              <div className="h-3 rounded-lg w-1/2 da-shimmer" />
             </div>
           ))}
         </div>
       ) : seasons.length === 0 ? (
         <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} className="empty-state">
-          <div
-            className="empty-state-icon"
-            style={{ background: 'linear-gradient(135deg, hsl(var(--gold) / 0.12), hsl(var(--gold) / 0.04))' }}
-          >
-            <Trophy className="w-7 h-7" style={{ color: 'hsl(var(--gold) / 0.6)' }} />
+          <div className="da-page-icon" style={{ width: '3.5rem', height: '3.5rem', borderRadius: '1rem' }}>
+            <Trophy className="w-7 h-7" />
           </div>
           <p className="empty-state-title">No seasons yet</p>
           <p className="empty-state-desc">Once a season runs, it'll appear here.</p>
@@ -124,17 +115,17 @@ function SeasonCard({
       <Link to={`/drafts/seasons/${season.id}`} className="block group">
         <div
           className={cn(
-            'glass-card p-4 hover-lift cursor-pointer relative overflow-hidden',
-            !archived && 'border-gold/15'
+            'da-glass p-4 hover-lift cursor-pointer relative overflow-hidden',
+            !archived && 'border-gold/30'
           )}
           style={
             !archived
               ? {
                   background:
-                    'linear-gradient(135deg, hsl(var(--gold) / 0.05), transparent 60%), hsl(var(--card))',
+                    'linear-gradient(135deg, hsl(var(--gold) / 0.08), transparent 60%), linear-gradient(180deg, hsl(160 35% 7% / 0.88), hsl(160 50% 4% / 0.94))',
                   borderLeft: '3px solid hsl(var(--gold))',
                 }
-              : { borderLeft: '3px solid hsl(var(--border))' }
+              : { borderLeft: '3px solid hsl(var(--silver) / 0.45)' }
           }
         >
           <div className="flex items-center justify-between gap-3">
@@ -160,7 +151,7 @@ function SeasonCard({
               )}
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0">
-              <span className={cn('status-pill flex items-center gap-1 text-[9px]', st.cls)}>
+              <span className={cn('flex items-center gap-1', st.cls)}>
                 {st.live && <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />}
                 {st.label}
               </span>
