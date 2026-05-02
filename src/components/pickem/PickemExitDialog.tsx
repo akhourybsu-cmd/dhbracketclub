@@ -1,0 +1,49 @@
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
+/**
+ * "Exit Pick Center?" confirmation. Shown when the user taps the back arrow
+ * on the Pick'em hub. Mirrors the Nexus/RuneDelve exit pattern so leaving
+ * the standalone module always feels deliberate.
+ */
+export function PickemExitDialog({
+  open, onOpenChange, onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent
+        className="border-gold/30"
+        style={{
+          background:
+            'linear-gradient(180deg, hsl(160 35% 7%), hsl(160 50% 4%))',
+        }}
+      >
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-white text-lg font-black tracking-tight">
+            Exit Pick Center?
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-white/65 text-sm">
+            You'll head back to DH Club. Your picks are safe — come back anytime to lock more games.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="bg-white/5 border-white/15 text-white hover:bg-white/10">
+            Stay in Pick Center
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={onConfirm}
+            className="bg-gold text-black font-extrabold hover:bg-gold/90"
+          >
+            Exit
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
