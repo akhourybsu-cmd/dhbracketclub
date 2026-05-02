@@ -6,10 +6,10 @@ import { useAllSeasons, useProfilesByIds, type DraftSeason } from '@/hooks/useDr
 import { cn } from '@/lib/utils';
 
 const STATUS_PRESET: Record<string, { label: string; cls: string; live: boolean }> = {
-  upcoming: { label: 'Upcoming', cls: 'bg-muted text-muted-foreground', live: false },
-  regular_season: { label: 'Active', cls: 'bg-success/15 text-success border border-success/20', live: true },
-  playoffs: { label: 'Playoffs Live', cls: 'bg-gold/15 text-gold border border-gold/20', live: true },
-  complete: { label: 'Complete', cls: 'bg-primary/10 text-primary', live: false },
+  upcoming: { label: 'Upcoming', cls: 'da-status-setup', live: false },
+  regular_season: { label: 'Active', cls: 'da-status-live', live: true },
+  playoffs: { label: 'Playoffs Live', cls: 'da-status-complete', live: true },
+  complete: { label: 'Complete', cls: 'da-status-complete', live: false },
 };
 
 export default function SeasonsArchivePage() {
@@ -26,18 +26,12 @@ export default function SeasonsArchivePage() {
     <div className="pb-6">
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <Link to="/drafts" className="w-9 h-9 rounded-xl bg-muted/40 flex items-center justify-center btn-press">
+        <Link to="/drafts" className="da-back" aria-label="Back to Drafts">
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div className="page-header mb-0 flex-1">
-          <div
-            className="page-header-icon"
-            style={{
-              background: 'linear-gradient(135deg, hsl(var(--gold) / 0.2), hsl(var(--gold) / 0.05))',
-              boxShadow: '0 0 12px hsl(var(--gold) / 0.15)',
-            }}
-          >
-            <Archive className="w-5 h-5" style={{ color: 'hsl(var(--gold))' }} />
+          <div className="da-page-icon">
+            <Archive className="w-5 h-5" />
           </div>
           <div>
             <h1 className="page-header-title">Seasons</h1>
