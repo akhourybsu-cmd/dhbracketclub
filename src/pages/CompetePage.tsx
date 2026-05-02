@@ -324,17 +324,11 @@ function DraftArenaEnterBanner({
 
     // Are you on the clock in any live draft?
     let onTheClock = false;
-    if (live?.drafts && myUserId) {
-      try {
-        const turn = getDerivedDraftTurn(live.drafts);
-        onTheClock = turn?.currentUserId === myUserId;
-      } catch { /* noop */ }
+    if (live?.drafts && myUserId && (live.drafts as any).current_pick_user_id === myUserId) {
+      onTheClock = true;
     }
-    if (!onTheClock && playoffLive?.drafts && myUserId) {
-      try {
-        const turn = getDerivedDraftTurn(playoffLive.drafts);
-        onTheClock = turn?.currentUserId === myUserId;
-      } catch { /* noop */ }
+    if (!onTheClock && playoffLive?.drafts && myUserId && (playoffLive.drafts as any).current_pick_user_id === myUserId) {
+      onTheClock = true;
     }
 
     if (season.status === 'complete') {
