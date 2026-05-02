@@ -1682,14 +1682,35 @@ function PickemCompeteCard() {
 
   const isLive = !loading && season?.status === 'active' && week?.status !== 'upcoming';
   const remaining = Math.max(0, totalGames - pickedCount);
+  const weekLabel = week?.label || (season ? `Week ${season.current_week}` : 'This week');
+  const allLocked = isLive && totalGames > 0 && remaining === 0;
+  const noPicksYet = isLive && pickedCount === 0 && totalGames > 0;
 
+  // Action-oriented subline so users know exactly what tapping does
   const subline = !season
     ? 'Tuning broadcast feed…'
-    : isLive
-      ? `${week?.label || `Week ${season.current_week}`} · ${remaining > 0 ? `${remaining} games left` : 'All picks in'}`
-      : season.status === 'upcoming'
-        ? 'Season starts soon'
-        : season.name;
+    : season.status === 'upcoming'
+      ? 'Season kicks off soon — open to preview the schedule'
+      : isLive
+        ? noPicksYet
+          ? `${weekLabel} · Tap to make your picks (${totalGames} games)`
+          : remaining > 0
+            ? `${weekLabel} · ${remaining} of ${totalGames} games left to pick`
+            : `${weekLabel} · Locked in — tap to track live scores`
+        : `${season.name} · Tap to view final standings`;
+
+  // CTA microcopy adapts to user state
+  const ctaLabel = !season
+    ? 'Open Pick Center'
+    : season.status === 'upcoming'
+      ? 'Preview Season'
+      : isLive
+        ? allLocked
+          ? 'Track Live'
+          : noPicksYet
+            ? 'Make My Picks'
+            : 'Finish My Picks'
+        : 'View Standings';
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
