@@ -7,8 +7,8 @@ import { cn } from '@/lib/utils';
 
 const STATUS_PRESET: Record<string, { label: string; cls: string; live: boolean }> = {
   upcoming: { label: 'Upcoming', cls: 'da-status-setup', live: false },
-  regular_season: { label: 'Active', cls: 'da-status-live', live: true },
-  playoffs: { label: 'Playoffs Live', cls: 'da-status-complete', live: true },
+  regular_season: { label: 'Active', cls: 'da-status-active', live: true },
+  playoffs: { label: 'Playoffs Live', cls: 'da-status-active', live: true },
   complete: { label: 'Complete', cls: 'da-status-complete', live: false },
 };
 

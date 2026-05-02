@@ -14,10 +14,12 @@ import { useCurrentSeason, useSeasonEntries, usePlayoffMatchByDraftIds } from '@
 import { PlayoffBadge } from '@/components/draft/PlayoffBadge';
 import { getPlayoffGameLabel } from '@/lib/playoffStyle';
 
-function CountedNumber({ value }: { value: number }) {
+import { forwardRef } from 'react';
+
+const CountedNumber = forwardRef<HTMLSpanElement, { value: number }>(function CountedNumber({ value }, ref) {
   const animated = useCountUp(value);
-  return <>{Math.round(animated)}</>;
-}
+  return <span ref={ref}>{Math.round(animated)}</span>;
+});
 
 export default function DraftsListPage() {
   const { user } = useAuth();

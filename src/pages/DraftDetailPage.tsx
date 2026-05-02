@@ -1001,7 +1001,14 @@ export default function DraftDetailPage() {
                   <span className="text-[11px] font-extrabold text-muted-foreground/60 w-5 text-right font-mono">{idx + 1}</span>
                   <span className="text-[13px] font-semibold">{p.profiles?.display_name || 'Unknown'}</span>
                   {p.user_id === draft.created_by && (
-                    <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-primary/10 text-primary">Host</span>
+                    <span
+                      className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
+                      style={{
+                        background: 'hsl(45 95% 55% / 0.14)',
+                        border: '1px solid hsl(45 95% 55% / 0.34)',
+                        color: 'hsl(45 95% 68%)',
+                      }}
+                    >Host</span>
                   )}
                 </div>
               ))}
@@ -1035,17 +1042,29 @@ export default function DraftDetailPage() {
           )}
 
           {canManage && (
-            <Button
+            <button
+              type="button"
               onClick={handleStartDraft}
               disabled={starting || participants.length < 2}
               className={cn(
-                "w-full h-12 rounded-xl font-bold btn-press gap-2 text-[13px]",
+                "w-full h-12 rounded-xl font-black uppercase tracking-[0.14em] btn-press inline-flex items-center justify-center gap-2 text-[13px] transition-all disabled:cursor-not-allowed",
                 participants.length >= 2 && !starting && "draft-start-pulse",
               )}
+              style={{
+                color: starting || participants.length < 2 ? 'hsl(45 60% 78%)' : 'hsl(160 40% 6%)',
+                background: starting || participants.length < 2
+                  ? 'linear-gradient(135deg, hsl(45 35% 22%), hsl(40 30% 16%))'
+                  : 'linear-gradient(135deg, hsl(45 100% 65%), hsl(40 95% 50%))',
+                border: '1px solid hsl(45 95% 55% / 0.55)',
+                boxShadow: starting || participants.length < 2
+                  ? 'inset 0 1px 0 hsl(45 60% 60% / 0.18)'
+                  : '0 6px 20px hsl(45 95% 40% / 0.5), inset 0 1px 0 hsl(45 100% 90% / 0.65)',
+                opacity: starting || participants.length < 2 ? 0.85 : 1,
+              }}
             >
               <Play className="w-4 h-4" />
               {starting ? 'Starting…' : 'Start Draft'}
-            </Button>
+            </button>
           )}
         </motion.div>
       )}
