@@ -152,7 +152,7 @@ export default function SeasonArchiveDetailPage() {
               </p>
             </div>
             <Link to="/compete">
-              <button className="text-[11px] font-bold px-3 py-1.5 rounded-lg btn-press" style={{ background: 'hsl(var(--gold) / 0.15)', color: 'hsl(var(--gold))' }}>
+              <button className="da-cta" style={{ height: '2rem', fontSize: '10px' }}>
                 View Live
               </button>
             </Link>
@@ -173,7 +173,7 @@ export default function SeasonArchiveDetailPage() {
             <Stat label="Players" value={`${standings.length}`} />
           </div>
           {regChamp && (
-            <div className="mt-3 pt-3 border-t border-border/30 flex items-center gap-2">
+            <div className="mt-3 pt-3 border-t border-gold/15 flex items-center gap-2">
               <Crown className="w-3.5 h-3.5" style={{ color: 'hsl(var(--gold))' }} />
               <span className="text-[10px] text-muted-foreground/70 font-medium">Regular Season Champion</span>
               <span className="text-[11px] font-extrabold ml-auto" style={{ color: 'hsl(var(--gold))' }}>
