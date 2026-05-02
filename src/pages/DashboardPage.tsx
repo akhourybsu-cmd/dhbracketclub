@@ -563,10 +563,10 @@ export default function DashboardPage() {
         className="grid grid-cols-4 gap-1.5 sm:gap-2 mb-7"
       >
         {[
-          { to: '/drafts/create', icon: Bookmark, label: 'Draft', color: 'gold', primary: true },
-          { to: '/lore', icon: ScrollText, label: 'Lore', color: 'lore' },
-          { to: '/pools/create', icon: Trophy, label: 'Bracket', color: 'primary' },
-          { to: '/lockbox', icon: Shield, label: 'Lockbox', color: 'destructive' },
+          { to: '/drafts', icon: Bookmark, label: 'Drafts', color: 'gold', primary: true },
+          { to: '/rune-delve', icon: Sparkles, label: 'Rune Delve', color: 'lore' },
+          { to: '/nexus', icon: Shield, label: 'Nexus', color: 'primary' },
+          { to: '/pickem', icon: Trophy, label: "Pick'em", color: 'destructive' },
         ].map((item, i) => (
           <motion.div key={item.to} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 + i * 0.04 }}>
             <Link to={item.to}>
