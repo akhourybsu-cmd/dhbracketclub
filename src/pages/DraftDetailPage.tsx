@@ -1734,7 +1734,7 @@ export default function DraftDetailPage() {
                       // Find the pick text from results
                       const pickInfo = draftResults.flatMap(r => (r.pick_ratings as any[]).map((pr: any) => pr)).find((pr: any) => pr.pick_id === dispute.pick_id);
                       return (
-                        <div key={dispute.id} className="p-3 rounded-lg bg-muted/30 border border-border/30 space-y-2">
+                        <div key={dispute.id} className="da-subcard p-3 space-y-2">
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 flex-1">
                               <p className="text-[11px] font-semibold">{pickInfo?.pick_text || 'Unknown pick'}</p>
@@ -1955,7 +1955,7 @@ export default function DraftDetailPage() {
           </DialogHeader>
           {disputeDialogPick && (
             <div className="space-y-4">
-              <div className="p-3 rounded-lg bg-muted/30 border border-border/30">
+              <div className="da-subcard p-3">
                 <p className="text-[13px] font-semibold">{disputeDialogPick.pick_text}</p>
                 <p className="text-[11px] text-muted-foreground mt-1">
                   Current score: {disputeDialogPick.score.toFixed(1)} — {disputeDialogPick.explanation}
