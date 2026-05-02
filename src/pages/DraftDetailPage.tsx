@@ -1214,7 +1214,13 @@ export default function DraftDetailPage() {
           {/* Pick input */}
           {isMyTurn && (
             <div className="mb-5">
-              <div className="flex gap-2">
+              <motion.div
+                key={`pick-input-${picks.length}`}
+                initial={{ scale: 0.96, opacity: 0.6 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+                className="flex gap-2"
+              >
                 <Input
                   value={pickText}
                   onChange={e => {
@@ -1231,9 +1237,9 @@ export default function DraftDetailPage() {
                   }}
                 />
                 <Button onClick={handleMakePick} disabled={submitting || !pickText.trim()} className="h-11 px-4 rounded-xl font-bold btn-press">
-                  <Send className="w-4 h-4" />
+                  <Send className={cn("w-4 h-4", submitting && "animate-pulse")} />
                 </Button>
-              </div>
+              </motion.div>
 
               {/* Spell-check / relevance suggestion */}
               <AnimatePresence>
