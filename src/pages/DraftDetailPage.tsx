@@ -983,10 +983,10 @@ export default function DraftDetailPage() {
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           className="mb-4 flex items-center gap-2 px-4 py-3 rounded-xl"
-          style={{ background: 'hsl(var(--primary) / 0.08)', border: '1px solid hsl(var(--primary) / 0.15)' }}
+          style={{ background: 'hsl(45 95% 55% / 0.10)', border: '1px solid hsl(45 95% 55% / 0.22)' }}
         >
-          <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-          <span className="text-[11px] font-semibold text-primary">Enriching picks with AI…</span>
+          <Sparkles className="w-4 h-4 animate-pulse" style={{ color: 'hsl(var(--gold))' }} />
+          <span className="text-[11px] font-semibold" style={{ color: 'hsl(45 95% 70%)' }}>Enriching picks with AI…</span>
         </motion.div>
       )}
 
@@ -1508,15 +1508,15 @@ export default function DraftDetailPage() {
           })()}
 
           <div className="text-center mb-5">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Draft Complete 🎉</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'hsl(var(--gold))' }}>Draft Complete 🎉</p>
           </div>
 
           {/* AI Report Section */}
           {resultsGenerating ? (
-            <div className="glass-card p-6 mb-5">
+            <div className="da-glass p-6 mb-5">
               <div className="flex items-center justify-center gap-2 mb-4">
-                <Sparkles className="w-5 h-5 text-primary animate-pulse" />
-                <p className="text-sm font-bold text-primary">Generating draft report…</p>
+                <Sparkles className="w-5 h-5 animate-pulse" style={{ color: 'hsl(var(--gold))' }} />
+                <p className="text-sm font-bold" style={{ color: 'hsl(var(--gold))' }}>Generating draft report…</p>
               </div>
               <div className="space-y-3">
                 {[1, 2, 3].map(i => (
