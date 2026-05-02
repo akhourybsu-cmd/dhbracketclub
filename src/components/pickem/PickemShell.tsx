@@ -1,13 +1,14 @@
 import { cn } from '@/lib/utils';
 
 /**
- * Stadium page shell — forces a dark, near-black, game-day surface for the
- * entire Pick'em player experience regardless of the user's chosen theme.
+ * Backwards-compat pass-through.
  *
- * Pure presentation — no business logic, no data dependencies.
- *
- * Bleeds to the screen edges (using negative horizontal margins that cancel
- * AppLayout's container padding) so the field/vignette feels immersive.
+ * Originally this component injected the `.pk-stadium` skin and negative
+ * margins on each Pick'em page. That responsibility has moved up to
+ * `PickemLayout`, which wraps every /pickem/* route as a true standalone
+ * shell (matching Nexus / Rune Delve). Pages that still wrap their content
+ * in `<PickemShell>` continue to work — this component now just renders a
+ * passthrough container so the existing JSX structure isn't disturbed.
  */
 export function PickemShell({
   className,
@@ -16,16 +17,5 @@ export function PickemShell({
   className?: string;
   children: React.ReactNode;
 }) {
-  return (
-    <div
-      className={cn(
-        'pk-stadium -mx-4 sm:-mx-6 px-4 sm:px-6 pt-3 pb-4 rounded-none',
-        // Stretch to full viewport height so vignette fills the screen
-        'min-h-[calc(100dvh-4.5rem)]',
-        className,
-      )}
-    >
-      {children}
-    </div>
-  );
+  return <div className={cn('contents', className)}>{children}</div>;
 }
