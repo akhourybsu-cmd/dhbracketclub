@@ -97,6 +97,7 @@ export default function PickemWeekPage() {
   }
 
   return (
+    <PickemShell>
     <div className="space-y-4 pb-32">{/* extra bottom space for sticky slip */}
       {/* Top bar */}
       <div className="flex items-center justify-between">
@@ -227,5 +228,6 @@ export default function PickemWeekPage() {
         />
       )}
     </div>
+    </PickemShell>
   );
 }
