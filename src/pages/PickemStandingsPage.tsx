@@ -4,6 +4,7 @@ import { ChevronLeft, Trophy, Crown, Flame } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useActiveSeason, useSeasonStandings } from '@/hooks/usePickem';
 import { TurfBackdrop } from '@/components/pickem/TurfBackdrop';
+import { PickemShell } from '@/components/pickem/PickemShell';
 import { cn } from '@/lib/utils';
 
 export default function PickemStandingsPage() {
@@ -15,9 +16,10 @@ export default function PickemStandingsPage() {
   const rest = standings.slice(3);
 
   return (
+    <PickemShell>
     <div className="space-y-4 pb-6">
-      <Link to="/pickem" className="text-[12px] text-muted-foreground flex items-center gap-1 btn-press">
-        <ChevronLeft className="w-4 h-4" /> Pick'em
+      <Link to="/pickem" className="text-[12px] text-white/55 flex items-center gap-1 btn-press">
+        <ChevronLeft className="w-4 h-4" /> Pick Center
       </Link>
 
       {/* Hero header — turf */}
