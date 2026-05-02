@@ -861,10 +861,10 @@ export default function DraftDetailPage() {
               )}
               <span
                 className={cn(
-                  "status-pill flex-shrink-0",
-                  isSetup && 'bg-muted text-muted-foreground',
-                  isInProgress && 'bg-success/10 text-success',
-                  isDraftComplete && 'bg-primary/10 text-primary',
+                  "flex-shrink-0",
+                  isSetup && 'da-status-setup',
+                  isInProgress && !isDraftComplete && 'da-status-live',
+                  isDraftComplete && 'da-status-complete',
                 )}
               >
                 {isSetup ? 'Setup' : isInProgress && !isDraftComplete ? 'In Progress' : 'Complete'}
@@ -915,7 +915,7 @@ export default function DraftDetailPage() {
               <span className="stat-label">Picks</span>
             </div>
             <div className="stat-card py-2 flex-1">
-              <Trophy className="w-3 h-3 text-primary" />
+              <Trophy className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />
               <span className="stat-value text-xs">{currentRound > draft.num_rounds ? draft.num_rounds : currentRound}</span>
               <span className="stat-label">Round</span>
             </div>
@@ -947,11 +947,9 @@ export default function DraftDetailPage() {
           ) : null}
 
           {!isParticipant && user && (
-            <div className="flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full self-start bg-muted/40 border border-border/40">
-              <span className="text-[11px]">👁</span>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Spectating
-              </span>
+            <div className="da-pill mt-2 self-start" style={{ background: 'hsl(160 30% 9% / 0.7)', color: 'hsl(45 95% 65%)', borderColor: 'hsl(45 80% 50% / 0.22)' }}>
+              <span>👁</span>
+              <span>Spectating</span>
             </div>
           )}
         </motion.div>
