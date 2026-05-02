@@ -1831,7 +1831,7 @@ function PickemCompeteCard() {
                     '0 4px 14px hsl(45 95% 40% / 0.55), inset 0 1px 0 hsl(45 100% 85% / 0.55)',
                 }}
               >
-                Enter <ChevronRight className="w-3.5 h-3.5" strokeWidth={3} />
+                {ctaLabel} <ChevronRight className="w-3.5 h-3.5" strokeWidth={3} />
               </div>
             </div>
           </div>
