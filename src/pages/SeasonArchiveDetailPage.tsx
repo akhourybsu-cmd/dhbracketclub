@@ -71,7 +71,7 @@ export default function SeasonArchiveDetailPage() {
     <div className="pb-6">
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <Link to="/drafts/seasons" className="w-9 h-9 rounded-xl bg-muted/40 flex items-center justify-center btn-press">
+        <Link to="/drafts/seasons" className="da-back" aria-label="Back to Seasons">
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div className="flex-1 min-w-0">
