@@ -294,9 +294,184 @@ function NexusDefenseCompeteCard() {
   );
 }
 
-/* ══════════════════════════════════════════════════════════
-   SEASON HERO BANNER — draft-count based progress
-   ══════════════════════════════════════════════════════════ */
+/* ── Draft Arena enter banner — flashy launcher into the standalone /drafts shell ── */
+function DraftArenaEnterBanner({
+  season,
+  entries,
+  totalDrafts,
+  myUserId,
+}: {
+  season: any | null;
+  entries: any[];
+  totalDrafts: number;
+  myUserId?: string;
+}) {
+  // Derive a single, action-oriented subline + pulse state from current league context.
+  const { subline, pulse, ctaLabel } = (() => {
+    if (!season) {
+      return {
+        subline: 'No active season — open the war room to start one',
+        pulse: false,
+        ctaLabel: 'Enter Arena',
+      };
+    }
+
+    const regular = entries.filter((e) => !e.is_playoff);
+    const completed = regular.filter((e) => e.drafts?.status === 'complete').length;
+    const live = regular.find((e) => e.drafts?.status === 'in_progress');
+    const playoffLive = entries.find((e) => e.is_playoff && e.drafts?.status === 'in_progress');
+    const seasonLabel = season.season_label || season.name?.split(' ').slice(-1)[0] || '';
+
+    // Are you on the clock in any live draft?
+    let onTheClock = false;
+    if (live?.drafts && myUserId) {
+      try {
+        const turn = getDerivedDraftTurn(live.drafts);
+        onTheClock = turn?.currentUserId === myUserId;
+      } catch { /* noop */ }
+    }
+    if (!onTheClock && playoffLive?.drafts && myUserId) {
+      try {
+        const turn = getDerivedDraftTurn(playoffLive.drafts);
+        onTheClock = turn?.currentUserId === myUserId;
+      } catch { /* noop */ }
+    }
+
+    if (season.status === 'complete') {
+      return {
+        subline: `${seasonLabel} complete — view the champion & podium`,
+        pulse: false,
+        ctaLabel: 'View Recap',
+      };
+    }
+    if (playoffLive) {
+      return {
+        subline: onTheClock
+          ? `${seasonLabel} Playoffs — you're on the clock`
+          : `${seasonLabel} Playoffs · live match in progress`,
+        pulse: true,
+        ctaLabel: onTheClock ? 'Make Pick' : 'Watch Live',
+      };
+    }
+    if (season.status === 'playoffs') {
+      return {
+        subline: `${seasonLabel} Playoffs — bracket is set`,
+        pulse: false,
+        ctaLabel: 'Open Bracket',
+      };
+    }
+    if (live) {
+      return {
+        subline: onTheClock
+          ? `${seasonLabel} · Draft ${live.week_number ?? completed + 1} of ${totalDrafts} — you're on the clock`
+          : `${seasonLabel} · Draft ${live.week_number ?? completed + 1} of ${totalDrafts} live now`,
+        pulse: true,
+        ctaLabel: onTheClock ? 'Make Pick' : 'Open Draft',
+      };
+    }
+    return {
+      subline: `${seasonLabel} · Draft ${Math.min(completed + 1, totalDrafts)} of ${totalDrafts} — ready to start`,
+      pulse: false,
+      ctaLabel: 'Enter Arena',
+    };
+  })();
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+      <Link to="/drafts" className="block">
+        <div
+          className={cn('relative overflow-hidden rounded-2xl btn-press', pulse && 'da-banner-pulse')}
+          style={{
+            background:
+              'radial-gradient(ellipse 120% 80% at 50% 0%, hsl(45 95% 45% / 0.45), transparent 60%),' +
+              'radial-gradient(ellipse 90% 60% at 100% 100%, hsl(152 72% 36% / 0.22), transparent 60%),' +
+              'linear-gradient(180deg, hsl(160 45% 7%), hsl(160 55% 4%))',
+            border: '1px solid hsl(45 95% 55% / 0.4)',
+            boxShadow:
+              '0 12px 40px hsl(45 95% 35% / 0.4), inset 0 1px 0 hsl(45 100% 90% / 0.2)',
+          }}
+        >
+          {/* Drifting gold glow */}
+          <div
+            aria-hidden
+            className="absolute -top-12 -right-10 w-44 h-44 rounded-full pointer-events-none"
+            style={{
+              background:
+                'radial-gradient(circle, hsl(45 95% 60% / 0.4), transparent 70%)',
+              filter: 'blur(8px)',
+            }}
+          />
+
+          <div className="relative z-10 p-5 flex items-center gap-4">
+            {/* Emblem hero visual */}
+            <div className="relative flex-shrink-0">
+              <div
+                aria-hidden
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background:
+                    'radial-gradient(circle, hsl(45 95% 60% / 0.5), transparent 65%)',
+                  filter: 'blur(10px)',
+                  transform: 'scale(1.15)',
+                }}
+              />
+              <img
+                src={draftEmblem}
+                alt="Draft Arena"
+                width={96}
+                height={96}
+                loading="lazy"
+                decoding="async"
+                className="relative w-[88px] h-[88px] object-contain drop-shadow-[0_4px_18px_hsl(45_95%_50%/0.55)]"
+              />
+            </div>
+
+            {/* Title + CTA */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span
+                  className="text-[9px] font-extrabold uppercase tracking-[0.22em]"
+                  style={{ color: 'hsl(45 95% 70%)' }}
+                >
+                  ◆ Draft League
+                </span>
+              </div>
+              <h2
+                className="font-extrabold text-[22px] leading-none tracking-tight mb-1.5"
+                style={{
+                  background:
+                    'linear-gradient(180deg, hsl(45 30% 98%), hsl(45 95% 70%))',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  textShadow: '0 0 18px hsl(45 95% 40% / 0.4)',
+                }}
+              >
+                Draft Arena
+              </h2>
+              <p className="text-[10.5px] font-bold text-white/65 leading-snug mb-2.5 line-clamp-2">
+                {subline}
+              </p>
+              <div
+                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider"
+                style={{
+                  background:
+                    'linear-gradient(135deg, hsl(45 100% 65%), hsl(40 95% 50%))',
+                  color: 'hsl(160 30% 6%)',
+                  boxShadow:
+                    '0 4px 14px hsl(45 95% 40% / 0.5), inset 0 1px 0 hsl(45 100% 90% / 0.55)',
+                }}
+              >
+                {ctaLabel} <ChevronRight className="w-3.5 h-3.5" strokeWidth={3} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </Link>
+    </motion.div>
+  );
+}
+
+
 function SeasonHeaderCard({ season, entries }: { season: any; entries: any[] }) {
   const statusLabels: Record<string, { label: string; cls: string; dotCls: string }> = {
     upcoming: { label: 'Upcoming', cls: 'bg-muted text-muted-foreground', dotCls: 'bg-muted-foreground' },
