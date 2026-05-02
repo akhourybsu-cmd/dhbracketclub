@@ -1791,11 +1791,11 @@
       90deg,
       transparent 0,
       transparent 38px,
-      hsl(0 0% 100% / 0.045) 38px,
-      hsl(0 0% 100% / 0.045) 39px
+      hsl(0 0% 100% / 0.07) 38px,
+      hsl(0 0% 100% / 0.07) 39px
     );
-  mask-image: linear-gradient(180deg, transparent 0%, #000 30%, #000 70%, transparent 100%);
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 30%, #000 70%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 25%, #000 75%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 25%, #000 75%, transparent 100%);
 }
 
 /* Stadium light shimmer — gentle moving sheen */
@@ -1888,27 +1888,49 @@
 .pk-stamp-locked  { color: hsl(var(--muted-foreground)); background: hsl(var(--muted) / 0.4); }
 .pk-stamp-live    { color: hsl(var(--live)); background: hsl(var(--live) / 0.12); }
 
-/* Football-themed action tile */
+/* Football-themed action tile — darker, sharper edges */
 .pk-tile {
   position: relative;
   overflow: hidden;
-  border-radius: 1rem;
-  padding: 0.9rem;
-  background: linear-gradient(180deg, hsl(160 12% 10%), hsl(160 18% 6%));
-  border: 1px solid hsl(152 30% 18% / 0.55);
-  min-height: 96px;
+  border-radius: 0.875rem;
+  padding: 0.95rem;
+  background:
+    linear-gradient(180deg, hsl(160 25% 9%) 0%, hsl(160 35% 5%) 100%);
+  border: 1px solid hsl(152 35% 18% / 0.85);
+  min-height: 104px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+  transition: transform 120ms ease, border-color 160ms ease, box-shadow 160ms ease;
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 0.04),
+    0 4px 14px hsl(160 60% 2% / 0.55);
+  color: hsl(0 0% 100%);
 }
 .pk-tile:active { transform: scale(0.97); }
+.pk-tile:hover {
+  border-color: hsl(45 95% 55% / 0.45);
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 0.06),
+    0 6px 20px hsl(160 60% 2% / 0.7),
+    0 0 14px hsl(45 95% 55% / 0.18);
+}
 .pk-tile::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 80% 50% at 0% 0%, hsl(152 72% 46% / 0.10), transparent 60%);
+  background:
+    radial-gradient(ellipse 80% 50% at 0% 0%, hsl(152 72% 46% / 0.16), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 100% 100%, hsl(45 95% 55% / 0.07), transparent 60%);
   pointer-events: none;
+}
+/* gold edge glow variant for highlight tile */
+.pk-tile-hot {
+  border-color: hsl(45 95% 55% / 0.55) !important;
+  box-shadow:
+    inset 0 1px 0 hsl(45 95% 70% / 0.18),
+    0 0 18px hsl(45 95% 55% / 0.28),
+    0 6px 18px hsl(160 60% 2% / 0.6) !important;
 }
 
 /* Confidence chip */
