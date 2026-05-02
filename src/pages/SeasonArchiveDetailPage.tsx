@@ -202,7 +202,7 @@ export default function SeasonArchiveDetailPage() {
                     key={s.id}
                     className={cn(
                       'flex items-center gap-2 px-2.5 py-2 rounded-lg',
-                      isTop3 ? 'bg-gold/5 border border-gold/15' : 'bg-muted/20'
+                      isTop3 ? 'bg-gold/5 border border-gold/15' : 'da-subcard'
                     )}
                   >
                     <span
@@ -247,7 +247,7 @@ export default function SeasonArchiveDetailPage() {
                 const winnerIsA = m.winner_user_id && m.winner_user_id === m.user_a;
                 const winnerIsB = m.winner_user_id && m.winner_user_id === m.user_b;
                 return (
-                  <div key={m.id} className="bg-muted/20 rounded-lg p-2.5">
+                  <div key={m.id} className="da-subcard p-2.5">
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-[9px] font-extrabold uppercase tracking-wider text-muted-foreground/60">
                         {getPlayoffRoundLabel(m.round as any)}{' '}
@@ -309,7 +309,7 @@ export default function SeasonArchiveDetailPage() {
             <div className="space-y-1">
               {allDrafts.map(e => (
                 <Link to={`/drafts/${e.draft_id}`} key={e.id} className="block">
-                  <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors">
+                  <div className="flex items-center gap-2 px-2.5 py-2 da-subcard hover:bg-gold/10 transition-colors">
                     <span className="text-[10px] font-extrabold text-muted-foreground/60 w-6">
                       #{e.week_number}
                     </span>
@@ -330,7 +330,7 @@ export default function SeasonArchiveDetailPage() {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="text-center bg-muted/20 rounded-lg py-2">
+    <div className="text-center da-subcard py-2">
       <p className="text-[14px] font-extrabold tabular-nums leading-none">{value}</p>
       <p className="text-[8px] text-muted-foreground/60 font-bold uppercase tracking-wider mt-1">{label}</p>
     </div>
