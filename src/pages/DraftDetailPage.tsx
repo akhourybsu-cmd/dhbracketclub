@@ -32,6 +32,7 @@ import { OnTheClockTimer } from '@/components/draft/OnTheClockTimer';
 import { PickAnnouncement } from '@/components/draft/PickAnnouncement';
 import { DraftStatsCard } from '@/components/draft/DraftStatsCard';
 import { findMvpPick, findScoringStreaks, computePickTimings, formatDuration } from '@/lib/draftStats';
+import { useCountUp, useFirstSeen } from '@/lib/draft/animations';
 import {
   useCurrentSeason,
   useSeasonEntries,
