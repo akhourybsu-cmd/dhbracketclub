@@ -185,15 +185,21 @@ export default function DraftsListPage() {
         <div className="glass-card p-4 mb-4">
           <div className="grid grid-cols-3 gap-2 mb-3">
             <div className="text-center">
-              <p className="text-lg font-extrabold leading-none">{myDraftStats.totalPoints}</p>
+              <p className="text-lg font-extrabold leading-none tabular-nums">
+                <CountedNumber value={myDraftStats.totalPoints} />
+              </p>
               <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Total Pts</p>
             </div>
             <div className="text-center">
-              <p className="text-lg font-extrabold leading-none">{myDraftStats.wins}</p>
+              <p className="text-lg font-extrabold leading-none tabular-nums">
+                <CountedNumber value={myDraftStats.wins} />
+              </p>
               <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Wins</p>
             </div>
             <div className="text-center">
-              <p className="text-lg font-extrabold leading-none">{myDraftStats.podiums}</p>
+              <p className="text-lg font-extrabold leading-none tabular-nums">
+                <CountedNumber value={myDraftStats.podiums} />
+              </p>
               <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">Podiums</p>
             </div>
           </div>
