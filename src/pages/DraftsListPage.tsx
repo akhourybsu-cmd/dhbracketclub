@@ -7,6 +7,7 @@ import { Bookmark, Plus, ArrowRight, Users, Play, Trophy, Award, Target, Archive
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { getDerivedDraftTurn } from '@/lib/draftTurn';
+import { springSnap, useCountUp } from '@/lib/draft/animations';
 import { formatDistanceToNow } from 'date-fns';
 import { useDraftListUpdates } from '@/hooks/useRealtimeSubscription';
 import { useCurrentSeason, useSeasonEntries, usePlayoffMatchByDraftIds } from '@/hooks/useDraftSeasons';
