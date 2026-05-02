@@ -38,6 +38,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Loader2, Sparkles, RefreshCw } from 'lucide-react';
 import runedelveEmblem from '@/assets/runedelve-emblem.png';
 import nexusEmblem from '@/assets/nexus-emblem.png';
+import pickemEmblem from '@/assets/pickem-emblem.png';
 import { StartNextSeasonSheet } from '@/components/draft/StartNextSeasonSheet';
 
 /* ── Lockbox card (unchanged) ── */
@@ -1623,7 +1624,7 @@ function LifetimeStatsCard({ userId }: { userId?: string }) {
   );
 }
 
-/* ── NFL Pick'em featured card ── */
+/* ── NFL Pick'em featured card — standalone "Pick Center" enter banner ── */
 function PickemCompeteCard() {
   const { user } = useAuth();
   const [season, setSeason] = useState<any>(null);
@@ -1673,60 +1674,127 @@ function PickemCompeteCard() {
   const isLive = season?.status === 'active' && week?.status !== 'upcoming';
   const remaining = Math.max(0, totalGames - pickedCount);
 
+  const subline = !season
+    ? 'Loading broadcast feed…'
+    : isLive
+      ? `${week?.label || `Week ${season.current_week}`} · ${remaining > 0 ? `${remaining} games left` : 'All picks in'}`
+      : season.status === 'upcoming'
+        ? 'Season starts soon'
+        : season.name;
+
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-      <div className="glass-card p-4 relative overflow-hidden" style={{
-        borderLeft: '3px solid hsl(var(--gold))',
-      }}>
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{
-            background: 'linear-gradient(135deg, hsl(var(--gold) / 0.22), hsl(var(--gold) / 0.05))',
-          }}>
-            <Target className="w-5 h-5" style={{ color: 'hsl(var(--gold))' }} />
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <h2 className="font-bold text-[15px] tracking-tight">NFL Pick'em</h2>
-              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold" style={{
-                background: 'hsl(var(--gold) / 0.15)', color: 'hsl(var(--gold))',
-              }}>SEASON</span>
+      <Link to="/pickem" className="block">
+        <div
+          className="relative overflow-hidden rounded-2xl btn-press"
+          style={{
+            background:
+              'radial-gradient(ellipse 120% 80% at 50% 0%, hsl(152 72% 22% / 0.55), transparent 60%),' +
+              'radial-gradient(ellipse 90% 60% at 100% 100%, hsl(45 95% 50% / 0.28), transparent 60%),' +
+              'linear-gradient(180deg, hsl(160 28% 8%), hsl(160 30% 5%))',
+            border: '1px solid hsl(45 90% 55% / 0.38)',
+            boxShadow:
+              '0 12px 40px hsl(152 72% 18% / 0.5), inset 0 1px 0 hsl(45 95% 70% / 0.2)',
+          }}
+        >
+          {/* Yard-line shimmer */}
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none opacity-40"
+            style={{
+              backgroundImage:
+                'repeating-linear-gradient(90deg, transparent 0, transparent 36px, hsl(0 0% 100% / 0.05) 36px, hsl(0 0% 100% / 0.05) 37px)',
+              maskImage: 'linear-gradient(180deg, transparent 0%, black 30%, black 70%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, black 30%, black 70%, transparent 100%)',
+            }}
+          />
+
+          {/* Drifting gold glow */}
+          <div
+            aria-hidden
+            className="absolute -top-12 -right-10 w-44 h-44 rounded-full pointer-events-none"
+            style={{
+              background: 'radial-gradient(circle, hsl(45 95% 55% / 0.4), transparent 70%)',
+              filter: 'blur(8px)',
+            }}
+          />
+
+          <div className="relative z-10 p-5 flex items-center gap-4">
+            {/* Emblem hero visual */}
+            <div className="relative flex-shrink-0">
+              <div
+                aria-hidden
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background: 'radial-gradient(circle, hsl(45 95% 55% / 0.5), transparent 65%)',
+                  filter: 'blur(10px)',
+                  transform: 'scale(1.15)',
+                }}
+              />
+              <img
+                src={pickemEmblem}
+                alt="NFL Pick Center"
+                width={96}
+                height={96}
+                loading="lazy"
+                decoding="async"
+                className="relative w-[88px] h-[88px] object-contain drop-shadow-[0_4px_18px_hsl(45_95%_50%/0.55)]"
+              />
             </div>
-            <p className="text-[11px] text-muted-foreground/70">
-              {season ? (
-                isLive
-                  ? `${week?.label || `Week ${season.current_week}`} · ${remaining > 0 ? `${remaining} games left to pick` : 'All picks in'}`
-                  : season.status === 'upcoming' ? 'Season starts soon' : season.name
-              ) : 'Loading…'}
-            </p>
+
+            {/* Title + meta + CTA */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span
+                  className="text-[9px] font-extrabold uppercase tracking-[0.22em]"
+                  style={{ color: 'hsl(45 95% 65%)' }}
+                >
+                  ◆ NFL Pick'em
+                </span>
+                {isLive && (
+                  <span className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider"
+                    style={{ color: 'hsl(152 70% 65%)' }}>
+                    <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'hsl(152 70% 55%)' }} />
+                    Live
+                  </span>
+                )}
+              </div>
+              <h2
+                className="font-extrabold text-[22px] leading-none tracking-tight mb-1.5"
+                style={{
+                  background:
+                    'linear-gradient(180deg, hsl(45 30% 98%), hsl(45 95% 65%))',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  textShadow: '0 0 18px hsl(45 95% 45% / 0.45)',
+                }}
+              >
+                Pick Center
+              </h2>
+              <p className="text-[10px] font-semibold mb-2.5 truncate" style={{ color: 'hsl(150 12% 78%)' }}>
+                {subline}
+                {myStanding && (
+                  <span className="ml-1.5" style={{ color: 'hsl(45 95% 65%)' }}>
+                    · #{myStanding.rank ?? '—'} · {myStanding.total_correct}/{myStanding.total_picked}
+                  </span>
+                )}
+              </p>
+              <div
+                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider"
+                style={{
+                  background:
+                    'linear-gradient(135deg, hsl(45 95% 55%), hsl(38 95% 48%))',
+                  color: 'hsl(160 40% 6%)',
+                  boxShadow:
+                    '0 4px 14px hsl(45 95% 40% / 0.55), inset 0 1px 0 hsl(45 100% 85% / 0.55)',
+                }}
+              >
+                Enter <ChevronRight className="w-3.5 h-3.5" strokeWidth={3} />
+              </div>
+            </div>
           </div>
         </div>
-
-        {myStanding && (
-          <div className="flex gap-3 mb-3 text-[10px] text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Trophy className="w-3 h-3" />
-              #{myStanding.rank ?? '—'} · {myStanding.total_correct}/{myStanding.total_picked}
-            </span>
-          </div>
-        )}
-
-        <div className="flex gap-2">
-          <Link to="/pickem" className="flex-1">
-            <button className="w-full h-9 rounded-lg bg-muted/50 text-[11px] font-bold text-foreground/80 hover:bg-muted/60 transition-colors flex items-center justify-center gap-1.5">
-              Open Pick'em <ChevronRight className="w-3 h-3" />
-            </button>
-          </Link>
-          {isLive && remaining > 0 && week && (
-            <Link to={`/pickem/week/${week.week_number}`}>
-              <button className="h-9 px-3 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1.5" style={{
-                background: 'hsl(var(--gold) / 0.18)', color: 'hsl(var(--gold))',
-              }}>
-                <Target className="w-3 h-3" /> Make Picks
-              </button>
-            </Link>
-          )}
-        </div>
-      </div>
+      </Link>
     </motion.div>
   );
 }
@@ -2038,8 +2106,8 @@ export default function CompetePage() {
           </TabsContent>
 
           <TabsContent value="other" className="space-y-3">
-            <LockboxCompeteCard />
             <PickemCompeteCard />
+            <LockboxCompeteCard />
             <ArchivedModesCard />
           </TabsContent>
         </Tabs>
