@@ -2296,23 +2296,11 @@ export default function CompetePage() {
                 )}
 
                 <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
-                  <div className="glass-card p-3 bg-card/60 flex gap-2">
-                    <Link to="/drafts/seasons" className="flex-1">
-                      <button className="w-full h-9 rounded-lg bg-muted/50 text-[11px] font-bold text-foreground/80 transition-colors flex items-center justify-center gap-1.5 btn-press">
-                        Seasons Archive <ChevronRight className="w-3 h-3" />
-                      </button>
-                    </Link>
-                    {season.status !== 'complete' && (
-                      <Link to="/drafts/create">
-                        <button className="h-9 px-4 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1.5 btn-press" style={{
-                          background: 'hsl(var(--gold) / 0.15)',
-                          color: 'hsl(var(--gold))',
-                        }}>
-                          <Plus className="w-3 h-3" /> New Draft
-                        </button>
-                      </Link>
-                    )}
-                  </div>
+                  <Link to="/drafts/seasons" className="block">
+                    <button className="w-full h-9 rounded-lg bg-muted/50 text-[11px] font-bold text-foreground/80 transition-colors flex items-center justify-center gap-1.5 btn-press">
+                      Seasons Archive <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </Link>
                 </motion.div>
               </>
             ) : (
