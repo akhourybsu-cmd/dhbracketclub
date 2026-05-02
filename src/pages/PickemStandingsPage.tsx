@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronLeft, Trophy, Crown } from 'lucide-react';
+import { ChevronLeft, Trophy, Crown, Flame } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useActiveSeason, useSeasonStandings } from '@/hooks/usePickem';
+import { TurfBackdrop } from '@/components/pickem/TurfBackdrop';
 import { cn } from '@/lib/utils';
 
 export default function PickemStandingsPage() {
@@ -19,26 +20,24 @@ export default function PickemStandingsPage() {
         <ChevronLeft className="w-4 h-4" /> Pick'em
       </Link>
 
-      {/* Hero header */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-        className="relative rounded-2xl overflow-hidden p-5"
-        style={{
-          background: 'radial-gradient(ellipse 80% 60% at 50% 0%, hsl(var(--gold) / 0.14), transparent 60%), hsl(var(--card))',
-          border: '1px solid hsl(var(--gold) / 0.20)',
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, hsl(var(--gold) / 0.25), hsl(var(--gold) / 0.05))', boxShadow: 'var(--shadow-gold)' }}>
-            <Trophy className="w-5 h-5 text-gold" />
+      {/* Hero header — turf */}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+        <TurfBackdrop className="px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-gold/15 border border-gold/40">
+              <Trophy className="w-5 h-5 text-gold" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-gold/95">Standings Race</p>
+              <h1 className="text-[22px] font-extrabold tracking-tight leading-tight truncate text-white">
+                {season?.name ?? 'Standings'}
+              </h1>
+              <p className="text-[11px] text-white/60 truncate flex items-center gap-1 mt-0.5">
+                <Flame className="w-3 h-3 text-gold" /> Climb the standings
+              </p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-gold/90">Season</p>
-            <h1 className="text-[22px] font-extrabold tracking-tight leading-tight truncate">Standings</h1>
-            <p className="text-[11px] text-muted-foreground truncate">{season?.name ?? 'NFL Pick\'em'}</p>
-          </div>
-        </div>
+        </TurfBackdrop>
       </motion.div>
 
       {loading ? (

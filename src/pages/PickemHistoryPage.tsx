@@ -4,6 +4,7 @@ import { ChevronLeft, History, ChevronRight } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useActiveSeason, useSeasonWeeks } from '@/hooks/usePickem';
+import { TurfBackdrop } from '@/components/pickem/TurfBackdrop';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
@@ -69,34 +70,28 @@ export default function PickemHistoryPage() {
         <ChevronLeft className="w-4 h-4" /> Pick'em
       </Link>
 
-      {/* Hero header with overall record */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-        className="relative rounded-2xl overflow-hidden p-5"
-        style={{
-          background: 'radial-gradient(ellipse 80% 60% at 50% 0%, hsl(var(--primary) / 0.10), transparent 60%), hsl(var(--card))',
-          border: '1px solid hsl(var(--border) / 0.4)',
-        }}
-      >
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, hsl(var(--primary) / 0.22), hsl(var(--primary) / 0.05))', boxShadow: 'var(--shadow-glow-sm)' }}>
-            <History className="w-5 h-5 text-primary" />
+      {/* Hero header with overall record — turf */}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+        <TurfBackdrop className="px-5 py-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-primary/20 border border-primary/40">
+              <History className="w-5 h-5 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-gold/95">My Record</p>
+              <h1 className="text-[22px] font-extrabold tracking-tight leading-tight text-white">Pick History</h1>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-primary/90">My Record</p>
-            <h1 className="text-[22px] font-extrabold tracking-tight leading-tight">Pick History</h1>
-          </div>
-        </div>
-        {totals.weeks > 0 ? (
-          <div className="grid grid-cols-3 gap-2 mt-2">
-            <Stat label="Correct" value={`${totals.correct}/${totals.total}`} />
-            <Stat label="Accuracy" value={`${totals.accuracy}%`} accent />
-            <Stat label="Weeks" value={`${totals.weeks}`} />
-          </div>
-        ) : (
-          <p className="text-[12px] text-muted-foreground">No scored weeks yet.</p>
-        )}
+          {totals.weeks > 0 ? (
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              <Stat label="Correct" value={`${totals.correct}/${totals.total}`} />
+              <Stat label="Accuracy" value={`${totals.accuracy}%`} accent />
+              <Stat label="Weeks" value={`${totals.weeks}`} />
+            </div>
+          ) : (
+            <p className="text-[12px] text-white/65">History appears after your first scored week.</p>
+          )}
+        </TurfBackdrop>
       </motion.div>
 
       <div className="space-y-1.5">
@@ -145,9 +140,9 @@ export default function PickemHistoryPage() {
 
 function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
-    <div className="rounded-xl bg-background/40 border border-border/30 p-2.5 text-center">
-      <p className={cn('text-[15px] font-extrabold tabular-nums leading-none', accent && 'text-primary')}>{value}</p>
-      <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-muted-foreground/70 mt-1">{label}</p>
+    <div className="rounded-xl bg-black/35 border border-white/10 p-2.5 text-center">
+      <p className={cn('text-[15px] font-extrabold tabular-nums leading-none text-white', accent && 'text-gold')}>{value}</p>
+      <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-white/55 mt-1">{label}</p>
     </div>
   );
 }

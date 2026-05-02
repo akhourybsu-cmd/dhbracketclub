@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronLeft, Info, Lock, Trophy, Star, Zap } from 'lucide-react';
+import { TurfBackdrop } from '@/components/pickem/TurfBackdrop';
 
 export default function PickemRulesPage() {
   return (
@@ -9,24 +10,18 @@ export default function PickemRulesPage() {
         <ChevronLeft className="w-4 h-4" /> Pick'em
       </Link>
 
-      <motion.div
-        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-        className="relative rounded-2xl overflow-hidden p-5"
-        style={{
-          background: 'radial-gradient(ellipse 80% 60% at 50% 0%, hsl(var(--primary) / 0.10), transparent 60%), hsl(var(--card))',
-          border: '1px solid hsl(var(--border) / 0.4)',
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, hsl(var(--primary) / 0.22), hsl(var(--primary) / 0.05))', boxShadow: 'var(--shadow-glow-sm)' }}>
-            <Info className="w-5 h-5 text-primary" />
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+        <TurfBackdrop className="px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-primary/20 border border-primary/40">
+              <Info className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-gold/95">Pick'em Playbook</p>
+              <h1 className="text-[22px] font-extrabold tracking-tight leading-tight text-white">How It Works</h1>
+            </div>
           </div>
-          <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-primary/90">Quick Read</p>
-            <h1 className="text-[22px] font-extrabold tracking-tight leading-tight">How It Works</h1>
-          </div>
-        </div>
+        </TurfBackdrop>
       </motion.div>
 
       {[
