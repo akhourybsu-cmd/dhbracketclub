@@ -1037,7 +1037,14 @@ export default function DraftDetailPage() {
           )}
 
           {canManage && (
-            <Button onClick={handleStartDraft} disabled={starting || participants.length < 2} className="w-full h-12 rounded-xl font-bold btn-press gap-2 text-[13px]">
+            <Button
+              onClick={handleStartDraft}
+              disabled={starting || participants.length < 2}
+              className={cn(
+                "w-full h-12 rounded-xl font-bold btn-press gap-2 text-[13px]",
+                participants.length >= 2 && !starting && "draft-start-pulse",
+              )}
+            >
               <Play className="w-4 h-4" />
               {starting ? 'Starting…' : 'Start Draft'}
             </Button>
