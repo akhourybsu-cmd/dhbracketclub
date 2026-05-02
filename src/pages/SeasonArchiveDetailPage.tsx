@@ -255,12 +255,11 @@ export default function SeasonArchiveDetailPage() {
                       </span>
                       <span
                         className={cn(
-                          'text-[8px] font-bold uppercase px-1.5 py-0.5 rounded',
                           m.status === 'complete'
-                            ? 'bg-success/15 text-success'
+                            ? 'da-status-complete'
                             : m.status === 'in_progress'
-                            ? 'bg-gold/15 text-gold'
-                            : 'bg-muted text-muted-foreground'
+                            ? 'da-status-live'
+                            : 'da-status-setup'
                         )}
                       >
                         {m.status === 'complete' ? 'Final' : m.status === 'in_progress' ? 'Live' : m.status}
