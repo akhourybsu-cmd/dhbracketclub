@@ -39,6 +39,7 @@ import { Loader2, Sparkles, RefreshCw } from 'lucide-react';
 import runedelveEmblem from '@/assets/runedelve-emblem.png';
 import nexusEmblem from '@/assets/nexus-emblem.png';
 import pickemEmblem from '@/assets/pickem-emblem.png';
+import draftEmblem from '@/assets/draft-emblem.png';
 import { StartNextSeasonSheet } from '@/components/draft/StartNextSeasonSheet';
 
 /* ── Lockbox card (unchanged) ── */
