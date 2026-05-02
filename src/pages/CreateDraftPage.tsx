@@ -148,9 +148,24 @@ export default function CreateDraftPage() {
           </div>
         </div>
 
-        <Button type="submit" className="w-full h-11 rounded-xl font-bold btn-press da-cta" style={{ height: '2.75rem' }} disabled={loading || !topic.trim()}>
+        <button
+          type="submit"
+          disabled={loading || !topic.trim()}
+          className="w-full h-12 rounded-xl font-black uppercase tracking-[0.14em] text-[13px] btn-press transition-all disabled:cursor-not-allowed"
+          style={{
+            color: loading || !topic.trim() ? 'hsl(45 60% 78%)' : 'hsl(160 40% 6%)',
+            background: loading || !topic.trim()
+              ? 'linear-gradient(135deg, hsl(45 35% 22%), hsl(40 30% 16%))'
+              : 'linear-gradient(135deg, hsl(45 100% 65%), hsl(40 95% 50%))',
+            border: '1px solid hsl(45 95% 55% / 0.55)',
+            boxShadow: loading || !topic.trim()
+              ? 'inset 0 1px 0 hsl(45 60% 60% / 0.18)'
+              : '0 6px 20px hsl(45 95% 40% / 0.5), inset 0 1px 0 hsl(45 100% 90% / 0.65)',
+            opacity: loading || !topic.trim() ? 0.85 : 1,
+          }}
+        >
           {loading ? 'Creating…' : 'Create Draft'}
-        </Button>
+        </button>
       </motion.form>
     </div>
   );

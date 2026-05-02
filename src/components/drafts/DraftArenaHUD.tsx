@@ -100,11 +100,12 @@ export function DraftArenaHUD() {
 
           {seasonChip && (
             <span
-              className="h-9 px-2.5 rounded-lg flex items-center text-[11px] font-black tabular-nums"
+              className="h-9 px-2.5 rounded-lg flex items-center text-[11px] font-black tabular-nums uppercase"
               style={{
-                background: 'hsl(152 72% 36% / 0.18)',
-                border: '1px solid hsl(152 72% 46% / 0.4)',
-                color: 'hsl(152 75% 75%)',
+                background: 'hsl(45 95% 55% / 0.14)',
+                border: '1px solid hsl(45 95% 55% / 0.36)',
+                color: 'hsl(45 95% 70%)',
+                textShadow: '0 0 8px hsl(45 95% 55% / 0.35)',
               }}
             >
               {seasonChip}
