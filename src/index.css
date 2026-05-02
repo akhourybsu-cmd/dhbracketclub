@@ -1761,3 +1761,176 @@
   [style*="nx-sigil-epic"], [style*="nx-sigil-legendary"] { animation: none !important; }
 }
 
+
+/* ═══════════════════════════════════════════════════════════
+   NFL PICK'EM — Football identity layer
+   Turf gradients, yard lines, scorebug accents, broadcast feel.
+   Mobile-first, GPU-friendly, respects reduced motion.
+   ═══════════════════════════════════════════════════════════ */
+
+/* Turf base — deep stadium green w/ subtle vignette */
+.pk-turf {
+  background:
+    radial-gradient(ellipse 120% 70% at 50% -10%, hsl(152 60% 22% / 0.55), transparent 65%),
+    radial-gradient(ellipse 100% 80% at 50% 110%, hsl(160 30% 4% / 0.85), transparent 60%),
+    linear-gradient(180deg, hsl(152 35% 10%), hsl(160 25% 6% 95%));
+}
+
+/* Yard-line texture overlay (chalk hashes) */
+.pk-yardlines::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent 38px,
+      hsl(0 0% 100% / 0.045) 38px,
+      hsl(0 0% 100% / 0.045) 39px
+    );
+  mask-image: linear-gradient(180deg, transparent 0%, #000 30%, #000 70%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 30%, #000 70%, transparent 100%);
+}
+
+/* Stadium light shimmer — gentle moving sheen */
+.pk-stadium-shine::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 35%, hsl(45 95% 70% / 0.10) 50%, transparent 65%);
+  background-size: 220% 100%;
+  background-position: 100% 0;
+  animation: pk-shine 7s ease-in-out infinite;
+}
+@keyframes pk-shine {
+  0%, 100% { background-position: 120% 0; opacity: 0.6; }
+  50%      { background-position: -20% 0;  opacity: 1; }
+}
+
+/* Chalk-line divider */
+.pk-chalk {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.18), transparent);
+}
+
+/* Scorebug card — broadcast lower-third feel */
+.pk-scorebug {
+  position: relative;
+  border-radius: 1rem;
+  background: linear-gradient(180deg, hsl(160 12% 10%), hsl(160 16% 7%));
+  border: 1px solid hsl(152 30% 22% / 0.55);
+  box-shadow:
+    0 1px 0 hsl(0 0% 100% / 0.04) inset,
+    0 6px 18px hsl(160 40% 2% / 0.5);
+}
+
+/* Selected team glow (gold confidence) */
+.pk-selected {
+  background: linear-gradient(180deg, hsl(45 95% 55% / 0.18), hsl(45 95% 55% / 0.08)) !important;
+  border-color: hsl(45 95% 55% / 0.65) !important;
+  box-shadow:
+    0 0 0 1px hsl(45 95% 55% / 0.35),
+    0 0 22px hsl(45 95% 55% / 0.22),
+    inset 0 1px 0 hsl(45 95% 70% / 0.25) !important;
+}
+
+/* Field-line sweep on pick */
+@keyframes pk-sweep {
+  0%   { transform: translateX(-110%); opacity: 0; }
+  35%  { opacity: 1; }
+  100% { transform: translateX(110%);  opacity: 0; }
+}
+.pk-sweep {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
+}
+.pk-sweep::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  width: 45%;
+  background: linear-gradient(110deg, transparent 0%, hsl(45 95% 70% / 0.55) 50%, transparent 100%);
+  animation: pk-sweep 650ms cubic-bezier(.2,.7,.2,1) forwards;
+}
+
+/* Football pulse for empty/pre-season states */
+@keyframes pk-pulse {
+  0%, 100% { transform: scale(1);    opacity: 0.95; }
+  50%      { transform: scale(1.04); opacity: 1; }
+}
+.pk-pulse { animation: pk-pulse 2.4s ease-in-out infinite; }
+
+/* Result stamps */
+.pk-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.18rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+}
+.pk-stamp-correct { color: hsl(var(--success)); background: hsl(var(--success) / 0.12); }
+.pk-stamp-wrong   { color: hsl(var(--destructive)); background: hsl(var(--destructive) / 0.10); }
+.pk-stamp-locked  { color: hsl(var(--muted-foreground)); background: hsl(var(--muted) / 0.4); }
+.pk-stamp-live    { color: hsl(var(--live)); background: hsl(var(--live) / 0.12); }
+
+/* Football-themed action tile */
+.pk-tile {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  padding: 0.9rem;
+  background: linear-gradient(180deg, hsl(160 12% 10%), hsl(160 18% 6%));
+  border: 1px solid hsl(152 30% 18% / 0.55);
+  min-height: 96px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+.pk-tile:active { transform: scale(0.97); }
+.pk-tile::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 50% at 0% 0%, hsl(152 72% 46% / 0.10), transparent 60%);
+  pointer-events: none;
+}
+
+/* Confidence chip */
+.pk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.22rem 0.55rem;
+  border-radius: 9999px;
+  background: hsl(160 8% 12% / 0.85);
+  border: 1px solid hsl(152 30% 22% / 0.55);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: hsl(var(--foreground) / 0.85);
+  white-space: nowrap;
+}
+.pk-chip-gold {
+  color: hsl(var(--gold));
+  background: hsl(45 95% 55% / 0.10);
+  border-color: hsl(45 95% 55% / 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pk-stadium-shine::after,
+  .pk-pulse,
+  .pk-sweep::after { animation: none !important; }
+}

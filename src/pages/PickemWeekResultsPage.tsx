@@ -7,6 +7,7 @@ import {
   useActiveSeason, useSeasonWeeks, useWeekGames, useMyWeekPicks, useWeeklyStandings,
 } from '@/hooks/usePickem';
 import { TeamLogo } from '@/components/pickem/TeamLogo';
+import { TurfBackdrop } from '@/components/pickem/TurfBackdrop';
 import { Confetti } from '@/components/Confetti';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -49,29 +50,32 @@ export default function PickemWeekResultsPage() {
         </Link>
       </div>
 
-      {/* Recap hero */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-        className="relative rounded-2xl overflow-hidden p-5"
-        style={{
-          background: 'radial-gradient(ellipse 80% 60% at 50% 0%, hsl(var(--gold) / 0.12), transparent 60%), hsl(var(--card))',
-          border: '1px solid hsl(var(--border) / 0.4)',
-        }}
-      >
-        <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-gold/90">Final Results</p>
-        <h1 className="text-[26px] font-extrabold tracking-tight leading-tight mt-0.5">
-          {week?.label ?? `Week ${num}`}
-        </h1>
-        <div className="mt-3 flex items-baseline gap-2">
-          <span className="text-[34px] font-extrabold tabular-nums leading-none text-gold">{correctCount}</span>
-          <span className="text-[14px] font-extrabold text-muted-foreground tabular-nums">/ {totalScored || picks.length}</span>
-          <span className="text-[12px] text-muted-foreground ml-2">({accuracy}%)</span>
-          {myRank && (
-            <span className="ml-auto text-[12px] font-extrabold text-foreground/80">
-              Rank <span className="text-gold tabular-nums">#{myRank}</span>
-            </span>
+      {/* Recap hero — turf */}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+        <TurfBackdrop className="px-5 py-4">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-gold/95">Final Recap</p>
+          <h1 className="text-[26px] font-extrabold tracking-tight leading-tight text-white mt-0.5">
+            {week?.label ?? `Week ${num}`}
+          </h1>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-[36px] font-extrabold tabular-nums leading-none text-gold drop-shadow-[0_2px_8px_rgba(45,95,55,0.5)]">{correctCount}</span>
+            <span className="text-[14px] font-extrabold text-white/70 tabular-nums">/ {totalScored || picks.length}</span>
+            <span className="text-[12px] text-white/65 ml-2">({accuracy}%)</span>
+            {myRank && (
+              <span className="ml-auto text-[12px] font-extrabold text-white/85">
+                Rank <span className="text-gold tabular-nums">#{myRank}</span>
+              </span>
+            )}
+          </div>
+          {podiumed && (
+            <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gold/15 border border-gold/40">
+              <Trophy className="w-3 h-3 text-gold" />
+              <span className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-gold">
+                {myRank === 1 ? 'Week Champion' : `Top ${myRank} Finish`}
+              </span>
+            </div>
           )}
-        </div>
+        </TurfBackdrop>
       </motion.div>
 
       {/* Per-game results */}
@@ -100,11 +104,13 @@ export default function PickemWeekResultsPage() {
                   {format(new Date(game.kickoff_at), 'EEE h:mm a')}
                 </p>
                 {isFinal ? (
-                  wasCorrect ? <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-success uppercase tracking-wider"><Check className="w-3 h-3" /> Correct</span>
-                  : wasWrong ? <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-destructive uppercase tracking-wider"><X className="w-3 h-3" /> Wrong</span>
-                  : <span className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider">No pick</span>
+                  wasCorrect ? <span className="pk-stamp pk-stamp-correct"><Check className="w-3 h-3" /> Correct Pick</span>
+                  : wasWrong ? <span className="pk-stamp pk-stamp-wrong"><X className="w-3 h-3" /> Missed Pick</span>
+                  : <span className="pk-stamp pk-stamp-locked">No Pick</span>
                 ) : (
-                  <span className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider">{game.status === 'live' ? 'LIVE' : 'Pending'}</span>
+                  <span className={cn('pk-stamp', game.status === 'live' ? 'pk-stamp-live' : 'pk-stamp-locked')}>
+                    {game.status === 'live' ? 'Live' : 'Pending'}
+                  </span>
                 )}
               </div>
               <div className="flex items-center gap-2">
