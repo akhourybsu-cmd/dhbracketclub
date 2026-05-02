@@ -2498,3 +2498,111 @@
   50%      { box-shadow: 0 18px 56px hsl(45 95% 40% / 0.55), inset 0 1px 0 hsl(45 100% 90% / 0.28); }
 }
 .da-banner-pulse { animation: daBannerPulse 3.4s ease-in-out infinite; }
+
+/* ── Arena page primitives (only active inside .da-mode shell) ── */
+
+/* Card surface — gold-tinted glass-card replacement */
+.da-mode .da-glass {
+  background: linear-gradient(180deg, hsl(160 35% 7% / 0.88), hsl(160 50% 4% / 0.94));
+  border: 1px solid hsl(45 80% 50% / 0.18);
+  border-radius: 14px;
+  box-shadow:
+    0 1px 0 hsl(45 95% 55% / 0.08) inset,
+    0 8px 24px -14px hsl(45 95% 35% / 0.35);
+  position: relative;
+}
+
+/* Quieter sub-card (card-on-card) */
+.da-mode .da-subcard {
+  background: hsl(160 30% 8% / 0.55);
+  border: 1px solid hsl(45 80% 50% / 0.10);
+  border-radius: 10px;
+}
+
+/* Back button — replaces bg-muted/40 in arena */
+.da-mode .da-back {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: hsl(160 35% 9% / 0.7);
+  border: 1px solid hsl(45 80% 50% / 0.18);
+  color: hsl(45 95% 70%);
+  transition: background 150ms ease, border-color 150ms ease, transform 80ms ease;
+}
+.da-mode .da-back:hover { background: hsl(160 35% 12% / 0.85); border-color: hsl(45 80% 50% / 0.32); }
+.da-mode .da-back:active { transform: scale(0.96); }
+.da-mode .da-back:focus-visible { outline: none; box-shadow: 0 0 0 2px hsl(45 95% 55% / 0.45); }
+
+/* Page header icon tile */
+.da-mode .da-page-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 30% 30%, hsl(45 95% 55% / 0.32), transparent 70%),
+    linear-gradient(135deg, hsl(160 35% 9%), hsl(160 50% 5%));
+  border: 1px solid hsl(45 95% 55% / 0.32);
+  box-shadow: 0 0 14px hsl(45 95% 50% / 0.22), inset 0 1px 0 hsl(45 100% 90% / 0.12);
+  color: hsl(45 95% 65%);
+  flex-shrink: 0;
+}
+
+/* Status pills — three variants used across the arena pages */
+.da-mode .da-status-setup,
+.da-mode .da-status-live,
+.da-mode .da-status-complete {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.5rem;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.da-mode .da-status-setup {
+  background: hsl(160 15% 16% / 0.6);
+  border: 1px solid hsl(160 15% 28% / 0.5);
+  color: hsl(150 10% 70%);
+}
+.da-mode .da-status-live {
+  background: hsl(152 72% 36% / 0.18);
+  border: 1px solid hsl(152 72% 46% / 0.4);
+  color: hsl(152 75% 72%);
+}
+.da-mode .da-status-complete {
+  background: hsl(45 95% 55% / 0.14);
+  border: 1px solid hsl(45 95% 55% / 0.34);
+  color: hsl(45 95% 68%);
+}
+
+/* In-card divider */
+.da-mode .da-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, hsl(45 80% 50% / 0.18), transparent);
+  border: 0;
+}
+
+/* Warm gold shimmer override for skeletons inside the arena */
+.da-mode .skeleton-shimmer,
+.da-mode .da-shimmer {
+  background:
+    linear-gradient(90deg,
+      hsl(160 35% 9%) 0%,
+      hsl(45 60% 18% / 0.55) 50%,
+      hsl(160 35% 9%) 100%);
+  background-size: 200% 100%;
+  animation: daShimmer 1.6s ease-in-out infinite;
+}
+@keyframes daShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
