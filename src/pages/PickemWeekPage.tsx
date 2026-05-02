@@ -1,4 +1,4 @@
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ListChecks, ArrowRight, CalendarOff, Flame } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -19,7 +19,6 @@ import { PickSlipBar } from '@/components/pickem/PickSlipBar';
 export default function PickemWeekPage() {
   const { weekNumber } = useParams<{ weekNumber: string }>();
   const num = parseInt(weekNumber || '1', 10);
-  const navigate = useNavigate();
   const { user } = useAuth();
 
   const { season } = useActiveSeason();
