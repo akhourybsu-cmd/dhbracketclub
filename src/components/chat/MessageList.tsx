@@ -195,8 +195,8 @@ export function MessageList({
   const unreadCount = hasUnreadDivider ? filtered.length - 1 - unreadDividerAfterIdx : 0;
 
   return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-4 relative" style={{ minHeight: 0 }}>
-      <div className="py-3">
+    <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden px-2 sm:px-4 relative" style={{ minHeight: 0, overscrollBehavior: 'contain' }}>
+      <div className="py-2">
         {loadingMore && (
           <div className="text-center py-2">
             <span className="text-[10px] text-muted-foreground/50 font-medium">Loading older messages…</span>
