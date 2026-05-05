@@ -220,13 +220,13 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
       <div
         ref={containerRef}
         className={cn(
-          "flex flex-col sticky bottom-0 bg-background/80 backdrop-blur-xl border-t border-border/10",
-          compact ? "px-4 py-2" : "px-4 sm:px-5 py-2"
+          "flex flex-col bg-background",
+          compact ? "px-3 pt-1.5 pb-1.5" : "px-2.5 sm:px-3 pt-1.5"
         )}
         style={{
-          paddingBottom: compact ? undefined : 'calc(0.5rem + env(safe-area-inset-bottom, 0px))',
-          paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))',
-          paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))',
+          paddingBottom: compact ? undefined : 'calc(0.375rem + env(safe-area-inset-bottom, 0px))',
+          paddingLeft: `max(${compact ? '0.75rem' : '0.625rem'}, env(safe-area-inset-left, 0px))`,
+          paddingRight: `max(${compact ? '0.75rem' : '0.625rem'}, env(safe-area-inset-right, 0px))`,
         }}
       >
         {/* Image preview strip */}
@@ -260,17 +260,17 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
           )}
         </AnimatePresence>
 
-        <div className="flex items-end gap-2">
+        <div className="flex items-end gap-1.5">
           {/* Attach button */}
           {!compact && (
             <div className="relative flex-shrink-0">
               <button
                 onClick={() => setShowAttachMenu(!showAttachMenu)}
                 className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 mb-0.5 active:scale-90",
+                  "w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 active:scale-90",
                   showAttachMenu
-                    ? "bg-primary/10 text-primary rotate-45"
-                    : "text-muted-foreground/40 hover:text-muted-foreground/60 hover:bg-muted/15"
+                    ? "bg-primary/15 text-primary rotate-45"
+                    : "text-muted-foreground/60 hover:text-foreground/80 hover:bg-muted/30"
                 )}
               >
                 <Plus className="w-5 h-5" />
@@ -338,11 +338,11 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
               placeholder={placeholder || 'Message'}
               rows={1}
               className={cn(
-                "w-full resize-none bg-muted/15 border border-border/25 rounded-2xl focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/20 focus-visible:border-primary/25 focus:bg-muted/15 transition-all duration-200 placeholder:text-muted-foreground/35",
-                compact ? "text-xs pl-3.5 pr-3.5 py-2" : "text-sm pl-4 pr-4 py-3.5"
+                "w-full resize-none bg-muted/30 border border-border/20 rounded-[20px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:border-primary/30 transition-colors duration-150 placeholder:text-muted-foreground/45",
+                compact ? "text-xs pl-3.5 pr-3.5 py-2" : "text-[15px] pl-4 pr-4 py-2"
               )}
               autoComplete="off"
-              style={{ minHeight: compact ? 36 : 46, maxHeight: compact ? 96 : 104 }}
+              style={{ minHeight: compact ? 36 : 38, maxHeight: compact ? 96 : 120, lineHeight: 1.4 }}
             />
           </div>
 
@@ -351,15 +351,15 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
             onClick={handleSend}
             disabled={!canSend}
             className={cn(
-              "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 mb-0.5 active:scale-90",
+              "flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-150 active:scale-90",
               canSend
-                ? "bg-primary text-primary-foreground shadow-md hover:shadow-lg"
-                : "bg-muted/30 text-muted-foreground/50"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-muted/40 text-muted-foreground/40"
             )}
           >
             {uploading
-              ? <Loader2 className={cn(compact ? "w-4 h-4" : "w-[18px] h-[18px]", "animate-spin")} />
-              : <Send className={cn(compact ? "w-4 h-4" : "w-[18px] h-[18px]")} />
+              ? <Loader2 className={cn(compact ? "w-4 h-4" : "w-[17px] h-[17px]", "animate-spin")} />
+              : <Send className={cn(compact ? "w-4 h-4" : "w-[16px] h-[16px]", "translate-x-px")} />
             }
           </button>
         </div>
