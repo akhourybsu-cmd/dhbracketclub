@@ -6,7 +6,6 @@ import {
   Lock, FileText, Sparkles, Shield, Settings, LogOut, X,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -100,10 +99,8 @@ export function AppDrawer({ open, onOpenChange, unreadChatCount = 0 }: AppDrawer
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         }}
       >
-        <VisuallyHidden>
-          <SheetTitle>Navigation Menu</SheetTitle>
-          <SheetDescription>Browse all sections of the app</SheetDescription>
-        </VisuallyHidden>
+        <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+        <SheetDescription className="sr-only">Browse all sections of the app</SheetDescription>
 
         {/* Identity header */}
         <div className="px-5 pt-5 pb-4 border-b border-border/30 flex items-center gap-3">
