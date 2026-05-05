@@ -38,7 +38,7 @@ export function PickSlipBar({
   return (
     <div
       className="fixed left-0 right-0 z-30 px-3"
-      style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}
+      style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
     >
       <div className="max-w-[640px] mx-auto">
         <button
