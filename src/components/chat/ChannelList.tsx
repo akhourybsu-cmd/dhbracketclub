@@ -152,6 +152,7 @@ export function ChannelList({
   loading, onSelectChannel, onCreateChannel, onReorderChannels,
   onOpenSettings, onCreateCategory,
 }: ChannelListProps) {
+  const { setOpen: setNavOpen } = useNavDrawer();
   const [showNewChannel, setShowNewChannel] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
   const [newChannelCategory, setNewChannelCategory] = useState('');
