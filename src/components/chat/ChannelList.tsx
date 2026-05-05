@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence, Reorder, useDragControls } from 'framer-motion';
-import { Hash, Plus, Settings, GripVertical, FolderPlus } from 'lucide-react';
+import { Hash, Plus, Settings, GripVertical, FolderPlus, Menu } from 'lucide-react';
+import { useNavDrawer } from '@/contexts/NavDrawerContext';
 import { cn } from '@/lib/utils';
 import { format, isToday, isYesterday, differenceInDays } from 'date-fns';
 import { Input } from '@/components/ui/input';
@@ -192,8 +193,16 @@ export function ChannelList({
     >
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border/10 pb-3 mb-4 px-1">
-          <div>
+        <div className="flex items-center gap-2 border-b border-border/10 pb-3 mb-4 px-1">
+          <button
+            type="button"
+            aria-label="Open navigation menu"
+            onClick={() => setNavOpen(true)}
+            className="lg:hidden p-2 -ml-1 rounded-lg hover:bg-muted/40 active:bg-muted/60 min-w-[44px] min-h-[44px] flex items-center justify-center"
+          >
+            <Menu className="w-5 h-5 text-foreground/85" />
+          </button>
+          <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-extrabold tracking-tight">Chat</h1>
             <p className="text-[11px] text-muted-foreground/50 font-medium mt-0.5">DH conversations</p>
           </div>
