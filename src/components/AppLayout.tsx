@@ -58,12 +58,20 @@ function getRouteTitle(pathname: string): string {
 }
 
 export function AppLayout({ children }: { children: ReactNode }) {
+  return (
+    <NavDrawerProvider>
+      <AppLayoutInner>{children}</AppLayoutInner>
+    </NavDrawerProvider>
+  );
+}
+
+function AppLayoutInner({ children }: { children: ReactNode }) {
   const location = useLocation();
   const { play } = useSoundEffect();
   const { user } = useAuth();
   const { club } = useClub();
   const [unreadChatCount, setUnreadChatCount] = useState(0);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const { open: drawerOpen, setOpen: setDrawerOpen } = useNavDrawer();
   const lastFetchAtRef = useRef<number>(0);
 
   // Fetch unread chat count (throttled)
