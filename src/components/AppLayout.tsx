@@ -1,22 +1,15 @@
 import { ReactNode, useEffect, useState, useCallback, useRef } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { LayoutDashboard, MessageSquareText, CalendarDays, Swords, Newspaper, User, Trophy, BarChart3, MessageCircle, Bookmark, Link2, ScrollText, Lock, FileText, Sparkles, Shield } from 'lucide-react';
+import { LayoutDashboard, MessageSquareText, CalendarDays, Swords, Newspaper, User, Trophy, BarChart3, MessageCircle, Bookmark, Link2, ScrollText, Lock, FileText, Sparkles, Shield, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import dhMonogram from '@/assets/dh-monogram.png';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useClub } from '@/contexts/ClubContext';
-
-const navItems = [
-  { path: '/dashboard', label: 'Home', icon: LayoutDashboard },
-  { path: '/chat', label: 'Chat', icon: MessageSquareText },
-  { path: '/compete', label: 'Compete', icon: Swords },
-  { path: '/events', label: 'Events', icon: CalendarDays },
-  { path: '/lore', label: 'Lore', icon: ScrollText },
-];
+import { AppDrawer } from '@/components/AppDrawer';
+import { NavDrawerProvider, useNavDrawer } from '@/contexts/NavDrawerContext';
 
 const sidebarModules = [
   { type: 'divider', label: 'Social' },
@@ -40,13 +33,45 @@ const sidebarModules = [
   { path: '/posts', label: 'Posts', icon: FileText },
 ];
 
+// Map of routes -> friendly title shown in mobile header
+const routeTitles: Array<[RegExp, string]> = [
+  [/^\/dashboard/, 'Home'],
+  [/^\/chat/, 'Chat'],
+  [/^\/compete/, 'Compete'],
+  [/^\/events/, 'Events'],
+  [/^\/lore/, 'Lore'],
+  [/^\/feed/, 'Feed'],
+  [/^\/profile/, 'Profile'],
+  [/^\/posts/, 'Posts'],
+  [/^\/polls/, 'Polls'],
+  [/^\/rankings/, 'Rankings'],
+  [/^\/shared/, 'Shared Media'],
+  [/^\/lockbox/, 'Lockbox'],
+  [/^\/brackets/, 'Brackets'],
+  [/^\/pools/, 'Pools'],
+  [/^\/admin/, 'Admin'],
+  [/^\/club-settings/, 'Club Settings'],
+];
+function getRouteTitle(pathname: string): string {
+  for (const [re, title] of routeTitles) if (re.test(pathname)) return title;
+  return 'DH Club';
+}
+
 export function AppLayout({ children }: { children: ReactNode }) {
+  return (
+    <NavDrawerProvider>
+      <AppLayoutInner>{children}</AppLayoutInner>
+    </NavDrawerProvider>
+  );
+}
+
+function AppLayoutInner({ children }: { children: ReactNode }) {
   const location = useLocation();
   const { play } = useSoundEffect();
   const { user } = useAuth();
   const { club } = useClub();
   const [unreadChatCount, setUnreadChatCount] = useState(0);
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  const { open: drawerOpen, setOpen: setDrawerOpen } = useNavDrawer();
   const lastFetchAtRef = useRef<number>(0);
 
   // Fetch unread chat count (throttled)
@@ -89,43 +114,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }, [user]);
 
   useEffect(() => { fetchUnreadCount(true); }, [fetchUnreadCount]);
-
-  // Refresh unread count periodically and on route change (throttled to 10s)
   useEffect(() => {
     const interval = setInterval(() => fetchUnreadCount(true), 30000);
     return () => clearInterval(interval);
   }, [fetchUnreadCount]);
-
   useEffect(() => { fetchUnreadCount(); }, [location.pathname, fetchUnreadCount]);
-
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-
-    const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches;
-
-    const updateKeyboardState = () => {
-      if (isDesktop()) {
-        setIsKeyboardOpen(false);
-        return;
-      }
-
-      const viewportHeight = vv.height + vv.offsetTop;
-      const keyboardInset = Math.max(0, window.innerHeight - viewportHeight);
-      setIsKeyboardOpen(keyboardInset > 100);
-    };
-
-    updateKeyboardState();
-    vv.addEventListener('resize', updateKeyboardState);
-    vv.addEventListener('scroll', updateKeyboardState);
-    window.addEventListener('resize', updateKeyboardState);
-
-    return () => {
-      vv.removeEventListener('resize', updateKeyboardState);
-      vv.removeEventListener('scroll', updateKeyboardState);
-      window.removeEventListener('resize', updateKeyboardState);
-    };
-  }, []);
 
   const isChatRoute = location.pathname.startsWith('/chat');
   const isRuneDelve = location.pathname.startsWith('/rune-delve');
@@ -135,32 +128,62 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const isGameShell = isRuneDelve || isNexus || isPickem || isDrafts;
 
   const isNavActive = (path: string) => {
-    if (path === '/brackets') {
-      return location.pathname.startsWith('/brackets') || location.pathname.startsWith('/pools');
-    }
-    if (path === '/compete') {
-      return location.pathname === '/compete';
-    }
-    if (path === '/feed') {
-      return location.pathname === '/feed';
-    }
-    if (path === '/posts') {
-      return location.pathname.startsWith('/posts');
-    }
-    if (path === '/lore') {
-      return location.pathname.startsWith('/lore');
-    }
+    if (path === '/brackets') return location.pathname.startsWith('/brackets') || location.pathname.startsWith('/pools');
+    if (path === '/compete') return location.pathname === '/compete';
+    if (path === '/feed') return location.pathname === '/feed';
+    if (path === '/posts') return location.pathname.startsWith('/posts');
+    if (path === '/lore') return location.pathname.startsWith('/lore');
     if (path === '/dashboard') return location.pathname === '/dashboard';
     return location.pathname.startsWith(path);
   };
 
+  // Mobile header is hidden inside game shells (they own the viewport) and in chat
+  // (chat owns its own compact header, including a hamburger button).
+  const showMobileHeader = !isGameShell && !isChatRoute;
+  const mobileTitle = getRouteTitle(location.pathname);
+
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      {/* Mobile top header with hamburger */}
+      {showMobileHeader && (
+        <header
+          className="lg:hidden sticky top-0 z-40 flex items-center gap-2 h-12 px-2 border-b border-border/30 bg-background/85"
+          style={{
+            backdropFilter: 'blur(20px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+            paddingLeft: 'max(0.5rem, env(safe-area-inset-left, 0px))',
+            paddingRight: 'max(0.5rem, env(safe-area-inset-right, 0px))',
+          }}
+        >
+          <button
+            type="button"
+            aria-label="Open navigation menu"
+            onClick={() => { play('tap'); setDrawerOpen(true); }}
+            className="p-2 -ml-1 rounded-lg hover:bg-muted/40 active:bg-muted/60 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+          >
+            <Menu className="w-5 h-5 text-foreground/85" />
+          </button>
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <h1 className="text-[15px] font-bold tracking-tight truncate">{mobileTitle}</h1>
+          </div>
+          <Link to="/profile" className="p-1 rounded-full active:opacity-80" aria-label="Profile">
+            {club?.logo_url ? (
+              <img src={club.logo_url} alt="" className="w-8 h-8 rounded-full object-cover border border-border/40" />
+            ) : (
+              <img src={dhMonogram} alt="" className="w-8 h-8 rounded-full object-contain" />
+            )}
+          </Link>
+        </header>
+      )}
+
+      {/* Drawer */}
+      <AppDrawer open={drawerOpen} onOpenChange={setDrawerOpen} unreadChatCount={unreadChatCount} />
+
       {/* Main Content */}
       <main className={cn(
         "flex-1 overflow-x-hidden min-w-0",
-        isGameShell ? "pb-0" : "lg:pb-0 lg:pl-64",
-        isChatRoute ? "pb-0 overflow-hidden" : !isGameShell && "pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))]"
+        isGameShell ? "pb-0" : "lg:pl-64",
+        isChatRoute && "overflow-hidden"
       )}>
         {location.pathname === '/chat' || isGameShell ? (
           children
@@ -243,69 +266,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <p className="text-[9px] text-muted-foreground/60 font-semibold tracking-wide">DH — For fun, not funds.</p>
         </div>
       </aside>
-      )}
-
-      {/* Mobile Bottom Nav — hidden inside game shells (Rune Delve, Nexus) */}
-      {!isGameShell && (
-      <nav className={cn(
-        "lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 border-t border-border/25 transition-all duration-200",
-        isChatRoute && isKeyboardOpen && "translate-y-full opacity-0 pointer-events-none"
-      )} style={{
-        backdropFilter: 'blur(28px) saturate(200%)',
-        boxShadow: '0 -4px 24px rgba(0,0,0,0.15), inset 0 1px 0 hsl(var(--foreground) / 0.02)',
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        paddingLeft: 'env(safe-area-inset-left, 0px)',
-        paddingRight: 'env(safe-area-inset-right, 0px)',
-      }}>
-        <div className="flex items-center justify-around h-[4rem] px-1">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const active = isNavActive(item.path);
-            const showBadge = item.path === '/chat' && unreadChatCount > 0;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => play('tap')}
-                className={cn(
-                  "flex flex-col items-center justify-center gap-0.5 py-2 px-2.5 rounded-xl min-w-[3.5rem] min-h-[2.75rem] btn-press relative",
-                  "transition-colors duration-150",
-                  active ? "text-primary" : "text-muted-foreground active:text-foreground"
-                )}
-              >
-                <div className="relative">
-                  <Icon className={cn("w-[18px] h-[18px] transition-all duration-200", active && "scale-105")} />
-                  {showBadge && (
-                    <span className="absolute -top-1.5 -right-2 min-w-[14px] h-[14px] rounded-full bg-primary text-[8px] font-bold text-primary-foreground flex items-center justify-center px-0.5">
-                      {unreadChatCount > 9 ? '9+' : unreadChatCount}
-                    </span>
-                  )}
-                </div>
-                <span className={cn(
-                  "text-[8px] font-bold tracking-wide transition-colors duration-150",
-                  active ? "text-primary" : "text-muted-foreground"
-                )}>{item.label}</span>
-                {active && (
-                  <motion.div
-                    layoutId="nav-indicator"
-                    className="absolute -top-px left-1/2 -translate-x-1/2 w-5 h-[2px] rounded-full"
-                    style={{ background: 'linear-gradient(90deg, hsl(var(--primary) / 0.8), hsl(var(--primary) / 0.2))' }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                  />
-                )}
-                {active && (
-                  <motion.div
-                    layoutId="nav-underglow"
-                    className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-3 rounded-full"
-                    style={{ background: 'hsl(var(--primary) / 0.08)', filter: 'blur(6px)' }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                  />
-                )}
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
       )}
     </div>
   );
