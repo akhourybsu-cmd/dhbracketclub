@@ -220,13 +220,13 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
       <div
         ref={containerRef}
         className={cn(
-          "flex flex-col sticky bottom-0 bg-background/80 backdrop-blur-xl border-t border-border/10",
-          compact ? "px-4 py-2" : "px-4 sm:px-5 py-2"
+          "flex flex-col bg-background",
+          compact ? "px-3 pt-1.5 pb-1.5" : "px-2.5 sm:px-3 pt-1.5"
         )}
         style={{
-          paddingBottom: compact ? undefined : 'calc(0.5rem + env(safe-area-inset-bottom, 0px))',
-          paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))',
-          paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))',
+          paddingBottom: compact ? undefined : 'calc(0.375rem + env(safe-area-inset-bottom, 0px))',
+          paddingLeft: `max(${compact ? '0.75rem' : '0.625rem'}, env(safe-area-inset-left, 0px))`,
+          paddingRight: `max(${compact ? '0.75rem' : '0.625rem'}, env(safe-area-inset-right, 0px))`,
         }}
       >
         {/* Image preview strip */}
