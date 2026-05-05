@@ -697,9 +697,9 @@ export default function ChatPage() {
                   scrollToBottomTrigger={scrollToBottomTrigger}
                 />
                 {!searchResults && (
-                  <div className="flex-shrink-0 border-t border-border/15 bg-background/80 backdrop-blur-sm z-10">
+                  <div className="flex-shrink-0 border-t border-border/15 z-10">
                     {typingUsers.length > 0 && (
-                      <div className="px-4 sm:px-5 pt-1.5 pb-0.5">
+                      <div className="px-4 sm:px-5 pt-1 pb-0">
                         <span className="text-[10px] text-muted-foreground/60 font-medium italic animate-pulse">
                           {typingUsers.length === 1 ? `${typingUsers[0]} is typing…` : `${typingUsers.join(', ')} are typing…`}
                         </span>
