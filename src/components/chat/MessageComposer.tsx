@@ -260,17 +260,17 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
           )}
         </AnimatePresence>
 
-        <div className="flex items-end gap-2">
+        <div className="flex items-end gap-1.5">
           {/* Attach button */}
           {!compact && (
             <div className="relative flex-shrink-0">
               <button
                 onClick={() => setShowAttachMenu(!showAttachMenu)}
                 className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 mb-0.5 active:scale-90",
+                  "w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 active:scale-90",
                   showAttachMenu
-                    ? "bg-primary/10 text-primary rotate-45"
-                    : "text-muted-foreground/40 hover:text-muted-foreground/60 hover:bg-muted/15"
+                    ? "bg-primary/15 text-primary rotate-45"
+                    : "text-muted-foreground/60 hover:text-foreground/80 hover:bg-muted/30"
                 )}
               >
                 <Plus className="w-5 h-5" />
