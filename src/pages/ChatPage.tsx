@@ -591,31 +591,31 @@ export default function ChatPage() {
       {/* Main content area */}
       <div className="flex flex-col flex-1 min-w-0">
         {/* Header */}
-        <div className="flex items-center gap-2.5 py-3 border-b border-border/20 flex-shrink-0 sticky top-0 z-10" style={{ background: 'hsl(var(--background) / 0.8)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0px))', paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))', paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))' }}>
-          <button onClick={() => { setShowChannelList(true); setThreadParent(null); setThreadMessages([]); setShowPinned(false); }} className="p-1.5 -ml-0.5 rounded-lg hover:bg-muted/50 transition-colors lg:hidden">
-            <ChevronLeft className="w-5 h-5 text-muted-foreground/60" />
+        <div className="flex items-center gap-2 py-2 border-b border-border/20 flex-shrink-0 sticky top-0 z-10" style={{ background: 'hsl(var(--background) / 0.85)', backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)', paddingTop: 'max(0.5rem, env(safe-area-inset-top, 0px))', paddingLeft: 'max(0.625rem, env(safe-area-inset-left, 0px))', paddingRight: 'max(0.625rem, env(safe-area-inset-right, 0px))' }}>
+          <button onClick={() => { setShowChannelList(true); setThreadParent(null); setThreadMessages([]); setShowPinned(false); }} className="p-1.5 -ml-0.5 rounded-lg hover:bg-muted/50 active:bg-muted/70 transition-colors lg:hidden">
+            <ChevronLeft className="w-5 h-5 text-foreground/70" />
           </button>
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/10 text-sm">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/12 text-sm flex-shrink-0">
             {(selectedChannel?.icon && selectedChannel.icon !== 'hash') ? selectedChannel.icon : (CHANNEL_EMOJI[selectedChannel?.name || ''] || <Hash className="w-3.5 h-3.5 text-primary/80" />)}
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="font-bold text-[14px] tracking-tight">{selectedChannel?.name}</h2>
-            {selectedChannel?.description && <p className="text-[9px] text-muted-foreground/70 truncate">{selectedChannel.description}</p>}
+            <h2 className="font-bold text-[15px] tracking-tight leading-tight truncate">{selectedChannel?.name}</h2>
+            {selectedChannel?.description && <p className="text-[10px] text-muted-foreground/70 truncate leading-tight">{selectedChannel.description}</p>}
           </div>
-          <button onClick={() => { setShowSearch(!showSearch); setSearchQuery(''); setSearchResults(null); }} className={cn("p-1.5 rounded-lg transition-colors", showSearch ? "bg-primary/15 text-primary" : "hover:bg-muted/50 text-muted-foreground/60")}>
-            <Search className="w-4 h-4" />
+          <button onClick={() => { setShowSearch(!showSearch); setSearchQuery(''); setSearchResults(null); }} className={cn("p-2 rounded-full transition-colors", showSearch ? "bg-primary/15 text-primary" : "hover:bg-muted/50 text-muted-foreground/70")}>
+            <Search className="w-[18px] h-[18px]" />
           </button>
-          <button onClick={() => navigate('/shared')} className="p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground/60 transition-colors" title="Shared Media">
-            <Link2 className="w-4 h-4" />
+          <button onClick={() => navigate('/shared')} className="p-2 rounded-full hover:bg-muted/50 text-muted-foreground/70 transition-colors" title="Shared Media">
+            <Link2 className="w-[18px] h-[18px]" />
           </button>
           {pinnedCount > 0 && (
-            <button onClick={loadPinnedMessages} className={cn("p-1.5 rounded-lg transition-colors", showPinned ? "bg-premium-warm/15 text-premium-warm" : "hover:bg-muted/50 text-muted-foreground/60")}>
-              <Pin className="w-4 h-4" />
+            <button onClick={loadPinnedMessages} className={cn("p-2 rounded-full transition-colors", showPinned ? "bg-premium-warm/15 text-premium-warm" : "hover:bg-muted/50 text-muted-foreground/70")}>
+              <Pin className="w-[18px] h-[18px]" />
             </button>
           )}
           {selectedChannel && (
-            <button onClick={() => setSettingsChannel(selectedChannel)} className="p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground/60 transition-colors" title="Channel Settings">
-              <Settings className="w-4 h-4" />
+            <button onClick={() => setSettingsChannel(selectedChannel)} className="p-2 rounded-full hover:bg-muted/50 text-muted-foreground/70 transition-colors" title="Channel Settings">
+              <Settings className="w-[18px] h-[18px]" />
             </button>
           )}
         </div>
