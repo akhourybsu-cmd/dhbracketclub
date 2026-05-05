@@ -5,8 +5,9 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 import { AnimatePresence } from 'framer-motion';
-import { Hash, ChevronLeft, Pin, Search, X, Link2, Settings } from 'lucide-react';
+import { Hash, ChevronLeft, Pin, Search, X, Link2, Settings, Menu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useNavDrawer } from '@/contexts/NavDrawerContext';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -26,6 +27,7 @@ import { useChatActions } from '@/hooks/useChatActions';
 export default function ChatPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { setOpen: setNavDrawerOpen } = useNavDrawer();
   const composerRef = useRef<MessageComposerHandle>(null);
 
   // Dynamic viewport height to handle mobile keyboard
@@ -41,8 +43,8 @@ export default function ChatPage() {
       requestAnimationFrame(() => {
         const viewportHeight = vv.height + vv.offsetTop;
         const keyboardInset = Math.max(0, window.innerHeight - viewportHeight);
-        const keyboardOpen = keyboardInset > 100;
-        const mobileBottomOffset = keyboardOpen ? 0 : 76; // 4.5rem (nav) + ~4px buffer
+        // Bottom nav is gone; only reserve space for safe-area when keyboard closed.
+        const mobileBottomOffset = 0;
         const nextHeight = isDesktop()
           ? viewportHeight
           : Math.max(220, viewportHeight - mobileBottomOffset);
