@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useClub } from '@/contexts/ClubContext';
 import { AppDrawer } from '@/components/AppDrawer';
+import { NavDrawerProvider, useNavDrawer } from '@/contexts/NavDrawerContext';
 
 const sidebarModules = [
   { type: 'divider', label: 'Social' },
