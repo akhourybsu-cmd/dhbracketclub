@@ -14,6 +14,7 @@ interface ChannelListProps {
   categories: Category[];
   channelMeta: Map<string, ChannelMeta>;
   selectedChannel: Channel | null;
+  currentUserId?: string;
   loading: boolean;
   onSelectChannel: (ch: Channel) => void;
   onCreateChannel: (name: string, categoryId: string) => void;
@@ -35,24 +36,36 @@ interface ChannelRowProps {
   ch: Channel;
   meta: ChannelMeta | undefined;
   isCurrent: boolean;
+  currentUserId?: string;
   reorderEnabled: boolean;
   onSelect: () => void;
   onOpenSettings?: (ch: Channel) => void;
 }
 
-function ChannelRow({ ch, meta, isCurrent, reorderEnabled, onSelect, onOpenSettings }: ChannelRowProps) {
+function ChannelRow({ ch, meta, isCurrent, currentUserId, reorderEnabled, onSelect, onOpenSettings }: ChannelRowProps) {
   const dragControls = useDragControls();
-  const isUnread = !!meta?.unread;
+  const lastIsMine = !!currentUserId && meta?.lastAuthorId === currentUserId;
+  // Hard guard: never show unread when the latest message is from the current user
+  const isUnread = !!meta?.unread && !lastIsMine;
   const emoji = (ch.icon && ch.icon !== 'hash') ? ch.icon : CHANNEL_EMOJI[ch.name];
   const hasPreview = !!meta?.lastMessage;
 
   // Truncate the last message — strip image-only URLs for cleaner preview
   let previewText = meta?.lastMessage || '';
+  let isPhotoOnly = false;
   if (previewText) {
     const lines = previewText.split('\n').filter(l => l.trim());
     const firstTextLine = lines.find(l => !/^https?:\/\/\S+$/.test(l.trim()));
-    previewText = firstTextLine || (lines.length > 0 ? '📷 Image' : '');
+    if (firstTextLine) {
+      previewText = firstTextLine;
+    } else if (lines.length > 0) {
+      previewText = 'Photo';
+      isPhotoOnly = true;
+    } else {
+      previewText = '';
+    }
   }
+  const previewPrefix = lastIsMine ? 'You' : (meta?.lastAuthor || '');
 
   return (
     <Reorder.Item
@@ -104,10 +117,10 @@ function ChannelRow({ ch, meta, isCurrent, reorderEnabled, onSelect, onOpenSetti
             {hasPreview ? (
               <p className={cn(
                 "text-[12px] truncate flex-1 min-w-0",
-                isUnread ? "text-foreground/75 font-medium" : "text-muted-foreground/65",
+                isUnread ? "text-foreground/85 font-medium" : "text-muted-foreground/65",
               )}>
-                {meta?.lastAuthor && <span className="font-semibold text-foreground/65">{meta.lastAuthor}: </span>}
-                {previewText}
+                {previewPrefix && <span className={cn("font-semibold", isUnread ? "text-foreground/90" : "text-foreground/60")}>{previewPrefix}: </span>}
+                {isPhotoOnly ? (lastIsMine ? 'sent a photo' : 'sent a photo') : previewText}
               </p>
             ) : (
               <p className="text-[11px] text-muted-foreground/45 truncate flex-1 italic">
@@ -148,7 +161,7 @@ function ChannelRow({ ch, meta, isCurrent, reorderEnabled, onSelect, onOpenSetti
 }
 
 export function ChannelList({
-  channels, categories, channelMeta, selectedChannel,
+  channels, categories, channelMeta, selectedChannel, currentUserId,
   loading, onSelectChannel, onCreateChannel, onReorderChannels,
   onOpenSettings, onCreateCategory,
 }: ChannelListProps) {
@@ -272,6 +285,7 @@ export function ChannelList({
                       ch={ch}
                       meta={channelMeta.get(ch.id)}
                       isCurrent={selectedChannel?.id === ch.id}
+                      currentUserId={currentUserId}
                       reorderEnabled={!!onReorderChannels}
                       onSelect={() => onSelectChannel(ch)}
                       onOpenSettings={onOpenSettings}

@@ -164,8 +164,16 @@ export default function ChatPage() {
           if (!seenChannels.has(m.channel_id)) {
             seenChannels.add(m.channel_id);
             const lastRead = readStatesMap.get(m.channel_id);
-            const isUnread = lastRead ? new Date(m.created_at) > new Date(lastRead) : !!m.created_at;
-            meta.set(m.channel_id, { lastMessage: m.content, lastMessageAt: m.created_at, lastAuthor: m.profiles?.display_name || '', unread: isUnread });
+            const fromMe = m.user_id === user.id;
+            // Unread ONLY when latest message is from someone else AND is newer than last_read_at
+            const isUnread = !fromMe && (!lastRead || new Date(m.created_at) > new Date(lastRead));
+            meta.set(m.channel_id, {
+              lastMessage: m.content,
+              lastMessageAt: m.created_at,
+              lastAuthor: m.profiles?.display_name || '',
+              lastAuthorId: m.user_id,
+              unread: isUnread,
+            });
           }
         });
       }
@@ -216,7 +224,6 @@ export default function ChatPage() {
         setChannelMeta(prev => {
           const next = new Map(prev);
           const existing = next.get(m.channel_id) || { unread: false };
-          // Only mark unread when the new message isn't from the current user AND user isn't actively viewing this channel
           const isViewing = selectedIdRef.current === m.channel_id;
           const fromMe = m.user_id === user.id;
           next.set(m.channel_id, {
@@ -224,7 +231,10 @@ export default function ChatPage() {
             lastMessage: m.content,
             lastMessageAt: m.created_at,
             lastAuthor: authorName,
-            unread: existing.unread || (!fromMe && !isViewing),
+            lastAuthorId: m.user_id,
+            // Never unread for self-sent or actively-viewed channels.
+            // Self-sent messages also clear any prior unread state for this user.
+            unread: fromMe ? false : (isViewing ? false : true),
           });
           return next;
         });
@@ -509,6 +519,13 @@ export default function ChatPage() {
     cancelEdit();
     setNewMessage('');
     try { localStorage.setItem('last_chat_channel_id', ch.id); } catch {}
+    // Optimistically clear unread dot for the channel we're entering
+    setChannelMeta(prev => {
+      const next = new Map(prev);
+      const m = next.get(ch.id);
+      if (m?.unread) next.set(ch.id, { ...m, unread: false });
+      return next;
+    });
     setShowChannelList(false);
     play('tap');
     const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
@@ -552,6 +569,7 @@ export default function ChatPage() {
             categories={categories}
             channelMeta={channelMeta}
             selectedChannel={selectedChannel}
+            currentUserId={user?.id}
             loading={loading}
             onSelectChannel={selectChannel}
             onCreateChannel={handleCreateChannel}
@@ -578,6 +596,7 @@ export default function ChatPage() {
           categories={categories}
           channelMeta={channelMeta}
           selectedChannel={selectedChannel}
+          currentUserId={user?.id}
           loading={loading}
           onSelectChannel={selectChannel}
           onCreateChannel={handleCreateChannel}

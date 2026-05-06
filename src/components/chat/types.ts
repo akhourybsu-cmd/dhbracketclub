@@ -35,6 +35,7 @@ export type ChannelMeta = {
   lastMessage?: string;
   lastMessageAt?: string;
   lastAuthor?: string;
+  lastAuthorId?: string;
   unread: boolean;
 };
 
