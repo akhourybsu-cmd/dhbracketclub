@@ -117,10 +117,10 @@ function ChannelRow({ ch, meta, isCurrent, currentUserId, reorderEnabled, onSele
             {hasPreview ? (
               <p className={cn(
                 "text-[12px] truncate flex-1 min-w-0",
-                isUnread ? "text-foreground/75 font-medium" : "text-muted-foreground/65",
+                isUnread ? "text-foreground/85 font-medium" : "text-muted-foreground/65",
               )}>
-                {meta?.lastAuthor && <span className="font-semibold text-foreground/65">{meta.lastAuthor}: </span>}
-                {previewText}
+                {previewPrefix && <span className={cn("font-semibold", isUnread ? "text-foreground/90" : "text-foreground/60")}>{previewPrefix}: </span>}
+                {isPhotoOnly ? (lastIsMine ? 'sent a photo' : 'sent a photo') : previewText}
               </p>
             ) : (
               <p className="text-[11px] text-muted-foreground/45 truncate flex-1 italic">
