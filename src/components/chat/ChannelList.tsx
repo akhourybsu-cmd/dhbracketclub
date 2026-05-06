@@ -14,6 +14,7 @@ interface ChannelListProps {
   categories: Category[];
   channelMeta: Map<string, ChannelMeta>;
   selectedChannel: Channel | null;
+  currentUserId?: string;
   loading: boolean;
   onSelectChannel: (ch: Channel) => void;
   onCreateChannel: (name: string, categoryId: string) => void;
