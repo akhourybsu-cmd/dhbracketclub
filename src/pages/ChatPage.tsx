@@ -519,6 +519,13 @@ export default function ChatPage() {
     cancelEdit();
     setNewMessage('');
     try { localStorage.setItem('last_chat_channel_id', ch.id); } catch {}
+    // Optimistically clear unread dot for the channel we're entering
+    setChannelMeta(prev => {
+      const next = new Map(prev);
+      const m = next.get(ch.id);
+      if (m?.unread) next.set(ch.id, { ...m, unread: false });
+      return next;
+    });
     setShowChannelList(false);
     play('tap');
     const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
