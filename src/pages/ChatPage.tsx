@@ -589,6 +589,7 @@ export default function ChatPage() {
           categories={categories}
           channelMeta={channelMeta}
           selectedChannel={selectedChannel}
+          currentUserId={user?.id}
           loading={loading}
           onSelectChannel={selectChannel}
           onCreateChannel={handleCreateChannel}
