@@ -285,6 +285,7 @@ export function ChannelList({
                       ch={ch}
                       meta={channelMeta.get(ch.id)}
                       isCurrent={selectedChannel?.id === ch.id}
+                      currentUserId={currentUserId}
                       reorderEnabled={!!onReorderChannels}
                       onSelect={() => onSelectChannel(ch)}
                       onOpenSettings={onOpenSettings}
