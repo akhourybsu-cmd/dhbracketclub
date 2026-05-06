@@ -164,8 +164,16 @@ export default function ChatPage() {
           if (!seenChannels.has(m.channel_id)) {
             seenChannels.add(m.channel_id);
             const lastRead = readStatesMap.get(m.channel_id);
-            const isUnread = lastRead ? new Date(m.created_at) > new Date(lastRead) : !!m.created_at;
-            meta.set(m.channel_id, { lastMessage: m.content, lastMessageAt: m.created_at, lastAuthor: m.profiles?.display_name || '', unread: isUnread });
+            const fromMe = m.user_id === user.id;
+            // Unread ONLY when latest message is from someone else AND is newer than last_read_at
+            const isUnread = !fromMe && (!lastRead || new Date(m.created_at) > new Date(lastRead));
+            meta.set(m.channel_id, {
+              lastMessage: m.content,
+              lastMessageAt: m.created_at,
+              lastAuthor: m.profiles?.display_name || '',
+              lastAuthorId: m.user_id,
+              unread: isUnread,
+            });
           }
         });
       }
