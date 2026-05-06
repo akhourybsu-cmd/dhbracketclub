@@ -224,7 +224,6 @@ export default function ChatPage() {
         setChannelMeta(prev => {
           const next = new Map(prev);
           const existing = next.get(m.channel_id) || { unread: false };
-          // Only mark unread when the new message isn't from the current user AND user isn't actively viewing this channel
           const isViewing = selectedIdRef.current === m.channel_id;
           const fromMe = m.user_id === user.id;
           next.set(m.channel_id, {
@@ -232,7 +231,10 @@ export default function ChatPage() {
             lastMessage: m.content,
             lastMessageAt: m.created_at,
             lastAuthor: authorName,
-            unread: existing.unread || (!fromMe && !isViewing),
+            lastAuthorId: m.user_id,
+            // Never unread for self-sent or actively-viewed channels.
+            // Self-sent messages also clear any prior unread state for this user.
+            unread: fromMe ? false : (isViewing ? false : true),
           });
           return next;
         });
