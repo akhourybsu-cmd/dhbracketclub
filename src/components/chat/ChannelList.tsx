@@ -36,24 +36,36 @@ interface ChannelRowProps {
   ch: Channel;
   meta: ChannelMeta | undefined;
   isCurrent: boolean;
+  currentUserId?: string;
   reorderEnabled: boolean;
   onSelect: () => void;
   onOpenSettings?: (ch: Channel) => void;
 }
 
-function ChannelRow({ ch, meta, isCurrent, reorderEnabled, onSelect, onOpenSettings }: ChannelRowProps) {
+function ChannelRow({ ch, meta, isCurrent, currentUserId, reorderEnabled, onSelect, onOpenSettings }: ChannelRowProps) {
   const dragControls = useDragControls();
-  const isUnread = !!meta?.unread;
+  const lastIsMine = !!currentUserId && meta?.lastAuthorId === currentUserId;
+  // Hard guard: never show unread when the latest message is from the current user
+  const isUnread = !!meta?.unread && !lastIsMine;
   const emoji = (ch.icon && ch.icon !== 'hash') ? ch.icon : CHANNEL_EMOJI[ch.name];
   const hasPreview = !!meta?.lastMessage;
 
   // Truncate the last message — strip image-only URLs for cleaner preview
   let previewText = meta?.lastMessage || '';
+  let isPhotoOnly = false;
   if (previewText) {
     const lines = previewText.split('\n').filter(l => l.trim());
     const firstTextLine = lines.find(l => !/^https?:\/\/\S+$/.test(l.trim()));
-    previewText = firstTextLine || (lines.length > 0 ? '📷 Image' : '');
+    if (firstTextLine) {
+      previewText = firstTextLine;
+    } else if (lines.length > 0) {
+      previewText = 'Photo';
+      isPhotoOnly = true;
+    } else {
+      previewText = '';
+    }
   }
+  const previewPrefix = lastIsMine ? 'You' : (meta?.lastAuthor || '');
 
   return (
     <Reorder.Item
