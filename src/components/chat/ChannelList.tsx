@@ -161,7 +161,7 @@ function ChannelRow({ ch, meta, isCurrent, currentUserId, reorderEnabled, onSele
 }
 
 export function ChannelList({
-  channels, categories, channelMeta, selectedChannel,
+  channels, categories, channelMeta, selectedChannel, currentUserId,
   loading, onSelectChannel, onCreateChannel, onReorderChannels,
   onOpenSettings, onCreateCategory,
 }: ChannelListProps) {
