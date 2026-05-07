@@ -55,7 +55,7 @@ function ChannelRow({ ch, meta, isCurrent, currentUserId, reorderEnabled, onSele
   let isPhotoOnly = false;
   if (previewText) {
     const lines = previewText.split('\n').filter(l => l.trim());
-    const firstTextLine = lines.find(l => !/^https?:\/\/\S+$/.test(l.trim()));
+    const firstTextLine = lines.find(l => !/^(?:https?|lovable-private):\/\/\S+$/.test(l.trim()));
     if (firstTextLine) {
       previewText = firstTextLine;
     } else if (lines.length > 0) {
