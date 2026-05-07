@@ -14,14 +14,16 @@ import {
 } from '@/components/ui/alert-dialog';
 import { parseMessageLinks } from '@/lib/linkParser';
 import { LinkPreviewCard } from './LinkPreviewCard';
+import { ChatAttachmentImage } from './ChatAttachmentImage';
+import { isPrivateAttachmentUrl } from '@/lib/chatAttachments';
 
 /* ═══ URL auto-linking + inline image preview ═══ */
-const URL_RE = /(https?:\/\/[^\s<]+)/g;
+const URL_RE = /((?:https?|lovable-private):\/\/[^\s<]+)/g;
 const IMAGE_EXT_RE = /\.(jpg|jpeg|png|gif|webp|avif|svg)(\?.*)?$/i;
 const STORAGE_IMAGE_RE = /\/storage\/v1\/object\/public\/chat-attachments\//i;
 
 function isImageUrl(url: string): boolean {
-  return IMAGE_EXT_RE.test(url) || STORAGE_IMAGE_RE.test(url);
+  return IMAGE_EXT_RE.test(url) || STORAGE_IMAGE_RE.test(url) || isPrivateAttachmentUrl(url);
 }
 
 function stripImageUrls(text: string): string {
@@ -334,16 +336,7 @@ function MessageBubbleInner({
                     {imageUrls.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mt-1.5">
                         {imageUrls.map((url, i) => (
-                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
-                            <img
-                              src={url}
-                              alt="Shared image"
-                              className="rounded-lg max-w-[240px] max-h-[200px] object-cover border border-border/10"
-                              loading="lazy"
-                              decoding="async"
-                              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                            />
-                          </a>
+                          <ChatAttachmentImage key={i} url={url} />
                         ))}
                       </div>
                     )}

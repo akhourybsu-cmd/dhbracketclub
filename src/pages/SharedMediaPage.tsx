@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { Link2, Image as ImageIcon, Play, Music, Globe, ExternalLink, Loader2, Filter, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { UserAvatar } from '@/components/chat/UserAvatar';
+import { ChatAttachmentImage } from '@/components/chat/ChatAttachmentImage';
 import { toast } from 'sonner';
 import {
   Select,
@@ -222,22 +223,29 @@ export default function SharedMediaPage() {
 }
 
 function MediaItemCard({ item, getTypeIcon, onDelete }: { item: MediaItem; getTypeIcon: (type: string) => React.ReactNode; onDelete: (id: string) => void }) {
+  const isPrivateImage = item.content_type === 'image' && item.url.startsWith('lovable-private://');
   let hostname = '';
   try { hostname = new URL(item.url).hostname.replace(/^www\./, ''); } catch {}
 
+  // For private attachments, the outer anchor href can't be the sentinel.
+  // Disable the outer anchor; the thumbnail itself opens the signed URL.
+  const Wrapper: any = isPrivateImage ? 'div' : 'a';
+  const wrapperProps = isPrivateImage
+    ? { className: 'block' }
+    : { href: item.url, target: '_blank', rel: 'noopener noreferrer', className: 'block' };
+
   return (
     <div className="glass-card p-3.5 hover:bg-muted/15 transition-colors group relative">
-      <a
-        href={item.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block"
-      >
+      <Wrapper {...wrapperProps}>
         <div className="flex gap-3 relative z-10">
           {/* Thumbnail */}
           {item.content_type === 'image' ? (
             <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-muted/20">
-              <img src={item.url} alt="" className="w-full h-full object-cover" loading="lazy" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+              {isPrivateImage ? (
+                <ChatAttachmentImage url={item.url} className="!max-w-none !max-h-none w-full h-full !rounded-none !border-0" />
+              ) : (
+                <img src={item.url} alt="" className="w-full h-full object-cover" loading="lazy" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+              )}
             </div>
           ) : item.content_type === 'youtube' && item.embed_id ? (
             <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-black/30 relative">
@@ -290,7 +298,7 @@ function MediaItemCard({ item, getTypeIcon, onDelete }: { item: MediaItem; getTy
 
           <ExternalLink className="w-3.5 h-3.5 text-muted-foreground/20 group-hover:text-muted-foreground/50 transition-colors flex-shrink-0 mt-0.5" />
         </div>
-      </a>
+      </Wrapper>
 
       {/* Delete button */}
       <button

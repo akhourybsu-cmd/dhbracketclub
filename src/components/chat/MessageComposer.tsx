@@ -159,13 +159,12 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
       for (const pending of pendingImages) {
         const ext = pending.file.name.split('.').pop() || 'jpg';
         const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error } = await supabase.storage.from('chat-attachments').upload(path, pending.file, {
-          cacheControl: '3600',
-          upsert: false,
-        });
+        const { error } = await supabase.storage
+          .from('chat-attachments-private')
+          .upload(path, pending.file, { cacheControl: '3600', upsert: false });
         if (!error) {
-          const { data: urlData } = supabase.storage.from('chat-attachments').getPublicUrl(path);
-          urls.push(urlData.publicUrl);
+          // Store sentinel URL in message content; renderer mints signed URLs on demand
+          urls.push(`lovable-private://chat-attachments-private/${path}`);
         }
       }
       return urls;
