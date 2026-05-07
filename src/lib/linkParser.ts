@@ -12,10 +12,12 @@ export interface ParsedLink {
   embedType?: string; // e.g. 'track', 'album', 'playlist', 'video'
 }
 
-const URL_RE = /(https?:\/\/[^\s<]+)/g;
+// Match http(s) URLs OR our internal lovable-private:// sentinel for private chat attachments
+const URL_RE = /((?:https?|lovable-private):\/\/[^\s<]+)/g;
 const IMAGE_EXT_RE = /\.(jpg|jpeg|png|gif|webp|avif|svg|heic)(\?[^\s]*)?$/i;
 // Supabase storage URLs contain /object/public/ and are images
 const STORAGE_IMAGE_RE = /\/storage\/v1\/object\/public\/chat-attachments\//i;
+const PRIVATE_ATTACHMENT_RE = /^lovable-private:\/\/chat-attachments-private\//i;
 
 // YouTube patterns
 const YT_PATTERNS = [
