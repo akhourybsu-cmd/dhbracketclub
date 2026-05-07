@@ -14,14 +14,16 @@ import {
 } from '@/components/ui/alert-dialog';
 import { parseMessageLinks } from '@/lib/linkParser';
 import { LinkPreviewCard } from './LinkPreviewCard';
+import { ChatAttachmentImage } from './ChatAttachmentImage';
+import { isPrivateAttachmentUrl } from '@/lib/chatAttachments';
 
 /* ═══ URL auto-linking + inline image preview ═══ */
-const URL_RE = /(https?:\/\/[^\s<]+)/g;
+const URL_RE = /((?:https?|lovable-private):\/\/[^\s<]+)/g;
 const IMAGE_EXT_RE = /\.(jpg|jpeg|png|gif|webp|avif|svg)(\?.*)?$/i;
 const STORAGE_IMAGE_RE = /\/storage\/v1\/object\/public\/chat-attachments\//i;
 
 function isImageUrl(url: string): boolean {
-  return IMAGE_EXT_RE.test(url) || STORAGE_IMAGE_RE.test(url);
+  return IMAGE_EXT_RE.test(url) || STORAGE_IMAGE_RE.test(url) || isPrivateAttachmentUrl(url);
 }
 
 function stripImageUrls(text: string): string {
