@@ -64,7 +64,7 @@ serve(async (req) => {
       .map((x: string) => x.slice(0, 80));
 
     const typeLabel = type === "poll" ? "poll options/answers" : "items to rank";
-    const systemPrompt = `You suggest items for a fun private friend group competition app called DH. Given a ${type} titled "${title}", suggest 5-8 short, distinct ${typeLabel}. ${existingItems.length ? `Exclude these already-added items: ${existingItems.join(", ")}.` : ""} Keep suggestions fun, relevant, and concise (1-5 words each). Don't number them.`;
+    const systemPrompt = `You suggest items for a fun private friend group competition app called DH. Given a ${type} titled "${title}", suggest 5-8 short, distinct ${typeLabel}. ${safeExisting.length ? `Exclude these already-added items: ${safeExisting.join(", ")}.` : ""} Keep suggestions fun, relevant, and concise (1-5 words each). Don't number them.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
