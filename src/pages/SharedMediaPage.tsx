@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { Link2, Image as ImageIcon, Play, Music, Globe, ExternalLink, Loader2, Filter, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { UserAvatar } from '@/components/chat/UserAvatar';
+import { ChatAttachmentImage } from '@/components/chat/ChatAttachmentImage';
 import { toast } from 'sonner';
 import {
   Select,
