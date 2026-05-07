@@ -336,16 +336,7 @@ function MessageBubbleInner({
                     {imageUrls.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mt-1.5">
                         {imageUrls.map((url, i) => (
-                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
-                            <img
-                              src={url}
-                              alt="Shared image"
-                              className="rounded-lg max-w-[240px] max-h-[200px] object-cover border border-border/10"
-                              loading="lazy"
-                              decoding="async"
-                              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                            />
-                          </a>
+                          <ChatAttachmentImage key={i} url={url} />
                         ))}
                       </div>
                     )}
