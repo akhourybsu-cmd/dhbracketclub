@@ -67,6 +67,7 @@ export function parseMessageLinks(text: string): ParsedLink[] {
 
 /** Sanitize a URL for safe rendering (no javascript:, data: etc.) */
 export function isSafeUrl(url: string): boolean {
+  if (PRIVATE_ATTACHMENT_RE.test(url)) return true;
   try {
     const parsed = new URL(url);
     return ['http:', 'https:'].includes(parsed.protocol);
