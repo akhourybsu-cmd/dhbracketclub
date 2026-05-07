@@ -131,9 +131,7 @@ export function ThreadPanel({ parent, replies, replyValue, onReplyChange, onSend
                   {replyImages.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-2">
                       {replyImages.map((url, i) => (
-                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
-                          <img src={url} alt="Shared image" className="rounded-xl max-w-[200px] max-h-[160px] object-cover border border-border/15" loading="lazy" decoding="async" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                        </a>
+                        <ChatAttachmentImage key={i} url={url} className="max-w-[200px] max-h-[160px]" />
                       ))}
                     </div>
                   )}
