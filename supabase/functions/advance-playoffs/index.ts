@@ -20,7 +20,34 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { seasonId } = await req.json();
+    // ── Auth gate: require a signed-in user. Function is idempotent reconciliation
+    // logic invoked by any logged-in user viewing draft pages, so user-level auth
+    // (not admin) is the correct boundary. Prevents anonymous state-write abuse. ──
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user: authedUser }, error: authErr } = await userClient.auth.getUser();
+    if (authErr || !authedUser) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    let payload: { seasonId?: unknown };
+    try { payload = await req.json(); } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const seasonId = typeof payload.seasonId === "string" ? payload.seasonId : "";
     if (!seasonId) {
       return new Response(JSON.stringify({ error: "seasonId required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
