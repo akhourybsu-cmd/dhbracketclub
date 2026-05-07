@@ -297,7 +297,7 @@ function MediaItemCard({ item, getTypeIcon, onDelete }: { item: MediaItem; getTy
 
           <ExternalLink className="w-3.5 h-3.5 text-muted-foreground/20 group-hover:text-muted-foreground/50 transition-colors flex-shrink-0 mt-0.5" />
         </div>
-      </a>
+      </Wrapper>
 
       {/* Delete button */}
       <button
