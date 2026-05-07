@@ -33,7 +33,8 @@ export function extractUrls(text: string): string[] {
 
 export function classifyUrl(url: string): ParsedLink {
   // Image by extension or Supabase storage URL
-  if (IMAGE_EXT_RE.test(url) || STORAGE_IMAGE_RE.test(url)) {
+  // Image by extension, Supabase public storage URL, or our private sentinel
+  if (IMAGE_EXT_RE.test(url) || STORAGE_IMAGE_RE.test(url) || PRIVATE_ATTACHMENT_RE.test(url)) {
     return { url, contentType: 'image' };
   }
 
