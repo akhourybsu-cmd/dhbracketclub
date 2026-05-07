@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,16 +11,57 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // ── Auth gate: require a valid signed-in user (prevents anonymous AI cost abuse) ──
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: userErr } = await userClient.auth.getUser();
+    if (userErr || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const { title, type, existingItems = [] } = await req.json();
-    if (!title || !type) {
-      return new Response(JSON.stringify({ error: "title and type are required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    let body: { title?: unknown; type?: unknown; existingItems?: unknown };
+    try { body = await req.json(); } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const title = typeof body.title === "string" ? body.title.trim() : "";
+    const type = body.type;
+    const existingItems = Array.isArray(body.existingItems) ? body.existingItems : [];
+
+    // ── Cheap input validation before hitting the AI gateway ──
+    if (!title || (type !== "poll" && type !== "ranking")) {
+      return new Response(JSON.stringify({ error: "title and type ('poll'|'ranking') are required" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (title.length > 200) {
+      return new Response(JSON.stringify({ error: "title too long (max 200 chars)" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (existingItems.length > 50) {
+      return new Response(JSON.stringify({ error: "too many existing items (max 50)" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const safeExisting = existingItems
+      .filter((x: unknown): x is string => typeof x === "string")
+      .map((x: string) => x.slice(0, 80));
 
     const typeLabel = type === "poll" ? "poll options/answers" : "items to rank";
     const systemPrompt = `You suggest items for a fun private friend group competition app called DH. Given a ${type} titled "${title}", suggest 5-8 short, distinct ${typeLabel}. ${existingItems.length ? `Exclude these already-added items: ${existingItems.join(", ")}.` : ""} Keep suggestions fun, relevant, and concise (1-5 words each). Don't number them.`;
