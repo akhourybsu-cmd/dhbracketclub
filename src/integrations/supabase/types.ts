@@ -104,6 +104,30 @@ export type Database = {
           },
         ]
       }
+      ai_rate_limits: {
+        Row: {
+          count: number
+          function_name: string
+          updated_at: string
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          function_name: string
+          updated_at?: string
+          user_id: string
+          window_start: string
+        }
+        Update: {
+          count?: number
+          function_name?: string
+          updated_at?: string
+          user_id?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       bracket_picks: {
         Row: {
           bracket_id: string
@@ -5200,6 +5224,14 @@ export type Database = {
       }
       award_operation_rewards: {
         Args: { _operation_id: string }
+        Returns: Json
+      }
+      consume_ai_quota: {
+        Args: {
+          _function_name: string
+          _max_requests: number
+          _window_minutes: number
+        }
         Returns: Json
       }
       consume_boost: { Args: { _run_id: string }; Returns: Json }

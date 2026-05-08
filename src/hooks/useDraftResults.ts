@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { recalculateSeasonStandings } from '@/hooks/useDraftSeasons';
+import { isAiRateLimited, AI_RATE_LIMIT_MESSAGE } from '@/lib/aiQuota';
 
 interface PickRating {
   pick_id: string;
@@ -68,6 +69,7 @@ export function useDraftResults(draftId: string | undefined) {
         body: { draft_id: draftId },
       });
 
+      if (isAiRateLimited(data, error)) { toast.error(AI_RATE_LIMIT_MESSAGE); return; }
       if (error) throw error;
 
       if (data?.error) {
@@ -107,6 +109,7 @@ export function useDraftResults(draftId: string | undefined) {
       const { data, error } = await supabase.functions.invoke('rate-draft', {
         body: { draft_id: draftId },
       });
+      if (isAiRateLimited(data, error)) { toast.error(AI_RATE_LIMIT_MESSAGE); return; }
       if (error) throw error;
       if (data?.error) {
         toast.error(data.error);

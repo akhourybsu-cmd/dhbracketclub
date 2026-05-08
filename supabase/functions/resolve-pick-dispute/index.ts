@@ -122,6 +122,16 @@ IMPORTANT: Score using tenth-of-a-point precision (e.g. 7.3, 8.7, 6.1). Do NOT r
 
 Use the re_evaluate_pick tool to return your updated assessment.`;
 
+    // ── Per-user AI rate limit ──
+    const { data: quota } = await userClient.rpc("consume_ai_quota", {
+      _function_name: "resolve-pick-dispute", _max_requests: 10, _window_minutes: 60,
+    });
+    if (quota && quota.allowed === false) {
+      return new Response(JSON.stringify({
+        error: "Rate limit reached", retry_after: quota.retry_after, remaining: 0,
+      }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {

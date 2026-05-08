@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,6 +11,25 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // ── Auth gate ──
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: userErr } = await userClient.auth.getUser();
+    if (userErr || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -60,6 +80,16 @@ Rules:
 - A suggestion should be the canonical/proper name (e.g., "Shreck" → "Shrek", "breaking bad" → "Breaking Bad").
 - For relevance: only flag if clearly unrelated. Be lenient — creative picks are fine.
 - If the pick duplicates something already picked, flag it.`;
+
+    // ── Per-user AI rate limit ──
+    const { data: quota } = await userClient.rpc("consume_ai_quota", {
+      _function_name: "check-draft-pick", _max_requests: 30, _window_minutes: 60,
+    });
+    if (quota && quota.allowed === false) {
+      return new Response(JSON.stringify({
+        error: "Rate limit reached", retry_after: quota.retry_after, remaining: 0,
+      }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
