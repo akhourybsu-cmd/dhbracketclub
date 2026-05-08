@@ -44,6 +44,16 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── Per-user AI rate limit (lightweight cost cap) ──
+    const { data: quota } = await userClient.rpc("consume_ai_quota", {
+      _function_name: "suggest-playoff-topics", _max_requests: 10, _window_minutes: 60,
+    });
+    if (quota && quota.allowed === false) {
+      return new Response(JSON.stringify({
+        error: "Rate limit reached", retry_after: quota.retry_after, remaining: 0,
+      }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
