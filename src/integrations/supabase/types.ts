@@ -5230,7 +5230,6 @@ export type Database = {
         Args: {
           _function_name: string
           _max_requests: number
-          _user_id: string
           _window_minutes: number
         }
         Returns: Json
