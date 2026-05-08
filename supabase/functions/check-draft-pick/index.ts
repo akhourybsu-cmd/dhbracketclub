@@ -81,6 +81,16 @@ Rules:
 - For relevance: only flag if clearly unrelated. Be lenient — creative picks are fine.
 - If the pick duplicates something already picked, flag it.`;
 
+    // ── Per-user AI rate limit ──
+    const { data: quota } = await userClient.rpc("consume_ai_quota", {
+      _function_name: "check-draft-pick", _max_requests: 30, _window_minutes: 60,
+    });
+    if (quota && quota.allowed === false) {
+      return new Response(JSON.stringify({
+        error: "Rate limit reached", retry_after: quota.retry_after, remaining: 0,
+      }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
