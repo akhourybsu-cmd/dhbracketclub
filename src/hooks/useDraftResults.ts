@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { recalculateSeasonStandings } from '@/hooks/useDraftSeasons';
+import { isAiRateLimited, AI_RATE_LIMIT_MESSAGE } from '@/lib/aiQuota';
 
 interface PickRating {
   pick_id: string;
