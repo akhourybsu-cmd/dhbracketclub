@@ -142,6 +142,16 @@ ${participantSummaries}
 
 Use the rate_draft_results tool to return your structured analysis.`;
 
+    // ── Per-user AI rate limit (expensive multi-pick analysis) ──
+    const { data: quota } = await userClient.rpc("consume_ai_quota", {
+      _function_name: "rate-draft", _max_requests: 5, _window_minutes: 60,
+    });
+    if (quota && quota.allowed === false) {
+      return new Response(JSON.stringify({
+        error: "Rate limit reached", retry_after: quota.retry_after, remaining: 0,
+      }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // Call AI with tool calling
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
