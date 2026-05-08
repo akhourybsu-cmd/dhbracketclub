@@ -109,6 +109,7 @@ export function useDraftResults(draftId: string | undefined) {
       const { data, error } = await supabase.functions.invoke('rate-draft', {
         body: { draft_id: draftId },
       });
+      if (isAiRateLimited(data, error)) { toast.error(AI_RATE_LIMIT_MESSAGE); return; }
       if (error) throw error;
       if (data?.error) {
         toast.error(data.error);
