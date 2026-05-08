@@ -557,6 +557,9 @@ export async function suggestPlayoffTopics(seasonId: string, matchId: string): P
   const { data, error } = await supabase.functions.invoke('suggest-playoff-topics', {
     body: { seasonId, matchId },
   });
+  if (data && (data as any).error === 'Rate limit reached') {
+    throw new Error("You've hit the AI helper limit for now. Try again in a bit.");
+  }
   if (error) throw error;
   if ((data as any)?.error) throw new Error((data as any).error);
   return ((data as any)?.topics || []) as string[];
