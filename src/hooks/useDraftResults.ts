@@ -69,6 +69,7 @@ export function useDraftResults(draftId: string | undefined) {
         body: { draft_id: draftId },
       });
 
+      if (isAiRateLimited(data, error)) { toast.error(AI_RATE_LIMIT_MESSAGE); return; }
       if (error) throw error;
 
       if (data?.error) {
