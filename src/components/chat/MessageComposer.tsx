@@ -155,19 +155,18 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
 
     const uploadImages = async (): Promise<string[]> => {
       if (!userId || pendingImages.length === 0) return [];
-      const urls: string[] = [];
-      for (const pending of pendingImages) {
-        const ext = pending.file.name.split('.').pop() || 'jpg';
-        const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error } = await supabase.storage
-          .from('chat-attachments-private')
-          .upload(path, pending.file, { cacheControl: '3600', upsert: false });
-        if (!error) {
-          // Store sentinel URL in message content; renderer mints signed URLs on demand
-          urls.push(`lovable-private://chat-attachments-private/${path}`);
-        }
-      }
-      return urls;
+      const results = await Promise.all(
+        pendingImages.map(async (pending) => {
+          const ext = pending.file.name.split('.').pop() || 'jpg';
+          const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+          const { error } = await supabase.storage
+            .from('chat-attachments-private')
+            .upload(path, pending.file, { cacheControl: '3600', upsert: false });
+          if (!error) return `lovable-private://chat-attachments-private/${path}`;
+          return null;
+        })
+      );
+      return results.filter((url): url is string => url !== null);
     };
 
     const handleSend = async () => {

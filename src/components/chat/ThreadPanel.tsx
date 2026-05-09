@@ -61,6 +61,15 @@ export function ThreadPanel({ parent, replies, replyValue, onReplyChange, onSend
   const parentImages = extractImageUrls(parent.content);
   const parentLinks = useMemo(() => parseMessageLinks(parent.content).filter(l => l.contentType !== 'image'), [parent.content]);
 
+  // Memoize link parsing for all replies to avoid re-running on every render
+  const replyLinksByMsgId = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof parseMessageLinks>>();
+    replies.forEach(msg => {
+      map.set(msg.id, parseMessageLinks(msg.content).filter(l => l.contentType !== 'image'));
+    });
+    return map;
+  }, [replies]);
+
   // Wrap onSendReply to match the composer's onSend signature (imageUrls?: string[])
   const handleSend = () => { onSendReply(); };
 
@@ -111,7 +120,7 @@ export function ThreadPanel({ parent, replies, replyValue, onReplyChange, onSend
           {replies.length === 0 && <p className="text-xs text-muted-foreground/70 text-center py-8">No replies yet</p>}
           {replies.map(msg => {
             const replyImages = extractImageUrls(msg.content);
-            const replyLinks = parseMessageLinks(msg.content).filter(l => l.contentType !== 'image');
+            const replyLinks = replyLinksByMsgId.get(msg.id) ?? [];
             return (
               <div key={msg.id} className={cn("flex gap-2.5", msg._optimistic && "opacity-70")}>
                 <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} avatarUrl={msg.profiles?.avatar_url} size={24} />

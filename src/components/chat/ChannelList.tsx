@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, memo } from 'react';
 import { motion, AnimatePresence, Reorder, useDragControls } from 'framer-motion';
 import { Hash, Plus, Settings, GripVertical, FolderPlus, Menu } from 'lucide-react';
 import { useNavDrawer } from '@/contexts/NavDrawerContext';
@@ -42,7 +42,7 @@ interface ChannelRowProps {
   onOpenSettings?: (ch: Channel) => void;
 }
 
-function ChannelRow({ ch, meta, isCurrent, currentUserId, reorderEnabled, onSelect, onOpenSettings }: ChannelRowProps) {
+const ChannelRow = memo(function ChannelRow({ ch, meta, isCurrent, currentUserId, reorderEnabled, onSelect, onOpenSettings }: ChannelRowProps) {
   const dragControls = useDragControls();
   const lastIsMine = !!currentUserId && meta?.lastAuthorId === currentUserId;
   // Hard guard: never show unread when the latest message is from the current user
@@ -158,7 +158,15 @@ function ChannelRow({ ch, meta, isCurrent, currentUserId, reorderEnabled, onSele
       </div>
     </Reorder.Item>
   );
-}
+}, (prev, next) =>
+  prev.ch.id === next.ch.id &&
+  prev.ch.name === next.ch.name &&
+  prev.ch.icon === next.ch.icon &&
+  prev.isCurrent === next.isCurrent &&
+  prev.meta === next.meta &&
+  prev.reorderEnabled === next.reorderEnabled &&
+  prev.currentUserId === next.currentUserId
+);
 
 export function ChannelList({
   channels, categories, channelMeta, selectedChannel, currentUserId,
@@ -173,7 +181,7 @@ export function ChannelList({
   const [newCategoryName, setNewCategoryName] = useState('');
 
   // Sort channels within each category by most recent activity (unread/recent on top), preserving fallback to position
-  const groupedChannels = categories.map(cat => {
+  const groupedChannels = useMemo(() => categories.map(cat => {
     const chs = channels.filter(ch => ch.category_id === cat.id);
     const sorted = [...chs].sort((a, b) => {
       const ma = channelMeta.get(a.id);
@@ -184,7 +192,7 @@ export function ChannelList({
       return a.position - b.position;
     });
     return { ...cat, channels: sorted };
-  });
+  }), [categories, channels, channelMeta]);
 
   const handleCreate = () => {
     if (!newChannelName.trim()) return;

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bookmark, ArrowLeft, Users, Play, Send, Trophy, RefreshCw, Sparkles, MoreVertical, Pencil, Trash2, X, Star, ChevronDown, ChevronUp, Award, AlertTriangle, Check, Flame, Flag } from 'lucide-react';
+import { Bookmark, ArrowLeft, Users, Play, Send, Trophy, RefreshCw, Sparkles, MoreVertical, Pencil, Trash2, X, Star, ChevronDown, ChevronUp, Award, AlertTriangle, Check, Flame, Flag, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -112,6 +112,7 @@ export default function DraftDetailPage() {
   const [expandedResultUser, setExpandedResultUser] = useState<string | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const confettiShown = useRef(false);
+  const pickInputRef = useRef<HTMLInputElement>(null);
   const [announcement, setAnnouncement] = useState<{ displayName: string; pickText: string; round: number; pickNumber: number } | null>(null);
   const [seasonActionBusy, setSeasonActionBusy] = useState(false);
 
@@ -455,48 +456,39 @@ export default function DraftDetailPage() {
           advancePlayoffs(season.id).catch(err => console.error('advancePlayoffs failed:', err));
         }
       } else {
-        const nextTotal = pickNumber;
-        const nextRound = Math.floor(nextTotal / participants.length);
-        const nextPos = nextTotal % participants.length;
+        // Compute next picker once — reused for both DB update and push notification
+        const sortedParticipants = [...participants].sort((a, b) => a.pick_order - b.pick_order);
+        const nextRound = Math.floor(pickNumber / participants.length);
+        const nextPos = pickNumber % participants.length;
         const nextOrderIdx = nextRound % 2 === 0 ? nextPos : participants.length - 1 - nextPos;
-        const sorted = [...participants].sort((a, b) => a.pick_order - b.pick_order);
-        const nextPicker = sorted[nextOrderIdx];
+        const nextPicker = sortedParticipants[nextOrderIdx];
 
         await supabase.from('drafts').update({
           current_pick_number: pickNumber + 1,
           current_round: nextRound + 1,
           current_pick_user_id: nextPicker?.user_id || null,
         }).eq('id', draftId);
+
+        if (
+          nextPicker &&
+          nextPicker.user_id !== user.id // never push self for own action (snake-draft edge of round)
+        ) {
+          supabase.functions.invoke('send-push-notification', {
+            body: {
+              type: 'draft',
+              title: '🎯 Your Turn to Pick!',
+              message: `It's your turn in "${draft.topic}" — Round ${nextRound + 1}`,
+              url: `/drafts/${draftId}`,
+              sender_user_id: user.id,
+              target_user_id: nextPicker.user_id,
+            },
+          }).catch(() => {});
+        }
       }
 
       setPickText('');
       clearSuggestion();
       toast.success('Pick made! 🔥');
-
-      // Notify the next picker it's their turn
-      const nextTotal2 = pickNumber;
-      const nextRound2 = Math.floor(nextTotal2 / participants.length);
-      const nextPos2 = nextTotal2 % participants.length;
-      const nextOrderIdx2 = nextRound2 % 2 === 0 ? nextPos2 : participants.length - 1 - nextPos2;
-      const sorted2 = [...participants].sort((a, b) => a.pick_order - b.pick_order);
-      const nextPicker2 = sorted2[nextOrderIdx2];
-
-      if (
-        nextPicker2 &&
-        pickNumber < participants.length * draft.num_rounds &&
-        nextPicker2.user_id !== user.id // never push self for own action (snake-draft edge of round)
-      ) {
-        supabase.functions.invoke('send-push-notification', {
-          body: {
-            type: 'draft',
-            title: '🎯 Your Turn to Pick!',
-            message: `It's your turn in "${draft.topic}" — Round ${nextRound2 + 1}`,
-            url: `/drafts/${draftId}`,
-            sender_user_id: user.id,
-            target_user_id: nextPicker2.user_id,
-          },
-        }).catch(() => {});
-      }
 
       fetchData();
 
@@ -516,6 +508,8 @@ export default function DraftDetailPage() {
       toast.error(err.message || 'Failed to pick');
     } finally {
       setSubmitting(false);
+      // Restore focus after key-driven remount of pick input
+      requestAnimationFrame(() => pickInputRef.current?.focus());
     }
   };
 
@@ -1080,7 +1074,7 @@ export default function DraftDetailPage() {
       {isInProgress && !isDraftComplete && (
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
           {/* Pick announcement */}
-          <PickAnnouncement pick={announcement} />
+          <PickAnnouncement pick={announcement} onHide={() => setAnnouncement(null)} />
 
           {/* Current turn banner */}
           {isPlayoffDraft ? (
@@ -1150,7 +1144,9 @@ export default function DraftDetailPage() {
                 )}
               </div>
             </motion.div>
-          ) : (() => {
+          ) : (
+            <AnimatePresence mode="wait">
+              {(() => {
             const accent = isMyTurn ? '45 93% 52%' : '152 72% 46%';
             const pickerName = currentPicker?.profiles?.display_name || 'Unknown';
             const initials = pickerName.split(' ').map(s => s[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?';
@@ -1160,6 +1156,7 @@ export default function DraftDetailPage() {
                 initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ type: 'spring', stiffness: 240, damping: 22 }}
+                exit={{ opacity: 0, y: 6, transition: { duration: 0.15 } }}
                 className="relative overflow-hidden rounded-2xl mb-5"
                 style={{
                   background: `radial-gradient(120% 100% at 50% 0%, hsl(${accent} / 0.16), transparent 65%), hsl(var(--card))`,
@@ -1240,7 +1237,9 @@ export default function DraftDetailPage() {
                 </div>
               </motion.div>
             );
-          })()}
+              })()}
+            </AnimatePresence>
+          )}
 
           {/* Pick input */}
           {isMyTurn && (
@@ -1253,6 +1252,7 @@ export default function DraftDetailPage() {
                 className="flex gap-2"
               >
                 <Input
+                  ref={pickInputRef}
                   value={pickText}
                   onChange={e => {
                     setPickText(e.target.value);
@@ -1267,6 +1267,18 @@ export default function DraftDetailPage() {
                     }
                   }}
                 />
+                <AnimatePresence>
+                  {suggestionChecking && (
+                    <motion.span
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      className="flex items-center self-center flex-shrink-0"
+                    >
+                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground/50" />
+                    </motion.span>
+                  )}
+                </AnimatePresence>
                 <Button onClick={handleMakePick} disabled={submitting || !pickText.trim()} className="h-11 px-4 rounded-xl font-bold btn-press">
                   <Send className={cn("w-4 h-4", submitting && "animate-pulse")} />
                 </Button>

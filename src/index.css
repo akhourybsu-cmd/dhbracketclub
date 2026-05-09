@@ -25,7 +25,7 @@
     --secondary-foreground: 155 10% 68%;
 
     --muted: 160 8% 14%;
-    --muted-foreground: 155 10% 46%;
+    --muted-foreground: 155 12% 54%;
 
     /* Teal/cyan — energetic supporting */
     --accent: 172 66% 50%;
@@ -34,8 +34,8 @@
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 160 8% 13%;
-    --input: 160 8% 11%;
+    --border: 160 8% 20%;
+    --input: 160 8% 18%;
     --ring: 152 72% 46%;
 
     --radius: 0.75rem;
@@ -45,12 +45,12 @@
 
     /* Sidebar */
     --sidebar-background: 160 10% 5%;
-    --sidebar-foreground: 155 10% 50%;
+    --sidebar-foreground: 155 12% 58%;
     --sidebar-primary: 152 72% 46%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 160 8% 10%;
     --sidebar-accent-foreground: 150 10% 82%;
-    --sidebar-border: 160 8% 11%;
+    --sidebar-border: 160 8% 18%;
     --sidebar-ring: 152 72% 46%;
 
     /* ═══ Semantic Tokens ═══ */
@@ -96,7 +96,7 @@
     /* ═══ Chat Bubble Tokens ═══ */
     --chat-own: 215 65% 50%;
     --chat-own-bg: 215 65% 50% / 0.18;
-    --chat-incoming: 160 8% 16%;
+    --chat-incoming: 160 8% 22%;
 
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   }
@@ -115,21 +115,21 @@
     --secondary: 160 8% 12%;
     --secondary-foreground: 155 10% 68%;
     --muted: 160 8% 14%;
-    --muted-foreground: 155 10% 46%;
+    --muted-foreground: 155 12% 54%;
     --accent: 172 66% 50%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 98%;
-    --border: 160 8% 13%;
-    --input: 160 8% 11%;
+    --border: 160 8% 20%;
+    --input: 160 8% 18%;
     --ring: 152 72% 46%;
     --sidebar-background: 160 10% 5%;
-    --sidebar-foreground: 155 10% 50%;
+    --sidebar-foreground: 155 12% 58%;
     --sidebar-primary: 152 72% 46%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 160 8% 10%;
     --sidebar-accent-foreground: 150 10% 82%;
-    --sidebar-border: 160 8% 11%;
+    --sidebar-border: 160 8% 18%;
     --sidebar-ring: 152 72% 46%;
     --surface: 160 10% 6%;
     --surface-elevated: 160 8% 10%;
@@ -151,74 +151,98 @@
     --shadow-gold: 0 0 16px hsl(45 93% 52% / 0.15);
     --chat-own: 215 65% 50%;
     --chat-own-bg: 215 65% 50% / 0.18;
-    --chat-incoming: 160 8% 16%;
+    --chat-incoming: 160 8% 22%;
   }
 
   /* Light mode */
   .light {
-    --background: 150 10% 96%;
-    --foreground: 160 20% 8%;
-    --card: 0 0% 100%;
-    --card-foreground: 160 20% 8%;
+    /* ── Base surfaces ── */
+    --background: 150 8% 93%;           /* slightly tinted, not stark white */
+    --foreground: 160 25% 6%;           /* deep ink — high contrast body text */
+    --card: 0 0% 100%;                  /* pure white cards pop on tinted bg */
+    --card-foreground: 160 25% 6%;
     --popover: 0 0% 100%;
-    --popover-foreground: 160 20% 8%;
-    --primary: 152 58% 32%;
+    --popover-foreground: 160 25% 6%;
+
+    /* ── Brand ── */
+    --primary: 152 60% 27%;             /* slightly deeper for stronger button contrast */
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 152 65% 42%;
-    --secondary: 150 10% 91%;
-    --secondary-foreground: 160 12% 30%;
-    --muted: 150 8% 92%;
-    --muted-foreground: 160 8% 36%;
-    --accent: 172 50% 32%;
+    --primary-glow: 152 65% 38%;
+
+    /* ── Secondary ── */
+    --secondary: 150 8% 86%;            /* more distinct from background */
+    --secondary-foreground: 160 15% 18%; /* darker for legibility */
+
+    /* ── Muted — the critical fix ── */
+    --muted: 150 8% 88%;
+    --muted-foreground: 160 15% 24%;    /* 36% → 24% lightness = 6.2:1 on white (was 2.6:1 @60% opacity) */
+
+    /* ── Accent ── */
+    --accent: 172 52% 28%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 72% 48%;
+
+    --destructive: 0 72% 44%;
     --destructive-foreground: 0 0% 100%;
-    --border: 150 10% 82%;
-    --input: 150 10% 88%;
-    --ring: 152 58% 32%;
+
+    /* ── Structural ── */
+    --border: 150 12% 68%;              /* 82% → 68% lightness — visible dividers */
+    --input: 0 0% 100%;                 /* pure white inputs stand out on tinted bg */
+    --ring: 152 60% 27%;
     --radius: 0.75rem;
+
+    /* ── Sidebar ── */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 160 8% 36%;
-    --sidebar-primary: 152 58% 32%;
+    --sidebar-foreground: 160 15% 24%;  /* match muted-foreground improvement */
+    --sidebar-primary: 152 60% 27%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 150 10% 94%;
-    --sidebar-accent-foreground: 160 14% 18%;
-    --sidebar-border: 150 10% 85%;
-    --sidebar-ring: 152 58% 32%;
-    --surface: 150 8% 94%;
+    --sidebar-accent: 150 10% 90%;
+    --sidebar-accent-foreground: 160 18% 14%;
+    --sidebar-border: 150 12% 72%;
+    --sidebar-ring: 152 60% 27%;
+
+    /* ── Semantic surfaces ── */
+    --surface: 150 8% 90%;
     --surface-elevated: 0 0% 100%;
-    --surface-overlay: 150 8% 95%;
-    --success: 152 50% 35%;
-    --warning: 38 80% 42%;
-    --correct: 152 50% 35%;
-    --incorrect: 0 72% 48%;
-    --gold: 45 85% 40%;
-    --silver: 220 8% 48%;
-    --bronze: 30 45% 38%;
-    --live: 0 68% 48%;
-    --lore: 265 55% 45%;
-    --premium-warm: 28 70% 44%;
-    --shadow-card: 0 1px 3px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.04);
-    --shadow-elevated: 0 8px 32px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04);
-    --shadow-glow: 0 0 24px hsl(152 58% 32% / 0.1);
-    --shadow-glow-sm: 0 0 12px hsl(152 58% 32% / 0.06);
-    --shadow-glow-hover: 0 4px 16px rgba(0,0,0,0.06), 0 0 12px hsl(152 58% 32% / 0.05);
-    --shadow-inner: inset 0 1px 2px rgba(0,0,0,0.04);
-    --shadow-gold: 0 0 16px hsl(45 85% 40% / 0.1);
-    --shadow-premium: 0 2px 8px rgba(0,0,0,0.06), 0 0 1px rgba(0,0,0,0.03);
-    --gradient-primary: linear-gradient(135deg, hsl(152 58% 28%), hsl(152 65% 40%));
-    --gradient-accent: linear-gradient(135deg, hsl(172 50% 30%), hsl(172 60% 40%));
-    --gradient-surface: linear-gradient(180deg, hsl(0 0% 100%), hsl(150 8% 96%));
-    --gradient-hero: radial-gradient(ellipse 80% 50% at 50% -20%, hsl(152 58% 32% / 0.05), transparent);
-    --gradient-hero-accent: radial-gradient(ellipse 60% 40% at 80% 10%, hsl(172 50% 32% / 0.03), transparent);
-    --gradient-hero-warm: radial-gradient(ellipse 50% 30% at 20% 20%, hsl(28 70% 44% / 0.02), transparent);
-    --gradient-card-shine: linear-gradient(135deg, hsl(0 0% 100% / 0.5) 0%, transparent 40%);
-    --gradient-card-shine-alt: linear-gradient(315deg, hsl(152 58% 32% / 0.015) 0%, transparent 50%);
-    --gradient-arena-edge: linear-gradient(180deg, hsl(152 58% 32% / 0.03) 0%, transparent 40%);
-    --gradient-arena-floor: linear-gradient(180deg, transparent 60%, hsl(150 8% 94% / 0.3) 100%);
-    --chat-own: 215 55% 48%;
-    --chat-own-bg: 215 55% 48% / 0.14;
-    --chat-incoming: 0 0% 100%;
+    --surface-overlay: 150 8% 92%;
+
+    /* ── Semantic status ── */
+    --success: 152 55% 28%;
+    --warning: 38 82% 36%;
+    --correct: 152 55% 28%;
+    --incorrect: 0 72% 44%;
+    --gold: 45 90% 32%;                 /* richer gold — higher contrast on white */
+    --silver: 220 10% 38%;
+    --bronze: 30 48% 32%;
+    --live: 0 70% 44%;
+    --lore: 265 58% 38%;
+    --premium-warm: 28 72% 38%;
+
+    /* ── Shadows — more prominent in light mode ── */
+    --shadow-card: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.06);
+    --shadow-elevated: 0 8px 32px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+    --shadow-glow: 0 0 24px hsl(152 60% 27% / 0.12);
+    --shadow-glow-sm: 0 0 12px hsl(152 60% 27% / 0.08);
+    --shadow-glow-hover: 0 4px 20px rgba(0,0,0,0.09), 0 0 16px hsl(152 60% 27% / 0.07);
+    --shadow-inner: inset 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-gold: 0 0 16px hsl(45 90% 32% / 0.12);
+    --shadow-premium: 0 2px 10px rgba(0,0,0,0.07), 0 0 1px rgba(0,0,0,0.04);
+
+    /* ── Gradients ── */
+    --gradient-primary: linear-gradient(135deg, hsl(152 60% 23%), hsl(152 65% 36%));
+    --gradient-accent: linear-gradient(135deg, hsl(172 52% 26%), hsl(172 58% 36%));
+    --gradient-surface: linear-gradient(180deg, hsl(0 0% 100%), hsl(150 8% 93%));
+    --gradient-hero: radial-gradient(ellipse 80% 50% at 50% -20%, hsl(152 60% 27% / 0.07), transparent);
+    --gradient-hero-accent: radial-gradient(ellipse 60% 40% at 80% 10%, hsl(172 52% 28% / 0.04), transparent);
+    --gradient-hero-warm: radial-gradient(ellipse 50% 30% at 20% 20%, hsl(28 72% 38% / 0.03), transparent);
+    --gradient-card-shine: linear-gradient(135deg, hsl(0 0% 100% / 0.7) 0%, transparent 40%);
+    --gradient-card-shine-alt: linear-gradient(315deg, hsl(152 60% 27% / 0.02) 0%, transparent 50%);
+    --gradient-arena-edge: linear-gradient(180deg, hsl(152 60% 27% / 0.04) 0%, transparent 40%);
+    --gradient-arena-floor: linear-gradient(180deg, transparent 60%, hsl(150 8% 90% / 0.4) 100%);
+
+    /* ── Chat bubbles ── */
+    --chat-own: 215 58% 40%;
+    --chat-own-bg: 215 58% 40% / 0.12;
+    --chat-incoming: 150 6% 96%;        /* near-white with warmth, distinct from page bg */
   }
 
   * {
@@ -275,8 +299,10 @@
   /* Refined scrollbar */
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: hsl(var(--muted)); border-radius: 99px; }
-  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
+  ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.7); }
+  .light ::-webkit-scrollbar-thumb { background: hsl(150 10% 74%); }
+  .light ::-webkit-scrollbar-thumb:hover { background: hsl(150 10% 60%); }
 
   .scrollbar-none {
     -ms-overflow-style: none;
@@ -287,18 +313,113 @@
 
 @layer components {
   /* ═══ Light mode contrast boosters ═══ */
+
+  /* Cards — stronger definition against tinted page bg */
   .light .glass-card {
-    border-color: hsl(var(--border) / 0.7);
-    box-shadow: var(--shadow-card), 0 0 0 1px hsl(var(--border) / 0.12);
+    background-color: hsl(0 0% 100%);
+    border-color: hsl(var(--border) / 0.65);
+    box-shadow: var(--shadow-card);
   }
   .light .glass-card::after {
-    background: linear-gradient(90deg, transparent 10%, hsl(var(--foreground) / 0.03) 50%, transparent 90%);
-  }
-  .light .section-header {
-    color: hsl(var(--muted-foreground));
+    background: linear-gradient(90deg, transparent 10%, hsl(var(--foreground) / 0.025) 50%, transparent 90%);
   }
   .light .matchup-card {
-    border-color: hsl(var(--border) / 0.7);
+    border-color: hsl(var(--border) / 0.65);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Section labels — ensure readable contrast */
+  .light .section-header {
+    color: hsl(160 15% 30%);
+  }
+
+  /* Stat labels — extra readability at 8px */
+  .light .stat-card .stat-label {
+    color: hsl(160 14% 32%);
+  }
+  .light .stat-card .stat-value {
+    color: hsl(var(--foreground));
+  }
+
+  /* Nav items — deeper inactive label color */
+  .light .nav-item-inactive {
+    color: hsl(160 14% 28%);
+  }
+  .light .nav-item-inactive:hover {
+    color: hsl(var(--foreground));
+    background-color: hsl(150 8% 90%);
+  }
+  .light .nav-item-active {
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--primary) / 0.04));
+    color: hsl(var(--primary));
+  }
+
+  /* Inputs — white bg with visible border on tinted bg */
+  .light .form-input {
+    background-color: hsl(0 0% 100%);
+    border-color: hsl(var(--border) / 0.8);
+  }
+  .light input,
+  .light textarea,
+  .light select {
+    background-color: hsl(0 0% 100%) !important;
+    border-color: hsl(var(--border)) !important;
+  }
+  .light input:focus,
+  .light textarea:focus {
+    border-color: hsl(var(--primary) / 0.5) !important;
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.1), 0 0 16px hsl(var(--primary) / 0.06) !important;
+  }
+
+  /* Attention / draft-your-turn — richer gold on light bg */
+  .light .attention-card {
+    background: linear-gradient(90deg, hsl(var(--gold) / 0.12), hsl(var(--gold) / 0.03));
+    border-color: hsl(var(--gold) / 0.35);
+  }
+
+  /* Filter pills — more visible inactive state */
+  .light .filter-pill-inactive {
+    color: hsl(160 14% 28%);
+    background: hsl(150 8% 90%);
+    border-color: hsl(var(--border) / 0.6);
+  }
+  .light .filter-pill-inactive:hover {
+    color: hsl(var(--foreground));
+    background: hsl(150 8% 86%);
+    border-color: hsl(var(--border) / 0.9);
+  }
+
+  /* Round pills — inactive state readable */
+  .light .round-pill-default {
+    background-color: hsl(150 8% 88%);
+    color: hsl(160 15% 24%);
+    border: 1px solid hsl(var(--border) / 0.5);
+  }
+  .light .round-pill-default:hover {
+    color: hsl(var(--foreground));
+    background-color: hsl(150 8% 82%);
+    border-color: hsl(var(--border) / 0.8);
+  }
+
+  /* Back link — darker in light mode */
+  .light .back-link {
+    color: hsl(160 14% 32%);
+  }
+  .light .back-link:hover {
+    color: hsl(var(--foreground));
+  }
+
+  /* Noise grain overlay — subtle version for light mode */
+  .light body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.012;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 200px 200px;
   }
 
   /* ═══════════════════════════════════════════════════

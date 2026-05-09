@@ -1,10 +1,10 @@
-import { useEffect, useState, useCallback, useRef } from 'react'; 
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Hash, ChevronLeft, Pin, Search, X, Link2, Settings, Menu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useNavDrawer } from '@/contexts/NavDrawerContext';
@@ -95,6 +95,8 @@ export default function ChatPage() {
 
   // Members for @mention autocomplete
   const [members, setMembers] = useState<MentionMember[]>([]);
+  const membersRef = useRef<MentionMember[]>([]);
+  useEffect(() => { membersRef.current = members; }, [members]);
   const [currentDisplayName, setCurrentDisplayName] = useState<string>('');
 
   // Last read timestamp for unread divider
@@ -217,11 +219,13 @@ export default function ChatPage() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async (payload) => {
         const m = payload.new as any;
         if (m.parent_message_id) return; // threads don't update channel previews
-        // Look up author name from cached members; fall back to a quick fetch
-        let authorName = '';
-        // We can't use members here directly (closure), so do a tiny fetch for unknowns
-        const { data: prof } = await supabase.from('profiles').select('display_name').eq('id', m.user_id).maybeSingle();
-        authorName = prof?.display_name || '';
+        // Look up author name from cached members ref; only fetch from DB if unknown
+        const cachedMember = membersRef.current.find(mb => mb.id === m.user_id);
+        let authorName = cachedMember?.display_name || '';
+        if (!cachedMember) {
+          const { data: prof } = await supabase.from('profiles').select('display_name').eq('id', m.user_id).maybeSingle();
+          authorName = prof?.display_name || '';
+        }
         setChannelMeta(prev => {
           const next = new Map(prev);
           const existing = next.get(m.channel_id) || { unread: false };
@@ -567,7 +571,7 @@ export default function ChatPage() {
     return () => clearTimeout(timer);
   }, [searchQuery, showSearch, selectedChannel]);
 
-  const pinnedCount = messages.filter(m => m.is_pinned).length;
+  const pinnedCount = useMemo(() => messages.filter(m => m.is_pinned).length, [messages]);
   const showSidePanel = !!threadParent || showPinned;
 
   /* ═══ CHANNEL LIST VIEW (mobile only — desktop uses sidebar) ═══ */
@@ -728,13 +732,31 @@ export default function ChatPage() {
                 />
                 {!searchResults && (
                   <div className="flex-shrink-0 border-t border-border/15 z-10">
-                    {typingUsers.length > 0 && (
-                      <div className="px-4 sm:px-5 pt-1 pb-0">
-                        <span className="text-[10px] text-muted-foreground/60 font-medium italic animate-pulse">
-                          {typingUsers.length === 1 ? `${typingUsers[0]} is typing…` : `${typingUsers.join(', ')} are typing…`}
-                        </span>
-                      </div>
-                    )}
+                    <AnimatePresence>
+                      {typingUsers.length > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 4 }}
+                          transition={{ duration: 0.15 }}
+                          className="px-4 sm:px-5 pt-1.5 pb-0 flex items-center gap-1.5"
+                        >
+                          <div className="flex gap-[3px] items-center">
+                            {[0, 1, 2].map(i => (
+                              <motion.span
+                                key={i}
+                                className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 block"
+                                animate={{ y: [0, -4, 0] }}
+                                transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-[10px] text-muted-foreground/60 font-medium">
+                            {typingUsers.length === 1 ? `${typingUsers[0]} is typing` : `${typingUsers.join(', ')} are typing`}
+                          </span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                     <MessageComposer
                       ref={composerRef}
                       value={newMessage}

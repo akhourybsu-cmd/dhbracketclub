@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Flame } from 'lucide-react';
 
 interface PickAnnouncementProps {
@@ -9,20 +9,26 @@ interface PickAnnouncementProps {
     round: number;
     pickNumber: number;
   } | null;
+  onHide?: () => void;
 }
 
-export function PickAnnouncement({ pick }: PickAnnouncementProps) {
+export function PickAnnouncement({ pick, onHide }: PickAnnouncementProps) {
   const [visible, setVisible] = useState(false);
   const [currentPick, setCurrentPick] = useState(pick);
+  const lastShownPickNumberRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (pick) {
+    if (pick && pick.pickNumber !== lastShownPickNumberRef.current) {
+      lastShownPickNumberRef.current = pick.pickNumber;
       setCurrentPick(pick);
       setVisible(true);
-      const timer = setTimeout(() => setVisible(false), 3000);
+      const timer = setTimeout(() => {
+        setVisible(false);
+        onHide?.();
+      }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [pick]);
+  }, [pick, onHide]);
 
   return (
     <AnimatePresence>

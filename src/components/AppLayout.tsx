@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState, useCallback, useRef } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { LayoutDashboard, MessageSquareText, CalendarDays, Swords, Newspaper, User, Trophy, BarChart3, MessageCircle, Bookmark, Link2, ScrollText, Lock, FileText, Sparkles, Shield, Menu, Brackets as BracketsIcon } from 'lucide-react';
+import { LayoutDashboard, MessageSquareText, CalendarDays, Swords, Newspaper, User, Trophy, BarChart3, MessageCircle, Bookmark, Link2, ScrollText, Lock, FileText, Sparkles, Shield, Menu, Brackets as BracketsIcon, TrendingUp, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import dhMonogram from '@/assets/dh-monogram.png';
@@ -11,26 +11,42 @@ import { useClub } from '@/contexts/ClubContext';
 import { AppDrawer } from '@/components/AppDrawer';
 import { NavDrawerProvider, useNavDrawer } from '@/contexts/NavDrawerContext';
 
-const sidebarModules = [
-  { type: 'divider', label: 'Social' },
-  { path: '/dashboard', label: 'Home', icon: LayoutDashboard },
-  { path: '/chat', label: 'Chat', icon: MessageSquareText },
-  { path: '/feed', label: 'Feed', icon: Newspaper },
-  { path: '/events', label: 'Events', icon: CalendarDays },
-  { path: '/lore', label: 'Lore', icon: ScrollText },
-  { type: 'divider', label: 'Compete' },
-  { path: '/compete', label: 'Compete Hub', icon: Swords },
-  { path: '/drafts', label: 'Drafts', icon: Bookmark },
-  { path: '/rune-delve', label: 'Rune Delve', icon: Sparkles },
-  { path: '/nexus', label: 'Nexus Defense', icon: Shield },
-  { path: '/pickem', label: "Pick'em", icon: Trophy },
-  { path: '/brackets', label: 'Brackets', icon: BracketsIcon },
-  { type: 'divider', label: 'Other' },
-  { path: '/lockbox', label: 'Lockbox', icon: Lock },
-  { path: '/polls', label: 'Polls', icon: MessageCircle },
-  { path: '/rankings', label: 'Rankings', icon: BarChart3 },
-  { path: '/shared', label: 'Shared Media', icon: Link2 },
-  { path: '/posts', label: 'Posts', icon: FileText },
+type SidebarItem = { path: string; label: string; icon: React.ComponentType<{ className?: string }> };
+type SidebarSection = { label: string; items: SidebarItem[] };
+
+const STATIC_SECTIONS: SidebarSection[] = [
+  {
+    label: 'Social',
+    items: [
+      { path: '/dashboard', label: 'Home', icon: LayoutDashboard },
+      { path: '/chat', label: 'Chat', icon: MessageSquareText },
+      { path: '/feed', label: 'Feed', icon: Newspaper },
+      { path: '/events', label: 'Events', icon: CalendarDays },
+      { path: '/lore', label: 'Lore', icon: ScrollText },
+    ],
+  },
+  {
+    label: 'Games',
+    items: [
+      { path: '/compete', label: 'Compete Hub', icon: Swords },
+      { path: '/drafts', label: 'Draft Arena', icon: Bookmark },
+      { path: '/rune-delve', label: 'Rune Delve', icon: Sparkles },
+      { path: '/nexus', label: 'Nexus Defense', icon: Shield },
+      { path: '/pickem', label: "NFL Pick'em", icon: Trophy },
+      { path: '/brackets', label: 'Brackets', icon: BracketsIcon },
+      { path: '/portfolio-wars', label: 'Portfolio Wars', icon: TrendingUp },
+      { path: '/lockbox', label: 'Lockbox', icon: Lock },
+    ],
+  },
+  {
+    label: 'Community',
+    items: [
+      { path: '/polls', label: 'Polls', icon: MessageCircle },
+      { path: '/rankings', label: 'Rankings', icon: BarChart3 },
+      { path: '/posts', label: 'Posts', icon: FileText },
+      { path: '/shared', label: 'Shared Media', icon: Link2 },
+    ],
+  },
 ];
 
 // Map of routes -> friendly title shown in mobile header
@@ -70,7 +86,7 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
   const location = useLocation();
   const { play } = useSoundEffect();
   const { user } = useAuth();
-  const { club } = useClub();
+  const { club, isClubAdmin, isPlatformOwner } = useClub();
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const { open: drawerOpen, setOpen: setDrawerOpen } = useNavDrawer();
   const lastFetchAtRef = useRef<number>(0);
@@ -196,79 +212,91 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
         )}
       </main>
 
-      {/* Desktop Sidebar — hidden inside game shells (Rune Delve, Nexus) */}
-      {!isGameShell && (
-      <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 flex-col z-40 bg-sidebar-background border-r border-border/50" style={{
-        backdropFilter: 'blur(24px) saturate(180%)',
-        boxShadow: 'inset -1px 0 0 hsl(var(--foreground) / 0.02)',
-      }}>
-        <div className="px-6 pt-7 pb-8">
-          <div className="flex items-center gap-3 mb-1.5">
-            {club?.logo_url ? (
-              <img src={club.logo_url} alt={club.name} className="w-12 h-12 object-cover rounded-xl drop-shadow-lg" style={{ filter: 'drop-shadow(0 0 10px hsl(var(--club-accent) / 0.3))' }} />
-            ) : (
-              <img src={dhMonogram} alt="DH" className="w-12 h-12 object-contain drop-shadow-lg" style={{ filter: 'drop-shadow(0 0 10px hsl(var(--club-accent) / 0.25))' }} />
-            )}
-            <div className="min-w-0">
-              <h1 className="text-base font-extrabold tracking-tight leading-none truncate">
-                <span className="gradient-text">{club?.name ?? 'DH'}</span>
-              </h1>
-              <p className="text-[8px] text-muted-foreground/70 font-bold uppercase tracking-[0.2em] mt-0.5">Compete With Your Crew</p>
+      {/* Desktop Sidebar — hidden inside game shells (Rune Delve, Nexus, etc.) */}
+      {!isGameShell && (() => {
+        // Build sections including conditional admin section
+        const sections: SidebarSection[] = [...STATIC_SECTIONS];
+        const accountItems: SidebarItem[] = [{ path: '/profile', label: 'Profile', icon: User }];
+        sections.push({ label: 'Account', items: accountItems });
+        if (isClubAdmin || isPlatformOwner) {
+          const adminItems: SidebarItem[] = [
+            ...(isClubAdmin ? [{ path: '/club/settings', label: 'Club Settings', icon: Settings }] : []),
+            ...(isPlatformOwner ? [{ path: '/admin/clubs', label: 'Manage Clubs', icon: Shield }] : []),
+          ];
+          sections.push({ label: 'Admin', items: adminItems });
+        }
+
+        return (
+          <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 flex-col z-40 bg-sidebar-background border-r border-border/50" style={{
+            backdropFilter: 'blur(24px) saturate(180%)',
+            boxShadow: 'inset -1px 0 0 hsl(var(--foreground) / 0.02)',
+          }}>
+            {/* Identity header — fixed, never scrolls */}
+            <div className="flex-shrink-0 px-6 pt-6 pb-5 border-b border-border/30">
+              <div className="flex items-center gap-3">
+                {club?.logo_url ? (
+                  <img src={club.logo_url} alt={club.name} className="w-10 h-10 object-cover rounded-xl drop-shadow-lg flex-shrink-0" style={{ filter: 'drop-shadow(0 0 10px hsl(var(--club-accent) / 0.3))' }} />
+                ) : (
+                  <img src={dhMonogram} alt="DH" className="w-10 h-10 object-contain drop-shadow-lg flex-shrink-0" style={{ filter: 'drop-shadow(0 0 10px hsl(var(--club-accent) / 0.25))' }} />
+                )}
+                <div className="min-w-0">
+                  <h1 className="text-[15px] font-extrabold tracking-tight leading-none truncate">
+                    <span className="gradient-text">{club?.name ?? 'DH'}</span>
+                  </h1>
+                  <p className="text-[8px] text-muted-foreground/70 font-bold uppercase tracking-[0.2em] mt-0.5">Compete With Your Crew</p>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <nav className="flex flex-col gap-0.5 px-3 flex-1">
-          {sidebarModules.map((item, idx) => {
-            if ('type' in item && item.type === 'divider') {
-              return (
-                <div key={idx} className="mt-4 mb-1.5 px-3">
-                  <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70">{item.label}</p>
+
+            {/* Scrollable nav — fills remaining height */}
+            <nav className="flex-1 overflow-y-auto px-3 py-3 min-h-0">
+              {sections.map((sec) => (
+                <div key={sec.label} className="mb-4">
+                  <p className="px-3 mb-1.5 text-[8px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                    {sec.label}
+                  </p>
+                  <div className="flex flex-col gap-0.5">
+                    {sec.items.map((item) => {
+                      const Icon = item.icon;
+                      const active = isNavActive(item.path);
+                      const showBadge = item.path === '/chat' && unreadChatCount > 0;
+                      return (
+                        <Link
+                          key={item.path}
+                          to={item.path}
+                          onClick={() => play('tap')}
+                          className={cn('nav-item relative', active ? 'nav-item-active' : 'nav-item-inactive')}
+                        >
+                          <div className="relative flex-shrink-0">
+                            <Icon className="w-[18px] h-[18px]" />
+                            {showBadge && (
+                              <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] rounded-full bg-primary text-[8px] font-bold text-primary-foreground flex items-center justify-center px-0.5">
+                                {unreadChatCount > 9 ? '9+' : unreadChatCount}
+                              </span>
+                            )}
+                          </div>
+                          {item.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
                 </div>
-              );
-            }
-            const Icon = item.icon!;
-            const active = isNavActive(item.path!);
-            const showBadge = item.path === '/chat' && unreadChatCount > 0;
-            return (
-              <Link
-                key={item.path}
-                to={item.path!}
-                onClick={() => play('tap')}
-                className={cn("nav-item relative", active ? "nav-item-active" : "nav-item-inactive")}
-              >
-                <div className="relative">
-                  <Icon className="w-[18px] h-[18px]" />
-                  {showBadge && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] rounded-full bg-primary text-[8px] font-bold text-primary-foreground flex items-center justify-center px-0.5">
-                      {unreadChatCount > 9 ? '9+' : unreadChatCount}
-                    </span>
-                  )}
-                </div>
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="px-3 pb-3 space-y-0.5">
-          <div className="flex items-center justify-between px-3 py-2">
-            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/70">Theme</span>
-            <ThemeToggle />
-          </div>
-          <Link
-            to="/profile"
-            onClick={() => play('tap')}
-            className={cn("nav-item", location.pathname === '/profile' ? "nav-item-active" : "nav-item-inactive")}
-          >
-            <User className="w-[18px] h-[18px]" />
-            Profile
-          </Link>
-        </div>
-        <div className="px-6 pb-6">
-          <div className="h-px bg-border/40 mb-4" />
-          <p className="text-[9px] text-muted-foreground/60 font-semibold tracking-wide">DH — For fun, not funds.</p>
-        </div>
-      </aside>
-      )}
+              ))}
+            </nav>
+
+            {/* Footer — fixed, never scrolls */}
+            <div className="flex-shrink-0 border-t border-border/30">
+              <div className="px-4 py-3 flex items-center justify-between gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60">Theme</span>
+                <ThemeToggle />
+              </div>
+              <div className="px-6 pb-4">
+                <p className="text-[9px] text-muted-foreground/50 font-semibold tracking-wide">DH — For fun, not funds.</p>
+              </div>
+            </div>
+          </aside>
+        );
+      })()}
     </div>
   );
 }

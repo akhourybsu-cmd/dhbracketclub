@@ -274,11 +274,8 @@ function MessageBubbleInner({
               </div>
             )}
 
-            {/* Bubble + overlapping reactions wrapper */}
-            <div className={cn(
-              "relative",
-              msg.reactions && msg.reactions.length > 0 && "mb-3.5"
-            )}>
+            {/* Bubble + reactions wrapper */}
+            <div className="relative">
               {/* The bubble */}
               <div
                 className={cn(
@@ -349,11 +346,11 @@ function MessageBubbleInner({
                 )}
               </div>
 
-              {/* Reactions — overlapping bottom corner of bubble (iMessage style) */}
+              {/* Reactions — in-flow below bubble with slight overlap, never overflows into next message */}
               {msg.reactions && msg.reactions.length > 0 && (
                 <div className={cn(
-                  "absolute -bottom-2.5 z-10 flex flex-wrap gap-1",
-                  isOwn ? "right-1" : "left-1"
+                  "-mt-1 relative z-10 flex flex-wrap gap-1",
+                  isOwn ? "justify-end pr-1" : "justify-start pl-1"
                 )}>
                   {msg.reactions.map(r => (
                     <button

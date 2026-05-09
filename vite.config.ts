@@ -30,10 +30,14 @@ function emitVersionJson() {
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    port: 8080,
+    port: parseInt(process.env.PORT || '8080', 10),
     hmr: {
       overlay: false,
     },
+  },
+  preview: {
+    host: "::",
+    port: parseInt(process.env.PORT || '4173', 10),
   },
   define: {
     __BUILD_ID__: JSON.stringify(BUILD_ID),
