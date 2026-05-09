@@ -45,6 +45,7 @@ export function ClubProvider({ children }: { children: ReactNode }) {
   const [club, setClub] = useState<Club | null>(null);
   const [membership, setMembership] = useState<ClubMembership | null>(null);
   const [isPlatformOwner, setIsPlatformOwner] = useState(false);
+  const [isAppAdmin, setIsAppAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
