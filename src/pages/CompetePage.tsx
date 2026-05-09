@@ -2011,6 +2011,86 @@ function PickemCompeteCard() {
   );
 }
 
+/* ── Portfolio Wars card — weekly stock-picking competition ── */
+function PortfolioWarsCompeteCard() {
+  const [meta, setMeta] = useState<{ status: string; week_start: string; lock_at: string; players: number } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: ch } = await supabase.from('pw_challenges').select('id,status,week_start,lock_at')
+        .in('status', ['active', 'locked', 'upcoming']).order('week_start', { ascending: false }).limit(1).maybeSingle();
+      if (cancelled || !ch) return;
+      const { count } = await supabase.from('pw_entries').select('*', { count: 'exact', head: true }).eq('challenge_id', ch.id);
+      if (!cancelled) setMeta({ status: ch.status, week_start: ch.week_start, lock_at: ch.lock_at, players: count || 0 });
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const subline = !meta ? 'Weekly stock-picking challenge'
+    : meta.status === 'upcoming' ? `Picks lock ${format(new Date(meta.lock_at), 'EEE h:mm a')} · ${meta.players} entered`
+    : meta.status === 'active' ? `Live this week · ${meta.players} players`
+    : `Week of ${format(new Date(meta.week_start), 'MMM d')}`;
+  const cta = meta?.status === 'upcoming' ? 'Enter Picks' : 'Open';
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }}>
+      <Link to="/portfolio-wars" className="block">
+        <div
+          className="relative overflow-hidden rounded-2xl btn-press"
+          style={{
+            background:
+              'radial-gradient(ellipse 120% 80% at 50% 0%, hsl(152 75% 30% / 0.45), transparent 60%),' +
+              'linear-gradient(180deg, hsl(160 30% 8%), hsl(160 30% 5%))',
+            border: '1px solid hsl(152 60% 45% / 0.32)',
+            boxShadow: '0 12px 40px hsl(152 70% 20% / 0.4), inset 0 1px 0 hsl(152 60% 60% / 0.16)',
+          }}
+        >
+          <div className="relative z-10 p-5 flex items-center gap-4">
+            <div className="relative flex-shrink-0">
+              <div aria-hidden className="absolute inset-0 rounded-full"
+                style={{ background: 'radial-gradient(circle, hsl(152 80% 55% / 0.45), transparent 65%)', filter: 'blur(10px)', transform: 'scale(1.15)' }}/>
+              <div className="relative w-[72px] h-[72px] rounded-2xl flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg, hsl(152 70% 30%), hsl(152 70% 18%))', border: '1px solid hsl(152 70% 50% / 0.5)' }}>
+                <TrendingUp className="w-9 h-9" style={{ color: 'hsl(152 80% 65%)' }} strokeWidth={2.5} />
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-[9px] font-extrabold uppercase tracking-[0.22em]" style={{ color: 'hsl(152 70% 65%)' }}>
+                  ◆ Stock Challenge
+                </span>
+                {meta?.status === 'active' && (
+                  <span className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider" style={{ color: 'hsl(152 70% 65%)' }}>
+                    <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'hsl(152 70% 55%)' }} />
+                    Live
+                  </span>
+                )}
+              </div>
+              <h2 className="font-extrabold text-[20px] leading-none tracking-tight mb-1.5"
+                style={{
+                  background: 'linear-gradient(180deg, hsl(150 30% 98%), hsl(152 70% 70%))',
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                  textShadow: '0 0 18px hsl(152 80% 40% / 0.4)',
+                }}>
+                Portfolio Wars
+              </h2>
+              <p className="text-[10px] font-semibold mb-2" style={{ color: 'hsl(150 12% 78%)' }}>{subline}</p>
+              <div className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(152 72% 46%), hsl(152 70% 38%))',
+                  color: 'hsl(160 30% 6%)',
+                  boxShadow: '0 4px 14px hsl(152 80% 35% / 0.5), inset 0 1px 0 hsl(150 80% 80% / 0.5)',
+                }}>
+                {cta} <ChevronRight className="w-3.5 h-3.5" strokeWidth={3} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </Link>
+    </motion.div>
+  );
+}
+
 /* ── Archived modules card ── */
 function ArchivedModesCard() {
   const archived = [
@@ -2315,6 +2395,7 @@ export default function CompetePage() {
 
           <TabsContent value="other" className="space-y-3">
             <PickemCompeteCard />
+            <PortfolioWarsCompeteCard />
             <LockboxCompeteCard />
             <ArchivedModesCard />
           </TabsContent>
