@@ -506,6 +506,63 @@ export type Database = {
           },
         ]
       }
+      club_installed_assets: {
+        Row: {
+          asset_id: string
+          club_id: string
+          configuration_json: Json
+          created_at: string
+          enabled: boolean
+          id: string
+          installed_at: string
+          installed_by: string | null
+          sort_order: number
+          updated_at: string
+          visible_to_members: boolean
+        }
+        Insert: {
+          asset_id: string
+          club_id: string
+          configuration_json?: Json
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          installed_at?: string
+          installed_by?: string | null
+          sort_order?: number
+          updated_at?: string
+          visible_to_members?: boolean
+        }
+        Update: {
+          asset_id?: string
+          club_id?: string
+          configuration_json?: Json
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          installed_at?: string
+          installed_by?: string | null
+          sort_order?: number
+          updated_at?: string
+          visible_to_members?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_installed_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "platform_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_installed_assets_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       club_members: {
         Row: {
           club_id: string
@@ -3543,6 +3600,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_assets: {
+        Row: {
+          category: string
+          created_at: string
+          default_configuration_json: Json
+          full_description: string
+          icon_name: string
+          id: string
+          is_active: boolean
+          is_premium: boolean
+          name: string
+          placement_area: string
+          requires_configuration: boolean
+          short_description: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          default_configuration_json?: Json
+          full_description?: string
+          icon_name?: string
+          id?: string
+          is_active?: boolean
+          is_premium?: boolean
+          name: string
+          placement_area?: string
+          requires_configuration?: boolean
+          short_description?: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          default_configuration_json?: Json
+          full_description?: string
+          icon_name?: string
+          id?: string
+          is_active?: boolean
+          is_premium?: boolean
+          name?: string
+          placement_area?: string
+          requires_configuration?: boolean
+          short_description?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       poll_options: {
         Row: {
