@@ -4049,6 +4049,7 @@ export type Database = {
       pw_accolades: {
         Row: {
           challenge_id: string
+          club_id: string
           created_at: string
           id: string
           kind: string
@@ -4058,6 +4059,7 @@ export type Database = {
         }
         Insert: {
           challenge_id: string
+          club_id: string
           created_at?: string
           id?: string
           kind: string
@@ -4067,6 +4069,7 @@ export type Database = {
         }
         Update: {
           challenge_id?: string
+          club_id?: string
           created_at?: string
           id?: string
           kind?: string
@@ -4082,10 +4085,18 @@ export type Database = {
             referencedRelation: "pw_challenges"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "pw_accolades_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
         ]
       }
       pw_challenges: {
         Row: {
+          club_id: string
           created_at: string
           end_at: string
           end_trading_date: string | null
@@ -4101,6 +4112,7 @@ export type Database = {
           year: number
         }
         Insert: {
+          club_id: string
           created_at?: string
           end_at: string
           end_trading_date?: string | null
@@ -4116,6 +4128,7 @@ export type Database = {
           year: number
         }
         Update: {
+          club_id?: string
           created_at?: string
           end_at?: string
           end_trading_date?: string | null
@@ -4130,12 +4143,21 @@ export type Database = {
           week_start?: string
           year?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pw_challenges_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pw_entries: {
         Row: {
           avg_pct: number | null
           challenge_id: string
+          club_id: string
           created_at: string
           final_rank: number | null
           id: string
@@ -4147,6 +4169,7 @@ export type Database = {
         Insert: {
           avg_pct?: number | null
           challenge_id: string
+          club_id: string
           created_at?: string
           final_rank?: number | null
           id?: string
@@ -4158,6 +4181,7 @@ export type Database = {
         Update: {
           avg_pct?: number | null
           challenge_id?: string
+          club_id?: string
           created_at?: string
           final_rank?: number | null
           id?: string
@@ -4174,10 +4198,18 @@ export type Database = {
             referencedRelation: "pw_challenges"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "pw_entries_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
         ]
       }
       pw_picks: {
         Row: {
+          club_id: string
           created_at: string
           end_price: number | null
           entry_id: string
@@ -4189,6 +4221,7 @@ export type Database = {
           ticker: string
         }
         Insert: {
+          club_id: string
           created_at?: string
           end_price?: number | null
           entry_id: string
@@ -4200,6 +4233,7 @@ export type Database = {
           ticker: string
         }
         Update: {
+          club_id?: string
           created_at?: string
           end_price?: number | null
           entry_id?: string
@@ -4211,6 +4245,13 @@ export type Database = {
           ticker?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "pw_picks_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pw_picks_entry_id_fkey"
             columns: ["entry_id"]
@@ -4224,6 +4265,7 @@ export type Database = {
         Row: {
           captured_at: string
           challenge_id: string
+          club_id: string
           id: string
           kind: string
           price: number
@@ -4233,6 +4275,7 @@ export type Database = {
         Insert: {
           captured_at?: string
           challenge_id: string
+          club_id: string
           id?: string
           kind: string
           price: number
@@ -4242,6 +4285,7 @@ export type Database = {
         Update: {
           captured_at?: string
           challenge_id?: string
+          club_id?: string
           id?: string
           kind?: string
           price?: number
@@ -4254,6 +4298,13 @@ export type Database = {
             columns: ["challenge_id"]
             isOneToOne: false
             referencedRelation: "pw_challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pw_price_snapshots_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
             referencedColumns: ["id"]
           },
         ]
