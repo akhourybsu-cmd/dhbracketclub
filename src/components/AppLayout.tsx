@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useClub } from '@/contexts/ClubContext';
 import { AppDrawer } from '@/components/AppDrawer';
 import { NavDrawerProvider, useNavDrawer } from '@/contexts/NavDrawerContext';
+import { useClubAssets } from '@/hooks/useClubAssets';
 
 type SidebarItem = { path: string; label: string; icon: React.ComponentType<{ className?: string }> };
 type SidebarSection = { label: string; items: SidebarItem[] };
@@ -89,6 +90,7 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
   const { club, isClubAdmin, isPlatformOwner } = useClub();
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const { open: drawerOpen, setOpen: setDrawerOpen } = useNavDrawer();
+  const { filterNavPaths } = useClubAssets();
   const lastFetchAtRef = useRef<number>(0);
 
   // Fetch unread chat count (throttled)
@@ -214,8 +216,11 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
 
       {/* Desktop Sidebar — hidden inside game shells (Rune Delve, Nexus, etc.) */}
       {!isGameShell && (() => {
-        // Build sections including conditional admin section
-        const sections: SidebarSection[] = [...STATIC_SECTIONS];
+        // Build sections including conditional admin section, filtered by installed assets
+        const sections: SidebarSection[] = STATIC_SECTIONS.map(sec => ({
+          ...sec,
+          items: sec.items.filter(item => filterNavPaths([item.path]).length > 0),
+        })).filter(sec => sec.items.length > 0);
         const accountItems: SidebarItem[] = [{ path: '/profile', label: 'Profile', icon: User }];
         sections.push({ label: 'Account', items: accountItems });
         if (isClubAdmin || isPlatformOwner) {

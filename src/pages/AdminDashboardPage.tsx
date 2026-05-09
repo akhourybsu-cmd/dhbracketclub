@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { AdminStatTile, AdminSectionCard } from '@/components/admin/AdminPrimitives';
 import {
-  Building2, Users, Activity, Trophy, Megaphone, Flag, ScrollText, Wrench, Sparkles, BarChart3,
+  Building2, Users, Activity, Trophy, Megaphone, Flag, ScrollText, Wrench, Sparkles, BarChart3, Package,
 } from 'lucide-react';
 
 type Stats = {
@@ -63,6 +63,7 @@ export default function AdminDashboardPage() {
         Platform
       </p>
       <div className="space-y-2 mb-5">
+        <AdminSectionCard to="/admin/assets" icon={Package} label="Asset Catalog" description="Manage features available to clubs" color="primary" />
         <AdminSectionCard to="/admin/announcements" icon={Megaphone} label="Announcements" description="Push platform-wide messages" color="warning" badge="Soon" />
         <AdminSectionCard to="/admin/feature-flags" icon={Flag} label="Feature Flags" description="Toggle modules and beta tools" color="primary" badge="Soon" />
         <AdminSectionCard to="/admin/notes" icon={Sparkles} label="Polish Notes" description="UI / mobile refinement checklist" color="accent" badge="Soon" />

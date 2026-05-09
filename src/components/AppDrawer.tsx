@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useClub } from '@/contexts/ClubContext';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
+import { useClubAssets } from '@/hooks/useClubAssets';
 import dhMonogram from '@/assets/dh-monogram.png';
 
 type NavEntry = { path: string; label: string; icon: any; badge?: number };
@@ -27,11 +28,12 @@ export function AppDrawer({ open, onOpenChange, unreadChatCount = 0 }: AppDrawer
   const { user, signOut } = useAuth();
   const { club, isClubAdmin, isPlatformOwner, isAppAdmin } = useClub();
   const { play } = useSoundEffect();
+  const { filterNavPaths } = useClubAssets();
 
   // Close on route change
   useEffect(() => { if (open) onOpenChange(false); /* eslint-disable-next-line */ }, [location.pathname]);
 
-  const sections: Section[] = [
+  const rawSections: Section[] = [
     {
       label: 'Main',
       items: [
@@ -71,6 +73,11 @@ export function AppDrawer({ open, onOpenChange, unreadChatCount = 0 }: AppDrawer
       ],
     },
   ];
+
+  const sections: Section[] = rawSections.map(sec => ({
+    ...sec,
+    items: sec.items.filter(item => filterNavPaths([item.path]).length > 0),
+  })).filter(sec => sec.items.length > 0);
 
   if (isClubAdmin || isPlatformOwner || isAppAdmin) {
     sections.push({

@@ -2156,6 +2156,7 @@ function ArchivedModesCard() {
     { path: '/brackets', label: 'Brackets', icon: Trophy, color: 'primary' },
     { path: '/rankings', label: 'Rankings', icon: BarChart3, color: 'accent' },
     { path: '/polls', label: 'Polls', icon: MessageCircle, color: 'warning' },
+    { path: '/lockbox', label: 'Lockbox', icon: Lock, color: 'destructive' },
   ];
 
   return (
@@ -2455,7 +2456,6 @@ export default function CompetePage() {
           <TabsContent value="other" className="space-y-3">
             <PickemCompeteCard />
             <PortfolioWarsCompeteCard />
-            <LockboxCompeteCard />
             <ArchivedModesCard />
           </TabsContent>
         </Tabs>

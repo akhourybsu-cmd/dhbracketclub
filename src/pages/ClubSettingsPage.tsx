@@ -3,11 +3,12 @@ import { Link, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useClub } from '@/contexts/ClubContext';
+import { useClubAssets } from '@/hooks/useClubAssets';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Building2, ArrowLeft, Copy, Plus, Users, Crown, KeyRound, Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { Building2, ArrowLeft, Copy, Plus, Users, Crown, KeyRound, Eye, EyeOff, RefreshCw, Package, ChevronRight, Sparkles } from 'lucide-react';
 
 type InviteCode = {
   id: string;
@@ -35,6 +36,9 @@ const PRESET_ACCENTS: { label: string; color: string }[] = [
 
 export default function ClubSettingsPage() {
   const { club, isClubAdmin, loading, refresh } = useClub();
+  const { installedAssets } = useClubAssets();
+  // ≤3 installed = only the auto-installed defaults (Chat, Feed, Events), so show the onboarding CTA
+  const isNewClub = installedAssets.length <= 3;
   const [name, setName] = useState('');
   const [accent, setAccent] = useState('152 72% 46%');
   const [saving, setSaving] = useState(false);
@@ -310,6 +314,79 @@ export default function ClubSettingsPage() {
             </div>
           )}
         </section>
+
+        {/* Asset Library — onboarding CTA for new clubs, compact summary for established ones */}
+        {isNewClub ? (
+          <section
+            className="glass-card p-5 mb-4 relative overflow-hidden"
+            style={{ borderColor: `hsl(${accent} / 0.35)`, boxShadow: `0 0 0 1px hsl(${accent} / 0.12), 0 4px 24px hsl(${accent} / 0.08)` }}
+          >
+            {/* Background glow */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{ background: `radial-gradient(ellipse at 90% 20%, hsl(${accent} / 0.08), transparent 65%)` }}
+            />
+            <div className="relative">
+              <div className="flex items-start gap-3 mb-3">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: `hsl(${accent} / 0.14)`, border: `1px solid hsl(${accent} / 0.25)` }}
+                >
+                  <Sparkles className="w-5 h-5" style={{ color: `hsl(${accent})` }} />
+                </div>
+                <div>
+                  <h2 className="font-extrabold text-[14px] tracking-tight leading-tight">Add features to your club</h2>
+                  <p className="text-[11px] text-muted-foreground/70 mt-0.5 leading-relaxed">
+                    Your club has Home, Chat, Feed, and Events. Browse the Asset Library to add games, polls, rankings, and more.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                {['Draft Arena', 'Rune Delve', 'Nexus Defense', 'Brackets', 'Polls', 'Rankings', '+9 more'].map(label => (
+                  <span
+                    key={label}
+                    className="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                    style={{ background: `hsl(${accent} / 0.1)`, color: `hsl(${accent} / 0.9)`, border: `1px solid hsl(${accent} / 0.2)` }}
+                  >
+                    {label}
+                  </span>
+                ))}
+              </div>
+
+              <Link
+                to="/club/assets"
+                className="flex items-center justify-center gap-2 w-full h-10 rounded-xl font-extrabold text-[13px] transition-all active:scale-[0.98]"
+                style={{
+                  background: `linear-gradient(135deg, hsl(${accent}), hsl(${accent} / 0.8))`,
+                  color: 'hsl(220 60% 4%)',
+                  boxShadow: `0 4px 16px hsl(${accent} / 0.3)`,
+                }}
+              >
+                <Package className="w-4 h-4" /> Browse Asset Library
+              </Link>
+            </div>
+          </section>
+        ) : (
+          <section className="glass-card p-5 mb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground/80 flex items-center gap-1.5">
+                  <Package className="w-3 h-3" /> Asset Library
+                </h2>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+                  {installedAssets.length} feature{installedAssets.length !== 1 ? 's' : ''} installed
+                </p>
+              </div>
+              <Link
+                to="/club/assets"
+                className="flex items-center gap-1 text-[11px] font-bold text-primary btn-press"
+              >
+                Manage <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </section>
+        )}
 
         {/* Members */}
         <section className="glass-card p-5 space-y-3">

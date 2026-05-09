@@ -89,6 +89,8 @@ const AdminDiagnosticsPage = lazy(() => import("./pages/AdminDiagnosticsPage"));
 const AdminAnnouncementsPage = lazy(() => import("./pages/AdminAnnouncementsPage"));
 const AdminFeatureFlagsPage = lazy(() => import("./pages/AdminFeatureFlagsPage"));
 const AdminNotesPage = lazy(() => import("./pages/AdminNotesPage"));
+const AdminAssetCatalogPage = lazy(() => import("./pages/AdminAssetCatalogPage"));
+const ClubAssetsPage = lazy(() => import("./pages/ClubAssetsPage"));
 import { AdminRoute } from "./components/auth/AdminRoute";
 import { ClubAdminRoute } from "./components/auth/ClubAdminRoute";
 const NexusHomePage = lazy(() => import("./pages/NexusHomePage"));
@@ -269,6 +271,7 @@ function AnimatedRoutes() {
         <Route path="/club/request" element={<ProtectedRoute><Suspense fallback={<PageFallback />}><RequestClubPage /></Suspense></ProtectedRoute>} />
         <Route path="/club/settings" element={<ProtectedPage><ClubAdminRoute><ClubSettingsPage /></ClubAdminRoute></ProtectedPage>} />
         <Route path="/clubs/:clubId/settings" element={<ProtectedPage><ClubAdminRoute><ClubSettingsPage /></ClubAdminRoute></ProtectedPage>} />
+        <Route path="/club/assets" element={<ProtectedPage><ClubAdminRoute><ClubAssetsPage /></ClubAdminRoute></ProtectedPage>} />
 
         {/* Admin Portal — global platform controls (gated to is_app_admin / platform owner) */}
         <Route path="/admin" element={<ProtectedPage><AdminRoute><AdminDashboardPage /></AdminRoute></ProtectedPage>} />
@@ -280,6 +283,7 @@ function AnimatedRoutes() {
         <Route path="/admin/notes" element={<ProtectedPage><AdminRoute><AdminNotesPage /></AdminRoute></ProtectedPage>} />
         <Route path="/admin/audit" element={<ProtectedPage><AdminRoute><AdminAuditPage /></AdminRoute></ProtectedPage>} />
         <Route path="/admin/diagnostics" element={<ProtectedPage><AdminRoute><AdminDiagnosticsPage /></AdminRoute></ProtectedPage>} />
+        <Route path="/admin/assets" element={<ProtectedPage><AdminRoute><AdminAssetCatalogPage /></AdminRoute></ProtectedPage>} />
         {/* Legacy alias */}
         <Route path="/club-settings" element={<Navigate to="/club/settings" replace />} />
 
