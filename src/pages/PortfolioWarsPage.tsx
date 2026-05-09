@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import {
   TrendingUp, TrendingDown, Lock, Unlock, ChevronRight, Trophy, Crown,
-  Search, X, Clock, BarChart3, Sparkles, RefreshCw, ShieldCheck, ArrowLeft, Share2,
+  Search, X, Clock, BarChart3, Sparkles, RefreshCw, ShieldCheck,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,7 +18,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { copyShareTextWithLink } from '@/lib/share';
 import { toast } from 'sonner';
 
 const STATUS_LABEL: Record<string, string> = {
