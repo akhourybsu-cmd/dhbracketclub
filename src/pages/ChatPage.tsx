@@ -385,9 +385,9 @@ export default function ChatPage() {
       toast.error('Failed to send reply');
     } else {
       setThreadMessages(prev => prev.map(m => m.id === optimisticId ? { ...inserted } : m));
-      supabase.functions.invoke('send-push-notification', {
-        body: { record: { id: inserted.id, channel_id: inserted.channel_id, user_id: inserted.user_id, content: inserted.content } },
-      }).catch(() => {});
+      // Thread replies are intentionally NOT broadcast as top-level channel pushes.
+      // They previously spammed every channel subscriber as if they were a new
+      // channel message; thread participants see realtime updates in-app.
     }
   };
 

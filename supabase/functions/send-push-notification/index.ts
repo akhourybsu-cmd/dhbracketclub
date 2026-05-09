@@ -170,6 +170,12 @@ Deno.serve(async (req) => {
         .select("endpoint, p256dh, auth, user_id");
 
       if (target_user_id) {
+        // Self-push guard: never push the actor for their own action,
+        // even when a target_user_id is supplied (e.g. snake-draft turn
+        // where the same user is on the clock again).
+        if (sender_user_id && target_user_id === sender_user_id) {
+          return jsonResponse({ sent: 0, filtered: 0, reason: "self_target" });
+        }
         query = query.eq("user_id", target_user_id);
       } else {
         query = query.neq("user_id", sender_user_id || "");
