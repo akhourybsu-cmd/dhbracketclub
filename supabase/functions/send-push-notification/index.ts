@@ -159,17 +159,41 @@ Deno.serve(async (req) => {
     }
 
     // ══════════════════════════════════════════
-    // ── GENERIC NOTIFICATIONS (poll, event, draft) ──
+    // ── PERSONAL / TARGETED NOTIFICATIONS ──
+    //   types: poll | event | draft | lockbox | thread_reply | reaction
+    //   single recipient: target_user_id
+    //   multi recipient:  target_user_ids[]   (deduped, sender excluded)
     // ══════════════════════════════════════════
-    if (body.type && ["poll", "event", "draft", "lockbox"].includes(body.type)) {
-      const { type, title, message, url, sender_user_id, target_user_id } = body;
+    if (
+      body.type &&
+      ["poll", "event", "draft", "lockbox", "thread_reply", "reaction"].includes(body.type)
+    ) {
+      const {
+        type,
+        title,
+        message,
+        url,
+        tag: customTag,
+        sender_user_id,
+        target_user_id,
+        target_user_ids,
+      } = body;
 
-      // If target_user_id is set, only notify that specific user (e.g. draft turn, lock cracked)
       let query = supabase
         .from("push_subscriptions")
         .select("endpoint, p256dh, auth, user_id");
 
-      if (target_user_id) {
+      if (Array.isArray(target_user_ids) && target_user_ids.length > 0) {
+        // Multi-recipient personal push (thread reply, reaction fan-out, etc.)
+        // Dedupe + always exclude the sender.
+        const recipients = [...new Set(
+          target_user_ids.filter((u: any) => typeof u === "string" && u && u !== sender_user_id)
+        )];
+        if (recipients.length === 0) {
+          return jsonResponse({ sent: 0, filtered: 0, reason: "no_recipients" });
+        }
+        query = query.in("user_id", recipients);
+      } else if (target_user_id) {
         // Self-push guard: never push the actor for their own action,
         // even when a target_user_id is supplied (e.g. snake-draft turn
         // where the same user is on the clock again).
@@ -184,9 +208,17 @@ Deno.serve(async (req) => {
       const { data: subscriptions } = await query;
       if (!subscriptions || subscriptions.length === 0) return jsonResponse({ sent: 0 });
 
-      // Check preferences
+      // Map type -> notification_preferences column.
+      // thread_reply + reaction reuse the chat_messages toggle so users have
+      // a single switch to mute all chat-derived push notifications.
       const userIds = [...new Set(subscriptions.map((s: any) => s.user_id))];
-      const prefColumn = type === "poll" ? "polls" : type === "event" ? "events" : type === "lockbox" ? "lockbox" : "drafts";
+      const prefColumn =
+        type === "poll" ? "polls" :
+        type === "event" ? "events" :
+        type === "lockbox" ? "lockbox" :
+        type === "thread_reply" || type === "reaction" ? "chat_messages" :
+        "drafts";
+
       const { data: prefRows } = await supabase
         .from("notification_preferences")
         .select(`user_id, ${prefColumn}`)
@@ -202,7 +234,10 @@ Deno.serve(async (req) => {
       const payload = JSON.stringify({
         title: title || `New ${type}`,
         body: message || "",
-        tag: `dh-${type}`,
+        // Custom tag lets callers coalesce per-message bursts (e.g.
+        // `dh-react-<msgId>` so 5 reactions on the same message become
+        // one grouped notification via the SW's existing tag-grouping).
+        tag: customTag || `dh-${type}`,
         data: { url: url || "/" },
         icon: "/pwa-icon-512.png",
       });
