@@ -75,9 +75,8 @@ export function AppDrawer({ open, onOpenChange, unreadChatCount = 0 }: AppDrawer
     sections.push({
       label: 'Admin',
       items: [
-        ...(isClubAdmin ? [{ path: '/club-settings', label: 'Club Settings', icon: Settings }] : []),
+        ...(isClubAdmin ? [{ path: '/club/settings', label: 'Club Settings', icon: Settings }] : []),
         ...(isPlatformOwner ? [{ path: '/admin/clubs', label: 'Manage Clubs', icon: Shield }] : []),
-        ...(isClubAdmin || isPlatformOwner ? [{ path: '/admin', label: 'Admin Tools', icon: Settings }] : []),
       ],
     });
   }

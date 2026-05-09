@@ -49,8 +49,9 @@ const routeTitles: Array<[RegExp, string]> = [
   [/^\/lockbox/, 'Lockbox'],
   [/^\/brackets/, 'Brackets'],
   [/^\/pools/, 'Pools'],
-  [/^\/admin/, 'Admin'],
-  [/^\/club-settings/, 'Club Settings'],
+  [/^\/admin\/clubs/, 'Manage Clubs'],
+  [/^\/club\/settings/, 'Club Settings'],
+  [/^\/club\/request/, 'Club Access'],
 ];
 function getRouteTitle(pathname: string): string {
   for (const [re, title] of routeTitles) if (re.test(pathname)) return title;
