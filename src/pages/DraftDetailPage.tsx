@@ -1537,6 +1537,18 @@ export default function DraftDetailPage() {
             <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'hsl(var(--gold))' }}>Draft Complete 🎉</p>
           </div>
 
+          {/* Judging Scope / AI Context */}
+          <DraftAiContextCard
+            draftId={draftId!}
+            aiContext={(draft as any).ai_context || null}
+            aiContextOverride={(draft as any).ai_context_override || null}
+            canManage={canManage}
+            hasResults={hasResults}
+            regenerating={resultsGenerating}
+            onSaved={fetchData}
+            onRegenerate={regenerateResults}
+          />
+
           {/* AI Report Section */}
           {resultsGenerating ? (
             <div className="da-glass p-6 mb-5">
