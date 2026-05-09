@@ -161,14 +161,16 @@ export function useSubmitPicks() {
       if (!entryId) {
         const { data, error } = await supabase.from('pw_entries').insert({
           challenge_id: challengeId, user_id: user.id,
-        }).select('id').single();
+          // club_id is auto-stamped by DB trigger from the parent challenge
+        } as any).select('id').single();
         if (error) throw error;
         entryId = data.id;
       }
       // Replace picks (delete + insert)
       await supabase.from('pw_picks').delete().eq('entry_id', entryId!);
       const rows = unique.map((ticker, i) => ({ entry_id: entryId!, ticker, position: i + 1 }));
-      const { error: pErr } = await supabase.from('pw_picks').insert(rows);
+      // club_id is auto-stamped by DB trigger from the parent entry
+      const { error: pErr } = await supabase.from('pw_picks').insert(rows as any);
       if (pErr) throw pErr;
       return { entryId };
     },
