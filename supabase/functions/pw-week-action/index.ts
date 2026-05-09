@@ -107,10 +107,11 @@ Deno.serve(async (req) => {
 
   try {
     switch (action) {
-      case "open_next": return await openNext(sb);
-      case "snapshot":  return await snapshotPrices(sb);
-      case "lock":      return await lockWeek(sb, body.challenge_id);
-      case "finalize":  return await finalizeWeek(sb, body.challenge_id);
+      case "open_next":      return await openNext(sb);
+      case "snapshot":       return await snapshotPrices(sb);
+      case "lock":           return await lockWeek(sb, body.challenge_id);
+      case "finalize":       return await finalizeWeek(sb, body.challenge_id);
+      case "lock_reminder":  return await lockReminder(sb);
       default:
         return new Response(JSON.stringify({ error: "Unknown action" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
