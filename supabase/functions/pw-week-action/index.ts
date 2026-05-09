@@ -245,6 +245,12 @@ async function lockWeek(sb: any, challengeId?: string) {
     status: "active", start_trading_date: today,
   }).eq("id", ch.id);
   await sb.from("pw_entries").update({ locked_at: new Date().toISOString() }).eq("challenge_id", ch.id);
+  await broadcastPush({
+    title: "🔒 Portfolio Wars locked in",
+    message: "This week's picks are locked. May the best portfolio win.",
+    url: "/portfolio-wars",
+    tag: `pw-lock-${ch.id}`,
+  });
   return new Response(JSON.stringify({ ok: true, challenge_id: ch.id, locked_tickers: tickers.length }), {
     status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
