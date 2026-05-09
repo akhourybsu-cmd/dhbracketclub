@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
 import { toast } from 'sonner';
 import type { Message } from '@/components/chat/types';
+import { notifyReaction } from '@/lib/chatNotifications';
 
 export function useChatActions(userId: string | undefined) {
   const { play } = useSoundEffect();
