@@ -12,6 +12,8 @@ import { PageTransition } from "@/components/PageTransition";
 import { AnimatePresence } from "framer-motion";
 import { ThemeProvider } from "next-themes";
 import { useAppUpdate } from "@/hooks/useAppUpdate";
+import { useOfflineIndicator } from "@/hooks/useOfflineIndicator";
+import { useRoutePrefetch } from "@/hooks/useRoutePrefetch";
 
 // Lazy-loaded pages for code splitting
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -264,6 +266,8 @@ function AnimatedRoutes() {
 
 function AppWithUpdate() {
   useAppUpdate();
+  useOfflineIndicator();
+  useRoutePrefetch();
   return <AnimatedRoutes />;
 }
 

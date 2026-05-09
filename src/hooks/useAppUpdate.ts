@@ -26,13 +26,26 @@ export function useAppUpdate() {
   useEffect(() => {
     let cancelled = false;
 
+    // Don't auto-nuke during an active game run, chat composition, or form entry —
+    // user would lose progress. Show toast but let them tap to update manually.
+    const isBusyContext = (): boolean => {
+      const p = window.location.pathname;
+      if (p.startsWith('/nexus/battle') || p.startsWith('/rune-delve/play')) return true;
+      const ae = document.activeElement as HTMLElement | null;
+      if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable)) return true;
+      return false;
+    };
+
     const triggerUpdate = () => {
       if (promptedRef.current) return;
       promptedRef.current = true;
 
+      const busy = isBusyContext();
       toast('🚀 New version available', {
-        description: 'Updating in 10 seconds — tap to update now.',
-        duration: AUTO_NUKE_DELAY_MS,
+        description: busy
+          ? 'Tap to update when you finish.'
+          : 'Updating in 10 seconds — tap to update now.',
+        duration: busy ? Infinity : AUTO_NUKE_DELAY_MS,
         action: {
           label: 'Update now',
           onClick: () => {
@@ -42,9 +55,11 @@ export function useAppUpdate() {
         },
       });
 
-      autoTimerRef.current = setTimeout(() => {
-        void nukeAndReload();
-      }, AUTO_NUKE_DELAY_MS);
+      if (!busy) {
+        autoTimerRef.current = setTimeout(() => {
+          void nukeAndReload();
+        }, AUTO_NUKE_DELAY_MS);
+      }
     };
 
     const check = async () => {
