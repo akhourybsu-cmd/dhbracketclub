@@ -65,7 +65,7 @@ serve(async (req) => {
     // Fetch the draft
     const { data: draft } = await admin
       .from("drafts")
-      .select("topic, category")
+      .select("topic, category, ai_context, ai_context_override")
       .eq("id", dispute.draft_id)
       .single();
 
@@ -103,8 +103,16 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Pick rating not found in results" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Effective judging scope (override > original > broad)
+    const overrideCtx = ((draft as any).ai_context_override || "").trim();
+    const originalCtx = ((draft as any).ai_context || "").trim();
+    const effectiveCtx = overrideCtx || originalCtx;
+    const ctxBlock = effectiveCtx
+      ? `\n\n=== JUDGING SCOPE (AUTHORITATIVE) ===\n${overrideCtx ? "[Commissioner override — takes priority]\n" : "[From draft creator]\n"}${effectiveCtx}\n`
+      : `\n\n=== JUDGING SCOPE ===\nNo explicit scope was set. Interpret the category broadly across all relevant media (film, TV, video games, comics, anime, books, mythology, etc.) unless the title clearly limits it.\n`;
+
     // Build AI prompt for re-evaluation
-    const prompt = `You are an expert draft analyst for DH Bracket Club. You previously scored a pick in a "${draft.topic}"${draft.category ? ` (Category: ${draft.category})` : ""} draft.
+    const prompt = `You are an expert draft analyst for DH Bracket Club. You previously scored a pick in a "${draft.topic}"${draft.category ? ` (Category: ${draft.category})` : ""} draft.${ctxBlock}
 
 The pick: "${pick.pick_text}" (Round ${pick.round}, Pick #${pick.pick_number})
 

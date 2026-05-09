@@ -94,7 +94,15 @@ serve(async (req) => {
       return `Participant: ${name} (user_id: ${uid})\n${pickList}`;
     }).join("\n\n");
 
-    const prompt = `You are an expert strategic draft analyst for DH Bracket Club. The draft topic is: "${draft.topic}"${draft.category ? ` (Category: ${draft.category})` : ""}.
+    // ── Effective judging scope: override > original > broad-default ──
+    const overrideCtx = (draft.ai_context_override || "").trim();
+    const originalCtx = (draft.ai_context || "").trim();
+    const effectiveCtx = overrideCtx || originalCtx;
+    const ctxBlock = effectiveCtx
+      ? `\n\n=== JUDGING SCOPE (AUTHORITATIVE) ===\n${overrideCtx ? "[Commissioner override — takes priority over any original context]\n" : "[Provided by draft creator]\n"}${effectiveCtx}\n\nFollow this scope exactly. Do not narrow the category beyond what this scope or the title states.`
+      : `\n\n=== JUDGING SCOPE ===\nNo explicit scope was provided. Interpret the category broadly. For broad categories (e.g. "Best Villains of All Time") consider all relevant media and cultural sources — film, television, video games, comics, anime, literature, mythology, sports, real history, etc. Do not assume the category is limited to movies unless the title clearly says so.`;
+
+    const prompt = `You are an expert strategic draft analyst for DH Bracket Club. The draft topic is: "${draft.topic}"${draft.category ? ` (Category: ${draft.category})` : ""}.${ctxBlock}
 
 This was a snake-style draft. Evaluate every pick using the following CORE EVALUATION FRAMEWORK. Adapt your reasoning to the specific category while applying the same consistent logic.
 

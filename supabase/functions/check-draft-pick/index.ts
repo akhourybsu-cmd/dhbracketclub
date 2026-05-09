@@ -33,7 +33,7 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const { pick_text, topic, category, existing_picks } = await req.json();
+    const { pick_text, topic, category, existing_picks, ai_context, ai_context_override } = await req.json();
 
     if (!pick_text || typeof pick_text !== "string" || pick_text.trim().length < 2) {
       return new Response(JSON.stringify({ suggestion: null }), {
@@ -64,7 +64,14 @@ serve(async (req) => {
       });
     }
 
-    const prompt = `You are a spell-check and relevance assistant for a draft game about "${topic}"${category ? ` (category: ${category})` : ""}.
+    const overrideCtx = typeof ai_context_override === "string" ? ai_context_override.trim() : "";
+    const originalCtx = typeof ai_context === "string" ? ai_context.trim() : "";
+    const effectiveCtx = overrideCtx || originalCtx;
+    const scopeLine = effectiveCtx
+      ? `\n\nJudging scope (authoritative${overrideCtx ? ", commissioner override" : ""}): ${effectiveCtx}\nApply this scope when deciding relevance. Do not narrow the category beyond what this scope or title states.`
+      : `\n\nNo explicit scope was provided. Interpret the topic broadly — for broad categories, accept picks from any relevant medium (film, TV, games, comics, books, etc.). Do not assume movies-only unless the title says so.`;
+
+    const prompt = `You are a spell-check and relevance assistant for a draft game about "${topic}"${category ? ` (category: ${category})` : ""}.${scopeLine}
 
 The user typed: "${pick_text.trim()}"
 
@@ -72,7 +79,7 @@ ${existingList.length ? `Already picked items: ${existingList.join(", ")}` : ""}
 
 Tasks:
 1. If the text has a spelling mistake or is a common misspelling of something relevant to the topic, return the corrected version.
-2. If the text seems irrelevant to the topic "${topic}", flag it.
+2. If the text seems irrelevant to the topic "${topic}" (per the judging scope above), flag it.
 3. If the text is fine (correctly spelled and relevant), return null for both.
 
 Rules:

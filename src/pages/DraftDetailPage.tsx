@@ -62,6 +62,7 @@ import { PlayoffHeaderBanner } from '@/components/draft/PlayoffHeaderBanner';
 import { PlayoffBadge } from '@/components/draft/PlayoffBadge';
 import { PlayoffMatchupHero } from '@/components/draft/PlayoffMatchupHero';
 import { getPlayoffRoundShort, getPlayoffRoundName } from '@/lib/playoffStyle';
+import { DraftAiContextCard } from '@/components/draft/DraftAiContextCard';
 
 interface Participant {
   id: string;
@@ -142,7 +143,9 @@ export default function DraftDetailPage() {
   const { suggestion, checking: suggestionChecking, debouncedCheck, clearSuggestion } = usePickSuggestion(
     draft?.topic || '',
     draft?.category || null,
-    existingPickTexts
+    existingPickTexts,
+    draft?.ai_context || null,
+    draft?.ai_context_override || null,
   );
 
   const fetchData = useCallback(async () => {
@@ -1533,6 +1536,18 @@ export default function DraftDetailPage() {
           <div className="text-center mb-5">
             <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'hsl(var(--gold))' }}>Draft Complete 🎉</p>
           </div>
+
+          {/* Judging Scope / AI Context */}
+          <DraftAiContextCard
+            draftId={draftId!}
+            aiContext={(draft as any).ai_context || null}
+            aiContextOverride={(draft as any).ai_context_override || null}
+            canManage={canManage}
+            hasResults={hasResults}
+            regenerating={resultsGenerating}
+            onSaved={fetchData}
+            onRegenerate={regenerateResults}
+          />
 
           {/* AI Report Section */}
           {resultsGenerating ? (

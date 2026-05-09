@@ -4,9 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { Bookmark, ArrowLeft } from 'lucide-react';
+import { Bookmark, ArrowLeft, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function CreateDraftPage() {
@@ -14,6 +15,7 @@ export default function CreateDraftPage() {
   const navigate = useNavigate();
   const [topic, setTopic] = useState('');
   const [description, setDescription] = useState('');
+  const [aiContext, setAiContext] = useState('');
   const [numRounds, setNumRounds] = useState(5);
   const [loading, setLoading] = useState(false);
 
@@ -37,6 +39,7 @@ export default function CreateDraftPage() {
       if (compErr) throw compErr;
 
       // Create draft — creator is first participant
+      const trimmedCtx = aiContext.trim();
       const { data: draft, error: draftErr } = await supabase
         .from('drafts')
         .insert({
@@ -45,7 +48,8 @@ export default function CreateDraftPage() {
           created_by: user.id,
           num_rounds: numRounds,
           status: 'setup',
-        })
+          ai_context: trimmedCtx ? trimmedCtx : null,
+        } as any)
         .select()
         .single();
       if (draftErr) throw draftErr;
@@ -119,6 +123,23 @@ export default function CreateDraftPage() {
               maxLength={200}
               className="form-input"
             />
+          </div>
+          <div>
+            <label className="form-label flex items-center gap-1.5">
+              <Sparkles className="w-3 h-3" style={{ color: 'hsl(45 100% 65%)' }} />
+              AI Judging Context <span className="normal-case font-normal tracking-normal">(optional)</span>
+            </label>
+            <Textarea
+              value={aiContext}
+              onChange={e => setAiContext(e.target.value)}
+              placeholder={'e.g. "Best Villains of All Time — include movies, TV, video games, comics, anime, books, and mythology. Don\u2019t limit to movie villains."'}
+              maxLength={1000}
+              rows={4}
+              className="form-input min-h-[96px] resize-none text-[13px] leading-snug"
+            />
+            <p className="text-[10px] text-muted-foreground/70 mt-1.5 leading-snug">
+              Tell the AI what this category includes or excludes. Helps the draft report judge picks the way you intended. {aiContext.length}/1000
+            </p>
           </div>
           <div>
             <label className="form-label">Rounds</label>
