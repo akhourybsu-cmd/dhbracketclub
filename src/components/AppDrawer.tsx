@@ -25,7 +25,7 @@ interface AppDrawerProps {
 export function AppDrawer({ open, onOpenChange, unreadChatCount = 0 }: AppDrawerProps) {
   const location = useLocation();
   const { user, signOut } = useAuth();
-  const { club, isClubAdmin, isPlatformOwner } = useClub();
+  const { club, isClubAdmin, isPlatformOwner, isAppAdmin } = useClub();
   const { play } = useSoundEffect();
 
   // Close on route change
