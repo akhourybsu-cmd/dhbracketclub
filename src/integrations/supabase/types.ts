@@ -3908,6 +3908,218 @@ export type Database = {
         }
         Relationships: []
       }
+      pw_accolades: {
+        Row: {
+          challenge_id: string
+          created_at: string
+          id: string
+          kind: string
+          ticker: string | null
+          user_id: string
+          value: number | null
+        }
+        Insert: {
+          challenge_id: string
+          created_at?: string
+          id?: string
+          kind: string
+          ticker?: string | null
+          user_id: string
+          value?: number | null
+        }
+        Update: {
+          challenge_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          ticker?: string | null
+          user_id?: string
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pw_accolades_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "pw_challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pw_challenges: {
+        Row: {
+          created_at: string
+          end_at: string
+          end_trading_date: string | null
+          finalized_at: string | null
+          id: string
+          lock_at: string
+          start_trading_date: string | null
+          status: Database["public"]["Enums"]["pw_challenge_status"]
+          updated_at: string
+          week_end: string
+          week_number: number
+          week_start: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          end_at: string
+          end_trading_date?: string | null
+          finalized_at?: string | null
+          id?: string
+          lock_at: string
+          start_trading_date?: string | null
+          status?: Database["public"]["Enums"]["pw_challenge_status"]
+          updated_at?: string
+          week_end: string
+          week_number: number
+          week_start: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          end_at?: string
+          end_trading_date?: string | null
+          finalized_at?: string | null
+          id?: string
+          lock_at?: string
+          start_trading_date?: string | null
+          status?: Database["public"]["Enums"]["pw_challenge_status"]
+          updated_at?: string
+          week_end?: string
+          week_number?: number
+          week_start?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      pw_entries: {
+        Row: {
+          avg_pct: number | null
+          challenge_id: string
+          created_at: string
+          final_rank: number | null
+          id: string
+          locked_at: string | null
+          submitted_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avg_pct?: number | null
+          challenge_id: string
+          created_at?: string
+          final_rank?: number | null
+          id?: string
+          locked_at?: string | null
+          submitted_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avg_pct?: number | null
+          challenge_id?: string
+          created_at?: string
+          final_rank?: number | null
+          id?: string
+          locked_at?: string | null
+          submitted_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pw_entries_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "pw_challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pw_picks: {
+        Row: {
+          created_at: string
+          end_price: number | null
+          entry_id: string
+          id: string
+          latest_price: number | null
+          pct_change: number | null
+          position: number
+          start_price: number | null
+          ticker: string
+        }
+        Insert: {
+          created_at?: string
+          end_price?: number | null
+          entry_id: string
+          id?: string
+          latest_price?: number | null
+          pct_change?: number | null
+          position: number
+          start_price?: number | null
+          ticker: string
+        }
+        Update: {
+          created_at?: string
+          end_price?: number | null
+          entry_id?: string
+          id?: string
+          latest_price?: number | null
+          pct_change?: number | null
+          position?: number
+          start_price?: number | null
+          ticker?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pw_picks_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "pw_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pw_price_snapshots: {
+        Row: {
+          captured_at: string
+          challenge_id: string
+          id: string
+          kind: string
+          price: number
+          ticker: string
+          trading_date: string | null
+        }
+        Insert: {
+          captured_at?: string
+          challenge_id: string
+          id?: string
+          kind: string
+          price: number
+          ticker: string
+          trading_date?: string | null
+        }
+        Update: {
+          captured_at?: string
+          challenge_id?: string
+          id?: string
+          kind?: string
+          price?: number
+          ticker?: string
+          trading_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pw_price_snapshots_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "pw_challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ranking_items: {
         Row: {
           club_id: string
@@ -5351,6 +5563,12 @@ export type Database = {
         | "admin_grant"
         | "admin_debit"
       nexus_sigil_rarity: "common" | "rare" | "epic" | "legendary"
+      pw_challenge_status:
+        | "upcoming"
+        | "locked"
+        | "active"
+        | "completed"
+        | "archived"
       rd_quest_scope: "daily" | "weekly"
       rd_quest_status: "active" | "completed" | "claimed"
     }
@@ -5490,6 +5708,13 @@ export const Constants = {
         "admin_debit",
       ],
       nexus_sigil_rarity: ["common", "rare", "epic", "legendary"],
+      pw_challenge_status: [
+        "upcoming",
+        "locked",
+        "active",
+        "completed",
+        "archived",
+      ],
       rd_quest_scope: ["daily", "weekly"],
       rd_quest_status: ["active", "completed", "claimed"],
     },
