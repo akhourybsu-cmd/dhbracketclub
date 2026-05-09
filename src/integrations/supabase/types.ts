@@ -1096,6 +1096,10 @@ export type Database = {
       }
       drafts: {
         Row: {
+          ai_context: string | null
+          ai_context_override: string | null
+          ai_context_updated_at: string | null
+          ai_context_updated_by: string | null
           category: string | null
           club_id: string
           competition_id: string
@@ -1112,6 +1116,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_context?: string | null
+          ai_context_override?: string | null
+          ai_context_updated_at?: string | null
+          ai_context_updated_by?: string | null
           category?: string | null
           club_id?: string
           competition_id: string
@@ -1128,6 +1136,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_context?: string | null
+          ai_context_override?: string | null
+          ai_context_updated_at?: string | null
+          ai_context_updated_by?: string | null
           category?: string | null
           club_id?: string
           competition_id?: string
