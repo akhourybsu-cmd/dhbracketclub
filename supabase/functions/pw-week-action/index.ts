@@ -369,7 +369,7 @@ async function lockReminder(sb: any) {
   });
 }
 
-async function broadcastPush(args: { title: string; message: string; url: string; tag: string }) {
+async function broadcastPush(args: { title: string; message: string; url: string; tag: string; club_id?: string }) {
   try {
     await fetch(`${SUPABASE_URL}/functions/v1/send-push-notification`, {
       method: "POST",
@@ -384,6 +384,7 @@ async function broadcastPush(args: { title: string; message: string; url: string
         message: args.message,
         url: args.url,
         tag: args.tag,
+        club_id: args.club_id,
       }),
     });
   } catch (e) {
