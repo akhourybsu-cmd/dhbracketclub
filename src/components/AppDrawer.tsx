@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, MessageSquareText, CalendarDays, Swords, Newspaper,
   User, Trophy, BarChart3, MessageCircle, Bookmark, Link2, ScrollText,
-  Lock, FileText, Sparkles, Shield, Settings, LogOut, X, Brackets as BracketsIcon,
+  Lock, FileText, Sparkles, Shield, Settings, LogOut, Brackets as BracketsIcon,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { ThemeToggle } from '@/components/ThemeToggle';
