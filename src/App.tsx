@@ -252,6 +252,9 @@ function AnimatedRoutes() {
         <Route path="/club/request" element={<ProtectedRoute><Suspense fallback={<PageFallback />}><RequestClubPage /></Suspense></ProtectedRoute>} />
         <Route path="/club/settings" element={<ProtectedPage><ClubSettingsPage /></ProtectedPage>} />
         <Route path="/admin/clubs" element={<ProtectedPage><AdminClubsPage /></ProtectedPage>} />
+        {/* Legacy aliases — keep deep links working after navigation cleanup */}
+        <Route path="/admin" element={<Navigate to="/admin/clubs" replace />} />
+        <Route path="/club-settings" element={<Navigate to="/club/settings" replace />} />
 
         <Route path="*" element={<Suspense fallback={<PageFallback />}><NotFound /></Suspense>} />
       </Routes>
