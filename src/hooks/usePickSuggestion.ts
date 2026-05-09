@@ -8,14 +8,19 @@ interface PickSuggestion {
   relevance_note: string | null;
 }
 
-export function usePickSuggestion(topic: string, category: string | null, existingPicks: string[]) {
+export function usePickSuggestion(
+  topic: string,
+  category: string | null,
+  existingPicks: string[],
+  aiContext?: string | null,
+  aiContextOverride?: string | null,
+) {
   const [suggestion, setSuggestion] = useState<PickSuggestion | null>(null);
   const [checking, setChecking] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const checkPick = useCallback(async (text: string) => {
-    // Cancel any in-flight request
     abortRef.current?.abort();
     setSuggestion(null);
 
@@ -36,6 +41,8 @@ export function usePickSuggestion(topic: string, category: string | null, existi
           topic,
           category,
           existing_picks: existingPicks,
+          ai_context: aiContext || null,
+          ai_context_override: aiContextOverride || null,
         },
       });
 
@@ -55,7 +62,7 @@ export function usePickSuggestion(topic: string, category: string | null, existi
         setChecking(false);
       }
     }
-  }, [topic, category, existingPicks]);
+  }, [topic, category, existingPicks, aiContext, aiContextOverride]);
 
   const debouncedCheck = useCallback((text: string) => {
     if (timerRef.current) clearTimeout(timerRef.current);
