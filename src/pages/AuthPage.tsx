@@ -190,32 +190,10 @@ export default function AuthPage() {
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 transition={{ duration: 0.18 }}
-                className="space-y-4 overflow-hidden"
+                className="overflow-hidden"
               >
-                <div>
-                  <label className="form-label">Proposed Club Name</label>
-                  <Input
-                    required
-                    value={proposedClubName}
-                    onChange={(e) => setProposedClubName(e.target.value)}
-                    placeholder="e.g. Smith Family"
-                    maxLength={48}
-                    className="form-input"
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Why this club? (optional)</label>
-                  <Textarea
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    placeholder="Tell Alex who's joining and what you'll use it for."
-                    maxLength={500}
-                    rows={3}
-                    className="form-input resize-none"
-                  />
-                </div>
                 <p className="text-[11px] text-muted-foreground/80 px-0.5 leading-relaxed">
-                  Your account is created right away. Alex reviews each club request manually.
+                  Create your account first — once you sign in, you'll name your club and submit your request in one quick step. Alex reviews each one manually.
                 </p>
               </motion.div>
             )}
