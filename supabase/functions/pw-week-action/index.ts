@@ -223,23 +223,12 @@ async function snapshotPrices(sb: any) {
   });
 }
 
-async function lockWeek(sb: any, challengeId?: string) {
-  let ch;
-  if (challengeId) {
-    const { data } = await sb.from("pw_challenges").select("*").eq("id", challengeId).maybeSingle();
-    ch = data;
-  } else {
-    const { data } = await sb.from("pw_challenges").select("*").eq("status", "upcoming")
-      .order("week_start", { ascending: true }).limit(1).maybeSingle();
-    ch = data;
-  }
-  if (!ch) throw new Error("No upcoming challenge to lock");
+async function lockOneChallenge(sb: any, ch: any) {
   const tickers = await uniqueTickersForChallenge(sb, ch.id);
   const today = isoDate(new Date());
   for (const sym of tickers) {
     const q = await quote(sym);
     if (!q) continue;
-    // Use today's open price as start (Finnhub /quote returns o = today's open)
     const startPrice = q.o || q.c;
     await sb.from("pw_price_snapshots").upsert({
       challenge_id: ch.id, ticker: sym, kind: "start",
@@ -260,23 +249,38 @@ async function lockWeek(sb: any, challengeId?: string) {
     message: "This week's picks are locked. May the best portfolio win.",
     url: "/portfolio-wars",
     tag: `pw-lock-${ch.id}`,
+    club_id: ch.club_id,
   });
-  return new Response(JSON.stringify({ ok: true, challenge_id: ch.id, locked_tickers: tickers.length }), {
+  return { challenge_id: ch.id, club_id: ch.club_id, locked_tickers: tickers.length };
+}
+
+async function lockWeek(sb: any, challengeId?: string) {
+  if (challengeId) {
+    const { data: ch } = await sb.from("pw_challenges").select("*").eq("id", challengeId).maybeSingle();
+    if (!ch) throw new Error("Challenge not found");
+    const result = await lockOneChallenge(sb, ch);
+    return new Response(JSON.stringify({ ok: true, ...result }), {
+      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  // No specific challenge: lock the next upcoming for EVERY club whose lock_at <= now
+  const { data: list } = await sb.from("pw_challenges").select("*")
+    .eq("status", "upcoming").lte("lock_at", new Date().toISOString())
+    .order("week_start", { ascending: true });
+  // Take earliest per club
+  const perClub = new Map<string, any>();
+  for (const c of list || []) if (!perClub.has(c.club_id)) perClub.set(c.club_id, c);
+  const results: any[] = [];
+  for (const ch of perClub.values()) {
+    try { results.push(await lockOneChallenge(sb, ch)); }
+    catch (e) { console.error("lock failed for", ch.id, e); }
+  }
+  return new Response(JSON.stringify({ ok: true, results }), {
     status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
 
-async function finalizeWeek(sb: any, challengeId?: string) {
-  let ch;
-  if (challengeId) {
-    const { data } = await sb.from("pw_challenges").select("*").eq("id", challengeId).maybeSingle();
-    ch = data;
-  } else {
-    const { data } = await sb.from("pw_challenges").select("*").eq("status", "active")
-      .order("week_start", { ascending: false }).limit(1).maybeSingle();
-    ch = data;
-  }
-  if (!ch) throw new Error("No active challenge to finalize");
+async function finalizeOneChallenge(sb: any, ch: any) {
   const tickers = await uniqueTickersForChallenge(sb, ch.id);
   const today = isoDate(new Date());
   for (const sym of tickers) {
@@ -290,7 +294,6 @@ async function finalizeWeek(sb: any, challengeId?: string) {
     const { data: entries } = await sb.from("pw_entries").select("id").eq("challenge_id", ch.id);
     const ids = (entries || []).map((e: any) => e.id);
     if (ids.length) {
-      // Compute pct relative to that pick's start_price
       const { data: picks } = await sb.from("pw_picks")
         .select("id, start_price").in("entry_id", ids).eq("ticker", sym);
       for (const p of picks || []) {
@@ -313,35 +316,55 @@ async function finalizeWeek(sb: any, challengeId?: string) {
     message: "See who climbed the leaderboard this week.",
     url: "/portfolio-wars",
     tag: `pw-finalize-${ch.id}`,
+    club_id: ch.club_id,
   });
-  return new Response(JSON.stringify({ ok: true, challenge_id: ch.id }), {
+  return { challenge_id: ch.id, club_id: ch.club_id };
+}
+
+async function finalizeWeek(sb: any, challengeId?: string) {
+  if (challengeId) {
+    const { data: ch } = await sb.from("pw_challenges").select("*").eq("id", challengeId).maybeSingle();
+    if (!ch) throw new Error("Challenge not found");
+    const result = await finalizeOneChallenge(sb, ch);
+    return new Response(JSON.stringify({ ok: true, ...result }), {
+      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  // Finalize all currently-active challenges whose end_at <= now
+  const { data: list } = await sb.from("pw_challenges").select("*")
+    .eq("status", "active").lte("end_at", new Date().toISOString())
+    .order("week_start", { ascending: false });
+  const results: any[] = [];
+  for (const ch of list || []) {
+    try { results.push(await finalizeOneChallenge(sb, ch)); }
+    catch (e) { console.error("finalize failed for", ch.id, e); }
+  }
+  return new Response(JSON.stringify({ ok: true, results }), {
     status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
 
 async function lockReminder(sb: any) {
-  // Find the next upcoming challenge whose lock is within ~36h.
-  const { data: ch } = await sb.from("pw_challenges").select("*")
-    .eq("status", "upcoming").order("week_start", { ascending: true }).limit(1).maybeSingle();
-  if (!ch) {
-    return new Response(JSON.stringify({ ok: true, skipped: "no upcoming week" }), {
-      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+  // For every club, find the next upcoming challenge whose lock is within ~36h and notify.
+  const { data: list } = await sb.from("pw_challenges").select("*")
+    .eq("status", "upcoming").order("week_start", { ascending: true });
+  const perClub = new Map<string, any>();
+  for (const c of list || []) if (!perClub.has(c.club_id)) perClub.set(c.club_id, c);
+  const results: any[] = [];
+  for (const ch of perClub.values()) {
+    const lockMs = new Date(ch.lock_at).getTime();
+    const hoursToLock = (lockMs - Date.now()) / (1000 * 60 * 60);
+    if (hoursToLock <= 0 || hoursToLock > 36) continue;
+    await broadcastPush({
+      title: "📈 Picks lock tomorrow",
+      message: "Lock in your Portfolio Wars picks before Monday's open.",
+      url: "/portfolio-wars",
+      tag: `pw-reminder-${ch.id}`,
+      club_id: ch.club_id,
     });
+    results.push({ club_id: ch.club_id, challenge_id: ch.id, sent: true });
   }
-  const lockMs = new Date(ch.lock_at).getTime();
-  const hoursToLock = (lockMs - Date.now()) / (1000 * 60 * 60);
-  if (hoursToLock <= 0 || hoursToLock > 36) {
-    return new Response(JSON.stringify({ ok: true, skipped: "outside reminder window", hoursToLock }), {
-      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-  await broadcastPush({
-    title: "📈 Picks lock tomorrow",
-    message: "Lock in your Portfolio Wars picks before Monday's open.",
-    url: "/portfolio-wars",
-    tag: `pw-reminder-${ch.id}`,
-  });
-  return new Response(JSON.stringify({ ok: true, challenge_id: ch.id, sent: true }), {
+  return new Response(JSON.stringify({ ok: true, results }), {
     status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
