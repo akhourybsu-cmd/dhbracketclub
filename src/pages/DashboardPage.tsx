@@ -6,7 +6,7 @@ import { useClub } from '@/contexts/ClubContext';
 import { Button } from '@/components/ui/button';
 import {
   Plus, Users, ArrowRight, Trophy, BarChart3, Shield, Download, X, Swords,
-  MessageCircle, Bookmark, Zap, CalendarDays, Clock, MapPin, ChevronRight, ScrollText, Newspaper, Sparkles
+  MessageCircle, Bookmark, Zap, CalendarDays, Clock, MapPin, ChevronRight, ScrollText, Newspaper, Sparkles, TrendingUp
 } from 'lucide-react';
 import { UserAvatar } from '@/components/chat/UserAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
