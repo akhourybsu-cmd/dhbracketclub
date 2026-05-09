@@ -127,12 +127,15 @@ Deno.serve(async (req) => {
 async function openNext(sb: ReturnType<typeof createClient>) {
   // Determine the next Monday after today's week.
   const now = new Date();
-  const thisMon = mondayOfWeek(now);
-  // Next Monday = either this Monday (if upcoming this week not created) or next Monday.
-  // We always create the "next" week that does not yet exist.
-  let target = thisMon;
-  // If a challenge for thisMon already exists, jump one week.
-  for (let attempt = 0; attempt < 4; attempt++) {
+  let target = mondayOfWeek(now);
+  // Find the next Monday whose lock time (Mon 9:30 ET) is still in the future
+  // and which has no existing challenge row.
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const lockCandidate = etToUtc(target, 9, 30);
+    if (lockCandidate.getTime() <= now.getTime()) {
+      target = addDays(target, 7);
+      continue;
+    }
     const { year, week } = isoWeekNumber(target);
     const { data: existing } = await sb.from("pw_challenges")
       .select("id").eq("year", year).eq("week_number", week).maybeSingle();
