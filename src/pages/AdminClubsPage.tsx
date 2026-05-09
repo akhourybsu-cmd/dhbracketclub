@@ -6,7 +6,7 @@ import { useClub } from '@/contexts/ClubContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Shield, Check, X, Building2, ArrowLeft, Users, Copy } from 'lucide-react';
+import { Shield, Check, X, Building2, ArrowLeft, Users, Copy, MessageCircle } from 'lucide-react';
 
 type Request = {
   id: string;
@@ -148,8 +148,24 @@ export default function AdminClubsPage() {
     setActingId(null);
   };
 
-  const pending = requests.filter((r) => r.status === 'pending');
-  const reviewed = requests.filter((r) => r.status !== 'pending');
+  const requestInfo = async (req: Request) => {
+    const note = (reviewNotes[req.id] || '').trim();
+    if (!note) {
+      toast.error('Add a note explaining what info you need');
+      return;
+    }
+    setActingId(req.id);
+    const { error } = await (supabase as any).rpc('admin_set_request_needs_info', {
+      _request_id: req.id,
+      _admin_note: note,
+    });
+    if (error) toast.error(error.message);
+    else { toast.success('User notified — waiting on their reply'); await load(); }
+    setActingId(null);
+  };
+
+  const pending = requests.filter((r) => r.status === 'pending' || r.status === 'needs_info');
+  const reviewed = requests.filter((r) => !['pending', 'needs_info'].includes(r.status));
 
   return (
     <div className="min-h-screen bg-background px-4 py-6" style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))' }}>
