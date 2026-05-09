@@ -39,6 +39,7 @@ export default function CreateDraftPage() {
       if (compErr) throw compErr;
 
       // Create draft — creator is first participant
+      const trimmedCtx = aiContext.trim();
       const { data: draft, error: draftErr } = await supabase
         .from('drafts')
         .insert({
@@ -47,7 +48,8 @@ export default function CreateDraftPage() {
           created_by: user.id,
           num_rounds: numRounds,
           status: 'setup',
-        })
+          ai_context: trimmedCtx ? trimmedCtx : null,
+        } as any)
         .select()
         .single();
       if (draftErr) throw draftErr;
