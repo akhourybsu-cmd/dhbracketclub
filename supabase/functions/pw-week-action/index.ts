@@ -107,10 +107,11 @@ Deno.serve(async (req) => {
 
   try {
     switch (action) {
-      case "open_next": return await openNext(sb);
-      case "snapshot":  return await snapshotPrices(sb);
-      case "lock":      return await lockWeek(sb, body.challenge_id);
-      case "finalize":  return await finalizeWeek(sb, body.challenge_id);
+      case "open_next":      return await openNext(sb);
+      case "snapshot":       return await snapshotPrices(sb);
+      case "lock":           return await lockWeek(sb, body.challenge_id);
+      case "finalize":       return await finalizeWeek(sb, body.challenge_id);
+      case "lock_reminder":  return await lockReminder(sb);
       default:
         return new Response(JSON.stringify({ error: "Unknown action" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -127,12 +128,15 @@ Deno.serve(async (req) => {
 async function openNext(sb: ReturnType<typeof createClient>) {
   // Determine the next Monday after today's week.
   const now = new Date();
-  const thisMon = mondayOfWeek(now);
-  // Next Monday = either this Monday (if upcoming this week not created) or next Monday.
-  // We always create the "next" week that does not yet exist.
-  let target = thisMon;
-  // If a challenge for thisMon already exists, jump one week.
-  for (let attempt = 0; attempt < 4; attempt++) {
+  let target = mondayOfWeek(now);
+  // Find the next Monday whose lock time (Mon 9:30 ET) is still in the future
+  // and which has no existing challenge row.
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const lockCandidate = etToUtc(target, 9, 30);
+    if (lockCandidate.getTime() <= now.getTime()) {
+      target = addDays(target, 7);
+      continue;
+    }
     const { year, week } = isoWeekNumber(target);
     const { data: existing } = await sb.from("pw_challenges")
       .select("id").eq("year", year).eq("week_number", week).maybeSingle();
@@ -241,6 +245,12 @@ async function lockWeek(sb: any, challengeId?: string) {
     status: "active", start_trading_date: today,
   }).eq("id", ch.id);
   await sb.from("pw_entries").update({ locked_at: new Date().toISOString() }).eq("challenge_id", ch.id);
+  await broadcastPush({
+    title: "🔒 Portfolio Wars locked in",
+    message: "This week's picks are locked. May the best portfolio win.",
+    url: "/portfolio-wars",
+    tag: `pw-lock-${ch.id}`,
+  });
   return new Response(JSON.stringify({ ok: true, challenge_id: ch.id, locked_tickers: tickers.length }), {
     status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
@@ -288,9 +298,64 @@ async function finalizeWeek(sb: any, challengeId?: string) {
   await sb.from("pw_challenges").update({
     status: "completed", end_trading_date: today, finalized_at: new Date().toISOString(),
   }).eq("id", ch.id);
+  await broadcastPush({
+    title: "🏆 Portfolio Wars results are in",
+    message: "See who climbed the leaderboard this week.",
+    url: "/portfolio-wars",
+    tag: `pw-finalize-${ch.id}`,
+  });
   return new Response(JSON.stringify({ ok: true, challenge_id: ch.id }), {
     status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+async function lockReminder(sb: any) {
+  // Find the next upcoming challenge whose lock is within ~36h.
+  const { data: ch } = await sb.from("pw_challenges").select("*")
+    .eq("status", "upcoming").order("week_start", { ascending: true }).limit(1).maybeSingle();
+  if (!ch) {
+    return new Response(JSON.stringify({ ok: true, skipped: "no upcoming week" }), {
+      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const lockMs = new Date(ch.lock_at).getTime();
+  const hoursToLock = (lockMs - Date.now()) / (1000 * 60 * 60);
+  if (hoursToLock <= 0 || hoursToLock > 36) {
+    return new Response(JSON.stringify({ ok: true, skipped: "outside reminder window", hoursToLock }), {
+      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  await broadcastPush({
+    title: "📈 Picks lock tomorrow",
+    message: "Lock in your Portfolio Wars picks before Monday's open.",
+    url: "/portfolio-wars",
+    tag: `pw-reminder-${ch.id}`,
+  });
+  return new Response(JSON.stringify({ ok: true, challenge_id: ch.id, sent: true }), {
+    status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+async function broadcastPush(args: { title: string; message: string; url: string; tag: string }) {
+  try {
+    await fetch(`${SUPABASE_URL}/functions/v1/send-push-notification`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+      },
+      body: JSON.stringify({
+        type: "event", // reuse the events preference toggle
+        title: args.title,
+        message: args.message,
+        url: args.url,
+        tag: args.tag,
+      }),
+    });
+  } catch (e) {
+    console.error("pw broadcastPush failed:", e);
+  }
 }
 
 async function recomputeEntryAverages(sb: any, challengeId: string) {

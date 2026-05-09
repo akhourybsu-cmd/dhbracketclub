@@ -6,7 +6,7 @@ import { useClub } from '@/contexts/ClubContext';
 import { Button } from '@/components/ui/button';
 import {
   Plus, Users, ArrowRight, Trophy, BarChart3, Shield, Download, X, Swords,
-  MessageCircle, Bookmark, Zap, CalendarDays, Clock, MapPin, ChevronRight, ScrollText, Newspaper, Sparkles
+  MessageCircle, Bookmark, Zap, CalendarDays, Clock, MapPin, ChevronRight, ScrollText, Newspaper, Sparkles, TrendingUp
 } from 'lucide-react';
 import { UserAvatar } from '@/components/chat/UserAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -564,14 +564,15 @@ export default function DashboardPage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.12, duration: 0.4 }}
-        className="grid grid-cols-4 gap-1.5 sm:gap-2 mb-7"
+        className="grid grid-cols-5 gap-1.5 sm:gap-2 mb-7"
       >
         {[
           { to: '/drafts', emblem: draftEmblem, label: 'Draft Arena', color: 'gold', primary: true },
           { to: '/rune-delve', emblem: runedelveEmblem, label: 'Rune Delve', color: 'lore' },
           { to: '/nexus', emblem: nexusEmblem, label: 'Nexus Defense', color: 'primary' },
           { to: '/pickem', emblem: pickemEmblem, label: "NFL Pick'em", color: 'destructive' },
-        ].map((item, i) => (
+          { to: '/portfolio-wars', icon: TrendingUp, label: 'Portfolio Wars', color: 'success' },
+        ].map((item: any, i) => (
           <motion.div key={item.to} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 + i * 0.04 }}>
             <Link to={item.to}>
               <div
@@ -582,13 +583,23 @@ export default function DashboardPage() {
                   boxShadow: '0 0 18px hsl(var(--gold) / 0.12)',
                 } : undefined}
               >
-                <img
-                  src={item.emblem}
-                  alt=""
-                  aria-hidden="true"
-                  className="w-7 h-7 mx-auto mb-1.5 relative z-10 object-contain"
-                  style={{ filter: `drop-shadow(0 2px 6px hsl(var(--${item.color}) / 0.45))` }}
-                />
+                {item.emblem ? (
+                  <img
+                    src={item.emblem}
+                    alt=""
+                    aria-hidden="true"
+                    className="w-7 h-7 mx-auto mb-1.5 relative z-10 object-contain"
+                    style={{ filter: `drop-shadow(0 2px 6px hsl(var(--${item.color}) / 0.45))` }}
+                  />
+                ) : (
+                  <item.icon
+                    className="w-7 h-7 mx-auto mb-1.5 relative z-10"
+                    style={{
+                      color: `hsl(var(--${item.color}))`,
+                      filter: `drop-shadow(0 2px 6px hsl(var(--${item.color}) / 0.45))`,
+                    }}
+                  />
+                )}
                 <p className="text-[10px] font-bold relative z-10 leading-tight">{item.label}</p>
               </div>
             </Link>
