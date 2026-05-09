@@ -65,7 +65,7 @@ serve(async (req) => {
     // Fetch the draft
     const { data: draft } = await admin
       .from("drafts")
-      .select("topic, category")
+      .select("topic, category, ai_context, ai_context_override")
       .eq("id", dispute.draft_id)
       .single();
 
