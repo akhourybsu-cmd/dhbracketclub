@@ -67,7 +67,14 @@ function isoWeekNumber(d: Date): { year: number; week: number } {
   return { year: t.getUTCFullYear(), week };
 }
 
+const CRON_SHARED_SECRET = Deno.env.get("CRON_SHARED_SECRET") || "";
+
 async function authedAdmin(req: Request) {
+  // Allow pg_cron / internal schedulers via shared secret header (constant-time-ish compare)
+  const cronHeader = req.headers.get("x-cron-secret") || "";
+  if (CRON_SHARED_SECRET && cronHeader && cronHeader === CRON_SHARED_SECRET) {
+    return { ok: true, service: true, userId: null };
+  }
   const authHeader = req.headers.get("authorization") || "";
   const token = authHeader.replace(/^Bearer\s+/i, "");
   if (!token) return { ok: false, status: 401, error: "Missing bearer" };
