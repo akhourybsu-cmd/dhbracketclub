@@ -23,6 +23,7 @@ import type { Channel, Category, ChannelMeta, Message } from '@/components/chat/
 import { useChatMessages } from '@/hooks/useChatMessages';
 import { useChatRealtime, useChatTyping } from '@/hooks/useChatRealtime';
 import { useChatActions } from '@/hooks/useChatActions';
+import { notifyThreadReply } from '@/lib/chatNotifications';
 
 export default function ChatPage() {
   const { user } = useAuth();
@@ -385,9 +386,19 @@ export default function ChatPage() {
       toast.error('Failed to send reply');
     } else {
       setThreadMessages(prev => prev.map(m => m.id === optimisticId ? { ...inserted } : m));
-      // Thread replies are intentionally NOT broadcast as top-level channel pushes.
-      // They previously spammed every channel subscriber as if they were a new
-      // channel message; thread participants see realtime updates in-app.
+      // Personal-only push: parent author + prior thread participants + @mentions.
+      // Does NOT broadcast to the whole channel (P0 fix preserved).
+      const senderDisplayName =
+        user.user_metadata?.display_name || user.email?.split('@')[0] || 'Someone';
+      notifyThreadReply({
+        parentMessageId: threadParent.id,
+        parentAuthorId: threadParent.user_id,
+        channelId: selectedChannel.id,
+        senderUserId: user.id,
+        senderDisplayName,
+        content,
+        members,
+      });
     }
   };
 
