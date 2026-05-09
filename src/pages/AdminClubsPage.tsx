@@ -213,25 +213,51 @@ export default function AdminClubsPage() {
                 <div className="space-y-3">
                   {pending.map((req) => (
                     <div key={req.id} className="glass-card p-4 space-y-3">
-                      <div>
-                        <p className="text-base font-bold">{req.proposed_name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          requested by {req.profile?.display_name ?? 'unknown'}
-                        </p>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-base font-bold">{req.proposed_name}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            requested by {req.profile?.display_name ?? 'unknown'}
+                          </p>
+                        </div>
+                        <span
+                          className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md flex-shrink-0"
+                          style={{
+                            background: req.status === 'needs_info' ? 'hsl(var(--gold) / 0.16)' : 'hsl(var(--muted) / 0.4)',
+                            color: req.status === 'needs_info' ? 'hsl(var(--gold))' : 'hsl(var(--muted-foreground))',
+                          }}
+                        >
+                          {req.status === 'needs_info' ? 'Awaiting reply' : 'Pending'}
+                        </span>
                       </div>
                       {req.reason && (
                         <p className="text-sm leading-relaxed bg-muted/30 rounded-lg p-3 break-words">
                           {req.reason}
                         </p>
                       )}
+                      {(req as any).user_note && (
+                        <div className="text-sm leading-relaxed bg-primary/5 border border-primary/15 rounded-lg p-3 break-words">
+                          <p className="text-[10px] uppercase font-bold tracking-wider text-primary mb-1">User reply</p>
+                          {(req as any).user_note}
+                        </div>
+                      )}
                       <Textarea
-                        placeholder="Optional review notes (visible to requester)"
+                        placeholder="Notes for requester (used by Reject and Needs Info)"
                         value={reviewNotes[req.id] ?? ''}
                         onChange={(e) => setReviewNotes((s) => ({ ...s, [req.id]: e.target.value }))}
                         rows={2}
                         className="form-input resize-none text-sm"
                       />
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        <Button
+                          variant="outline"
+                          className="btn-press"
+                          onClick={() => requestInfo(req)}
+                          disabled={actingId === req.id}
+                          title="Ask the user for more info"
+                        >
+                          <MessageCircle className="w-4 h-4 mr-1.5" /> Info
+                        </Button>
                         <Button
                           variant="outline"
                           className="btn-press"
