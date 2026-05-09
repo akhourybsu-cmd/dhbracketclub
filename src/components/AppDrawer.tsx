@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, MessageSquareText, CalendarDays, Swords, Newspaper,
   User, Trophy, BarChart3, MessageCircle, Bookmark, Link2, ScrollText,
-  Lock, FileText, Sparkles, Shield, Settings, LogOut, X,
+  Lock, FileText, Sparkles, Shield, Settings, LogOut, X, Brackets as BracketsIcon,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -50,7 +50,7 @@ export function AppDrawer({ open, onOpenChange, unreadChatCount = 0 }: AppDrawer
         { path: '/rune-delve', label: 'Rune Delve', icon: Sparkles },
         { path: '/nexus', label: 'Nexus Defense', icon: Shield },
         { path: '/pickem', label: "NFL Pick'em", icon: Trophy },
-        { path: '/brackets', label: 'Brackets', icon: Trophy },
+        { path: '/brackets', label: 'Brackets', icon: BracketsIcon },
         { path: '/lockbox', label: 'Lockbox', icon: Lock },
       ],
     },
