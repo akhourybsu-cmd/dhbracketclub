@@ -458,6 +458,8 @@ export default function ProfilePage() {
         </Link>
       )}
 
+      <NotificationPreferencesSection />
+
       {/* Linked sign-in providers */}
       <LinkedAccounts />
 
