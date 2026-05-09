@@ -175,47 +175,50 @@ async function uniqueTickersForChallenge(sb: any, challengeId: string): Promise<
 }
 
 async function snapshotPrices(sb: any) {
-  // Snapshot latest prices for the active OR locked OR upcoming current challenge.
-  const { data: ch } = await sb.from("pw_challenges")
-    .select("*").in("status", ["active", "locked"]).order("week_start", { ascending: false }).limit(1).maybeSingle();
-  if (!ch) {
+  // Snapshot latest prices for the active OR locked current challenge in EVERY club.
+  const { data: challenges } = await sb.from("pw_challenges")
+    .select("*").in("status", ["active", "locked"]).order("week_start", { ascending: false });
+  if (!challenges?.length) {
     return new Response(JSON.stringify({ ok: true, skipped: "no active week" }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-  const tickers = await uniqueTickersForChallenge(sb, ch.id);
-  if (!tickers.length) {
-    return new Response(JSON.stringify({ ok: true, skipped: "no picks" }), {
-      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  // De-dup: take the most recent active challenge per club
+  const perClub = new Map<string, any>();
+  for (const c of challenges) {
+    if (!perClub.has(c.club_id)) perClub.set(c.club_id, c);
   }
-  const today = isoDate(new Date());
-  let updated = 0;
-  for (const sym of tickers) {
-    const q = await quote(sym);
-    if (!q) continue;
-    await sb.from("pw_price_snapshots").upsert({
-      challenge_id: ch.id, ticker: sym, kind: "latest",
-      price: q.c, trading_date: today, captured_at: new Date().toISOString(),
-    }, { onConflict: "challenge_id,ticker,kind" });
-    // Update each pick's latest_price + pct vs start (if start present)
-    const { data: startSnap } = await sb.from("pw_price_snapshots")
-      .select("price").eq("challenge_id", ch.id).eq("ticker", sym).eq("kind", "start").maybeSingle();
-    const start = startSnap?.price ? Number(startSnap.price) : null;
-    const latest = q.c;
-    const pct = start ? ((latest - start) / start) * 100 : null;
-    const { data: entries } = await sb.from("pw_entries").select("id").eq("challenge_id", ch.id);
-    const ids = (entries || []).map((e: any) => e.id);
-    if (ids.length) {
-      await sb.from("pw_picks").update({
-        latest_price: latest, ...(pct !== null ? { pct_change: pct } : {}),
-      }).in("entry_id", ids).eq("ticker", sym);
+  const results: any[] = [];
+  for (const ch of perClub.values()) {
+    const tickers = await uniqueTickersForChallenge(sb, ch.id);
+    if (!tickers.length) { results.push({ club_id: ch.club_id, skipped: "no picks" }); continue; }
+    const today = isoDate(new Date());
+    let updated = 0;
+    for (const sym of tickers) {
+      const q = await quote(sym);
+      if (!q) continue;
+      await sb.from("pw_price_snapshots").upsert({
+        challenge_id: ch.id, ticker: sym, kind: "latest",
+        price: q.c, trading_date: today, captured_at: new Date().toISOString(),
+      }, { onConflict: "challenge_id,ticker,kind" });
+      const { data: startSnap } = await sb.from("pw_price_snapshots")
+        .select("price").eq("challenge_id", ch.id).eq("ticker", sym).eq("kind", "start").maybeSingle();
+      const start = startSnap?.price ? Number(startSnap.price) : null;
+      const latest = q.c;
+      const pct = start ? ((latest - start) / start) * 100 : null;
+      const { data: entries } = await sb.from("pw_entries").select("id").eq("challenge_id", ch.id);
+      const ids = (entries || []).map((e: any) => e.id);
+      if (ids.length) {
+        await sb.from("pw_picks").update({
+          latest_price: latest, ...(pct !== null ? { pct_change: pct } : {}),
+        }).in("entry_id", ids).eq("ticker", sym);
+      }
+      updated++;
     }
-    updated++;
+    await recomputeEntryAverages(sb, ch.id);
+    results.push({ club_id: ch.club_id, challenge_id: ch.id, updated });
   }
-  // Recompute avg_pct for each entry
-  await recomputeEntryAverages(sb, ch.id);
-  return new Response(JSON.stringify({ ok: true, challenge_id: ch.id, updated }), {
+  return new Response(JSON.stringify({ ok: true, results }), {
     status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
