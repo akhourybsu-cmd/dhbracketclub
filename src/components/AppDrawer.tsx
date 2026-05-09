@@ -71,12 +71,12 @@ export function AppDrawer({ open, onOpenChange, unreadChatCount = 0 }: AppDrawer
     },
   ];
 
-  if (isClubAdmin || isPlatformOwner) {
+  if (isClubAdmin || isPlatformOwner || isAppAdmin) {
     sections.push({
       label: 'Admin',
       items: [
         ...(isClubAdmin ? [{ path: '/club/settings', label: 'Club Settings', icon: Settings }] : []),
-        ...(isPlatformOwner ? [{ path: '/admin/clubs', label: 'Manage Clubs', icon: Shield }] : []),
+        ...((isAppAdmin || isPlatformOwner) ? [{ path: '/admin', label: 'Admin Portal', icon: Shield }] : []),
       ],
     });
   }
