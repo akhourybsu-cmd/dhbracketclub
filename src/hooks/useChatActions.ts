@@ -20,9 +20,28 @@ export function useChatActions(userId: string | undefined) {
       .maybeSingle();
     if (existing) {
       await supabase.from('message_reactions').delete().eq('id', existing.id);
-    } else {
-      await supabase.from('message_reactions').insert({ message_id: messageId, user_id: userId, emoji });
+      return; // un-reacting never sends a notification
     }
+    await supabase.from('message_reactions').insert({ message_id: messageId, user_id: userId, emoji });
+
+    // Personal push to the message author only (skips self-reactions).
+    // Tag-grouped per-message so emoji-spam coalesces into one notification.
+    try {
+      const [{ data: msg }, { data: reactor }] = await Promise.all([
+        supabase.from('messages').select('user_id, channel_id').eq('id', messageId).maybeSingle(),
+        supabase.from('profiles').select('display_name').eq('id', userId).maybeSingle(),
+      ]);
+      if (msg && msg.user_id && msg.user_id !== userId) {
+        await notifyReaction({
+          messageId,
+          channelId: msg.channel_id,
+          authorId: msg.user_id,
+          reactorId: userId,
+          reactorDisplayName: reactor?.display_name || 'Someone',
+          emoji,
+        });
+      }
+    } catch { /* fire-and-forget */ }
   }, [userId, play]);
 
   const togglePin = useCallback(async (msg: Message) => {
