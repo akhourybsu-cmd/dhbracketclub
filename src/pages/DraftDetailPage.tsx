@@ -62,6 +62,7 @@ import { PlayoffHeaderBanner } from '@/components/draft/PlayoffHeaderBanner';
 import { PlayoffBadge } from '@/components/draft/PlayoffBadge';
 import { PlayoffMatchupHero } from '@/components/draft/PlayoffMatchupHero';
 import { getPlayoffRoundShort, getPlayoffRoundName } from '@/lib/playoffStyle';
+import { DraftAiContextCard } from '@/components/draft/DraftAiContextCard';
 
 interface Participant {
   id: string;
