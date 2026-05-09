@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState, useCallback, useRef } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { LayoutDashboard, MessageSquareText, CalendarDays, Swords, Newspaper, User, Trophy, BarChart3, MessageCircle, Bookmark, Link2, ScrollText, Lock, FileText, Sparkles, Shield, Menu } from 'lucide-react';
+import { LayoutDashboard, MessageSquareText, CalendarDays, Swords, Newspaper, User, Trophy, BarChart3, MessageCircle, Bookmark, Link2, ScrollText, Lock, FileText, Sparkles, Shield, Menu, Brackets as BracketsIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import dhMonogram from '@/assets/dh-monogram.png';
@@ -24,7 +24,7 @@ const sidebarModules = [
   { path: '/rune-delve', label: 'Rune Delve', icon: Sparkles },
   { path: '/nexus', label: 'Nexus Defense', icon: Shield },
   { path: '/pickem', label: "Pick'em", icon: Trophy },
-  { path: '/brackets', label: 'Brackets', icon: Trophy },
+  { path: '/brackets', label: 'Brackets', icon: BracketsIcon },
   { type: 'divider', label: 'Other' },
   { path: '/lockbox', label: 'Lockbox', icon: Lock },
   { path: '/polls', label: 'Polls', icon: MessageCircle },
