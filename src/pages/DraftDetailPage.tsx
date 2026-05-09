@@ -142,7 +142,9 @@ export default function DraftDetailPage() {
   const { suggestion, checking: suggestionChecking, debouncedCheck, clearSuggestion } = usePickSuggestion(
     draft?.topic || '',
     draft?.category || null,
-    existingPickTexts
+    existingPickTexts,
+    draft?.ai_context || null,
+    draft?.ai_context_override || null,
   );
 
   const fetchData = useCallback(async () => {
