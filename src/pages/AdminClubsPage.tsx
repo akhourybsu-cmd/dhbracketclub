@@ -50,7 +50,7 @@ export default function AdminClubsPage() {
     const [{ data: reqs }, { data: cbs }] = await Promise.all([
       (supabase as any)
         .from('club_requests')
-        .select('id, requested_by, proposed_name, reason, status, created_at, profile:requested_by(display_name)')
+        .select('id, requested_by, proposed_name, reason, user_note, status, created_at, profile:requested_by(display_name)')
         .order('created_at', { ascending: false }),
       (supabase as any)
         .from('clubs')
