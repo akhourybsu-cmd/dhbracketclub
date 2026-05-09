@@ -125,6 +125,23 @@ export default function CreateDraftPage() {
             />
           </div>
           <div>
+            <label className="form-label flex items-center gap-1.5">
+              <Sparkles className="w-3 h-3" style={{ color: 'hsl(45 100% 65%)' }} />
+              AI Judging Context <span className="normal-case font-normal tracking-normal">(optional)</span>
+            </label>
+            <Textarea
+              value={aiContext}
+              onChange={e => setAiContext(e.target.value)}
+              placeholder={'e.g. "Best Villains of All Time — include movies, TV, video games, comics, anime, books, and mythology. Don\u2019t limit to movie villains."'}
+              maxLength={1000}
+              rows={4}
+              className="form-input min-h-[96px] resize-none text-[13px] leading-snug"
+            />
+            <p className="text-[10px] text-muted-foreground/70 mt-1.5 leading-snug">
+              Tell the AI what this category includes or excludes. Helps the draft report judge picks the way you intended. {aiContext.length}/1000
+            </p>
+          </div>
+          <div>
             <label className="form-label">Rounds</label>
             <div className="flex gap-2">
               {[3, 5, 7, 10].map(n => (
