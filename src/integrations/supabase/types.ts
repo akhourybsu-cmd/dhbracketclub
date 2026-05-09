@@ -62,6 +62,36 @@ export type Database = {
           },
         ]
       }
+      admin_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          target_id: string | null
+          target_type: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Relationships: []
+      }
       admin_logs: {
         Row: {
           action_payload: Json | null
@@ -104,6 +134,36 @@ export type Database = {
           },
         ]
       }
+      admin_notes: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          id: string
+          subject_id: string | null
+          subject_type: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          subject_id?: string | null
+          subject_type: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          subject_id?: string | null
+          subject_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ai_rate_limits: {
         Row: {
           count: number
@@ -125,6 +185,72 @@ export type Database = {
           updated_at?: string
           user_id?: string
           window_start?: string
+        }
+        Relationships: []
+      }
+      announcements: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          published_at: string | null
+          severity: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          published_at?: string | null
+          severity?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          published_at?: string | null
+          severity?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      app_feature_flags: {
+        Row: {
+          created_at: string
+          description: string | null
+          enabled: boolean
+          id: string
+          key: string
+          rollout: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          key: string
+          rollout?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          key?: string
+          rollout?: Json
+          updated_at?: string
         }
         Relationships: []
       }
@@ -472,42 +598,54 @@ export type Database = {
       clubs: {
         Row: {
           accent_color: string
+          banner_url: string | null
           created_at: string
+          description: string | null
           id: string
           join_password: string | null
           logo_url: string | null
           name: string
           owner_admin_id: string | null
           password_visible: boolean
+          settings: Json
           slug: string
           status: string
           updated_at: string
+          visibility: string
         }
         Insert: {
           accent_color?: string
+          banner_url?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           join_password?: string | null
           logo_url?: string | null
           name: string
           owner_admin_id?: string | null
           password_visible?: boolean
+          settings?: Json
           slug: string
           status?: string
           updated_at?: string
+          visibility?: string
         }
         Update: {
           accent_color?: string
+          banner_url?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           join_password?: string | null
           logo_url?: string | null
           name?: string
           owner_admin_id?: string | null
           password_visible?: boolean
+          settings?: Json
           slug?: string
           status?: string
           updated_at?: string
+          visibility?: string
         }
         Relationships: [
           {
@@ -5494,6 +5632,10 @@ export type Database = {
       get_club_password: { Args: { _club_id: string }; Returns: string }
       is_app_admin: { Args: { _user_id: string }; Returns: boolean }
       is_club_admin: {
+        Args: { _club: string; _user: string }
+        Returns: boolean
+      }
+      is_club_manager: {
         Args: { _club: string; _user: string }
         Returns: boolean
       }
