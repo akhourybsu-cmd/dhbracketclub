@@ -4,9 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { Bookmark, ArrowLeft } from 'lucide-react';
+import { Bookmark, ArrowLeft, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function CreateDraftPage() {
@@ -14,6 +15,7 @@ export default function CreateDraftPage() {
   const navigate = useNavigate();
   const [topic, setTopic] = useState('');
   const [description, setDescription] = useState('');
+  const [aiContext, setAiContext] = useState('');
   const [numRounds, setNumRounds] = useState(5);
   const [loading, setLoading] = useState(false);
 
