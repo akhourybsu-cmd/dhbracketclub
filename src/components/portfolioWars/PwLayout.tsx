@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { PwHUD } from './PwHUD';
 import { PwBoot } from './PwBoot';
+import { TickerTape } from './TickerTape';
 
 /**
  * Full-screen standalone shell for the Portfolio Wars module. Applies the
@@ -16,6 +17,7 @@ export function PwLayout({ children }: { children: ReactNode }) {
   return (
     <div className="pw-mode pw-shell relative min-h-[100dvh]">
       <PwHUD />
+      <TickerTape />
 
       <main
         className="max-w-[640px] mx-auto px-3 sm:px-5 pt-3"
