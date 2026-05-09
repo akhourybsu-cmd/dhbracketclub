@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -92,7 +93,8 @@ export function useMyEntry(challengeId?: string) {
 }
 
 export function useChallengeLeaderboard(challengeId?: string) {
-  return useQuery({
+  const qc = useQueryClient();
+  const query = useQuery({
     queryKey: ['pw-leaderboard', challengeId],
     enabled: !!challengeId,
     queryFn: async () => {
@@ -114,6 +116,21 @@ export function useChallengeLeaderboard(challengeId?: string) {
     },
     staleTime: 1000 * 30,
   });
+
+  // Realtime: refresh leaderboard when picks/entries change for this challenge
+  useEffect(() => {
+    if (!challengeId) return;
+    const channel = supabase
+      .channel(`pw-leaderboard-${challengeId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pw_picks' },
+        () => qc.invalidateQueries({ queryKey: ['pw-leaderboard', challengeId] }))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pw_entries', filter: `challenge_id=eq.${challengeId}` },
+        () => qc.invalidateQueries({ queryKey: ['pw-leaderboard', challengeId] }))
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [challengeId, qc]);
+
+  return query;
 }
 
 export function useChallengeAccolades(challengeId?: string) {
@@ -165,15 +182,11 @@ export function useSubmitPicks() {
 export function useTickerQuote() {
   return useMutation({
     mutationFn: async (symbol: string) => {
-      const { data, error } = await supabase.functions.invoke('pw-quote', {
-        body: null,
-      });
-      if (!error && data) return data;
-      // fall back: use direct fetch with query string (functions.invoke doesn't support GET easily)
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pw-quote?symbol=${encodeURIComponent(symbol)}`;
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
       });
+      if (!res.ok) throw new Error(`Quote failed (${res.status})`);
       return res.json();
     },
   });
