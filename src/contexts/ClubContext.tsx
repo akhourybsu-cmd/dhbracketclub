@@ -24,6 +24,7 @@ interface ClubContextType {
   loading: boolean;
   isClubAdmin: boolean;
   isPlatformOwner: boolean;
+  isAppAdmin: boolean;
   refresh: () => Promise<void>;
 }
 
@@ -33,6 +34,7 @@ const ClubContext = createContext<ClubContextType>({
   loading: true,
   isClubAdmin: false,
   isPlatformOwner: false,
+  isAppAdmin: false,
   refresh: async () => {},
 });
 
