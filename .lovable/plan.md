@@ -1,119 +1,102 @@
-## Audit findings
+# Portfolio Wars — Standalone Shell
 
-The current onboarding has three overlapping surfaces that all touch the same data:
+Bring Portfolio Wars in line with the other flagship modules (Pick'em, Nexus, Draft Arena, RuneDelve) by giving it its own full-screen shell, custom HUD, branded boot animation, exit dialog, and a stock-market visual identity.
 
-| Surface | What it does today | Problem |
-|---|---|---|
-| `AuthPage` mode `request` | Signup **and** asks `proposed_name` + `reason` in the same form | Duplicates the request form; on email-confirm flows it stashes data in `sessionStorage` and replays it later |
-| `RequestClubPage` | Status display + form + auto-submit-from-stash | Mixes "create new", "view pending", "view approved", "view rejected", "edit" all loosely |
-| `ClubGate` | Bounces users without a club to `/club/request` | Has no awareness of request status — can't differentiate pending vs needs_info vs rejected vs no_request |
+## Visual identity — "Trading Floor"
 
-Schema gaps (`public.club_requests`):
-- No `updated_at`, no `user_note`, no `needs_info`/`cancelled` statuses.
-- No constraint preventing two active requests per user (today only behavior of the form prevents it).
-- RLS: user has INSERT + SELECT only; can't update/cancel their own request.
+Distinct from the emerald/gold of Pick'em & Drafts so the user instantly knows they've entered a different module:
 
-Result: redundant inputs, brittle session-storage handoffs, no `needs_info` round-trip, no centralized "where does this user belong now?" decision.
+- **Background base**: deep midnight navy `hsl(220 50% 4%)` → `hsl(218 45% 7%)` (Bloomberg-terminal feel, not the green-on-green of Pick'em)
+- **Primary accent — "Bull Green"**: `hsl(152 80% 50%)` (ticker-up green, matches existing `PctBadge` positives)
+- **Secondary accent — "Bear Red"**: `hsl(0 75% 60%)` (used sparingly, mostly in the HUD's market-status pip and price-down states)
+- **Highlight — "Ticker Amber"**: `hsl(38 100% 60%)` (LED/CRT amber for chip outlines and the boot title gradient)
+- **Mono numerics**: `font-mono tabular-nums` everywhere prices/percentages appear (already partially used on the page)
+- **Texture**: subtle scanline overlay + faint candlestick grid (repeating-linear-gradient) in the boot screen and HUD background, evoking a trading terminal
 
-## Plan — smallest clean rebuild
-
-### 1. Schema (one migration)
-- Add columns to `club_requests`: `updated_at timestamptz`, `user_note text`, plus expand `status` allowed values to `pending | needs_info | approved | rejected | cancelled` (CHECK constraint).
-- Add **partial unique index** `(requested_by) WHERE status IN ('pending','needs_info')` — DB-level guarantee of one active request per user.
-- Trigger `update_updated_at_column` on UPDATE.
-- Tighten RLS:
-  - Keep INSERT (own row only, status forced to `pending`).
-  - Add UPDATE policy so a user can edit their own request only while it is `pending`, `needs_info`, or `rejected`, and only the `proposed_name`, `reason`, `user_note`, `status='cancelled'` paths (enforced via SECURITY DEFINER RPC).
-- New SECURITY DEFINER RPCs:
-  - `upsert_club_request(name, reason, user_note)` — single entry-point that creates a new request *or* updates the user's existing active/rejected one. Handles status reset (`needs_info`/`rejected` → `pending`).
-  - `cancel_club_request()` — sets active row to `cancelled`.
-  - `admin_set_request_needs_info(req_id, admin_note)` — platform owner only.
-
-### 2. AuthPage simplification
-- Remove the inline "proposed club name" / "reason" fields from the `Request` tab.
-- That tab becomes pure "sign up" — display name + email + password. After signup the user lands on `/club/request` (via the new `OnboardingGate`) and fills the request there. No more `sessionStorage` stash.
-- `Join Club` (password) tab stays as-is (instant join, separate flow).
-
-### 3. New `useOnboardingStatus` hook
-Returns `{ state, request, club, loading }` where `state ∈ 'loading' | 'approved' | 'pending' | 'needs_info' | 'rejected' | 'no_request' | 'no_club_no_account'`. Single source of truth, queries `club_members` + active `club_requests` once.
-
-### 4. Reusable `resolvePostLoginDestination(state)` helper
-- `approved` → `/dashboard` (or saved deep-link)
-- `pending` / `needs_info` / `rejected` → `/club/request`
-- `no_request` → `/club/request`
-- platform owner with no club → `/admin/clubs`
-
-### 5. `ClubGate` rewrite
-- Uses `useOnboardingStatus` instead of just checking `club`.
-- Allows `/club/request`, `/profile`, `/admin/clubs` for non-approved users.
-- Otherwise redirects per `resolvePostLoginDestination`.
-
-### 6. Rebuilt `/club/request` page (mobile-first onboarding shell)
-Single page that adapts to status:
+## Files to add
 
 ```text
-┌────────────────────────────────────┐
-│  ⚪ Account created                │
-│  ⚪ Club request submitted         │  ← progress checklist
-│  ⚪ Awaiting admin approval        │
-│  ⚪ Welcome in                     │
-├────────────────────────────────────┤
-│  STATUS BADGE  · last updated 2m   │
-│                                    │
-│  Submitted details (read-only      │
-│  when pending; editable inline)    │
-│                                    │
-│  Admin note (if needs_info / rej.) │
-│  Your reply (if needs_info)        │
-│                                    │
-│  [ Update request ] [ Cancel ]     │
-│  [ Sign out ]                      │
-└────────────────────────────────────┘
+src/assets/portfolio-wars-emblem.png        ← new (generated, transparent)
+src/components/portfolioWars/PwLayout.tsx   ← shell wrapper (mirrors PickemLayout)
+src/components/portfolioWars/PwHUD.tsx      ← sticky in-game header
+src/components/portfolioWars/PwBoot.tsx     ← one-time boot intro
+src/components/portfolioWars/PwExitDialog.tsx
 ```
 
-State-driven UI:
-- **no_request** → form (proposed_name, reason).
-- **pending** → progress + read-only details + Cancel + Sign out + "no need to resubmit".
-- **needs_info** → admin_note callout + editable response field + "Send update" (which calls `upsert_club_request` and flips back to `pending`).
-- **rejected** → reason callout + optional "Submit a new request" (which `upsert_club_request` overwrites the same row).
-- **approved** → success card + "Enter the app" CTA.
+### Emblem
+Generate a transparent PNG: stylized rising candlestick / bull-horns mark inside a hex frame, bull-green + ticker-amber glow. Premium tier (it'll appear in the HUD and boot at large scale).
 
-### 7. Admin surface (`AdminClubsPage`)
-Minimal additions only:
-- New "Request more info" action with inline note → calls `admin_set_request_needs_info`.
-- Show `needs_info` requests grouped above pending; show `cancelled` in history.
-- No layout redesign.
+### PwLayout
+Identical structure to `PickemLayout` / `DraftArenaLayout`:
+- Wraps children in `.pw-mode .pw-shell` div, `min-h-[100dvh]`
+- Mounts `<PwHUD />` at top, `<PwBoot />` below
+- `<main>` capped at `max-w-[640px]`, `pt-3`, padded for safe-area bottom
 
-### 8. Backfill / safety
-- Existing 2 `approved` rows untouched.
-- No active pending rows exist (verified via DB) → safe to add the partial-unique index immediately.
-- Existing approved users keep working: `ClubGate` now hits `useOnboardingStatus` which still resolves them to `approved` via `club_members`.
+### PwHUD
+Mirrors `PickemHUD` patterns:
+- Sticky header, `h-12`, gradient background (navy variant), bull-green border-bottom glow
+- **Left**: back arrow → opens exit dialog when on `/portfolio-wars` hub, otherwise `navigate(-1)`
+- **Center**: emblem + "Portfolio Wars" eyebrow + contextual subtitle. Subtitle derived from URL/active tab (Lobby / Leaderboard / History / Admin / "Locks in 2d 4h" when a challenge is active)
+- **Right**: 
+  - **Market-status pip** — small pulsing dot: green (open / picks open), amber (locked, in-progress), red (closed weekend). Reads from `useCurrentChallenge`.
+  - **Week chip** — `WK 19` style or date range, using bull-green tinted badge
+  - **Trophy icon** linking to leaderboard tab (when not already there)
 
-### Files touched
+### PwBoot
+One-time per session (`pw_boot_played_v1` flag). Same engine as `PickemBoot`, restyled:
+- Background: navy radial + faint amber glow
+- Overlay: animated **scanlines** + **candlestick grid** instead of yard-line stripes
+- Emblem with rotating dashed ring (bull-green glow)
+- Title: "Portfolio Wars" with white→amber gradient, eyebrow "◆ DH · MARKET DESK ◆"
+- Stage labels: `Connecting to market feed…` → `Loading watchlist…` → `Trading floor online`
+- Progress bar: green→amber gradient
 
-**New**
-- `supabase/migrations/<ts>_onboarding_rebuild.sql`
-- `src/hooks/useOnboardingStatus.ts`
-- `src/lib/onboarding.ts` (resolver + small helpers)
+### PwExitDialog
+Copy/paste of `PickemExitDialog` with PW-themed copy: "Exit Portfolio Wars? Your picks are locked in — come back anytime to track the leaderboard."
 
-**Edited**
-- `src/components/ClubGate.tsx`
-- `src/pages/AuthPage.tsx` (remove duplicate fields in Request tab)
-- `src/pages/RequestClubPage.tsx` (full state-driven rewrite)
-- `src/pages/AdminClubsPage.tsx` (add needs_info action)
-- `src/integrations/supabase/types.ts` (auto-regenerated)
+## Files to edit
 
-**Untouched**
-- `Join Club` password flow, `AuthContext`, `ClubContext`, all in-app routes, all existing approved users.
+### `src/components/AppLayout.tsx` (line ~125-129)
+Add `/portfolio-wars` to the game-shell detection so the DH Club mobile header and bottom nav hide while in the module:
+```ts
+const isPortfolioWars = location.pathname.startsWith('/portfolio-wars');
+const isGameShell = isRuneDelve || isNexus || isPickem || isDrafts || isPortfolioWars;
+```
 
-### Acceptance map
-1. Signup → request once → logout → login: same row surfaced via `useOnboardingStatus`. ✓
-2. Duplicate active request: blocked by partial unique index + RPC upsert. ✓
-3. Approved user → `/dashboard`. ✓
-4. Pending user → `/club/request` status screen. ✓
-5. needs_info → admin note + reply field. ✓
-6. Rejected → clear state + optional resubmit (overwrites same row). ✓
-7. Admin approve creates club + member (existing flow). ✓
-8. No duplicate fields between AuthPage and RequestClubPage. ✓
-9. Existing approved users unaffected (no schema change to `club_members`). ✓
-10. Mobile-first throughout. ✓
+### `src/App.tsx` (line 163)
+Wrap the route element in the new layout:
+```tsx
+<Route path="/portfolio-wars" element={
+  <ProtectedPage>
+    <PwLayout><PortfolioWarsPage /></PwLayout>
+  </ProtectedPage>
+} />
+```
+
+### `src/pages/PortfolioWarsPage.tsx`
+Strip the page-level header (back arrow, title block, share button) since the HUD now owns that chrome. Move the **Share button** into `PwHUD`'s right cluster (replaces or sits beside the trophy when on the leaderboard/results tab). Adjust top padding since `pt-3` is already supplied by `PwLayout`.
+
+### `src/index.css`
+Add a `.pw-mode` skin block (opt-in token overrides scoped to the shell) so deep components inherit the trading-terminal palette without leaking into DH Club:
+```css
+.pw-mode {
+  --pw-bg: 220 50% 4%;
+  --pw-bull: 152 80% 50%;
+  --pw-bear: 0 75% 60%;
+  --pw-amber: 38 100% 60%;
+  background: hsl(var(--pw-bg));
+}
+```
+
+## Memory update
+
+Append to `mem://index.md` under Memories:
+- `[Portfolio Wars Game Shell](mem://features/portfolio-wars-game-shell)` — Standalone PwLayout/HUD/Boot, navy + bull-green + amber, hides DH chrome on /portfolio-wars
+
+Add corresponding `mem://features/portfolio-wars-game-shell.md` describing the pattern.
+
+## Out of scope
+
+- No business-logic changes to picks, scoring, edge functions, or cron
+- No new sub-routes (single `/portfolio-wars` page stays — HUD subtitles derive from active tab via a small context or query param sync; simplest: read `?tab=` param if present, else default)
+- Sound/haptics — defer (Pick'em & Drafts shells don't have module-specific SFX wired in either)

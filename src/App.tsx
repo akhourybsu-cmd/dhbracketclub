@@ -95,6 +95,7 @@ const NexusSigilVaultPage = lazy(() => import("./pages/NexusSigilVaultPage"));
 const NexusSimulatorPage = lazy(() => import("./pages/NexusSimulatorPage"));
 const NexusMissionWorkshopPage = lazy(() => import("./pages/NexusMissionWorkshopPage"));
 const PortfolioWarsPage = lazy(() => import("./pages/PortfolioWarsPage"));
+import { PwLayout } from "./components/portfolioWars/PwLayout";
 import { RuneDelveLayout } from "./components/runedelve/RuneDelveLayout";
 import { NexusLayout } from "./components/nexus/NexusLayout";
 import { PickemLayout } from "./components/pickem/PickemLayout";
@@ -160,7 +161,7 @@ function AnimatedRoutes() {
         <Route path="/compete" element={<ProtectedPage><CompetePage /></ProtectedPage>} />
 
         {/* Portfolio Wars — weekly stock-picking challenge */}
-        <Route path="/portfolio-wars" element={<ProtectedPage><PortfolioWarsPage /></ProtectedPage>} />
+        <Route path="/portfolio-wars" element={<ProtectedPage><PwLayout><PortfolioWarsPage /></PwLayout></ProtectedPage>} />
 
         {/* Lockbox module */}
         <Route path="/lockbox" element={<ProtectedPage><LockboxPage /></ProtectedPage>} />

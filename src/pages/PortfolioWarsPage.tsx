@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import {
   TrendingUp, TrendingDown, Lock, Unlock, ChevronRight, Trophy, Crown,
-  Search, X, Clock, BarChart3, Sparkles, RefreshCw, ShieldCheck, ArrowLeft, Share2,
+  Search, X, Clock, BarChart3, Sparkles, RefreshCw, ShieldCheck,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,7 +18,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { copyShareTextWithLink } from '@/lib/share';
 import { toast } from 'sonner';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -598,33 +597,6 @@ export default function PortfolioWarsPage() {
   return (
     <div className="pb-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="page-header">
-          <Link to="/compete" className="page-header-icon active:scale-95 transition" aria-label="Back to Compete">
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div className="flex-1 min-w-0">
-            <h1 className="page-header-title">Portfolio Wars</h1>
-            <p className="page-header-subtitle">Weekly stock-picking challenge</p>
-          </div>
-          <button
-            onClick={async () => {
-              const url = 'https://dryhorse.app/portfolio-wars';
-              const text = current
-                ? `Portfolio Wars · Week ${current.week_number} on DH Club — pick 3 stocks, climb the leaderboard.`
-                : 'Pick 3 stocks. Climb the leaderboard. Portfolio Wars on DH Club.';
-              if (navigator.share) {
-                try { await navigator.share({ title: 'Portfolio Wars', text, url }); return; }
-                catch { /* fall through to copy */ }
-              }
-              await copyShareTextWithLink(text, url);
-            }}
-            className="page-header-icon active:scale-95 transition"
-            aria-label="Share Portfolio Wars"
-          >
-            <Share2 className="w-4 h-4" />
-          </button>
-        </div>
-
         <Tabs defaultValue="lobby" className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-4">
             <TabsTrigger value="lobby" className="text-[11px] font-bold">📊 Lobby</TabsTrigger>

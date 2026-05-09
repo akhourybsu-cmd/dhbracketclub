@@ -2684,3 +2684,36 @@
 .da-mode .hover\:text-primary:hover { color: hsl(45 100% 70%); }
 .da-mode .active\:text-primary:active { color: hsl(45 100% 70%); }
 .da-mode .active\:bg-primary\/10:active { background-color: hsl(45 95% 55% / 0.18); }
+
+/* ─── Portfolio Wars (Trading Floor) skin ─── */
+.pw-mode {
+  --pw-bg: 220 50% 4%;
+  --pw-surface: 220 45% 7%;
+  --pw-bull: 152 80% 50%;
+  --pw-bear: 0 75% 60%;
+  --pw-amber: 38 100% 60%;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, hsl(152 80% 30% / 0.10), transparent 60%),
+    radial-gradient(ellipse 70% 40% at 50% 100%, hsl(38 100% 50% / 0.06), transparent 70%),
+    linear-gradient(180deg, hsl(var(--pw-bg)), hsl(220 60% 2%));
+  color: hsl(150 20% 92%);
+}
+.pw-mode .glass-card {
+  background: hsl(var(--pw-surface) / 0.65);
+  border: 1px solid hsl(var(--pw-bull) / 0.16);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+}
+/* Re-tint primary tokens used by buttons / tabs inside the shell */
+.pw-mode .text-primary { color: hsl(var(--pw-bull)); }
+.pw-mode .bg-primary { background-color: hsl(var(--pw-bull)); }
+.pw-mode .bg-primary\/15 { background-color: hsl(var(--pw-bull) / 0.15); }
+.pw-mode .bg-primary\/10 { background-color: hsl(var(--pw-bull) / 0.12); }
+.pw-mode .border-primary { border-color: hsl(var(--pw-bull)); }
+.pw-mode .border-primary\/40 { border-color: hsl(var(--pw-bull) / 0.4); }
+.pw-mode .border-primary\/30 { border-color: hsl(var(--pw-bull) / 0.32); }
+.pw-mode .border-primary\/20 { border-color: hsl(var(--pw-bull) / 0.22); }
+.pw-mode [data-state="active"].text-foreground,
+.pw-mode [role="tab"][data-state="active"] {
+  color: hsl(var(--pw-bull));
+}
