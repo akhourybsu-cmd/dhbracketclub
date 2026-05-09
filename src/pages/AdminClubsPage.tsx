@@ -6,7 +6,7 @@ import { useClub } from '@/contexts/ClubContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Shield, Check, X, Building2, ArrowLeft, Users, Copy } from 'lucide-react';
+import { Shield, Check, X, Building2, ArrowLeft, Users, Copy, MessageCircle } from 'lucide-react';
 
 type Request = {
   id: string;
@@ -50,7 +50,7 @@ export default function AdminClubsPage() {
     const [{ data: reqs }, { data: cbs }] = await Promise.all([
       (supabase as any)
         .from('club_requests')
-        .select('id, requested_by, proposed_name, reason, status, created_at, profile:requested_by(display_name)')
+        .select('id, requested_by, proposed_name, reason, user_note, status, created_at, profile:requested_by(display_name)')
         .order('created_at', { ascending: false }),
       (supabase as any)
         .from('clubs')
@@ -148,8 +148,24 @@ export default function AdminClubsPage() {
     setActingId(null);
   };
 
-  const pending = requests.filter((r) => r.status === 'pending');
-  const reviewed = requests.filter((r) => r.status !== 'pending');
+  const requestInfo = async (req: Request) => {
+    const note = (reviewNotes[req.id] || '').trim();
+    if (!note) {
+      toast.error('Add a note explaining what info you need');
+      return;
+    }
+    setActingId(req.id);
+    const { error } = await (supabase as any).rpc('admin_set_request_needs_info', {
+      _request_id: req.id,
+      _admin_note: note,
+    });
+    if (error) toast.error(error.message);
+    else { toast.success('User notified — waiting on their reply'); await load(); }
+    setActingId(null);
+  };
+
+  const pending = requests.filter((r) => r.status === 'pending' || r.status === 'needs_info');
+  const reviewed = requests.filter((r) => !['pending', 'needs_info'].includes(r.status));
 
   return (
     <div className="min-h-screen bg-background px-4 py-6" style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))' }}>
@@ -197,25 +213,51 @@ export default function AdminClubsPage() {
                 <div className="space-y-3">
                   {pending.map((req) => (
                     <div key={req.id} className="glass-card p-4 space-y-3">
-                      <div>
-                        <p className="text-base font-bold">{req.proposed_name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          requested by {req.profile?.display_name ?? 'unknown'}
-                        </p>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-base font-bold">{req.proposed_name}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            requested by {req.profile?.display_name ?? 'unknown'}
+                          </p>
+                        </div>
+                        <span
+                          className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md flex-shrink-0"
+                          style={{
+                            background: req.status === 'needs_info' ? 'hsl(var(--gold) / 0.16)' : 'hsl(var(--muted) / 0.4)',
+                            color: req.status === 'needs_info' ? 'hsl(var(--gold))' : 'hsl(var(--muted-foreground))',
+                          }}
+                        >
+                          {req.status === 'needs_info' ? 'Awaiting reply' : 'Pending'}
+                        </span>
                       </div>
                       {req.reason && (
                         <p className="text-sm leading-relaxed bg-muted/30 rounded-lg p-3 break-words">
                           {req.reason}
                         </p>
                       )}
+                      {(req as any).user_note && (
+                        <div className="text-sm leading-relaxed bg-primary/5 border border-primary/15 rounded-lg p-3 break-words">
+                          <p className="text-[10px] uppercase font-bold tracking-wider text-primary mb-1">User reply</p>
+                          {(req as any).user_note}
+                        </div>
+                      )}
                       <Textarea
-                        placeholder="Optional review notes (visible to requester)"
+                        placeholder="Notes for requester (used by Reject and Needs Info)"
                         value={reviewNotes[req.id] ?? ''}
                         onChange={(e) => setReviewNotes((s) => ({ ...s, [req.id]: e.target.value }))}
                         rows={2}
                         className="form-input resize-none text-sm"
                       />
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        <Button
+                          variant="outline"
+                          className="btn-press"
+                          onClick={() => requestInfo(req)}
+                          disabled={actingId === req.id}
+                          title="Ask the user for more info"
+                        >
+                          <MessageCircle className="w-4 h-4 mr-1.5" /> Info
+                        </Button>
                         <Button
                           variant="outline"
                           className="btn-press"

@@ -423,6 +423,8 @@ export type Database = {
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
+          updated_at: string
+          user_note: string | null
         }
         Insert: {
           created_at?: string
@@ -434,6 +436,8 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
+          updated_at?: string
+          user_note?: string | null
         }
         Update: {
           created_at?: string
@@ -445,6 +449,8 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
+          updated_at?: string
+          user_note?: string | null
         }
         Relationships: [
           {
@@ -5226,6 +5232,28 @@ export type Database = {
         Args: { _code: string; _ref: string; _user_id: string }
         Returns: boolean
       }
+      admin_set_request_needs_info: {
+        Args: { _admin_note: string; _request_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          proposed_name: string
+          reason: string | null
+          requested_by: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_note: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "club_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       apply_mission_draft_live: {
         Args: { _also_update_active_op?: boolean; _draft_id: string }
         Returns: Json
@@ -5238,6 +5266,7 @@ export type Database = {
         Args: { _operation_id: string }
         Returns: Json
       }
+      cancel_club_request: { Args: never; Returns: undefined }
       consume_ai_quota: {
         Args: {
           _function_name: string
@@ -5289,6 +5318,28 @@ export type Database = {
         Returns: Json
       }
       toggle_message_pin: { Args: { p_message_id: string }; Returns: undefined }
+      upsert_club_request: {
+        Args: { _proposed_name: string; _reason: string; _user_note: string }
+        Returns: {
+          created_at: string
+          id: string
+          proposed_name: string
+          reason: string | null
+          requested_by: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_note: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "club_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user" | "owner"

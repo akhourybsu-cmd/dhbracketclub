@@ -1,19 +1,18 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useClub } from '@/contexts/ClubContext';
+import { useOnboardingStatus } from '@/hooks/useOnboardingStatus';
 
 /**
- * Gates protected app routes behind club membership.
- * Logged-in users without a club are redirected to the club request flow,
- * EXCEPT for the request page itself, club settings, and platform-owner admin routes.
+ * Routes signed-in users based on their onboarding state.
+ * Approved users (club members or platform owners) get full app access.
+ * Everyone else is funneled to /club/request (the unified onboarding shell).
  */
 export function ClubGate({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
-  const { club, loading: clubLoading, isPlatformOwner } = useClub();
+  const { state, loading } = useOnboardingStatus();
   const location = useLocation();
 
-  // Wait for both auth and club state
-  if (authLoading || clubLoading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="loading-spinner-ring" />
@@ -23,12 +22,11 @@ export function ClubGate({ children }: { children: React.ReactNode }) {
 
   if (!user) return <>{children}</>; // ProtectedRoute handles non-auth case
 
-  // Routes accessible without a club
-  const allowedWithoutClub = ['/club/request', '/club/settings', '/admin/clubs', '/profile'];
-  const onAllowedRoute = allowedWithoutClub.some(p => location.pathname.startsWith(p));
+  // Routes always accessible (sign out, profile, admin review, onboarding shell)
+  const allowAlways = ['/club/request', '/club/settings', '/admin/clubs', '/profile'];
+  const onAllowed = allowAlways.some((p) => location.pathname.startsWith(p));
 
-  // Platform owner (Alex) can access everything regardless of club state
-  if (!club && !isPlatformOwner && !onAllowedRoute) {
+  if (state !== 'approved' && !onAllowed) {
     return <Navigate to="/club/request" replace />;
   }
 

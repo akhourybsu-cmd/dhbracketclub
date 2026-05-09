@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -23,8 +23,6 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [clubPassword, setClubPassword] = useState('');
-  const [proposedClubName, setProposedClubName] = useState('');
-  const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
 
   if (user) {
@@ -81,13 +79,10 @@ export default function AuthPage() {
         return;
       }
 
-      // mode === 'request' — sign up + create a club_request, no invite code needed
-      if (!proposedClubName.trim()) {
-        toast.error('Please name your club');
-        setLoading(false);
-        return;
-      }
-      const { data: signUpData, error } = await supabase.auth.signUp({
+      // mode === 'request' — pure sign-up. The unified onboarding shell at
+      // /club/request collects the club name + reason after sign-in, so there
+      // are no duplicate fields and no sessionStorage stash to keep in sync.
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -96,27 +91,7 @@ export default function AuthPage() {
         },
       });
       if (error) throw error;
-
-      // If a session was returned (auto-confirm on), submit the club_request now.
-      // Otherwise, stash it so RequestClubPage can submit it after the user verifies email + signs in.
-      if (signUpData.session?.user?.id) {
-        const { error: reqErr } = await (supabase as any).from('club_requests').insert({
-          requested_by: signUpData.session.user.id,
-          proposed_name: proposedClubName.trim(),
-          reason: reason.trim() || null,
-        });
-        if (reqErr) {
-          toast.error(`Account created, but request failed: ${reqErr.message}`);
-        } else {
-          toast.success('Account created! Your club request is awaiting review.');
-        }
-      } else {
-        sessionStorage.setItem(
-          'pending_club_request',
-          JSON.stringify({ proposed_name: proposedClubName.trim(), reason: reason.trim() || null }),
-        );
-        toast.success('Check your email to verify, then sign in — your club request will be submitted automatically.');
-      }
+      toast.success("Account created! Check your email to verify, then we'll set up your club.");
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -215,32 +190,10 @@ export default function AuthPage() {
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 transition={{ duration: 0.18 }}
-                className="space-y-4 overflow-hidden"
+                className="overflow-hidden"
               >
-                <div>
-                  <label className="form-label">Proposed Club Name</label>
-                  <Input
-                    required
-                    value={proposedClubName}
-                    onChange={(e) => setProposedClubName(e.target.value)}
-                    placeholder="e.g. Smith Family"
-                    maxLength={48}
-                    className="form-input"
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Why this club? (optional)</label>
-                  <Textarea
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    placeholder="Tell Alex who's joining and what you'll use it for."
-                    maxLength={500}
-                    rows={3}
-                    className="form-input resize-none"
-                  />
-                </div>
                 <p className="text-[11px] text-muted-foreground/80 px-0.5 leading-relaxed">
-                  Your account is created right away. Alex reviews each club request manually.
+                  Create your account first — once you sign in, you'll name your club and submit your request in one quick step. Alex reviews each one manually.
                 </p>
               </motion.div>
             )}
