@@ -2032,6 +2032,20 @@ function PortfolioWarsCompeteCard() {
     : `Week of ${format(new Date(meta.week_start), 'MMM d')}`;
   const cta = meta?.status === 'upcoming' ? 'Enter Picks' : 'Open';
 
+  const statusBadge = !meta ? null
+    : meta.status === 'upcoming' ? { label: 'Picks Open', color: 'hsl(152 80% 60%)', bg: 'hsl(152 80% 50% / 0.18)' }
+    : meta.status === 'locked' ? { label: 'Locked', color: 'hsl(38 100% 65%)', bg: 'hsl(38 100% 60% / 0.18)' }
+    : meta.status === 'active' ? { label: 'Live', color: 'hsl(152 80% 60%)', bg: 'hsl(152 80% 50% / 0.18)' }
+    : { label: 'Results In', color: 'hsl(45 95% 65%)', bg: 'hsl(45 95% 55% / 0.18)' };
+
+  // Mini ticker tape for inside the card (static curated)
+  const miniTape = [
+    { s: 'AAPL', p: 1.24 }, { s: 'NVDA', p: -0.82 }, { s: 'MSFT', p: 0.44 },
+    { s: 'TSLA', p: 2.16 }, { s: 'AMZN', p: -0.31 }, { s: 'META', p: 0.91 },
+    { s: 'COIN', p: 3.87 }, { s: 'PLTR', p: 2.41 }, { s: 'AMD', p: -1.42 },
+  ];
+  const tapeLoop = [...miniTape, ...miniTape];
+
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }}>
       <Link to="/portfolio-wars" className="block">
@@ -2039,46 +2053,91 @@ function PortfolioWarsCompeteCard() {
           className="relative overflow-hidden rounded-2xl btn-press"
           style={{
             background:
-              'radial-gradient(ellipse 120% 80% at 50% 0%, hsl(152 75% 30% / 0.45), transparent 60%),' +
-              'linear-gradient(180deg, hsl(160 30% 8%), hsl(160 30% 5%))',
-            border: '1px solid hsl(152 60% 45% / 0.32)',
-            boxShadow: '0 12px 40px hsl(152 70% 20% / 0.4), inset 0 1px 0 hsl(152 60% 60% / 0.16)',
+              'radial-gradient(ellipse 100% 60% at 50% 0%, hsl(152 80% 30% / 0.30), transparent 65%),' +
+              'linear-gradient(180deg, hsl(220 50% 8%), hsl(220 55% 4%))',
+            border: '1px solid hsl(152 80% 50% / 0.30)',
+            boxShadow: '0 12px 40px hsl(220 80% 4% / 0.6), inset 0 1px 0 hsl(152 80% 60% / 0.14)',
           }}
         >
-          <div className="relative z-10 p-5 flex items-center gap-4">
+          {/* Mini ticker tape */}
+          <div
+            className="relative h-6 overflow-hidden border-b"
+            style={{ borderColor: 'hsl(152 80% 50% / 0.16)', background: 'hsl(220 60% 3% / 0.7)' }}
+          >
+            <div
+              className="absolute inset-y-0 left-0 w-6 z-10 pointer-events-none"
+              style={{ background: 'linear-gradient(90deg, hsl(220 60% 3%), transparent)' }}
+            />
+            <div
+              className="absolute inset-y-0 right-0 w-6 z-10 pointer-events-none"
+              style={{ background: 'linear-gradient(270deg, hsl(220 60% 3%), transparent)' }}
+            />
+            <div
+              className="flex items-center gap-3 whitespace-nowrap h-full"
+              style={{ animation: 'pw-card-tape 38s linear infinite' }}
+            >
+              {tapeLoop.map((t, i) => (
+                <span key={i} className="flex items-center gap-1 text-[9px] font-bold font-mono">
+                  <span style={{ color: 'hsl(150 15% 80%)' }}>{t.s}</span>
+                  <span
+                    className="px-1 rounded tabular-nums"
+                    style={{
+                      color: t.p >= 0 ? 'hsl(152 80% 70%)' : 'hsl(0 80% 75%)',
+                    }}
+                  >
+                    {t.p >= 0 ? '+' : ''}{t.p.toFixed(2)}%
+                  </span>
+                </span>
+              ))}
+            </div>
+            <style>{`@keyframes pw-card-tape { from { transform: translateX(0); } to { transform: translateX(-50%); } }`}</style>
+          </div>
+
+          <div className="relative z-10 p-4 flex items-center gap-3">
             <div className="relative flex-shrink-0">
-              <div aria-hidden className="absolute inset-0 rounded-full"
-                style={{ background: 'radial-gradient(circle, hsl(152 80% 55% / 0.45), transparent 65%)', filter: 'blur(10px)', transform: 'scale(1.15)' }}/>
-              <div className="relative w-[72px] h-[72px] rounded-2xl flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, hsl(152 70% 30%), hsl(152 70% 18%))', border: '1px solid hsl(152 70% 50% / 0.5)' }}>
-                <TrendingUp className="w-9 h-9" style={{ color: 'hsl(152 80% 65%)' }} strokeWidth={2.5} />
+              <div aria-hidden className="absolute inset-0 rounded-2xl"
+                style={{ background: 'radial-gradient(circle, hsl(152 80% 55% / 0.5), transparent 65%)', filter: 'blur(10px)', transform: 'scale(1.15)' }}/>
+              <div className="relative w-[60px] h-[60px] rounded-xl flex items-center justify-center"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(220 50% 10%), hsl(220 55% 6%))',
+                  border: '1px solid hsl(152 80% 50% / 0.45)',
+                  boxShadow: 'inset 0 0 20px hsl(152 80% 50% / 0.2)',
+                }}>
+                <TrendingUp className="w-7 h-7" style={{ color: 'hsl(152 80% 65%)', filter: 'drop-shadow(0 0 6px hsl(152 80% 50% / 0.7))' }} strokeWidth={2.5} />
               </div>
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-[9px] font-extrabold uppercase tracking-[0.22em]" style={{ color: 'hsl(152 70% 65%)' }}>
+                <span className="text-[8.5px] font-black uppercase tracking-[0.22em]" style={{ color: 'hsl(152 80% 65%)' }}>
                   ◆ Stock Challenge
                 </span>
-                {meta?.status === 'active' && (
-                  <span className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider" style={{ color: 'hsl(152 70% 65%)' }}>
-                    <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'hsl(152 70% 55%)' }} />
-                    Live
+                {statusBadge && (
+                  <span
+                    className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider"
+                    style={{ background: statusBadge.bg, color: statusBadge.color }}
+                  >
+                    {meta?.status === 'active' && (
+                      <span className="w-1 h-1 rounded-full animate-pulse" style={{ background: statusBadge.color }} />
+                    )}
+                    {statusBadge.label}
                   </span>
                 )}
               </div>
-              <h2 className="font-extrabold text-[20px] leading-none tracking-tight mb-1.5"
+              <h2 className="font-black text-[18px] leading-none tracking-tight mb-1"
                 style={{
-                  background: 'linear-gradient(180deg, hsl(150 30% 98%), hsl(152 70% 70%))',
+                  background: 'linear-gradient(180deg, hsl(150 30% 98%), hsl(152 80% 70%))',
                   WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                   textShadow: '0 0 18px hsl(152 80% 40% / 0.4)',
                 }}>
                 Portfolio Wars
               </h2>
-              <p className="text-[10px] font-semibold mb-2" style={{ color: 'hsl(150 12% 78%)' }}>{subline}</p>
-              <div className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider"
+              <p className="text-[10px] font-semibold mb-2" style={{ color: 'hsl(150 12% 75%)' }}>
+                Pick 3 stocks. Beat the market. Beat your friends.
+              </p>
+              <div className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[11px] font-black uppercase tracking-wider"
                 style={{
-                  background: 'linear-gradient(135deg, hsl(152 72% 46%), hsl(152 70% 38%))',
-                  color: 'hsl(160 30% 6%)',
+                  background: 'linear-gradient(135deg, hsl(152 80% 48%), hsl(152 80% 38%))',
+                  color: 'hsl(220 60% 4%)',
                   boxShadow: '0 4px 14px hsl(152 80% 35% / 0.5), inset 0 1px 0 hsl(150 80% 80% / 0.5)',
                 }}>
                 {cta} <ChevronRight className="w-3.5 h-3.5" strokeWidth={3} />
