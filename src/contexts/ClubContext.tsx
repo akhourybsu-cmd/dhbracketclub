@@ -126,8 +126,9 @@ export function ClubProvider({ children }: { children: ReactNode }) {
         club,
         membership,
         loading,
-        isClubAdmin: membership?.role === 'admin',
+        isClubAdmin: membership?.role === 'admin' || isAppAdmin,
         isPlatformOwner,
+        isAppAdmin,
         refresh: load,
       }}
     >
