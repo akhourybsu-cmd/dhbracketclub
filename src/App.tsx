@@ -267,10 +267,20 @@ function AnimatedRoutes() {
 
         {/* Clubs (multi-tenant) */}
         <Route path="/club/request" element={<ProtectedRoute><Suspense fallback={<PageFallback />}><RequestClubPage /></Suspense></ProtectedRoute>} />
-        <Route path="/club/settings" element={<ProtectedPage><ClubSettingsPage /></ProtectedPage>} />
-        <Route path="/admin/clubs" element={<ProtectedPage><AdminClubsPage /></ProtectedPage>} />
-        {/* Legacy aliases — keep deep links working after navigation cleanup */}
-        <Route path="/admin" element={<Navigate to="/admin/clubs" replace />} />
+        <Route path="/club/settings" element={<ProtectedPage><ClubAdminRoute><ClubSettingsPage /></ClubAdminRoute></ProtectedPage>} />
+        <Route path="/clubs/:clubId/settings" element={<ProtectedPage><ClubAdminRoute><ClubSettingsPage /></ClubAdminRoute></ProtectedPage>} />
+
+        {/* Admin Portal — global platform controls (gated to is_app_admin / platform owner) */}
+        <Route path="/admin" element={<ProtectedPage><AdminRoute><AdminDashboardPage /></AdminRoute></ProtectedPage>} />
+        <Route path="/admin/clubs" element={<ProtectedPage><AdminRoute><AdminClubsPage /></AdminRoute></ProtectedPage>} />
+        <Route path="/admin/users" element={<ProtectedPage><AdminRoute><AdminUsersPage /></AdminRoute></ProtectedPage>} />
+        <Route path="/admin/competitions" element={<ProtectedPage><AdminRoute><AdminCompetitionsPage /></AdminRoute></ProtectedPage>} />
+        <Route path="/admin/announcements" element={<ProtectedPage><AdminRoute><AdminAnnouncementsPage /></AdminRoute></ProtectedPage>} />
+        <Route path="/admin/feature-flags" element={<ProtectedPage><AdminRoute><AdminFeatureFlagsPage /></AdminRoute></ProtectedPage>} />
+        <Route path="/admin/notes" element={<ProtectedPage><AdminRoute><AdminNotesPage /></AdminRoute></ProtectedPage>} />
+        <Route path="/admin/audit" element={<ProtectedPage><AdminRoute><AdminAuditPage /></AdminRoute></ProtectedPage>} />
+        <Route path="/admin/diagnostics" element={<ProtectedPage><AdminRoute><AdminDiagnosticsPage /></AdminRoute></ProtectedPage>} />
+        {/* Legacy alias */}
         <Route path="/club-settings" element={<Navigate to="/club/settings" replace />} />
 
         <Route path="*" element={<Suspense fallback={<PageFallback />}><NotFound /></Suspense>} />
