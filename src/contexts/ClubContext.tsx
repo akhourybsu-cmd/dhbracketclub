@@ -24,6 +24,7 @@ interface ClubContextType {
   loading: boolean;
   isClubAdmin: boolean;
   isPlatformOwner: boolean;
+  isAppAdmin: boolean;
   refresh: () => Promise<void>;
 }
 
@@ -33,6 +34,7 @@ const ClubContext = createContext<ClubContextType>({
   loading: true,
   isClubAdmin: false,
   isPlatformOwner: false,
+  isAppAdmin: false,
   refresh: async () => {},
 });
 
@@ -43,6 +45,7 @@ export function ClubProvider({ children }: { children: ReactNode }) {
   const [club, setClub] = useState<Club | null>(null);
   const [membership, setMembership] = useState<ClubMembership | null>(null);
   const [isPlatformOwner, setIsPlatformOwner] = useState(false);
+  const [isAppAdmin, setIsAppAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -50,6 +53,7 @@ export function ClubProvider({ children }: { children: ReactNode }) {
       setClub(null);
       setMembership(null);
       setIsPlatformOwner(false);
+      setIsAppAdmin(false);
       setLoading(false);
       return;
     }
@@ -66,7 +70,7 @@ export function ClubProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      const [{ data: m }, { data: roleRow }] = await Promise.all([
+      const [{ data: m }, { data: ownerRow }, { data: adminRow }] = await Promise.all([
         (supabase as any)
           .from('club_members')
           .select('club_id, role, clubs:club_id(id, name, slug, accent_color, logo_url, owner_admin_id, status, password_visible)')
@@ -78,8 +82,15 @@ export function ClubProvider({ children }: { children: ReactNode }) {
           .eq('user_id', user.id)
           .eq('role', 'owner')
           .maybeSingle(),
+        (supabase as any)
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .maybeSingle(),
       ]);
-      setIsPlatformOwner(!!roleRow);
+      setIsPlatformOwner(!!ownerRow);
+      setIsAppAdmin(!!adminRow);
       if (m?.clubs) {
         setClub(m.clubs as Club);
         setMembership({ club_id: m.club_id, role: m.role });
@@ -115,8 +126,9 @@ export function ClubProvider({ children }: { children: ReactNode }) {
         club,
         membership,
         loading,
-        isClubAdmin: membership?.role === 'admin',
+        isClubAdmin: membership?.role === 'admin' || isAppAdmin,
         isPlatformOwner,
+        isAppAdmin,
         refresh: load,
       }}
     >

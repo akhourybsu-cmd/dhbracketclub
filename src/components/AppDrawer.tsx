@@ -25,7 +25,7 @@ interface AppDrawerProps {
 export function AppDrawer({ open, onOpenChange, unreadChatCount = 0 }: AppDrawerProps) {
   const location = useLocation();
   const { user, signOut } = useAuth();
-  const { club, isClubAdmin, isPlatformOwner } = useClub();
+  const { club, isClubAdmin, isPlatformOwner, isAppAdmin } = useClub();
   const { play } = useSoundEffect();
 
   // Close on route change
@@ -71,12 +71,12 @@ export function AppDrawer({ open, onOpenChange, unreadChatCount = 0 }: AppDrawer
     },
   ];
 
-  if (isClubAdmin || isPlatformOwner) {
+  if (isClubAdmin || isPlatformOwner || isAppAdmin) {
     sections.push({
       label: 'Admin',
       items: [
         ...(isClubAdmin ? [{ path: '/club/settings', label: 'Club Settings', icon: Settings }] : []),
-        ...(isPlatformOwner ? [{ path: '/admin/clubs', label: 'Manage Clubs', icon: Shield }] : []),
+        ...((isAppAdmin || isPlatformOwner) ? [{ path: '/admin', label: 'Admin Portal', icon: Shield }] : []),
       ],
     });
   }

@@ -81,6 +81,16 @@ const RuneDelveQuestsPage = lazy(() => import("./pages/RuneDelveQuestsPage"));
 const RequestClubPage = lazy(() => import("./pages/RequestClubPage"));
 const AdminClubsPage = lazy(() => import("./pages/AdminClubsPage"));
 const ClubSettingsPage = lazy(() => import("./pages/ClubSettingsPage"));
+const AdminDashboardPage = lazy(() => import("./pages/AdminDashboardPage"));
+const AdminUsersPage = lazy(() => import("./pages/AdminUsersPage"));
+const AdminCompetitionsPage = lazy(() => import("./pages/AdminCompetitionsPage"));
+const AdminAuditPage = lazy(() => import("./pages/AdminAuditPage"));
+const AdminDiagnosticsPage = lazy(() => import("./pages/AdminDiagnosticsPage"));
+const AdminAnnouncementsPage = lazy(() => import("./pages/AdminAnnouncementsPage"));
+const AdminFeatureFlagsPage = lazy(() => import("./pages/AdminFeatureFlagsPage"));
+const AdminNotesPage = lazy(() => import("./pages/AdminNotesPage"));
+import { AdminRoute } from "./components/auth/AdminRoute";
+import { ClubAdminRoute } from "./components/auth/ClubAdminRoute";
 const NexusHomePage = lazy(() => import("./pages/NexusHomePage"));
 const NexusMissionsPage = lazy(() => import("./pages/NexusMissionsPage"));
 const NexusLoadoutPage = lazy(() => import("./pages/NexusLoadoutPage"));
@@ -257,10 +267,20 @@ function AnimatedRoutes() {
 
         {/* Clubs (multi-tenant) */}
         <Route path="/club/request" element={<ProtectedRoute><Suspense fallback={<PageFallback />}><RequestClubPage /></Suspense></ProtectedRoute>} />
-        <Route path="/club/settings" element={<ProtectedPage><ClubSettingsPage /></ProtectedPage>} />
-        <Route path="/admin/clubs" element={<ProtectedPage><AdminClubsPage /></ProtectedPage>} />
-        {/* Legacy aliases — keep deep links working after navigation cleanup */}
-        <Route path="/admin" element={<Navigate to="/admin/clubs" replace />} />
+        <Route path="/club/settings" element={<ProtectedPage><ClubAdminRoute><ClubSettingsPage /></ClubAdminRoute></ProtectedPage>} />
+        <Route path="/clubs/:clubId/settings" element={<ProtectedPage><ClubAdminRoute><ClubSettingsPage /></ClubAdminRoute></ProtectedPage>} />
+
+        {/* Admin Portal — global platform controls (gated to is_app_admin / platform owner) */}
+        <Route path="/admin" element={<ProtectedPage><AdminRoute><AdminDashboardPage /></AdminRoute></ProtectedPage>} />
+        <Route path="/admin/clubs" element={<ProtectedPage><AdminRoute><AdminClubsPage /></AdminRoute></ProtectedPage>} />
+        <Route path="/admin/users" element={<ProtectedPage><AdminRoute><AdminUsersPage /></AdminRoute></ProtectedPage>} />
+        <Route path="/admin/competitions" element={<ProtectedPage><AdminRoute><AdminCompetitionsPage /></AdminRoute></ProtectedPage>} />
+        <Route path="/admin/announcements" element={<ProtectedPage><AdminRoute><AdminAnnouncementsPage /></AdminRoute></ProtectedPage>} />
+        <Route path="/admin/feature-flags" element={<ProtectedPage><AdminRoute><AdminFeatureFlagsPage /></AdminRoute></ProtectedPage>} />
+        <Route path="/admin/notes" element={<ProtectedPage><AdminRoute><AdminNotesPage /></AdminRoute></ProtectedPage>} />
+        <Route path="/admin/audit" element={<ProtectedPage><AdminRoute><AdminAuditPage /></AdminRoute></ProtectedPage>} />
+        <Route path="/admin/diagnostics" element={<ProtectedPage><AdminRoute><AdminDiagnosticsPage /></AdminRoute></ProtectedPage>} />
+        {/* Legacy alias */}
         <Route path="/club-settings" element={<Navigate to="/club/settings" replace />} />
 
         <Route path="*" element={<Suspense fallback={<PageFallback />}><NotFound /></Suspense>} />

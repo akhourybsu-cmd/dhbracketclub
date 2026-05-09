@@ -444,8 +444,19 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Admin Hub (admin-only, self-gates) */}
-      <AdminHub />
+      {/* Admin Portal entry — only for global app admin / platform owner */}
+      {(isPlatformOwner) && (
+        <Link to="/admin" className="block glass-card arena-edge p-4 mb-4 flex items-center gap-3 btn-press" style={{ borderColor: 'hsl(var(--gold) / 0.3)' }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, hsl(var(--gold) / 0.22), hsl(var(--gold) / 0.06))', border: '1px solid hsl(var(--gold) / 0.3)' }}>
+            <ShieldCheck className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: 'hsl(var(--gold))' }}>Admin</p>
+            <p className="text-[14px] font-extrabold leading-tight">Open Admin Portal</p>
+            <p className="text-[10px] text-muted-foreground/80">Manage the DH Club platform</p>
+          </div>
+        </Link>
+      )}
 
       <NotificationPreferencesSection />
 
