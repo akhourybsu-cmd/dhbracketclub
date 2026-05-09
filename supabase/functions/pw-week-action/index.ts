@@ -298,9 +298,64 @@ async function finalizeWeek(sb: any, challengeId?: string) {
   await sb.from("pw_challenges").update({
     status: "completed", end_trading_date: today, finalized_at: new Date().toISOString(),
   }).eq("id", ch.id);
+  await broadcastPush({
+    title: "🏆 Portfolio Wars results are in",
+    message: "See who climbed the leaderboard this week.",
+    url: "/portfolio-wars",
+    tag: `pw-finalize-${ch.id}`,
+  });
   return new Response(JSON.stringify({ ok: true, challenge_id: ch.id }), {
     status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+async function lockReminder(sb: any) {
+  // Find the next upcoming challenge whose lock is within ~36h.
+  const { data: ch } = await sb.from("pw_challenges").select("*")
+    .eq("status", "upcoming").order("week_start", { ascending: true }).limit(1).maybeSingle();
+  if (!ch) {
+    return new Response(JSON.stringify({ ok: true, skipped: "no upcoming week" }), {
+      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const lockMs = new Date(ch.lock_at).getTime();
+  const hoursToLock = (lockMs - Date.now()) / (1000 * 60 * 60);
+  if (hoursToLock <= 0 || hoursToLock > 36) {
+    return new Response(JSON.stringify({ ok: true, skipped: "outside reminder window", hoursToLock }), {
+      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  await broadcastPush({
+    title: "📈 Picks lock tomorrow",
+    message: "Lock in your Portfolio Wars picks before Monday's open.",
+    url: "/portfolio-wars",
+    tag: `pw-reminder-${ch.id}`,
+  });
+  return new Response(JSON.stringify({ ok: true, challenge_id: ch.id, sent: true }), {
+    status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+async function broadcastPush(args: { title: string; message: string; url: string; tag: string }) {
+  try {
+    await fetch(`${SUPABASE_URL}/functions/v1/send-push-notification`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+      },
+      body: JSON.stringify({
+        type: "event", // reuse the events preference toggle
+        title: args.title,
+        message: args.message,
+        url: args.url,
+        tag: args.tag,
+      }),
+    });
+  } catch (e) {
+    console.error("pw broadcastPush failed:", e);
+  }
 }
 
 async function recomputeEntryAverages(sb: any, challengeId: string) {
