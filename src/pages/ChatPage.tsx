@@ -23,6 +23,7 @@ import type { Channel, Category, ChannelMeta, Message } from '@/components/chat/
 import { useChatMessages } from '@/hooks/useChatMessages';
 import { useChatRealtime, useChatTyping } from '@/hooks/useChatRealtime';
 import { useChatActions } from '@/hooks/useChatActions';
+import { notifyThreadReply } from '@/lib/chatNotifications';
 
 export default function ChatPage() {
   const { user } = useAuth();
