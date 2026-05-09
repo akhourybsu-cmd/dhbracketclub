@@ -478,7 +478,11 @@ export default function DraftDetailPage() {
       const sorted2 = [...participants].sort((a, b) => a.pick_order - b.pick_order);
       const nextPicker2 = sorted2[nextOrderIdx2];
 
-      if (nextPicker2 && pickNumber < participants.length * draft.num_rounds) {
+      if (
+        nextPicker2 &&
+        pickNumber < participants.length * draft.num_rounds &&
+        nextPicker2.user_id !== user.id // never push self for own action (snake-draft edge of round)
+      ) {
         supabase.functions.invoke('send-push-notification', {
           body: {
             type: 'draft',
