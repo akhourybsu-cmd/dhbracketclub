@@ -23,8 +23,6 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [clubPassword, setClubPassword] = useState('');
-  const [proposedClubName, setProposedClubName] = useState('');
-  const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
 
   if (user) {
@@ -81,13 +79,10 @@ export default function AuthPage() {
         return;
       }
 
-      // mode === 'request' — sign up + create a club_request, no invite code needed
-      if (!proposedClubName.trim()) {
-        toast.error('Please name your club');
-        setLoading(false);
-        return;
-      }
-      const { data: signUpData, error } = await supabase.auth.signUp({
+      // mode === 'request' — pure sign-up. The unified onboarding shell at
+      // /club/request collects the club name + reason after sign-in, so there
+      // are no duplicate fields and no sessionStorage stash to keep in sync.
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -96,27 +91,7 @@ export default function AuthPage() {
         },
       });
       if (error) throw error;
-
-      // If a session was returned (auto-confirm on), submit the club_request now.
-      // Otherwise, stash it so RequestClubPage can submit it after the user verifies email + signs in.
-      if (signUpData.session?.user?.id) {
-        const { error: reqErr } = await (supabase as any).from('club_requests').insert({
-          requested_by: signUpData.session.user.id,
-          proposed_name: proposedClubName.trim(),
-          reason: reason.trim() || null,
-        });
-        if (reqErr) {
-          toast.error(`Account created, but request failed: ${reqErr.message}`);
-        } else {
-          toast.success('Account created! Your club request is awaiting review.');
-        }
-      } else {
-        sessionStorage.setItem(
-          'pending_club_request',
-          JSON.stringify({ proposed_name: proposedClubName.trim(), reason: reason.trim() || null }),
-        );
-        toast.success('Check your email to verify, then sign in — your club request will be submitted automatically.');
-      }
+      toast.success("Account created! Check your email to verify, then we'll set up your club.");
     } catch (err: any) {
       toast.error(err.message);
     } finally {
