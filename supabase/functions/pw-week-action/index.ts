@@ -126,35 +126,42 @@ Deno.serve(async (req) => {
 });
 
 async function openNext(sb: ReturnType<typeof createClient>) {
-  // Determine the next Monday after today's week.
+  // For each active club, ensure the next upcoming weekly challenge exists.
   const now = new Date();
-  let target = mondayOfWeek(now);
-  // Find the next Monday whose lock time (Mon 9:30 ET) is still in the future
-  // and which has no existing challenge row.
-  for (let attempt = 0; attempt < 8; attempt++) {
-    const lockCandidate = etToUtc(target, 9, 30);
-    if (lockCandidate.getTime() <= now.getTime()) {
+  const { data: clubs } = await sb.from("clubs").select("id, name").eq("status", "active");
+  const created: any[] = [];
+  for (const club of clubs || []) {
+    let target = mondayOfWeek(now);
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const lockCandidate = etToUtc(target, 9, 30);
+      if (lockCandidate.getTime() <= now.getTime()) {
+        target = addDays(target, 7);
+        continue;
+      }
+      const { year, week } = isoWeekNumber(target);
+      const { data: existing } = await sb.from("pw_challenges")
+        .select("id").eq("club_id", club.id).eq("year", year).eq("week_number", week).maybeSingle();
+      if (!existing) break;
       target = addDays(target, 7);
-      continue;
     }
     const { year, week } = isoWeekNumber(target);
-    const { data: existing } = await sb.from("pw_challenges")
-      .select("id").eq("year", year).eq("week_number", week).maybeSingle();
-    if (!existing) break;
-    target = addDays(target, 7);
+    const friday = addDays(target, 4);
+    const lock_at = etToUtc(target, 9, 30);
+    const end_at = etToUtc(friday, 16, 0);
+    const { data, error } = await sb.from("pw_challenges").insert({
+      club_id: club.id,
+      year, week_number: week,
+      week_start: isoDate(target), week_end: isoDate(friday),
+      lock_at: lock_at.toISOString(), end_at: end_at.toISOString(),
+      status: "upcoming",
+    }).select("*").single();
+    if (error) {
+      console.error(`pw open_next failed for club ${club.id}:`, error);
+      continue;
+    }
+    created.push(data);
   }
-  const { year, week } = isoWeekNumber(target);
-  const friday = addDays(target, 4);
-  const lock_at = etToUtc(target, 9, 30);
-  const end_at = etToUtc(friday, 16, 0);
-  const { data, error } = await sb.from("pw_challenges").insert({
-    year, week_number: week,
-    week_start: isoDate(target), week_end: isoDate(friday),
-    lock_at: lock_at.toISOString(), end_at: end_at.toISOString(),
-    status: "upcoming",
-  }).select("*").single();
-  if (error) throw error;
-  return new Response(JSON.stringify({ ok: true, challenge: data }), {
+  return new Response(JSON.stringify({ ok: true, created }), {
     status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
