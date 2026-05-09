@@ -7,11 +7,40 @@
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
     <meta name="theme-color" content="#0D1210" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="DH Club" />
+    <meta name="application-name" content="DH Club" />
+    <meta name="format-detection" content="telephone=no" />
     <link rel="icon" href="/favicon.png" type="image/png" />
-    <link rel="apple-touch-icon" href="/pwa-icon-512.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <style>
+      /* Pre-React splash to avoid white flash on installed PWA cold launch. */
+      html, body { background: #0D1210; }
+      #root:empty::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: #0D1210;
+      }
+      #root:empty::after {
+        content: '';
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        width: 32px;
+        height: 32px;
+        margin: -16px 0 0 -16px;
+        border: 2px solid rgba(255,255,255,0.12);
+        border-top-color: #34d399;
+        border-radius: 50%;
+        animation: dh-spin 0.8s linear infinite;
+      }
+      @keyframes dh-spin { to { transform: rotate(360deg); } }
+    </style>
     <!-- Preload fonts for faster rendering -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
