@@ -1,48 +1,23 @@
 import { Link } from 'react-router-dom';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Trophy, BarChart3, MessageCircle, Bookmark, ChevronRight, Plus, Swords, Lock, Shield,
-  Calendar, Award, TrendingUp, Users, Archive, Crown, Target, Flame, Medal, ChevronDown, X
+  Trophy, BarChart3, MessageCircle, Bookmark, ChevronRight, Lock, Shield,
+  Swords, TrendingUp,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { useCurrentDay, useMyLock, useDayLocks } from '@/hooks/useLockbox';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
-import { useDraftListUpdates } from '@/hooks/useRealtimeSubscription';
-import { getDerivedDraftTurn } from '@/lib/draftTurn';
-import {
-  useCurrentSeason,
-  useSeasonStandings,
-  useSeasonEntries,
-  usePlayoffMatchesLive,
-  useLifetimeStats,
-  useIsCommissioner,
-  useUnassignedDrafts,
-  addDraftToSeason,
-  removeDraftFromSeason,
-  recalculateSeasonStandings,
-  advancePlayoffs,
-  suggestPlayoffTopics,
-  startPlayoffMatch,
-  getSeasonDraftTarget,
-  type SeasonStanding,
-  type PlayoffMatch,
-} from '@/hooks/useDraftSeasons';
-import { getSeasonDisplayName, getOrdinalSuffix, getDraftLabel, getSeasonEmoji, getSeasonProgressText } from '@/lib/seasonUtils';
+import { useCurrentDay, useMyLock, useDayLocks } from '@/hooks/useLockbox';
+import { useCurrentSeason, useSeasonEntries, getSeasonDraftTarget } from '@/hooks/useDraftSeasons';
 import { cn } from '@/lib/utils';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Loader2, Sparkles, RefreshCw } from 'lucide-react';
+import { useClubAssets } from '@/hooks/useClubAssets';
 import runedelveEmblem from '@/assets/runedelve-emblem.png';
 import nexusEmblem from '@/assets/nexus-emblem.png';
 import pickemEmblem from '@/assets/pickem-emblem.png';
 import draftEmblem from '@/assets/draft-emblem.png';
-import { StartNextSeasonSheet } from '@/components/draft/StartNextSeasonSheet';
 
-/* ── Lockbox card (unchanged) ── */
+/* ── Lockbox card ── */
 function LockboxCompeteCard() {
   const { user } = useAuth();
   const { data: day } = useCurrentDay();
@@ -63,7 +38,8 @@ function LockboxCompeteCard() {
       <div className="glass-card p-4 relative overflow-hidden border border-destructive/10">
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, hsl(var(--destructive) / 0.2), hsl(var(--destructive) / 0.05))' }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, hsl(var(--destructive) / 0.2), hsl(var(--destructive) / 0.05))' }}>
               <Lock className="w-5 h-5" style={{ color: 'hsl(var(--destructive))' }} />
             </div>
             <div className="flex-1">
@@ -81,8 +57,7 @@ function LockboxCompeteCard() {
             </div>
             {totalLocks > 0 && (
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                <Swords className="w-3 h-3" />
-                {crackedCount}/{totalLocks}
+                <Swords className="w-3 h-3" /> {crackedCount}/{totalLocks}
               </div>
             )}
           </div>
@@ -94,8 +69,9 @@ function LockboxCompeteCard() {
             </Link>
             {!myLock && (
               <Link to="/lockbox">
-                <button className="h-8 px-3 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1.5" style={{ background: 'hsl(var(--destructive) / 0.15)', color: 'hsl(var(--destructive))' }}>
-                  <Plus className="w-3 h-3" /> Create Lock
+                <button className="h-8 px-3 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1.5"
+                  style={{ background: 'hsl(var(--destructive) / 0.15)', color: 'hsl(var(--destructive))' }}>
+                  <Lock className="w-3 h-3" /> Create Lock
                 </button>
               </Link>
             )}
@@ -106,90 +82,39 @@ function LockboxCompeteCard() {
   );
 }
 
-/* ── Rune Delve card — featured campaign mode ── */
+/* ── Rune Delve banner ── */
 function RuneDelveCompeteCard() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
       <Link to="/rune-delve" className="block">
-        <div
-          className="relative overflow-hidden rounded-2xl btn-press"
+        <div className="relative overflow-hidden rounded-2xl btn-press"
           style={{
             background:
               'radial-gradient(ellipse 120% 80% at 50% 0%, hsl(152 72% 24% / 0.55), transparent 60%),' +
               'radial-gradient(ellipse 90% 60% at 100% 100%, hsl(152 72% 40% / 0.25), transparent 60%),' +
               'linear-gradient(180deg, hsl(160 24% 8%), hsl(160 22% 5%))',
             border: '1px solid hsl(152 50% 40% / 0.35)',
-            boxShadow:
-              '0 12px 40px hsl(152 72% 20% / 0.45), inset 0 1px 0 hsl(152 60% 60% / 0.18)',
-          }}
-        >
-          {/* Drifting magical glow */}
-          <div
-            aria-hidden
-            className="absolute -top-12 -right-10 w-44 h-44 rounded-full pointer-events-none"
-            style={{
-              background:
-                'radial-gradient(circle, hsl(152 80% 50% / 0.35), transparent 70%)',
-              filter: 'blur(8px)',
-            }}
-          />
-
+            boxShadow: '0 12px 40px hsl(152 72% 20% / 0.45), inset 0 1px 0 hsl(152 60% 60% / 0.18)',
+          }}>
+          <div aria-hidden className="absolute -top-12 -right-10 w-44 h-44 rounded-full pointer-events-none"
+            style={{ background: 'radial-gradient(circle, hsl(152 80% 50% / 0.35), transparent 70%)', filter: 'blur(8px)' }} />
           <div className="relative z-10 p-5 flex items-center gap-4">
-            {/* Emblem hero visual */}
             <div className="relative flex-shrink-0">
-              <div
-                aria-hidden
-                className="absolute inset-0 rounded-full"
-                style={{
-                  background:
-                    'radial-gradient(circle, hsl(152 80% 50% / 0.5), transparent 65%)',
-                  filter: 'blur(10px)',
-                  transform: 'scale(1.15)',
-                }}
-              />
-              <img
-                src={runedelveEmblem}
-                alt="Rune Delve"
-                width={96}
-                height={96}
-                loading="lazy"
-                decoding="async"
-                className="relative w-[88px] h-[88px] object-contain drop-shadow-[0_4px_18px_hsl(152_80%_45%/0.5)]"
-              />
+              <div aria-hidden className="absolute inset-0 rounded-full"
+                style={{ background: 'radial-gradient(circle, hsl(152 80% 50% / 0.5), transparent 65%)', filter: 'blur(10px)', transform: 'scale(1.15)' }} />
+              <img src={runedelveEmblem} alt="Rune Delve" width={96} height={96} loading="lazy" decoding="async"
+                className="relative w-[88px] h-[88px] object-contain drop-shadow-[0_4px_18px_hsl(152_80%_45%/0.5)]" />
             </div>
-
-            {/* Title + CTA */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <span
-                  className="text-[9px] font-extrabold uppercase tracking-[0.22em]"
-                  style={{ color: 'hsl(152 70% 65%)' }}
-                >
-                  ◆ Campaign
-                </span>
+                <span className="text-[9px] font-extrabold uppercase tracking-[0.22em]" style={{ color: 'hsl(152 70% 65%)' }}>◆ Campaign</span>
               </div>
-              <h2
-                className="font-extrabold text-[22px] leading-none tracking-tight mb-2.5"
-                style={{
-                  background:
-                    'linear-gradient(180deg, hsl(150 30% 98%), hsl(152 70% 70%))',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  textShadow: '0 0 18px hsl(152 80% 40% / 0.4)',
-                }}
-              >
+              <h2 className="font-extrabold text-[22px] leading-none tracking-tight mb-2.5"
+                style={{ background: 'linear-gradient(180deg, hsl(150 30% 98%), hsl(152 70% 70%))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', textShadow: '0 0 18px hsl(152 80% 40% / 0.4)' }}>
                 Rune Delve
               </h2>
-              <div
-                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider"
-                style={{
-                  background:
-                    'linear-gradient(135deg, hsl(152 72% 46%), hsl(152 70% 38%))',
-                  color: 'hsl(160 30% 6%)',
-                  boxShadow:
-                    '0 4px 14px hsl(152 80% 35% / 0.5), inset 0 1px 0 hsl(150 80% 80% / 0.5)',
-                }}
-              >
+              <div className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider"
+                style={{ background: 'linear-gradient(135deg, hsl(152 72% 46%), hsl(152 70% 38%))', color: 'hsl(160 30% 6%)', boxShadow: '0 4px 14px hsl(152 80% 35% / 0.5), inset 0 1px 0 hsl(150 80% 80% / 0.5)' }}>
                 Enter <ChevronRight className="w-3.5 h-3.5" strokeWidth={3} />
               </div>
             </div>
@@ -200,90 +125,39 @@ function RuneDelveCompeteCard() {
   );
 }
 
-/* ── Nexus Defense card — sci-fi tower defense ── */
+/* ── Nexus Defense banner ── */
 function NexusDefenseCompeteCard() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
       <Link to="/nexus" className="block">
-        <div
-          className="relative overflow-hidden rounded-2xl btn-press"
+        <div className="relative overflow-hidden rounded-2xl btn-press"
           style={{
             background:
               'radial-gradient(ellipse 120% 80% at 50% 0%, hsl(202 90% 28% / 0.55), transparent 60%),' +
               'radial-gradient(ellipse 90% 60% at 100% 100%, hsl(190 95% 50% / 0.25), transparent 60%),' +
               'linear-gradient(180deg, hsl(215 40% 8%), hsl(220 45% 5%))',
             border: '1px solid hsl(195 80% 55% / 0.35)',
-            boxShadow:
-              '0 12px 40px hsl(202 90% 25% / 0.45), inset 0 1px 0 hsl(190 90% 70% / 0.18)',
-          }}
-        >
-          {/* Drifting energy glow */}
-          <div
-            aria-hidden
-            className="absolute -top-12 -right-10 w-44 h-44 rounded-full pointer-events-none"
-            style={{
-              background:
-                'radial-gradient(circle, hsl(195 95% 55% / 0.4), transparent 70%)',
-              filter: 'blur(8px)',
-            }}
-          />
-
+            boxShadow: '0 12px 40px hsl(202 90% 25% / 0.45), inset 0 1px 0 hsl(190 90% 70% / 0.18)',
+          }}>
+          <div aria-hidden className="absolute -top-12 -right-10 w-44 h-44 rounded-full pointer-events-none"
+            style={{ background: 'radial-gradient(circle, hsl(195 95% 55% / 0.4), transparent 70%)', filter: 'blur(8px)' }} />
           <div className="relative z-10 p-5 flex items-center gap-4">
-            {/* Emblem hero visual */}
             <div className="relative flex-shrink-0">
-              <div
-                aria-hidden
-                className="absolute inset-0 rounded-full"
-                style={{
-                  background:
-                    'radial-gradient(circle, hsl(195 95% 55% / 0.5), transparent 65%)',
-                  filter: 'blur(10px)',
-                  transform: 'scale(1.15)',
-                }}
-              />
-              <img
-                src={nexusEmblem}
-                alt="Nexus Defense"
-                width={96}
-                height={96}
-                loading="lazy"
-                decoding="async"
-                className="relative w-[88px] h-[88px] object-contain drop-shadow-[0_4px_18px_hsl(195_95%_50%/0.55)]"
-              />
+              <div aria-hidden className="absolute inset-0 rounded-full"
+                style={{ background: 'radial-gradient(circle, hsl(195 95% 55% / 0.5), transparent 65%)', filter: 'blur(10px)', transform: 'scale(1.15)' }} />
+              <img src={nexusEmblem} alt="Nexus Defense" width={96} height={96} loading="lazy" decoding="async"
+                className="relative w-[88px] h-[88px] object-contain drop-shadow-[0_4px_18px_hsl(195_95%_50%/0.55)]" />
             </div>
-
-            {/* Title + CTA */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <span
-                  className="text-[9px] font-extrabold uppercase tracking-[0.22em]"
-                  style={{ color: 'hsl(190 90% 72%)' }}
-                >
-                  ◆ Tower Defense
-                </span>
+                <span className="text-[9px] font-extrabold uppercase tracking-[0.22em]" style={{ color: 'hsl(190 90% 72%)' }}>◆ Tower Defense</span>
               </div>
-              <h2
-                className="font-extrabold text-[22px] leading-none tracking-tight mb-2.5"
-                style={{
-                  background:
-                    'linear-gradient(180deg, hsl(195 30% 98%), hsl(195 90% 70%))',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  textShadow: '0 0 18px hsl(195 95% 45% / 0.45)',
-                }}
-              >
+              <h2 className="font-extrabold text-[22px] leading-none tracking-tight mb-2.5"
+                style={{ background: 'linear-gradient(180deg, hsl(195 30% 98%), hsl(195 90% 70%))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', textShadow: '0 0 18px hsl(195 95% 45% / 0.45)' }}>
                 Nexus Defense
               </h2>
-              <div
-                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider"
-                style={{
-                  background:
-                    'linear-gradient(135deg, hsl(195 95% 52%), hsl(210 90% 48%))',
-                  color: 'hsl(215 50% 6%)',
-                  boxShadow:
-                    '0 4px 14px hsl(200 95% 40% / 0.5), inset 0 1px 0 hsl(190 95% 85% / 0.55)',
-                }}
-              >
+              <div className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider"
+                style={{ background: 'linear-gradient(135deg, hsl(195 95% 52%), hsl(210 90% 48%))', color: 'hsl(215 50% 6%)', boxShadow: '0 4px 14px hsl(200 95% 40% / 0.5), inset 0 1px 0 hsl(190 95% 85% / 0.55)' }}>
                 Deploy <ChevronRight className="w-3.5 h-3.5" strokeWidth={3} />
               </div>
             </div>
@@ -294,167 +168,59 @@ function NexusDefenseCompeteCard() {
   );
 }
 
-/* ── Draft Arena enter banner — flashy launcher into the standalone /drafts shell ── */
-function DraftArenaEnterBanner({
-  season,
-  entries,
-  totalDrafts,
-  myUserId,
-}: {
-  season: any | null;
-  entries: any[];
-  totalDrafts: number;
-  myUserId?: string;
+/* ── Draft Arena enter banner — context-aware subline ── */
+function DraftArenaEnterBanner({ season, entries, totalDrafts, myUserId }: {
+  season: any | null; entries: any[]; totalDrafts: number; myUserId?: string;
 }) {
-  // Derive a single, action-oriented subline + pulse state from current league context.
   const { subline, pulse, ctaLabel } = (() => {
-    if (!season) {
-      return {
-        subline: 'No active season — open the war room to start one',
-        pulse: false,
-        ctaLabel: 'Enter Arena',
-      };
-    }
-
-    const regular = entries.filter((e) => !e.is_playoff);
-    const completed = regular.filter((e) => e.drafts?.status === 'complete').length;
-    const live = regular.find((e) => e.drafts?.status === 'in_progress');
-    const playoffLive = entries.find((e) => e.is_playoff && e.drafts?.status === 'in_progress');
+    if (!season) return { subline: 'No active season — open the war room to start one', pulse: false, ctaLabel: 'Enter Arena' };
+    const regular = entries.filter(e => !e.is_playoff);
+    const completed = regular.filter(e => e.drafts?.status === 'complete').length;
+    const live = regular.find(e => e.drafts?.status === 'in_progress');
+    const playoffLive = entries.find(e => e.is_playoff && e.drafts?.status === 'in_progress');
     const seasonLabel = season.season_label || season.name?.split(' ').slice(-1)[0] || '';
-
-    // Are you on the clock in any live draft?
     let onTheClock = false;
-    if (live?.drafts && myUserId && (live.drafts as any).current_pick_user_id === myUserId) {
-      onTheClock = true;
-    }
-    if (!onTheClock && playoffLive?.drafts && myUserId && (playoffLive.drafts as any).current_pick_user_id === myUserId) {
-      onTheClock = true;
-    }
-
-    if (season.status === 'complete') {
-      return {
-        subline: `${seasonLabel} complete — view the champion & podium`,
-        pulse: false,
-        ctaLabel: 'View Recap',
-      };
-    }
-    if (playoffLive) {
-      return {
-        subline: onTheClock
-          ? `${seasonLabel} Playoffs — you're on the clock`
-          : `${seasonLabel} Playoffs · live match in progress`,
-        pulse: true,
-        ctaLabel: onTheClock ? 'Make Pick' : 'Watch Live',
-      };
-    }
-    if (season.status === 'playoffs') {
-      return {
-        subline: `${seasonLabel} Playoffs — bracket is set`,
-        pulse: false,
-        ctaLabel: 'Open Bracket',
-      };
-    }
-    if (live) {
-      return {
-        subline: onTheClock
-          ? `${seasonLabel} · Draft ${live.week_number ?? completed + 1} of ${totalDrafts} — you're on the clock`
-          : `${seasonLabel} · Draft ${live.week_number ?? completed + 1} of ${totalDrafts} live now`,
-        pulse: true,
-        ctaLabel: onTheClock ? 'Make Pick' : 'Open Draft',
-      };
-    }
-    return {
-      subline: `${seasonLabel} · Draft ${Math.min(completed + 1, totalDrafts)} of ${totalDrafts} — ready to start`,
-      pulse: false,
-      ctaLabel: 'Enter Arena',
-    };
+    if (live?.drafts && myUserId && (live.drafts as any).current_pick_user_id === myUserId) onTheClock = true;
+    if (!onTheClock && playoffLive?.drafts && myUserId && (playoffLive.drafts as any).current_pick_user_id === myUserId) onTheClock = true;
+    if (season.status === 'complete') return { subline: `${seasonLabel} complete — view the champion & podium`, pulse: false, ctaLabel: 'View Recap' };
+    if (playoffLive) return { subline: onTheClock ? `${seasonLabel} Playoffs — you're on the clock` : `${seasonLabel} Playoffs · live match in progress`, pulse: true, ctaLabel: onTheClock ? 'Make Pick' : 'Watch Live' };
+    if (season.status === 'playoffs') return { subline: `${seasonLabel} Playoffs — bracket is set`, pulse: false, ctaLabel: 'Open Bracket' };
+    if (live) return { subline: onTheClock ? `${seasonLabel} · Draft ${live.week_number ?? completed + 1} of ${totalDrafts} — you're on the clock` : `${seasonLabel} · Draft ${live.week_number ?? completed + 1} of ${totalDrafts} live now`, pulse: true, ctaLabel: onTheClock ? 'Make Pick' : 'Open Draft' };
+    return { subline: `${seasonLabel} · Draft ${Math.min(completed + 1, totalDrafts)} of ${totalDrafts} — ready to start`, pulse: false, ctaLabel: 'Enter Arena' };
   })();
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
       <Link to="/drafts" className="block">
-        <div
-          className={cn('relative overflow-hidden rounded-2xl btn-press', pulse && 'da-banner-pulse')}
+        <div className={cn('relative overflow-hidden rounded-2xl btn-press', pulse && 'da-banner-pulse')}
           style={{
             background:
               'radial-gradient(ellipse 120% 80% at 50% 0%, hsl(45 95% 45% / 0.45), transparent 60%),' +
               'radial-gradient(ellipse 90% 60% at 100% 100%, hsl(152 72% 36% / 0.22), transparent 60%),' +
               'linear-gradient(180deg, hsl(160 45% 7%), hsl(160 55% 4%))',
             border: '1px solid hsl(45 95% 55% / 0.4)',
-            boxShadow:
-              '0 12px 40px hsl(45 95% 35% / 0.4), inset 0 1px 0 hsl(45 100% 90% / 0.2)',
-          }}
-        >
-          {/* Drifting gold glow */}
-          <div
-            aria-hidden
-            className="absolute -top-12 -right-10 w-44 h-44 rounded-full pointer-events-none"
-            style={{
-              background:
-                'radial-gradient(circle, hsl(45 95% 60% / 0.4), transparent 70%)',
-              filter: 'blur(8px)',
-            }}
-          />
-
+            boxShadow: '0 12px 40px hsl(45 95% 35% / 0.4), inset 0 1px 0 hsl(45 100% 90% / 0.2)',
+          }}>
+          <div aria-hidden className="absolute -top-12 -right-10 w-44 h-44 rounded-full pointer-events-none"
+            style={{ background: 'radial-gradient(circle, hsl(45 95% 60% / 0.4), transparent 70%)', filter: 'blur(8px)' }} />
           <div className="relative z-10 p-5 flex items-center gap-4">
-            {/* Emblem hero visual */}
             <div className="relative flex-shrink-0">
-              <div
-                aria-hidden
-                className="absolute inset-0 rounded-full"
-                style={{
-                  background:
-                    'radial-gradient(circle, hsl(45 95% 60% / 0.5), transparent 65%)',
-                  filter: 'blur(10px)',
-                  transform: 'scale(1.15)',
-                }}
-              />
-              <img
-                src={draftEmblem}
-                alt="Draft Arena"
-                width={96}
-                height={96}
-                loading="lazy"
-                decoding="async"
-                className="relative w-[88px] h-[88px] object-contain drop-shadow-[0_4px_18px_hsl(45_95%_50%/0.55)]"
-              />
+              <div aria-hidden className="absolute inset-0 rounded-full"
+                style={{ background: 'radial-gradient(circle, hsl(45 95% 60% / 0.5), transparent 65%)', filter: 'blur(10px)', transform: 'scale(1.15)' }} />
+              <img src={draftEmblem} alt="Draft Arena" width={96} height={96} loading="lazy" decoding="async"
+                className="relative w-[88px] h-[88px] object-contain drop-shadow-[0_4px_18px_hsl(45_95%_50%/0.55)]" />
             </div>
-
-            {/* Title + CTA */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <span
-                  className="text-[9px] font-extrabold uppercase tracking-[0.22em]"
-                  style={{ color: 'hsl(45 95% 70%)' }}
-                >
-                  ◆ Draft League
-                </span>
+                <span className="text-[9px] font-extrabold uppercase tracking-[0.22em]" style={{ color: 'hsl(45 95% 70%)' }}>◆ Draft League</span>
               </div>
-              <h2
-                className="font-extrabold text-[22px] leading-none tracking-tight mb-1.5"
-                style={{
-                  background:
-                    'linear-gradient(180deg, hsl(45 30% 98%), hsl(45 95% 70%))',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  textShadow: '0 0 18px hsl(45 95% 40% / 0.4)',
-                }}
-              >
+              <h2 className="font-extrabold text-[22px] leading-none tracking-tight mb-1.5"
+                style={{ background: 'linear-gradient(180deg, hsl(45 30% 98%), hsl(45 95% 70%))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', textShadow: '0 0 18px hsl(45 95% 40% / 0.4)' }}>
                 Draft Arena
               </h2>
-              <p className="text-[10.5px] font-bold text-white/65 leading-snug mb-2.5 line-clamp-2">
-                {subline}
-              </p>
-              <div
-                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider"
-                style={{
-                  background:
-                    'linear-gradient(135deg, hsl(45 100% 65%), hsl(40 95% 50%))',
-                  color: 'hsl(160 30% 6%)',
-                  boxShadow:
-                    '0 4px 14px hsl(45 95% 40% / 0.5), inset 0 1px 0 hsl(45 100% 90% / 0.55)',
-                }}
-              >
+              <p className="text-[10.5px] font-bold text-white/65 leading-snug mb-2.5 line-clamp-2">{subline}</p>
+              <div className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider"
+                style={{ background: 'linear-gradient(135deg, hsl(45 100% 65%), hsl(40 95% 50%))', color: 'hsl(160 30% 6%)', boxShadow: '0 4px 14px hsl(45 95% 40% / 0.5), inset 0 1px 0 hsl(45 100% 90% / 0.55)' }}>
                 {ctaLabel} <ChevronRight className="w-3.5 h-3.5" strokeWidth={3} />
               </div>
             </div>
@@ -465,1336 +231,7 @@ function DraftArenaEnterBanner({
   );
 }
 
-
-function SeasonHeaderCard({ season, entries }: { season: any; entries: any[] }) {
-  const statusLabels: Record<string, { label: string; cls: string; dotCls: string }> = {
-    upcoming: { label: 'Upcoming', cls: 'bg-muted text-muted-foreground', dotCls: 'bg-muted-foreground' },
-    regular_season: { label: 'Regular Season', cls: 'bg-success/15 text-success border border-success/20', dotCls: 'bg-success' },
-    playoffs: { label: 'Playoffs', cls: 'bg-gold/15 text-gold border border-gold/20', dotCls: 'bg-gold' },
-    complete: { label: 'Complete', cls: 'bg-primary/10 text-primary', dotCls: 'bg-primary' },
-  };
-  const st = statusLabels[season.status] || statusLabels.upcoming;
-  const isActive = season.status === 'regular_season' || season.status === 'playoffs';
-
-  // Draft-count based progress
-  const totalDrafts = getSeasonDraftTarget(season);
-  const completedDrafts = entries.filter(e => !e.is_playoff && e.drafts?.status === 'complete').length;
-  const progressPct = totalDrafts > 0 ? Math.round((completedDrafts / totalDrafts) * 100) : 0;
-  const progressText = getSeasonProgressText(completedDrafts, totalDrafts, season.status);
-
-  return (
-    <motion.div initial={{ opacity: 0, y: 10, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}>
-      <div className="relative rounded-xl overflow-hidden">
-        <div className="absolute inset-0 rounded-xl" style={{ background: 'var(--gradient-hero-gold)' }} />
-        <div className="absolute inset-0 rounded-xl" style={{ background: 'var(--gradient-hero-gold-accent)' }} />
-        <div className="glass-card p-0 relative overflow-hidden border-gold/10" style={{
-          backgroundImage: 'var(--gradient-arena-edge-gold)',
-          boxShadow: 'var(--shadow-gold)',
-        }}>
-          <div className="relative z-10 p-5 pb-4">
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                  <h2 className="font-extrabold text-xl tracking-tight leading-tight">{season.name}</h2>
-                  <p className="text-[11px] text-muted-foreground/70 mt-0.5">
-                    {format(new Date(season.starts_at), 'MMM d')} — {format(new Date(season.ends_at), 'MMM d, yyyy')}
-                  </p>
-              </div>
-              <span className={cn('status-pill flex items-center gap-1.5 text-[10px] px-2.5 py-1', st.cls)}>
-                {isActive && (
-                  <span className={cn('w-1.5 h-1.5 rounded-full animate-pulse', st.dotCls)} />
-                )}
-                {st.label}
-              </span>
-            </div>
-
-            {/* Stats row — draft-count based */}
-            <div className="flex items-center gap-0 mt-4 rounded-lg bg-muted/25 p-2.5">
-              <div className="flex-1 text-center">
-                <p className="text-sm font-extrabold tabular-nums">{totalDrafts}</p>
-                <p className="text-[8px] text-muted-foreground/60 font-bold uppercase tracking-wider">Reg Drafts</p>
-              </div>
-              <div className="w-px h-7 bg-border/20" />
-              <div className="flex-1 text-center">
-                <p className="text-sm font-extrabold tabular-nums">Best {season.best_of}</p>
-                <p className="text-[8px] text-muted-foreground/60 font-bold uppercase tracking-wider">Count</p>
-              </div>
-              <div className="w-px h-7 bg-border/20" />
-              <div className="flex-1 text-center">
-                <p className="text-sm font-extrabold tabular-nums">All 5</p>
-                <p className="text-[8px] text-muted-foreground/60 font-bold uppercase tracking-wider">Playoffs</p>
-              </div>
-            </div>
-
-            {/* Season progress bar — draft count */}
-            {season.status !== 'complete' && (
-              <div className="mt-3.5">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[9px] font-bold text-muted-foreground/70">{progressText}</span>
-                  <span className="text-[9px] font-bold tabular-nums" style={{ color: 'hsl(var(--gold))' }}>
-                    {season.status === 'playoffs' ? 'Playoffs' : `Draft ${completedDrafts} of ${totalDrafts}`}
-                  </span>
-                </div>
-                <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/40">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${season.status === 'playoffs' ? 100 : progressPct}%`,
-                      background: season.status === 'playoffs'
-                        ? 'linear-gradient(90deg, hsl(var(--gold) / 0.7), hsl(var(--gold)))'
-                        : 'linear-gradient(90deg, hsl(var(--gold) / 0.7), hsl(var(--gold)))',
-                      boxShadow: '0 0 8px hsl(var(--gold) / 0.3)',
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════
-   NEXT DRAFT — elevated CTA (draft-count aware)
-   ══════════════════════════════════════════════════════════ */
-function NextDraftCard({ entries, totalDrafts }: { entries: any[]; totalDrafts: number }) {
-  const regularEntries = entries.filter(e => !e.is_playoff);
-  const completedCount = regularEntries.filter(e => e.drafts?.status === 'complete').length;
-  const nextDraftNumber = completedCount + 1;
-  const isRegularSeasonComplete = completedCount >= totalDrafts;
-
-  // Find the latest non-complete entry (current draft)
-  const currentEntry = regularEntries.find(e => e.drafts?.status !== 'complete');
-  // Or show the latest entry if all complete
-  const latestEntry = currentEntry || regularEntries[regularEntries.length - 1];
-  const isLive = latestEntry?.drafts?.status === 'in_progress';
-
-  const label = isRegularSeasonComplete
-    ? 'Regular Season Complete'
-    : getDraftLabel(nextDraftNumber, totalDrafts);
-
-  return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
-      <div className={cn(
-        "glass-card p-4 relative overflow-hidden",
-        isLive && "border-success/20"
-      )} style={{
-        borderLeft: '3px solid hsl(var(--gold))',
-      }}>
-        <div className="flex items-center gap-2 mb-3">
-          <Bookmark className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
-          <h3 className="font-bold text-[13px]">{label}</h3>
-          {isLive && (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/12 text-success text-[9px] font-bold border border-success/15">
-              <span className="live-dot w-1.5 h-1.5" />
-              LIVE
-            </span>
-          )}
-          {!isRegularSeasonComplete && (
-            <span className="text-[9px] text-muted-foreground/60 ml-auto tabular-nums">
-              Draft {Math.min(nextDraftNumber, totalDrafts)} of {totalDrafts}
-            </span>
-          )}
-        </div>
-        {latestEntry && !isRegularSeasonComplete ? (
-          latestEntry.drafts?.status !== 'complete' ? (
-            <Link to={`/drafts/${latestEntry.draft_id}`}>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                <Bookmark className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(var(--gold))' }} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-bold truncate">{latestEntry.drafts?.topic || 'Draft'}</p>
-                  <span className={cn(
-                    'status-pill text-[9px] mt-1 inline-flex',
-                    latestEntry.drafts?.status === 'in_progress' ? 'bg-success/12 text-success' :
-                    'bg-muted text-muted-foreground'
-                  )}>
-                    {latestEntry.drafts?.status === 'in_progress' ? 'In Progress' :
-                     latestEntry.drafts?.status || 'Unknown'}
-                  </span>
-                </div>
-                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60" />
-              </div>
-            </Link>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-[11px] text-muted-foreground/70 mb-3">No draft assigned yet</p>
-              <Link to="/drafts/create">
-                <button className="w-full h-10 rounded-lg text-[12px] font-bold transition-colors flex items-center justify-center gap-2 btn-press" style={{
-                  background: 'hsl(var(--gold) / 0.15)',
-                  color: 'hsl(var(--gold))',
-                  border: '1px solid hsl(var(--gold) / 0.15)',
-                }}>
-                  <Plus className="w-4 h-4" /> Create Draft {nextDraftNumber}
-                </button>
-              </Link>
-            </div>
-          )
-        ) : isRegularSeasonComplete ? (
-          <div className="text-center py-3">
-            <p className="text-[12px] font-bold" style={{ color: 'hsl(var(--gold))' }}>
-              🏆 All {totalDrafts} regular-season drafts complete
-            </p>
-            <p className="text-[10px] text-muted-foreground mt-1">Playoffs are unlocked!</p>
-          </div>
-        ) : (
-          <div className="text-center py-4">
-            <p className="text-[11px] text-muted-foreground/70 mb-3">No draft assigned yet</p>
-            <Link to="/drafts/create">
-              <button className="w-full h-10 rounded-lg text-[12px] font-bold transition-colors flex items-center justify-center gap-2 btn-press" style={{
-                background: 'hsl(var(--gold) / 0.15)',
-                color: 'hsl(var(--gold))',
-                border: '1px solid hsl(var(--gold) / 0.15)',
-              }}>
-                <Plus className="w-4 h-4" /> Create Draft {nextDraftNumber}
-              </button>
-            </Link>
-          </div>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════
-   STANDINGS TABLE — competitive energy with leader treatment
-   ══════════════════════════════════════════════════════════ */
-function StandingsCard({ standings, userId }: { standings: SeasonStanding[]; userId?: string }) {
-  const [expanded, setExpanded] = useState<string | null>(null);
-
-  if (standings.length === 0) {
-    return (
-      <div className="glass-card p-6 text-center">
-        <Trophy className="w-6 h-6 mx-auto mb-2 text-muted-foreground/40" />
-        <p className="text-xs text-muted-foreground">No standings yet — complete a draft to get on the board.</p>
-      </div>
-    );
-  }
-
-  const leaderPts = standings[0]?.season_points || 0;
-
-  return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
-      <div className="glass-card overflow-hidden" style={{ boxShadow: 'var(--shadow-elevated)' }}>
-        <div className="p-3.5 border-b border-border/20">
-          <h3 className="font-bold text-[13px] flex items-center gap-1.5">
-            <TrendingUp className="w-3.5 h-3.5" style={{ color: 'hsl(var(--gold))' }} />
-            Season Standings
-          </h3>
-        </div>
-        <div className="divide-y divide-border/10">
-          {standings.map((s, i) => {
-            const isMe = s.user_id === userId;
-            const isExpanded = expanded === s.id;
-            const rank = s.rank || i + 1;
-            const isPodium = rank <= 3;
-            const gap = rank === 1 ? null : leaderPts - s.season_points;
-
-            const seedBg = s.playoff_seed === 1 ? 'hsl(var(--gold))' :
-                           s.playoff_seed === 2 ? 'hsl(var(--silver))' :
-                           s.playoff_seed === 3 ? 'hsl(var(--bronze))' :
-                           'hsl(var(--muted-foreground))';
-
-            return (
-              <div key={s.id}>
-                <button
-                  type="button"
-                  className={cn(
-                    'flex items-center gap-3 px-4 py-3.5 transition-colors cursor-pointer w-full text-left',
-                    rank === 1 && 'relative',
-                    isMe && !isPodium && 'border-l-2 border-l-gold/40',
-                  )}
-                  style={rank === 1 ? {
-                    background: 'linear-gradient(90deg, hsl(var(--gold) / 0.08), transparent)',
-                  } : undefined}
-                  onClick={() => setExpanded(isExpanded ? null : s.id)}
-                  aria-expanded={isExpanded}
-                  aria-label={`${(s.profiles as any)?.display_name || 'Unknown'} standings details`}
-                >
-                  <div className="w-7 flex-shrink-0 flex items-center justify-center">
-                    {isPodium ? (
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-extrabold" style={{
-                        background: `${seedBg}20`,
-                        color: seedBg,
-                        border: `1.5px solid ${seedBg}40`,
-                      }}>
-                        {rank}
-                      </div>
-                    ) : (
-                      <span className="text-[12px] font-bold text-muted-foreground">{rank}</span>
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <p className={cn('text-[13px] font-bold truncate', isMe && 'text-gold', rank === 1 && !isMe && 'text-foreground')}>
-                        {(s.profiles as any)?.display_name || 'Unknown'}
-                      </p>
-                      {isMe && <span className="text-[8px] text-muted-foreground bg-gold/10 px-1 py-0.5 rounded font-bold">YOU</span>}
-                      {rank === 1 && <Crown className="w-3 h-3 flex-shrink-0" style={{ color: 'hsl(var(--gold))' }} />}
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[9px] text-muted-foreground">{s.drafts_played} drafted</span>
-                      <span className="text-[9px] text-muted-foreground">·</span>
-                      <span className="text-[9px] text-muted-foreground">{s.wins}W {s.podiums}P</span>
-                    </div>
-                  </div>
-
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-extrabold tabular-nums" style={{ color: 'hsl(var(--gold))' }}>{s.season_points}</p>
-                    {gap !== null ? (
-                      <p className="text-[8px] text-muted-foreground/50 tabular-nums font-bold">-{gap} pts</p>
-                    ) : (
-                      <p className="text-[8px] font-bold uppercase" style={{ color: 'hsl(var(--gold) / 0.6)' }}>Leader</p>
-                    )}
-                  </div>
-                </button>
-                {isExpanded && (
-                  <div className="px-4 pb-3 pt-0">
-                    <div className="grid grid-cols-4 gap-px rounded-lg overflow-hidden bg-border/10">
-                      {[
-                        { v: s.avg_finish.toFixed(1), l: 'Avg Finish' },
-                        { v: s.avg_score.toFixed(1), l: 'Avg Score' },
-                        { v: s.best_score.toFixed(1), l: 'Best', cls: 'text-success' },
-                        { v: s.worst_score.toFixed(1), l: 'Worst', cls: 'text-destructive' },
-                      ].map(stat => (
-                        <div key={stat.l} className="text-center bg-muted/30 p-2.5">
-                          <p className={cn('text-[12px] font-bold tabular-nums', stat.cls)}>{stat.v}</p>
-                          <p className="text-[7px] text-muted-foreground/60 font-bold uppercase tracking-wider">{stat.l}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════
-   TOPIC PICKER DIALOG — higher seed picks from 3 AI suggestions
-   ══════════════════════════════════════════════════════════ */
-function TopicPickerDialog({
-  open, onOpenChange, seasonId, match, onStarted,
-}: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  seasonId: string;
-  match: PlayoffMatch;
-  onStarted: () => void;
-}) {
-  const [topics, setTopics] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState<string | null>(null);
-
-  const fetchTopics = useCallback(async () => {
-    setLoading(true);
-    setTopics([]);
-    try {
-      const list = await suggestPlayoffTopics(seasonId, match.id);
-      setTopics(list);
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to get suggestions');
-    } finally {
-      setLoading(false);
-    }
-  }, [seasonId, match.id]);
-
-  useEffect(() => {
-    if (open) fetchTopics();
-  }, [open, fetchTopics]);
-
-  const handlePick = async (topic: string) => {
-    setSubmitting(topic);
-    try {
-      await startPlayoffMatch(match.id, topic);
-      toast.success('Matchup created!');
-      onOpenChange(false);
-      onStarted();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to start matchup');
-    } finally {
-      setSubmitting(null);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <Sparkles className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
-            Choose your matchup topic
-          </DialogTitle>
-          <DialogDescription className="text-[12px]">
-            {match.round === 'final' && match.match_number === 2
-              ? 'As the lower seed, you pick the topic for Game 2.'
-              : 'As the higher seed, you get to pick the topic for this draft.'}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-2 py-2">
-          {loading ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="h-14 rounded-lg skeleton-shimmer" />
-              ))}
-            </div>
-          ) : (
-            <>
-              {topics.map(t => (
-                <button
-                  key={t}
-                  onClick={() => handlePick(t)}
-                  disabled={!!submitting}
-                  className="w-full text-left p-3 rounded-lg border border-border/30 hover:border-gold/40 hover:bg-gold/5 transition-all disabled:opacity-40"
-                >
-                  <p className="font-bold text-[13px]">{t}</p>
-                  {submitting === t && (
-                    <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
-                      <Loader2 className="w-3 h-3 animate-spin" /> Creating draft…
-                    </p>
-                  )}
-                </button>
-              ))}
-              <button
-                onClick={fetchTopics}
-                disabled={loading || !!submitting}
-                className="w-full mt-2 h-9 rounded-lg bg-muted/50 text-[11px] font-bold text-foreground/80 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40"
-              >
-                <RefreshCw className="w-3 h-3" /> Regenerate options
-              </button>
-            </>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════
-   PLAYOFF FORMAT GUIDE — clear-cut rules card shown inside
-   the Playoff Picture so members always see how it works.
-   ══════════════════════════════════════════════════════════ */
-function PlayoffFormatGuide({ embedded = false }: { embedded?: boolean }) {
-  const rules: { icon: React.ReactNode; label: string; body: string }[] = [
-    { icon: <Users className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />, label: 'Field',
-      body: 'Top 5 in Season Points qualify. #1, #2, #3 get a first-round bye.' },
-    { icon: <Swords className="w-3 h-3" style={{ color: 'hsl(var(--primary))' }} />, label: 'Bracket',
-      body: 'Play-In: #4 vs #5 (Bo1). Semis: #1 vs Play-In winner & #2 vs #3 (Bo1 each).' },
-    { icon: <Crown className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />, label: 'Final',
-      body: 'Best-of-3. First to 2 game wins is Champion.' },
-    { icon: <Award className="w-3 h-3" style={{ color: 'hsl(var(--bronze))' }} />, label: '3rd Place',
-      body: 'Bo1 between the two semifinal losers — the winner takes bronze.' },
-    { icon: <Sparkles className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />, label: 'Topic Picker',
-      body: 'Higher seed picks the draft topic. In the Final, picker rotates: G1 higher, G2 lower, G3 higher.' },
-    { icon: <Target className="w-3 h-3" style={{ color: 'hsl(var(--success))' }} />, label: 'Tiebreaks',
-      body: 'Match winner = highest draft score. Series clinched at 2 wins ends the Final.' },
-  ];
-
-  return (
-    <div className={cn(embedded ? 'mt-3' : 'mt-4 pt-3 border-t border-border/15')}>
-      <div className="flex items-center gap-1.5 mb-2">
-        <Trophy className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />
-        <p className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: 'hsl(var(--gold))' }}>
-          Playoff Format
-        </p>
-      </div>
-      <ul className="space-y-1.5">
-        {rules.map(r => (
-          <li key={r.label} className="flex items-start gap-2 p-2 rounded-md bg-muted/20">
-            <span className="mt-0.5 flex-shrink-0">{r.icon}</span>
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold leading-tight">{r.label}</p>
-              <p className="text-[10px] text-muted-foreground/80 leading-snug mt-0.5">{r.body}</p>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════
-   PLAYOFF BRACKET — visual bracket with connector lines
-   ══════════════════════════════════════════════════════════ */
-function PlayoffPicture({ standings, matches, seasonId }: { standings: SeasonStanding[]; matches: PlayoffMatch[]; seasonId: string | undefined }) {
-  const { user } = useAuth();
-  const [pickerMatch, setPickerMatch] = useState<PlayoffMatch | null>(null);
-
-  const seeds = standings.filter(s => s.playoff_seed).sort((a, b) => (a.playoff_seed || 99) - (b.playoff_seed || 99));
-  const getName = (seed: number) => {
-    const s = seeds.find(s => s.playoff_seed === seed);
-    return s ? (s.profiles as any)?.display_name || '?' : 'TBD';
-  };
-  const getNameByUser = (userId: string | null) => {
-    if (!userId) return 'TBD';
-    const s = standings.find(s => s.user_id === userId);
-    return (s?.profiles as any)?.display_name || '?';
-  };
-
-  if (seeds.length === 0 && matches.length === 0) {
-    return (
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}>
-        <div className="glass-card p-4">
-          <h3 className="font-bold text-[13px] flex items-center gap-1.5 mb-3">
-            <Crown className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
-            Playoff Picture
-          </h3>
-          <p className="text-[11px] text-muted-foreground/70 text-center py-3">Complete all 12 regular-season drafts to unlock playoffs.</p>
-        </div>
-      </motion.div>
-    );
-  }
-
-  const qfMatches = matches.filter(m => m.round === 'qf').sort((a, b) => a.match_number - b.match_number);
-  const sfMatches = matches.filter(m => m.round === 'sf').sort((a, b) => a.match_number - b.match_number);
-  const finalMatches = matches.filter(m => m.round === 'final').sort((a, b) => a.match_number - b.match_number);
-  const thirdPlaceMatch = matches.find(m => m.round === 'third_place');
-
-  // Series state for finals best-of-3
-  const finalWinCount: Record<string, number> = {};
-  for (const m of finalMatches) {
-    if (m.status === 'complete' && m.winner_user_id) {
-      finalWinCount[m.winner_user_id] = (finalWinCount[m.winner_user_id] || 0) + 1;
-    }
-  }
-  const finalsPlayers = finalMatches[0] ? [finalMatches[0].user_a, finalMatches[0].user_b] : [];
-  const champion = finalsPlayers.find(p => p && (finalWinCount[p] || 0) >= 2) || null;
-  const seriesScore = finalsPlayers.length === 2
-    ? `${finalWinCount[finalsPlayers[0]!] || 0}–${finalWinCount[finalsPlayers[1]!] || 0}`
-    : null;
-
-  const MatchCard = ({ m, placeholder, gameLabel }: { m?: PlayoffMatch; placeholder?: { roundLabel: string }; gameLabel?: string }) => {
-    if (!m) {
-      return (
-        <div className="rounded-lg bg-muted/20 p-2.5 border border-dashed border-border/20 text-center">
-          <p className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider">{placeholder?.roundLabel}</p>
-          <p className="text-[10px] text-muted-foreground/50 mt-1">Awaiting prior round</p>
-        </div>
-      );
-    }
-    const isAwaitingTopic = m.status === 'awaiting_topic';
-    const isCallerPicker = isAwaitingTopic && user?.id === m.topic_picker_user_id;
-    const pickerName = getNameByUser(m.topic_picker_user_id);
-
-    let statusLabel = 'Pending';
-    let statusClass = 'bg-muted text-muted-foreground';
-    if (m.status === 'complete') { statusLabel = 'Final'; statusClass = 'bg-primary/15 text-primary'; }
-    else if (m.status === 'in_progress') { statusLabel = 'Live'; statusClass = 'bg-success/15 text-success'; }
-    else if (isAwaitingTopic) { statusLabel = 'Topic'; statusClass = 'bg-gold/15 text-gold'; }
-
-    return (
-      <div className="rounded-lg bg-muted/30 p-2.5 border border-border/15 space-y-1.5">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/70">
-            {gameLabel || `M${m.match_number}`}
-          </span>
-          <span className={cn('text-[8px] font-bold px-1.5 py-0.5 rounded', statusClass)}>{statusLabel}</span>
-        </div>
-        <div className="space-y-0.5">
-          <p className={cn('text-[10px] font-bold flex items-center gap-1', m.winner_user_id === m.user_a && 'text-gold')}>
-            <span className="text-muted-foreground/70">#{m.seed_a}</span>
-            <span className="truncate">{getNameByUser(m.user_a)}</span>
-            {m.winner_user_id === m.user_a && <Trophy className="w-2.5 h-2.5 ml-auto" style={{ color: 'hsl(var(--gold))' }} />}
-          </p>
-          <p className={cn('text-[10px] font-bold flex items-center gap-1', m.winner_user_id === m.user_b && 'text-gold')}>
-            <span className="text-muted-foreground/70">#{m.seed_b}</span>
-            <span className="truncate">{getNameByUser(m.user_b)}</span>
-            {m.winner_user_id === m.user_b && <Trophy className="w-2.5 h-2.5 ml-auto" style={{ color: 'hsl(var(--gold))' }} />}
-          </p>
-        </div>
-        {isAwaitingTopic && isCallerPicker && (
-          <button
-            onClick={() => setPickerMatch(m)}
-            className="block w-full text-[9px] font-bold text-center py-1 rounded bg-gold/15 hover:bg-gold/25 transition-colors flex items-center justify-center gap-1"
-            style={{ color: 'hsl(var(--gold))' }}
-          >
-            <Sparkles className="w-2.5 h-2.5" /> Choose topic
-          </button>
-        )}
-        {isAwaitingTopic && !isCallerPicker && (
-          <p className="text-[9px] text-center py-1 text-muted-foreground/70 italic truncate">
-            Waiting for {pickerName}…
-          </p>
-        )}
-        {m.draft_id && (
-          <Link to={`/drafts/${m.draft_id}`} className="block">
-            <div className="text-[9px] font-bold text-center py-1 rounded bg-gold/10 hover:bg-gold/15 transition-colors flex items-center justify-center gap-1" style={{ color: 'hsl(var(--gold))' }}>
-              Open Draft <ChevronRight className="w-2.5 h-2.5" />
-            </div>
-          </Link>
-        )}
-      </div>
-    );
-  };
-
-  return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}>
-      <div className="glass-card p-4">
-        <h3 className="font-bold text-[13px] flex items-center gap-1.5 mb-4">
-          <Crown className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
-          Playoff Picture
-        </h3>
-
-        {champion && (
-          <div className="mb-4 p-3 rounded-lg text-center" style={{
-            background: 'linear-gradient(135deg, hsl(var(--gold) / 0.2), hsl(var(--gold) / 0.05))',
-            border: '1px solid hsl(var(--gold) / 0.3)',
-          }}>
-            <Trophy className="w-6 h-6 mx-auto mb-1" style={{ color: 'hsl(var(--gold))' }} />
-            <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Champion</p>
-            <p className="text-[14px] font-black mt-0.5" style={{ color: 'hsl(var(--gold))' }}>{getNameByUser(champion)}</p>
-            {seriesScore && <p className="text-[10px] text-muted-foreground mt-1">Series {seriesScore}</p>}
-          </div>
-        )}
-
-        {matches.length > 0 ? (
-          <>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="space-y-2">
-                <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/50 text-center">Play-In</p>
-                <MatchCard m={qfMatches[0]} placeholder={{ roundLabel: 'Play-In' }} />
-              </div>
-              <div className="space-y-2">
-                <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/50 text-center">Semis</p>
-                <MatchCard m={sfMatches[0]} placeholder={{ roundLabel: 'SF 1' }} />
-                <MatchCard m={sfMatches[1]} placeholder={{ roundLabel: 'SF 2' }} />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-center gap-1">
-                  <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/50 text-center">Final · Bo3</p>
-                </div>
-                {seriesScore && finalMatches.length > 0 && !champion && (
-                  <p className="text-[8px] font-bold text-center text-gold">Series {seriesScore}</p>
-                )}
-                {finalMatches.length === 0 ? (
-                  <MatchCard placeholder={{ roundLabel: 'Final' }} />
-                ) : (
-                  finalMatches.map(fm => (
-                    <MatchCard key={fm.id} m={fm} gameLabel={`Game ${fm.match_number}`} />
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* Third-place game appears only after both Semis are complete */}
-            {sfMatches.length === 2 && sfMatches.every(m => m.status === 'complete') && (
-              <div className="mt-3 pt-3 border-t border-border/15">
-                <div className="flex items-center justify-center gap-1.5 mb-2">
-                  <Award className="w-3 h-3" style={{ color: 'hsl(var(--bronze))' }} />
-                  <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/70 text-center">3rd Place · Bo1</p>
-                </div>
-                {thirdPlaceMatch ? (
-                  <div className="max-w-[200px] mx-auto">
-                    <MatchCard m={thirdPlaceMatch} gameLabel="3rd Place" />
-                  </div>
-                ) : (
-                  <div className="max-w-[200px] mx-auto">
-                    <MatchCard placeholder={{ roundLabel: '3rd Place' }} />
-                  </div>
-                )}
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="space-y-3">
-            <div className="grid grid-cols-3 gap-2 mb-3">
-              {['Play-In', 'Semis', 'Finals'].map(r => (
-                <div key={r} className="text-center">
-                  <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/50">{r}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 items-center">
-              <div className="rounded-lg bg-muted/30 p-2.5 border border-border/10">
-                <p className="text-[10px] font-bold">#{4} <span className="text-muted-foreground font-normal">{getName(4)}</span></p>
-                <p className="text-[10px] font-bold mt-1">#{5} <span className="text-muted-foreground font-normal">{getName(5)}</span></p>
-              </div>
-              <div className="rounded-lg bg-muted/30 p-2.5 border border-border/10">
-                <p className="text-[10px] font-bold">#{1} <span className="text-muted-foreground font-normal">{getName(1)}</span></p>
-                <div className="flex items-center gap-1 mt-0.5">
-                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'hsl(var(--gold) / 0.15)', color: 'hsl(var(--gold))' }}>BYE</span>
-                </div>
-                <div className="h-px bg-border/20 my-1.5" />
-                <p className="text-[9px] text-muted-foreground">vs Play-In ✦</p>
-              </div>
-              <div className="rounded-lg p-2.5 border border-gold/15" style={{ background: 'hsl(var(--gold) / 0.05)' }}>
-                <div className="text-center">
-                  <Trophy className="w-4 h-4 mx-auto mb-1" style={{ color: 'hsl(var(--gold) / 0.5)' }} />
-                  <p className="text-[9px] font-bold" style={{ color: 'hsl(var(--gold))' }}>Championship</p>
-                  <p className="text-[8px] text-muted-foreground mt-0.5">Best of 3</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 items-center">
-              <div />
-              <div className="rounded-lg bg-muted/30 p-2.5 border border-border/10">
-                <p className="text-[10px] font-bold">#{2} <span className="text-muted-foreground font-normal">{getName(2)}</span></p>
-                <div className="h-px bg-border/20 my-1.5" />
-                <p className="text-[10px] font-bold">#{3} <span className="text-muted-foreground font-normal">{getName(3)}</span></p>
-              </div>
-              <div />
-            </div>
-
-            {/* Bronze callout — 3rd place game */}
-            <div className="flex items-center justify-center gap-1.5 pt-2">
-              <Award className="w-3 h-3" style={{ color: 'hsl(var(--bronze))' }} />
-              <p className="text-[9px] font-bold" style={{ color: 'hsl(var(--bronze))' }}>
-                3rd Place · Bo1
-              </p>
-              <span className="text-[9px] text-muted-foreground/60">— SF losers face off</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {pickerMatch && seasonId && (
-        <TopicPickerDialog
-          open={!!pickerMatch}
-          onOpenChange={(v) => { if (!v) setPickerMatch(null); }}
-          seasonId={seasonId}
-          match={pickerMatch}
-          onStarted={() => { /* live subscription will refetch */ }}
-        />
-      )}
-    </motion.div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════
-   COMMISSIONER PANEL — manage season-eligible drafts
-   ══════════════════════════════════════════════════════════ */
-function CommissionerPanel({ season, entries, onUpdate }: { season: any; entries: any[]; onUpdate: () => void }) {
-  const { drafts: unassigned, loading, refetch: refetchUnassigned } = useUnassignedDrafts(season?.id);
-  const [busy, setBusy] = useState<string | null>(null);
-
-  const totalDrafts = getSeasonDraftTarget(season);
-  const regularEntries = entries.filter(e => !e.is_playoff);
-  const slotsFilled = regularEntries.length;
-  const slotsRemaining = Math.max(0, totalDrafts - slotsFilled);
-
-  const handleAdd = async (draftId: string) => {
-    setBusy(draftId);
-    try {
-      const num = await addDraftToSeason(season.id, draftId);
-      await recalculateSeasonStandings(season.id);
-      toast.success(`Added as Season Draft #${num}`);
-      refetchUnassigned();
-      onUpdate();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to add');
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const handleRemove = async (draftId: string) => {
-    setBusy(draftId);
-    try {
-      await removeDraftFromSeason(draftId);
-      await recalculateSeasonStandings(season.id);
-      toast.success('Removed from season');
-      refetchUnassigned();
-      onUpdate();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to remove');
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
-      <div className="glass-card overflow-hidden border" style={{ borderColor: 'hsl(var(--gold) / 0.2)' }}>
-        <div className="p-3.5 border-b border-border/20 flex items-center justify-between" style={{ background: 'hsl(var(--gold) / 0.05)' }}>
-          <h3 className="font-bold text-[13px] flex items-center gap-1.5">
-            <Shield className="w-3.5 h-3.5" style={{ color: 'hsl(var(--gold))' }} />
-            Commissioner
-          </h3>
-          <span className="text-[10px] font-bold tabular-nums" style={{ color: slotsRemaining > 0 ? 'hsl(var(--gold))' : 'hsl(var(--success))' }}>
-            {slotsFilled} / {totalDrafts} slots filled
-          </span>
-        </div>
-
-        {/* Unassigned drafts */}
-        {unassigned.length > 0 && slotsRemaining > 0 && (
-          <div className="p-3 border-b border-border/10">
-            <p className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider mb-2">Unassigned Drafts</p>
-            <div className="space-y-1.5 max-h-48 overflow-y-auto">
-              {unassigned.map(d => (
-                <div key={d.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
-                  <Bookmark className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'hsl(var(--gold) / 0.5)' }} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-bold truncate">{d.topic}</p>
-                    <span className={cn(
-                      'text-[9px] font-semibold',
-                      d.status === 'complete' ? 'text-primary' :
-                      d.status === 'in_progress' ? 'text-success' :
-                      'text-muted-foreground'
-                    )}>{d.status}</span>
-                  </div>
-                  <button
-                    onClick={() => handleAdd(d.id)}
-                    disabled={busy === d.id}
-                    className="px-2 py-1 rounded-md text-[9px] font-bold transition-colors flex items-center gap-1 btn-press"
-                    style={{ background: 'hsl(var(--gold) / 0.15)', color: 'hsl(var(--gold))' }}
-                  >
-                    {busy === d.id ? '…' : <><Plus className="w-3 h-3" /> Add</>}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Currently assigned — allow removal */}
-        {regularEntries.length > 0 && (
-          <div className="p-3">
-            <p className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider mb-2">Season Drafts</p>
-            <div className="space-y-1">
-              {regularEntries.map(e => (
-                <div key={e.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/20 transition-colors">
-                  <span className="text-[10px] font-bold text-muted-foreground w-5 text-center">#{e.week_number}</span>
-                  <p className="text-[11px] font-semibold flex-1 truncate">{e.drafts?.topic || 'Draft'}</p>
-                  <span className={cn(
-                    'text-[9px] font-semibold',
-                    e.drafts?.status === 'complete' ? 'text-primary' :
-                    e.drafts?.status === 'in_progress' ? 'text-success' :
-                    'text-muted-foreground'
-                  )}>{e.drafts?.status || '?'}</span>
-                  <button
-                    onClick={() => handleRemove(e.draft_id)}
-                    disabled={busy === e.draft_id}
-                    className="p-1 rounded text-muted-foreground/40 hover:text-destructive transition-colors"
-                    title="Remove from season"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {slotsRemaining === 0 && (
-          <div className="p-3 text-center">
-            <p className="text-[10px] font-bold" style={{ color: 'hsl(var(--success))' }}>✓ All {totalDrafts} season slots are filled</p>
-          </div>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════
-   PLAYOFF CONTROL CENTER — single guided portal that
-   answers "what should I do next?" for every member.
-   ══════════════════════════════════════════════════════════ */
-function PlayoffControlCenter({
-  season, matches, standings, userId, onUpdate,
-}: {
-  season: any;
-  matches: PlayoffMatch[];
-  standings: SeasonStanding[];
-  userId: string | undefined;
-  onUpdate: () => void;
-}) {
-  const [pickerMatch, setPickerMatch] = useState<PlayoffMatch | null>(null);
-  const [showRules, setShowRules] = useState(false);
-  const [advancing, setAdvancing] = useState(false);
-  const [hasReadyWork, setHasReadyWork] = useState(false);
-  const [onboardingDismissed, setOnboardingDismissed] = useState(true);
-
-  const seasonId = season?.id as string | undefined;
-  const onboardingKey = seasonId ? `playoff_onboarding_dismissed_${seasonId}` : null;
-
-  useEffect(() => {
-    if (!onboardingKey) return;
-    setOnboardingDismissed(localStorage.getItem(onboardingKey) === '1');
-  }, [onboardingKey]);
-
-  const dismissOnboarding = () => {
-    if (onboardingKey) localStorage.setItem(onboardingKey, '1');
-    setOnboardingDismissed(true);
-  };
-
-  const getNameByUser = useCallback((uid: string | null): string => {
-    if (!uid) return 'TBD';
-    const s = standings.find(s => s.user_id === uid);
-    return (s?.profiles as any)?.display_name || '?';
-  }, [standings]);
-
-  // Detect if there's a match whose underlying draft is complete but match isn't scored.
-  useEffect(() => {
-    if (!seasonId) { setHasReadyWork(false); return; }
-    const candidateDraftIds = matches
-      .filter(m => m.draft_id && m.status !== 'complete')
-      .map(m => m.draft_id as string);
-    if (candidateDraftIds.length === 0) { setHasReadyWork(false); return; }
-    let cancelled = false;
-    supabase
-      .from('drafts')
-      .select('id, status')
-      .in('id', candidateDraftIds)
-      .then(({ data }) => {
-        if (cancelled) return;
-        const ready = (data || []).some((d: any) => d.status === 'complete');
-        setHasReadyWork(ready);
-      });
-    return () => { cancelled = true; };
-  }, [seasonId, matches]);
-
-  const handleAdvance = async () => {
-    if (!seasonId) return;
-    setAdvancing(true);
-    try {
-      const res: any = await advancePlayoffs(seasonId);
-      if (res?.log?.length) toast.success(`Playoffs: ${res.log.join(' • ')}`);
-      else toast.success('Up to date');
-      onUpdate();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to advance');
-    } finally {
-      setAdvancing(false);
-    }
-  };
-
-  const roundLabelForMatch = (m: PlayoffMatch): string => {
-    if (m.round === 'qf') return 'Play-In';
-    if (m.round === 'sf') return `Semi ${m.match_number}`;
-    if (m.round === 'final') return `Final · G${m.match_number}`;
-    if (m.round === 'third_place') return '3rd Place';
-    return m.round;
-  };
-
-  // Sort: awaiting_topic → in_progress → pending → complete; show top 3 active.
-  const order: Record<string, number> = { awaiting_topic: 0, in_progress: 1, pending: 2, complete: 3 };
-  const activeMatches = [...matches]
-    .filter(m => m.status !== 'complete')
-    .sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9))
-    .slice(0, 3);
-
-  // Lifecycle steps for the timeline.
-  const sfDone = matches.filter(m => m.round === 'sf' && m.status === 'complete').length;
-  const finalDone = matches.filter(m => m.round === 'final' && m.status === 'complete').length;
-  const finalWinByUser: Record<string, number> = {};
-  for (const m of matches) {
-    if (m.round === 'final' && m.status === 'complete' && m.winner_user_id) {
-      finalWinByUser[m.winner_user_id] = (finalWinByUser[m.winner_user_id] || 0) + 1;
-    }
-  }
-  const champion = Object.entries(finalWinByUser).find(([, n]) => n >= 2)?.[0] || null;
-  const playoffsStarted = season?.status === 'playoffs' || matches.length > 0;
-  const playInDone = matches.some(m => m.round === 'qf' && m.status === 'complete') || sfDone > 0;
-
-  type StepState = 'done' | 'active' | 'todo';
-  const steps: { label: string; state: StepState }[] = [
-    { label: 'Regular', state: playoffsStarted ? 'done' : 'active' },
-    { label: 'Play-In', state: !playoffsStarted ? 'todo' : (playInDone ? 'done' : 'active') },
-    { label: 'Semis', state: !playInDone ? 'todo' : (sfDone >= 2 ? 'done' : 'active') },
-    { label: 'Finals', state: sfDone < 2 ? 'todo' : (champion ? 'done' : 'active') },
-    { label: 'Champ', state: champion ? 'done' : 'todo' },
-  ];
-
-  // Champion banner — collapse the surface to celebration.
-  if (champion) {
-    return (
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }}>
-        <div
-          className="rounded-2xl p-4 text-center"
-          style={{
-            background: 'linear-gradient(135deg, hsl(var(--gold) / 0.22), hsl(var(--gold) / 0.04))',
-            border: '1px solid hsl(var(--gold) / 0.35)',
-          }}
-        >
-          <Trophy className="w-7 h-7 mx-auto mb-1.5" style={{ color: 'hsl(var(--gold))' }} />
-          <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Season Champion</p>
-          <p className="text-[16px] font-black mt-1" style={{ color: 'hsl(var(--gold))' }}>
-            {getNameByUser(champion)}
-          </p>
-          <p className="text-[10px] text-muted-foreground/80 mt-1">
-            Playoffs complete — see the bracket below for full results.
-          </p>
-        </div>
-      </motion.div>
-    );
-  }
-
-  const showOnboarding =
-    season?.status === 'playoffs' &&
-    !onboardingDismissed &&
-    matches.filter(m => m.status === 'complete').length === 0;
-
-  const statusPillLabel =
-    season?.status === 'playoffs' ? 'Playoffs Live' :
-    season?.status === 'regular_season' ? 'Regular Season' :
-    'Off-season';
-  const statusPillTone = season?.status === 'playoffs' ? 'gold' : 'muted';
-
-  return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }}>
-      <div
-        className="glass-card overflow-hidden"
-        style={{ border: '1px solid hsl(var(--gold) / 0.22)' }}
-      >
-        {/* Header */}
-        <div
-          className="px-4 py-3 flex items-center justify-between gap-2"
-          style={{ background: 'hsl(var(--gold) / 0.06)', borderBottom: '1px solid hsl(var(--border) / 0.4)' }}
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <Trophy className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(var(--gold))' }} />
-            <h3 className="font-bold text-[13px] truncate">Playoff Control Center</h3>
-          </div>
-          <span
-            className={cn(
-              'text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full',
-              statusPillTone === 'gold' ? 'text-gold' : 'text-muted-foreground',
-            )}
-            style={{
-              background: statusPillTone === 'gold' ? 'hsl(var(--gold) / 0.15)' : 'hsl(var(--muted) / 0.6)',
-            }}
-          >
-            {statusPillLabel}
-          </span>
-        </div>
-
-        {/* Onboarding banner */}
-        {showOnboarding && (
-          <div
-            className="px-3 py-2 flex items-start gap-2"
-            style={{ background: 'hsl(var(--gold) / 0.08)', borderBottom: '1px solid hsl(var(--border) / 0.3)' }}
-          >
-            <span className="text-[14px] leading-none mt-0.5">🏆</span>
-            <p className="text-[10.5px] leading-snug flex-1 text-foreground/80">
-              Playoffs have started! <strong>Higher seeds pick topics</strong>, then both players draft. First to clinch wins the round.
-            </p>
-            <button
-              onClick={dismissOnboarding}
-              className="text-muted-foreground/60 hover:text-foreground transition-colors p-0.5"
-              aria-label="Dismiss"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </div>
-        )}
-
-        {/* Timeline */}
-        <div className="px-3 pt-3">
-          <div className="flex items-center justify-between gap-1">
-            {steps.map((s, i) => (
-              <div key={s.label} className="flex items-center flex-1 min-w-0">
-                <div className="flex flex-col items-center gap-1 flex-1 min-w-0">
-                  <div
-                    className={cn(
-                      'w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold',
-                      s.state === 'done' && 'bg-success/20 text-success',
-                      s.state === 'active' && 'text-gold',
-                      s.state === 'todo' && 'bg-muted/40 text-muted-foreground/50',
-                    )}
-                    style={s.state === 'active' ? {
-                      background: 'hsl(var(--gold) / 0.18)',
-                      boxShadow: '0 0 0 2px hsl(var(--gold) / 0.25)',
-                    } : undefined}
-                  >
-                    {s.state === 'done' ? '✓' : i + 1}
-                  </div>
-                  <span
-                    className={cn(
-                      'text-[8.5px] font-bold uppercase tracking-wider truncate',
-                      s.state === 'active' && 'text-gold',
-                      s.state === 'done' && 'text-foreground/70',
-                      s.state === 'todo' && 'text-muted-foreground/50',
-                    )}
-                  >
-                    {s.label}
-                  </span>
-                </div>
-                {i < steps.length - 1 && (
-                  <div
-                    className={cn(
-                      'h-px flex-shrink-0 w-2 -mt-3.5',
-                      s.state === 'done' ? 'bg-success/40' : 'bg-border/30',
-                    )}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Active matches */}
-        <div className="p-3 space-y-2">
-          {activeMatches.length === 0 ? (
-            <div className="rounded-lg bg-muted/20 p-3 text-center">
-              <p className="text-[11px] font-bold text-foreground/80">
-                {season?.status === 'playoffs' ? 'Awaiting next round' : 'Regular season in progress'}
-              </p>
-              <p className="text-[10px] text-muted-foreground/70 mt-1">
-                {season?.status === 'playoffs'
-                  ? 'Matches will appear here as soon as the next round is created.'
-                  : 'Once all 12 regular drafts complete, playoffs unlock automatically.'}
-              </p>
-            </div>
-          ) : (
-            activeMatches.map(m => {
-              const isPicker = m.status === 'awaiting_topic' && userId && userId === m.topic_picker_user_id;
-              const pickerName = getNameByUser(m.topic_picker_user_id);
-              const aName = getNameByUser(m.user_a);
-              const bName = getNameByUser(m.user_b);
-
-              // Finals rotate the picker (G1 higher, G2 lower, G3 higher); other rounds always use higher seed.
-              const isFinalsG2 = m.round === 'final' && m.match_number === 2;
-              const pickerRoleLabel = isFinalsG2 ? 'lower seed' : 'higher seed';
-
-              let statusSentence = '';
-              if (m.status === 'awaiting_topic') {
-                statusSentence = isPicker
-                  ? `You're the ${pickerRoleLabel} for this game — choose the draft topic to begin.`
-                  : `Waiting for ${pickerName} (${pickerRoleLabel}) to choose a topic.`;
-              } else if (m.status === 'in_progress') {
-                statusSentence = 'Draft is live — make your picks before the timer runs out.';
-              } else if (m.status === 'pending') {
-                statusSentence = 'Match created — open the draft to start picking.';
-              }
-
-              return (
-                <div
-                  key={m.id}
-                  className="rounded-lg p-3 border space-y-2"
-                  style={{
-                    background: 'hsl(var(--muted) / 0.25)',
-                    borderColor: m.status === 'awaiting_topic'
-                      ? 'hsl(var(--gold) / 0.3)'
-                      : 'hsl(var(--border) / 0.3)',
-                  }}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70">
-                      {roundLabelForMatch(m)}
-                    </span>
-                    <span
-                      className={cn(
-                        'text-[8.5px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider',
-                        m.status === 'awaiting_topic' && 'bg-gold/15 text-gold',
-                        m.status === 'in_progress' && 'bg-success/15 text-success',
-                        m.status === 'pending' && 'bg-muted text-muted-foreground',
-                      )}
-                    >
-                      {m.status === 'awaiting_topic' ? 'Pick Topic' :
-                       m.status === 'in_progress' ? 'Live' : 'Pending'}
-                    </span>
-                  </div>
-
-                  <p className="text-[11.5px] font-bold leading-snug">
-                    <span className="text-muted-foreground/70 font-semibold">#{m.seed_a}</span> {aName}
-                    <span className="text-muted-foreground mx-1.5">vs</span>
-                    <span className="text-muted-foreground/70 font-semibold">#{m.seed_b}</span> {bName}
-                  </p>
-
-                  <p className="text-[10.5px] text-muted-foreground/85 leading-snug">{statusSentence}</p>
-
-                  {/* Primary CTA */}
-                  {m.status === 'awaiting_topic' && isPicker && (
-                    <button
-                      onClick={() => setPickerMatch(m)}
-                      className="w-full h-9 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 btn-press transition-colors"
-                      style={{ background: 'hsl(var(--gold) / 0.18)', color: 'hsl(var(--gold))' }}
-                    >
-                      <Sparkles className="w-3.5 h-3.5" /> Choose Topic
-                    </button>
-                  )}
-                  {m.status === 'awaiting_topic' && !isPicker && (
-                    <button
-                      onClick={() => toast.success(`Reminder sent to ${pickerName}`)}
-                      className="w-full h-9 rounded-lg text-[11px] font-bold bg-muted/50 text-foreground/70 hover:bg-muted/70 transition-colors flex items-center justify-center gap-1.5"
-                    >
-                      Nudge {pickerName}
-                    </button>
-                  )}
-                  {(m.status === 'in_progress' || m.status === 'pending') && m.draft_id && (
-                    <Link to={`/drafts/${m.draft_id}`} className="block">
-                      <button
-                        className="w-full h-9 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 btn-press transition-colors"
-                        style={{ background: 'hsl(var(--gold) / 0.15)', color: 'hsl(var(--gold))' }}
-                      >
-                        Open Draft <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-                    </Link>
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* Action row */}
-        <div className="px-3 pb-3 space-y-2">
-          <button
-            onClick={handleAdvance}
-            disabled={advancing}
-            className={cn(
-              'w-full h-10 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 btn-press transition-all disabled:opacity-50',
-            )}
-            style={{
-              background: hasReadyWork ? 'hsl(var(--gold) / 0.22)' : 'hsl(var(--muted) / 0.5)',
-              color: hasReadyWork ? 'hsl(var(--gold))' : 'hsl(var(--muted-foreground))',
-              boxShadow: hasReadyWork ? '0 0 0 1px hsl(var(--gold) / 0.3)' : undefined,
-            }}
-          >
-            {advancing ? (
-              <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Advancing…</>
-            ) : (
-              <><Trophy className="w-3.5 h-3.5" /> Advance Playoffs</>
-            )}
-          </button>
-          <p className="text-[10px] text-muted-foreground/70 text-center leading-snug">
-            {hasReadyWork
-              ? 'Tap to score completed games and create the next round.'
-              : 'Up to date · auto-advances after each draft.'}
-          </p>
-
-          {/* How it works — expandable */}
-          <button
-            onClick={() => setShowRules(v => !v)}
-            className="w-full h-8 rounded-lg text-[10.5px] font-bold text-foreground/70 hover:text-foreground bg-muted/30 hover:bg-muted/50 transition-colors flex items-center justify-center gap-1.5"
-          >
-            How it works
-            <ChevronDown className={cn('w-3 h-3 transition-transform', showRules && 'rotate-180')} />
-          </button>
-          {showRules && <PlayoffFormatGuide embedded />}
-        </div>
-      </div>
-
-      {pickerMatch && seasonId && (
-        <TopicPickerDialog
-          open={!!pickerMatch}
-          onOpenChange={(v) => { if (!v) setPickerMatch(null); }}
-          seasonId={seasonId}
-          match={pickerMatch}
-          onStarted={() => onUpdate()}
-        />
-      )}
-    </motion.div>
-  );
-}
-function SeasonDraftHistory({ entries, totalDrafts }: { entries: any[]; totalDrafts: number }) {
-  const regularEntries = entries.filter(e => !e.is_playoff);
-  const [isOpen, setIsOpen] = useState(regularEntries.length <= 4);
-
-  if (regularEntries.length === 0) return null;
-
-  const displayEntries = isOpen ? regularEntries : regularEntries.slice(0, 3);
-
-  return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-      <div className="glass-card overflow-hidden bg-card/60">
-        <div className="p-3 border-b border-border/20 flex items-center justify-between">
-          <h3 className="font-bold text-[13px] flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5" style={{ color: 'hsl(var(--gold))' }} />
-            Draft History
-          </h3>
-          {regularEntries.length > 3 && (
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="text-[9px] font-bold text-muted-foreground/60 flex items-center gap-0.5 hover:text-muted-foreground transition-colors"
-            >
-              {isOpen ? 'Collapse' : `Show all ${regularEntries.length}`}
-              <ChevronDown className={cn('w-3 h-3 transition-transform', isOpen && 'rotate-180')} />
-            </button>
-          )}
-        </div>
-        <div className="divide-y divide-border/10">
-          {displayEntries.map((e, i) => {
-            const isComplete = e.drafts?.status === 'complete';
-            const isActive = e.drafts?.status === 'in_progress';
-            return (
-              <Link key={e.id} to={`/drafts/${e.draft_id}`} className="block">
-                <div className={cn(
-                  'flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors',
-                  i % 2 === 1 && 'bg-muted/8',
-                )}>
-                  <div className={cn(
-                    'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
-                    isComplete ? 'bg-success/12' : isActive ? 'bg-gold/12' : 'bg-muted/50',
-                  )}>
-                    {isComplete ? (
-                      <span className="text-[10px]">✓</span>
-                    ) : (
-                      <span className="text-[10px] font-bold text-muted-foreground">#{e.week_number}</span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[12px] font-bold truncate">{e.drafts?.topic || 'Draft'}</p>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[9px] text-muted-foreground/50">#{e.week_number} of {totalDrafts}</span>
-                      <span className="text-[9px] text-muted-foreground/30">·</span>
-                      <span className={cn(
-                        'text-[9px] font-semibold',
-                        isComplete ? 'text-primary' : isActive ? 'text-success' : 'text-muted-foreground',
-                      )}>
-                        {isComplete ? 'Complete' : isActive ? 'In Progress' : e.drafts?.status || 'unknown'}
-                      </span>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-3 h-3 text-muted-foreground/50" />
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════
-   LIFETIME STATS — with championship highlight
-   ══════════════════════════════════════════════════════════ */
-function LifetimeStatsCard({ userId }: { userId?: string }) {
-  const { stats, loading } = useLifetimeStats(userId);
-
-  if (loading || !stats) return null;
-
-  const items = [
-    { label: 'Seasons', value: stats.totalSeasons },
-    { label: 'Wins', value: stats.totalWins },
-    { label: 'Podiums', value: stats.totalPodiums },
-    { label: 'Playoffs', value: stats.totalPlayoffs },
-    { label: 'Championships', value: stats.totalChampionships, highlight: true },
-    { label: 'Avg Finish', value: stats.avgSeasonFinish > 0 ? getOrdinalSuffix(Math.round(stats.avgSeasonFinish)) : '—' },
-  ];
-
-  return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}>
-      <div className="glass-card p-4 bg-card/60">
-        <h3 className="font-bold text-[13px] flex items-center gap-1.5 mb-3">
-          <Medal className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
-          Lifetime Stats
-        </h3>
-        <div className="grid grid-cols-3 gap-3">
-          {items.map(item => (
-            <div key={item.label} className={cn(
-              'text-center rounded-lg p-2',
-              item.highlight && 'ring-1 ring-gold/20',
-            )} style={item.highlight ? { background: 'hsl(var(--gold) / 0.06)' } : undefined}>
-              <p className={cn('text-lg font-extrabold leading-none tabular-nums', item.highlight && 'text-gold')}>{item.value}</p>
-              <p className="text-[9px] text-muted-foreground/60 font-medium mt-0.5">{item.label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-/* ── NFL Pick'em featured card — standalone "Pick Center" enter banner ── */
+/* ── NFL Pick'em banner ── */
 function PickemCompeteCard() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -1808,44 +245,29 @@ function PickemCompeteCard() {
     let mounted = true;
     (async () => {
       try {
-        const { data: s } = await (supabase as any)
-          .from('nfl_seasons').select('*')
-          .order('year', { ascending: false }).limit(1).maybeSingle();
+        const { data: s } = await (supabase as any).from('nfl_seasons').select('*').order('year', { ascending: false }).limit(1).maybeSingle();
         if (!mounted) return;
         if (!s) { setLoading(false); return; }
         setSeason(s);
-
-        const { data: w } = await (supabase as any)
-          .from('nfl_weeks').select('*')
-          .eq('season_id', s.id).eq('week_number', s.current_week).maybeSingle();
+        const { data: w } = await (supabase as any).from('nfl_weeks').select('*').eq('season_id', s.id).eq('week_number', s.current_week).maybeSingle();
         if (!mounted) return;
         setWeek(w);
-
         if (w) {
-          const { count: gameCount } = await (supabase as any)
-            .from('nfl_games').select('id', { count: 'exact', head: true }).eq('week_id', w.id);
+          const { count: gameCount } = await (supabase as any).from('nfl_games').select('id', { count: 'exact', head: true }).eq('week_id', w.id);
           if (!mounted) return;
           setTotalGames(gameCount || 0);
-
           if (user) {
-            const { count: pickCount } = await (supabase as any)
-              .from('nfl_picks').select('id', { count: 'exact', head: true })
-              .eq('week_id', w.id).eq('user_id', user.id);
+            const { count: pickCount } = await (supabase as any).from('nfl_picks').select('id', { count: 'exact', head: true }).eq('week_id', w.id).eq('user_id', user.id);
             if (!mounted) return;
             setPickedCount(pickCount || 0);
           }
         }
-
         if (user) {
-          const { data: st } = await (supabase as any)
-            .from('nfl_season_standings').select('rank, total_correct, total_picked')
-            .eq('season_id', s.id).eq('user_id', user.id).maybeSingle();
+          const { data: st } = await (supabase as any).from('nfl_season_standings').select('rank, total_correct, total_picked').eq('season_id', s.id).eq('user_id', user.id).maybeSingle();
           if (!mounted) return;
           setMyStanding(st);
         }
-      } finally {
-        if (mounted) setLoading(false);
-      }
+      } finally { if (mounted) setLoading(false); }
     })();
     return () => { mounted = false; };
   }, [user]);
@@ -1855,152 +277,54 @@ function PickemCompeteCard() {
   const weekLabel = week?.label || (season ? `Week ${season.current_week}` : 'This week');
   const allLocked = isLive && totalGames > 0 && remaining === 0;
   const noPicksYet = isLive && pickedCount === 0 && totalGames > 0;
-
-  // Action-oriented subline so users know exactly what tapping does
-  const subline = !season
-    ? 'Tuning broadcast feed…'
-    : season.status === 'upcoming'
-      ? 'Season kicks off soon — open to preview the schedule'
-      : isLive
-        ? noPicksYet
-          ? `${weekLabel} · Tap to make your picks (${totalGames} games)`
-          : remaining > 0
-            ? `${weekLabel} · ${remaining} of ${totalGames} games left to pick`
-            : `${weekLabel} · Locked in — tap to track live scores`
-        : `${season.name} · Tap to view final standings`;
-
-  // CTA microcopy adapts to user state
-  const ctaLabel = !season
-    ? 'Open Pick Center'
-    : season.status === 'upcoming'
-      ? 'Preview Season'
-      : isLive
-        ? allLocked
-          ? 'Track Live'
-          : noPicksYet
-            ? 'Make My Picks'
-            : 'Finish My Picks'
-        : 'View Standings';
+  const subline = !season ? 'Tuning broadcast feed…'
+    : season.status === 'upcoming' ? 'Season kicks off soon — open to preview the schedule'
+    : isLive ? (noPicksYet ? `${weekLabel} · Tap to make your picks (${totalGames} games)` : remaining > 0 ? `${weekLabel} · ${remaining} of ${totalGames} games left to pick` : `${weekLabel} · Locked in — tap to track live scores`)
+    : `${season.name} · Tap to view final standings`;
+  const ctaLabel = !season ? 'Open Pick Center' : season.status === 'upcoming' ? 'Preview Season' : isLive ? (allLocked ? 'Track Live' : noPicksYet ? 'Make My Picks' : 'Finish My Picks') : 'View Standings';
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
       <Link to="/pickem" className="block">
-        <div
-          className="relative overflow-hidden rounded-2xl btn-press"
+        <div className="relative overflow-hidden rounded-2xl btn-press"
           style={{
             background:
               'radial-gradient(ellipse 120% 80% at 50% 0%, hsl(152 72% 22% / 0.55), transparent 60%),' +
               'radial-gradient(ellipse 90% 60% at 100% 100%, hsl(45 95% 50% / 0.28), transparent 60%),' +
               'linear-gradient(180deg, hsl(160 28% 8%), hsl(160 30% 5%))',
             border: '1px solid hsl(45 90% 55% / 0.38)',
-            boxShadow:
-              '0 12px 40px hsl(152 72% 18% / 0.5), inset 0 1px 0 hsl(45 95% 70% / 0.2)',
-          }}
-        >
-          {/* Yard-line shimmer */}
-          <div
-            aria-hidden
-            className="absolute inset-0 pointer-events-none opacity-40"
-            style={{
-              backgroundImage:
-                'repeating-linear-gradient(90deg, transparent 0, transparent 36px, hsl(0 0% 100% / 0.05) 36px, hsl(0 0% 100% / 0.05) 37px)',
-              maskImage: 'linear-gradient(180deg, transparent 0%, black 30%, black 70%, transparent 100%)',
-              WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, black 30%, black 70%, transparent 100%)',
-            }}
-          />
-
-          {/* Drifting gold glow */}
-          <div
-            aria-hidden
-            className="absolute -top-12 -right-10 w-44 h-44 rounded-full pointer-events-none"
-            style={{
-              background: 'radial-gradient(circle, hsl(45 95% 55% / 0.4), transparent 70%)',
-              filter: 'blur(8px)',
-            }}
-          />
-
+            boxShadow: '0 12px 40px hsl(152 72% 18% / 0.5), inset 0 1px 0 hsl(45 95% 70% / 0.2)',
+          }}>
+          <div aria-hidden className="absolute inset-0 pointer-events-none opacity-40"
+            style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent 0, transparent 36px, hsl(0 0% 100% / 0.05) 36px, hsl(0 0% 100% / 0.05) 37px)', maskImage: 'linear-gradient(180deg, transparent 0%, black 30%, black 70%, transparent 100%)', WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, black 30%, black 70%, transparent 100%)' }} />
+          <div aria-hidden className="absolute -top-12 -right-10 w-44 h-44 rounded-full pointer-events-none"
+            style={{ background: 'radial-gradient(circle, hsl(45 95% 55% / 0.4), transparent 70%)', filter: 'blur(8px)' }} />
           <div className="relative z-10 p-5 flex items-center gap-4">
-            {/* Emblem hero visual */}
             <div className="relative flex-shrink-0">
-              <div
-                aria-hidden
-                className="absolute inset-0 rounded-full"
-                style={{
-                  background: 'radial-gradient(circle, hsl(45 95% 55% / 0.5), transparent 65%)',
-                  filter: 'blur(10px)',
-                  transform: 'scale(1.15)',
-                }}
-              />
-              <img
-                src={pickemEmblem}
-                alt="NFL Pick Center"
-                width={96}
-                height={96}
-                loading="lazy"
-                decoding="async"
-                className="relative w-[88px] h-[88px] object-contain drop-shadow-[0_4px_18px_hsl(45_95%_50%/0.55)]"
-              />
+              <div aria-hidden className="absolute inset-0 rounded-full"
+                style={{ background: 'radial-gradient(circle, hsl(45 95% 55% / 0.5), transparent 65%)', filter: 'blur(10px)', transform: 'scale(1.15)' }} />
+              <img src={pickemEmblem} alt="NFL Pick Center" width={96} height={96} loading="lazy" decoding="async"
+                className="relative w-[88px] h-[88px] object-contain drop-shadow-[0_4px_18px_hsl(45_95%_50%/0.55)]" />
             </div>
-
-            {/* Title + meta + CTA */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5 h-3">
-                <span
-                  className="text-[9px] font-extrabold uppercase tracking-[0.22em]"
-                  style={{ color: 'hsl(45 95% 65%)' }}
-                >
-                  ◆ NFL Pick'em
-                </span>
-                {loading ? (
-                  <span
-                    aria-hidden
-                    className="inline-block h-2.5 w-10 rounded-full pk-skeleton"
-                  />
-                ) : isLive ? (
-                  <span className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider"
-                    style={{ color: 'hsl(152 70% 65%)' }}>
-                    <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'hsl(152 70% 55%)' }} />
-                    Live
-                  </span>
-                ) : null}
+                <span className="text-[9px] font-extrabold uppercase tracking-[0.22em]" style={{ color: 'hsl(45 95% 65%)' }}>◆ NFL Pick'em</span>
+                {loading ? <span aria-hidden className="inline-block h-2.5 w-10 rounded-full pk-skeleton" />
+                  : isLive ? <span className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider" style={{ color: 'hsl(152 70% 65%)' }}><span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'hsl(152 70% 55%)' }} />Live</span>
+                  : null}
               </div>
-              <h2
-                className="font-extrabold text-[22px] leading-none tracking-tight mb-1.5"
-                style={{
-                  background:
-                    'linear-gradient(180deg, hsl(45 30% 98%), hsl(45 95% 65%))',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  textShadow: '0 0 18px hsl(45 95% 45% / 0.45)',
-                }}
-              >
+              <h2 className="font-extrabold text-[22px] leading-none tracking-tight mb-1.5"
+                style={{ background: 'linear-gradient(180deg, hsl(45 30% 98%), hsl(45 95% 65%))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 Pick Center
               </h2>
-              {/* Reserve fixed line height to prevent layout shift */}
               <div className="mb-2.5 h-3.5 flex items-center">
-                {loading ? (
-                  <span aria-hidden className="inline-block h-2.5 w-44 max-w-full rounded-full pk-skeleton" />
-                ) : (
-                  <p className="text-[10px] font-semibold truncate" style={{ color: 'hsl(150 12% 78%)' }}>
-                    {subline}
-                    {myStanding && (
-                      <span className="ml-1.5" style={{ color: 'hsl(45 95% 65%)' }}>
-                        · #{myStanding.rank ?? '—'} · {myStanding.total_correct}/{myStanding.total_picked}
-                      </span>
-                    )}
-                  </p>
-                )}
+                {loading ? <span aria-hidden className="inline-block h-2.5 w-44 max-w-full rounded-full pk-skeleton" />
+                  : <p className="text-[10px] font-semibold truncate" style={{ color: 'hsl(150 12% 78%)' }}>
+                    {subline}{myStanding && <span className="ml-1.5" style={{ color: 'hsl(45 95% 65%)' }}>· #{myStanding.rank ?? '—'} · {myStanding.total_correct}/{myStanding.total_picked}</span>}
+                  </p>}
               </div>
-              <div
-                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider"
-                style={{
-                  background:
-                    'linear-gradient(135deg, hsl(45 95% 55%), hsl(38 95% 48%))',
-                  color: 'hsl(160 40% 6%)',
-                  boxShadow:
-                    '0 4px 14px hsl(45 95% 40% / 0.55), inset 0 1px 0 hsl(45 100% 85% / 0.55)',
-                }}
-              >
+              <div className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider"
+                style={{ background: 'linear-gradient(135deg, hsl(45 95% 55%), hsl(38 95% 48%))', color: 'hsl(160 40% 6%)', boxShadow: '0 4px 14px hsl(45 95% 40% / 0.55), inset 0 1px 0 hsl(45 100% 85% / 0.55)' }}>
                 {ctaLabel} <ChevronRight className="w-3.5 h-3.5" strokeWidth={3} />
               </div>
             </div>
@@ -2011,14 +335,13 @@ function PickemCompeteCard() {
   );
 }
 
-/* ── Portfolio Wars card — weekly stock-picking competition ── */
+/* ── Portfolio Wars banner ── */
 function PortfolioWarsCompeteCard() {
   const [meta, setMeta] = useState<{ status: string; week_start: string; lock_at: string; players: number } | null>(null);
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data: ch } = await supabase.from('pw_challenges').select('id,status,week_start,lock_at')
-        .in('status', ['active', 'locked', 'upcoming']).order('week_start', { ascending: false }).limit(1).maybeSingle();
+      const { data: ch } = await supabase.from('pw_challenges').select('id,status,week_start,lock_at').in('status', ['active', 'locked', 'upcoming']).order('week_start', { ascending: false }).limit(1).maybeSingle();
       if (cancelled || !ch) return;
       const { count } = await supabase.from('pw_entries').select('*', { count: 'exact', head: true }).eq('challenge_id', ch.id);
       if (!cancelled) setMeta({ status: ch.status, week_start: ch.week_start, lock_at: ch.lock_at, players: count || 0 });
@@ -2031,115 +354,53 @@ function PortfolioWarsCompeteCard() {
     : meta.status === 'active' ? `Live this week · ${meta.players} players`
     : `Week of ${format(new Date(meta.week_start), 'MMM d')}`;
   const cta = meta?.status === 'upcoming' ? 'Enter Picks' : 'Open';
-
   const statusBadge = !meta ? null
     : meta.status === 'upcoming' ? { label: 'Picks Open', color: 'hsl(152 80% 60%)', bg: 'hsl(152 80% 50% / 0.18)' }
     : meta.status === 'locked' ? { label: 'Locked', color: 'hsl(38 100% 65%)', bg: 'hsl(38 100% 60% / 0.18)' }
     : meta.status === 'active' ? { label: 'Live', color: 'hsl(152 80% 60%)', bg: 'hsl(152 80% 50% / 0.18)' }
     : { label: 'Results In', color: 'hsl(45 95% 65%)', bg: 'hsl(45 95% 55% / 0.18)' };
-
-  // Mini ticker tape for inside the card (static curated)
-  const miniTape = [
-    { s: 'AAPL', p: 1.24 }, { s: 'NVDA', p: -0.82 }, { s: 'MSFT', p: 0.44 },
-    { s: 'TSLA', p: 2.16 }, { s: 'AMZN', p: -0.31 }, { s: 'META', p: 0.91 },
-    { s: 'COIN', p: 3.87 }, { s: 'PLTR', p: 2.41 }, { s: 'AMD', p: -1.42 },
-  ];
+  const miniTape = [{ s: 'AAPL', p: 1.24 }, { s: 'NVDA', p: -0.82 }, { s: 'MSFT', p: 0.44 }, { s: 'TSLA', p: 2.16 }, { s: 'AMZN', p: -0.31 }, { s: 'META', p: 0.91 }, { s: 'COIN', p: 3.87 }, { s: 'PLTR', p: 2.41 }, { s: 'AMD', p: -1.42 }];
   const tapeLoop = [...miniTape, ...miniTape];
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }}>
       <Link to="/portfolio-wars" className="block">
-        <div
-          className="relative overflow-hidden rounded-2xl btn-press"
-          style={{
-            background:
-              'radial-gradient(ellipse 100% 60% at 50% 0%, hsl(152 80% 30% / 0.30), transparent 65%),' +
-              'linear-gradient(180deg, hsl(220 50% 8%), hsl(220 55% 4%))',
-            border: '1px solid hsl(152 80% 50% / 0.30)',
-            boxShadow: '0 12px 40px hsl(220 80% 4% / 0.6), inset 0 1px 0 hsl(152 80% 60% / 0.14)',
-          }}
-        >
-          {/* Mini ticker tape */}
-          <div
-            className="relative h-6 overflow-hidden border-b"
-            style={{ borderColor: 'hsl(152 80% 50% / 0.16)', background: 'hsl(220 60% 3% / 0.7)' }}
-          >
-            <div
-              className="absolute inset-y-0 left-0 w-6 z-10 pointer-events-none"
-              style={{ background: 'linear-gradient(90deg, hsl(220 60% 3%), transparent)' }}
-            />
-            <div
-              className="absolute inset-y-0 right-0 w-6 z-10 pointer-events-none"
-              style={{ background: 'linear-gradient(270deg, hsl(220 60% 3%), transparent)' }}
-            />
-            <div
-              className="flex items-center gap-3 whitespace-nowrap h-full"
-              style={{ animation: 'pw-card-tape 38s linear infinite' }}
-            >
+        <div className="relative overflow-hidden rounded-2xl btn-press"
+          style={{ background: 'radial-gradient(ellipse 100% 60% at 50% 0%, hsl(152 80% 30% / 0.30), transparent 65%), linear-gradient(180deg, hsl(220 50% 8%), hsl(220 55% 4%))', border: '1px solid hsl(152 80% 50% / 0.30)', boxShadow: '0 12px 40px hsl(220 80% 4% / 0.6), inset 0 1px 0 hsl(152 80% 60% / 0.14)' }}>
+          <div className="relative h-6 overflow-hidden border-b" style={{ borderColor: 'hsl(152 80% 50% / 0.16)', background: 'hsl(220 60% 3% / 0.7)' }}>
+            <div className="absolute inset-y-0 left-0 w-6 z-10 pointer-events-none" style={{ background: 'linear-gradient(90deg, hsl(220 60% 3%), transparent)' }} />
+            <div className="absolute inset-y-0 right-0 w-6 z-10 pointer-events-none" style={{ background: 'linear-gradient(270deg, hsl(220 60% 3%), transparent)' }} />
+            <div className="flex items-center gap-3 whitespace-nowrap h-full" style={{ animation: 'pw-card-tape 38s linear infinite' }}>
               {tapeLoop.map((t, i) => (
                 <span key={i} className="flex items-center gap-1 text-[9px] font-bold font-mono">
                   <span style={{ color: 'hsl(150 15% 80%)' }}>{t.s}</span>
-                  <span
-                    className="px-1 rounded tabular-nums"
-                    style={{
-                      color: t.p >= 0 ? 'hsl(152 80% 70%)' : 'hsl(0 80% 75%)',
-                    }}
-                  >
-                    {t.p >= 0 ? '+' : ''}{t.p.toFixed(2)}%
-                  </span>
+                  <span className="px-1 rounded tabular-nums" style={{ color: t.p >= 0 ? 'hsl(152 80% 70%)' : 'hsl(0 80% 75%)' }}>{t.p >= 0 ? '+' : ''}{t.p.toFixed(2)}%</span>
                 </span>
               ))}
             </div>
             <style>{`@keyframes pw-card-tape { from { transform: translateX(0); } to { transform: translateX(-50%); } }`}</style>
           </div>
-
           <div className="relative z-10 p-4 flex items-center gap-3">
             <div className="relative flex-shrink-0">
-              <div aria-hidden className="absolute inset-0 rounded-2xl"
-                style={{ background: 'radial-gradient(circle, hsl(152 80% 55% / 0.5), transparent 65%)', filter: 'blur(10px)', transform: 'scale(1.15)' }}/>
-              <div className="relative w-[60px] h-[60px] rounded-xl flex items-center justify-center"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(220 50% 10%), hsl(220 55% 6%))',
-                  border: '1px solid hsl(152 80% 50% / 0.45)',
-                  boxShadow: 'inset 0 0 20px hsl(152 80% 50% / 0.2)',
-                }}>
+              <div aria-hidden className="absolute inset-0 rounded-2xl" style={{ background: 'radial-gradient(circle, hsl(152 80% 55% / 0.5), transparent 65%)', filter: 'blur(10px)', transform: 'scale(1.15)' }} />
+              <div className="relative w-[60px] h-[60px] rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, hsl(220 50% 10%), hsl(220 55% 6%))', border: '1px solid hsl(152 80% 50% / 0.45)', boxShadow: 'inset 0 0 20px hsl(152 80% 50% / 0.2)' }}>
                 <TrendingUp className="w-7 h-7" style={{ color: 'hsl(152 80% 65%)', filter: 'drop-shadow(0 0 6px hsl(152 80% 50% / 0.7))' }} strokeWidth={2.5} />
               </div>
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-[8.5px] font-black uppercase tracking-[0.22em]" style={{ color: 'hsl(152 80% 65%)' }}>
-                  ◆ Stock Challenge
-                </span>
+                <span className="text-[8.5px] font-black uppercase tracking-[0.22em]" style={{ color: 'hsl(152 80% 65%)' }}>◆ Stock Challenge</span>
                 {statusBadge && (
-                  <span
-                    className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider"
-                    style={{ background: statusBadge.bg, color: statusBadge.color }}
-                  >
-                    {meta?.status === 'active' && (
-                      <span className="w-1 h-1 rounded-full animate-pulse" style={{ background: statusBadge.color }} />
-                    )}
+                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider" style={{ background: statusBadge.bg, color: statusBadge.color }}>
+                    {meta?.status === 'active' && <span className="w-1 h-1 rounded-full animate-pulse" style={{ background: statusBadge.color }} />}
                     {statusBadge.label}
                   </span>
                 )}
               </div>
-              <h2 className="font-black text-[18px] leading-none tracking-tight mb-1"
-                style={{
-                  background: 'linear-gradient(180deg, hsl(150 30% 98%), hsl(152 80% 70%))',
-                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                  textShadow: '0 0 18px hsl(152 80% 40% / 0.4)',
-                }}>
-                Portfolio Wars
-              </h2>
-              <p className="text-[10px] font-semibold mb-2" style={{ color: 'hsl(150 12% 75%)' }}>
-                Pick 3 stocks. Beat the market. Beat your friends.
-              </p>
+              <h2 className="font-black text-[18px] leading-none tracking-tight mb-1" style={{ background: 'linear-gradient(180deg, hsl(150 30% 98%), hsl(152 80% 70%))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Portfolio Wars</h2>
+              <p className="text-[10px] font-semibold mb-2" style={{ color: 'hsl(150 12% 75%)' }}>Pick 3 stocks. Beat the market. Beat your friends.</p>
               <div className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[11px] font-black uppercase tracking-wider"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(152 80% 48%), hsl(152 80% 38%))',
-                  color: 'hsl(220 60% 4%)',
-                  boxShadow: '0 4px 14px hsl(152 80% 35% / 0.5), inset 0 1px 0 hsl(150 80% 80% / 0.5)',
-                }}>
+                style={{ background: 'linear-gradient(135deg, hsl(152 80% 48%), hsl(152 80% 38%))', color: 'hsl(220 60% 4%)', boxShadow: '0 4px 14px hsl(152 80% 35% / 0.5)' }}>
                 {cta} <ChevronRight className="w-3.5 h-3.5" strokeWidth={3} />
               </div>
             </div>
@@ -2150,315 +411,80 @@ function PortfolioWarsCompeteCard() {
   );
 }
 
-/* ── Archived modules card ── */
-function ArchivedModesCard() {
-  const archived = [
-    { path: '/brackets', label: 'Brackets', icon: Trophy, color: 'primary' },
-    { path: '/rankings', label: 'Rankings', icon: BarChart3, color: 'accent' },
-    { path: '/polls', label: 'Polls', icon: MessageCircle, color: 'warning' },
-    { path: '/lockbox', label: 'Lockbox', icon: Lock, color: 'destructive' },
-  ];
+/* ── Community activities compact tile grid ── */
+function CommunityTilesSection({ isInstalled }: { isInstalled: (slug: string) => boolean }) {
+  const tiles = [
+    { path: '/brackets', slug: 'brackets', label: 'Brackets', icon: Trophy, color: 'hsl(var(--primary))' },
+    { path: '/rankings', slug: 'rankings', label: 'Rankings', icon: BarChart3, color: 'hsl(var(--accent-foreground))' },
+    { path: '/polls', slug: 'polls', label: 'Polls', icon: MessageCircle, color: 'hsl(var(--warning))' },
+  ].filter(t => isInstalled(t.slug));
+
+  if (tiles.length === 0) return null;
 
   return (
-    <div className="glass-card p-4">
-      <h3 className="font-bold text-[13px] flex items-center gap-1.5 mb-3">
-        <Archive className="w-3.5 h-3.5 text-muted-foreground" />
-        Other Modes
-      </h3>
-      <div className="grid grid-cols-3 gap-2">
-        {archived.map(mod => (
-          <Link key={mod.path} to={mod.path}>
-            <div className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-              <mod.icon className="w-4 h-4 text-muted-foreground/60" />
-              <span className="text-[10px] font-bold text-muted-foreground/70">{mod.label}</span>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ── No season state ── */
-function NoSeasonState() {
-  const [activeDrafts, setActiveDrafts] = useState(0);
-
-  useEffect(() => {
-    supabase.from('drafts').select('*', { count: 'exact', head: true }).neq('status', 'complete').then(({ count }) => {
-      setActiveDrafts(count || 0);
-    });
-  }, []);
-
-  return (
-    <div className="space-y-3">
-      <div className="glass-card arena-edge p-6 text-center">
-        <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 relative z-10" style={{
-          background: 'linear-gradient(135deg, hsl(var(--gold) / 0.15), hsl(var(--gold) / 0.05))',
-        }}>
-          <Trophy className="w-7 h-7" style={{ color: 'hsl(var(--gold) / 0.6)' }} />
-        </div>
-        <h3 className="text-base font-extrabold relative z-10 mb-1">Draft League</h3>
-        <p className="text-[11px] text-muted-foreground leading-relaxed relative z-10 mb-4">
-          No season is active yet. Start a season to track standings, playoffs, and championships.
-        </p>
-        <div className="flex flex-wrap gap-2 justify-center relative z-10">
-          <Link to="/drafts">
-            <button className="flex items-center gap-2 font-bold rounded-xl px-4 py-2.5 text-[12px] btn-press" style={{
-              background: 'hsl(var(--gold) / 0.15)',
-              color: 'hsl(var(--gold))',
-            }}>
-              <Bookmark className="w-4 h-4" /> View Drafts
-              {activeDrafts > 0 && <span className="text-[9px] opacity-70">({activeDrafts} active)</span>}
-            </button>
-          </Link>
-          <Link to="/drafts/create">
-            <button className="flex items-center gap-2 font-bold rounded-xl px-4 py-2.5 text-[12px] btn-press" style={{
-              background: 'hsl(var(--surface-elevated))',
-              border: '1px solid hsl(var(--border) / 0.5)',
-            }}>
-              <Plus className="w-4 h-4" /> New Draft
-            </button>
-          </Link>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+      <div className="glass-card p-4">
+        <h3 className="font-bold text-[12px] text-muted-foreground/70 mb-3 flex items-center gap-1.5">
+          <span className="w-4 h-px bg-border/40" /> More Activities
+        </h3>
+        <div className={cn('grid gap-2', tiles.length === 1 ? 'grid-cols-1' : tiles.length === 2 ? 'grid-cols-2' : 'grid-cols-3')}>
+          {tiles.map(t => (
+            <Link key={t.path} to={t.path}>
+              <div className="flex flex-col items-center gap-2 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors btn-press">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: `${t.color}18` }}>
+                  <t.icon className="w-4.5 h-4.5" style={{ color: t.color }} />
+                </div>
+                <span className="text-[11px] font-bold text-center leading-tight">{t.label}</span>
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
-
-      <Link to="/drafts">
-        <div className="glass-card p-4 flex items-center gap-3 hover:bg-muted/30 transition-colors">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{
-            background: 'linear-gradient(135deg, hsl(var(--gold) / 0.15), hsl(var(--gold) / 0.04))',
-          }}>
-            <Bookmark className="w-5 h-5" style={{ color: 'hsl(var(--gold))' }} />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-bold text-[14px]">All Drafts</h3>
-            <p className="text-[11px] text-muted-foreground/70">View all drafts, stats, and results</p>
-          </div>
-          <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
-        </div>
-      </Link>
-    </div>
+    </motion.div>
   );
 }
 
 /* ══════════════════════════════════════════════════════════ */
 export default function CompetePage() {
   const { user } = useAuth();
-  const { season, loading: seasonLoading, refetch: refetchSeason } = useCurrentSeason();
-  const { standings, loading: standingsLoading, refetch: refetchStandings } = useSeasonStandings(season?.id);
-  const { entries, loading: entriesLoading, refetch: refetchEntries } = useSeasonEntries(season?.id);
-  const { matches } = usePlayoffMatchesLive(season?.id);
-  const isCommissioner = useIsCommissioner(season);
-  const [isAppAdmin, setIsAppAdmin] = useState(false);
-  const [startNextOpen, setStartNextOpen] = useState(false);
-
-  useEffect(() => {
-    if (!user?.id) { setIsAppAdmin(false); return; }
-    supabase.rpc('is_app_admin', { _user_id: user.id }).then(({ data }) => {
-      setIsAppAdmin(!!data);
-    });
-  }, [user?.id]);
-
+  const { season, loading: seasonLoading } = useCurrentSeason();
+  const { entries } = useSeasonEntries(season?.id);
+  const { isInstalled } = useClubAssets();
   const totalDrafts = season ? getSeasonDraftTarget(season) : 12;
-
-  const handleSeasonUpdate = useCallback(() => {
-    refetchEntries();
-    refetchStandings();
-  }, [refetchEntries, refetchStandings]);
-
-  // Refetch standings and entries on page focus/visibility
-  useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible' && season?.id) {
-        refetchStandings();
-        refetchEntries();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [season?.id, refetchStandings, refetchEntries]);
-
-  // Auto-recalc guard: if stored standings appear stale vs completed entries, trigger recalc
-  useEffect(() => {
-    if (!season?.id || standingsLoading || entriesLoading) return;
-    const completedEntries = entries.filter(e => !e.is_playoff && e.drafts?.status === 'complete');
-    const maxDraftsPlayed = standings.length > 0 ? Math.max(...standings.map(s => s.drafts_played)) : 0;
-    if (completedEntries.length > 0 && maxDraftsPlayed < completedEntries.length) {
-      console.log('Standings stale — triggering recalc', { maxDraftsPlayed, completedEntries: completedEntries.length });
-      recalculateSeasonStandings(season.id).then(() => {
-        refetchStandings();
-      }).catch(err => console.error('Auto-recalc failed:', err));
-    }
-  }, [season?.id, standings, entries, standingsLoading, entriesLoading, refetchStandings]);
-
-  // Auto-advance playoffs (idempotent): on mount + visibility, when in regular_season or playoffs
-  useEffect(() => {
-    if (!season?.id) return;
-    if (season.status !== 'regular_season' && season.status !== 'playoffs') return;
-    let cancelled = false;
-    const tryAdvance = () => {
-      advancePlayoffs(season.id).then(() => {
-        if (!cancelled) {
-          refetchEntries();
-          refetchStandings();
-        }
-      }).catch(err => console.error('Auto-advance failed:', err));
-    };
-    tryAdvance();
-    const onVis = () => { if (document.visibilityState === 'visible') tryAdvance(); };
-    document.addEventListener('visibilitychange', onVis);
-    return () => { cancelled = true; document.removeEventListener('visibilitychange', onVis); };
-  }, [season?.id, season?.status, refetchEntries, refetchStandings]);
 
   return (
     <div className="pb-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="page-header">
-          <div className="page-header-icon" style={{
-            background: 'linear-gradient(135deg, hsl(var(--gold) / 0.2), hsl(var(--gold) / 0.05))',
-          }}>
+          <div className="page-header-icon"
+            style={{ background: 'linear-gradient(135deg, hsl(var(--gold) / 0.2), hsl(var(--gold) / 0.05))' }}>
             <Swords className="w-5 h-5" style={{ color: 'hsl(var(--gold))' }} />
           </div>
           <div>
             <h1 className="page-header-title">Compete</h1>
-            <p className="page-header-subtitle">Draft League, Lockbox & more</p>
+            <p className="page-header-subtitle">Games & activities</p>
           </div>
         </div>
 
-        <Tabs defaultValue="league" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
-            <TabsTrigger value="league" className="text-[11px] font-bold">🏆 League</TabsTrigger>
-            <TabsTrigger value="runedelve" className="text-[11px] font-bold">🎮 Games</TabsTrigger>
-            <TabsTrigger value="other" className="text-[11px] font-bold">📦 Other</TabsTrigger>
-          </TabsList>
+        <div className="space-y-3">
+          {/* Draft Arena — always the lead feature */}
+          <DraftArenaEnterBanner
+            season={season}
+            entries={entries}
+            totalDrafts={totalDrafts}
+            myUserId={user?.id}
+          />
 
-          <TabsContent value="league" className="space-y-3">
-            {/* Flashy launcher into the standalone Draft Arena shell — always pinned at top */}
-            <DraftArenaEnterBanner
-              season={season}
-              entries={entries}
-              totalDrafts={totalDrafts}
-              myUserId={user?.id}
-            />
+          {/* Other installed games */}
+          {isInstalled('rune-delve') && <RuneDelveCompeteCard />}
+          {isInstalled('nexus-defense') && <NexusDefenseCompeteCard />}
+          {isInstalled('nfl-pickem') && <PickemCompeteCard />}
+          {isInstalled('portfolio-wars') && <PortfolioWarsCompeteCard />}
+          {isInstalled('lockbox') && <LockboxCompeteCard />}
 
-            {seasonLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="glass-card p-5">
-                    <div className="h-4 rounded-lg w-1/3 mb-2.5 skeleton-shimmer" />
-                    <div className="h-3 rounded-lg w-1/2 skeleton-shimmer" />
-                  </div>
-                ))}
-              </div>
-            ) : season ? (
-              <>
-                <SeasonHeaderCard season={season} entries={entries} />
-                {season.status === 'complete' ? (
-                  <>
-                    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-                      <Link to={`/drafts/seasons/${season.id}`}>
-                        <div className="glass-card p-4 flex items-center gap-3 border-gold/15 hover-lift" style={{
-                          background: 'linear-gradient(135deg, hsl(var(--gold) / 0.08), transparent 60%), hsl(var(--card))',
-                          borderLeft: '3px solid hsl(var(--gold))',
-                        }}>
-                          <Trophy className="w-5 h-5 flex-shrink-0" style={{ color: 'hsl(var(--gold))' }} />
-                          <div className="flex-1">
-                            <p className="text-[13px] font-extrabold">Season Complete</p>
-                            <p className="text-[10px] text-muted-foreground/70 mt-0.5">View the full archive & podium</p>
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-muted-foreground/60" />
-                        </div>
-                      </Link>
-                    </motion.div>
-                    {(isCommissioner || isAppAdmin) && (
-                      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }}>
-                        <div
-                          className="glass-card p-4 flex items-center gap-3"
-                          style={{
-                            background: 'linear-gradient(135deg, hsl(var(--gold) / 0.10), transparent 60%), hsl(var(--card))',
-                            border: '1px solid hsl(var(--gold) / 0.25)',
-                            boxShadow: '0 0 24px -10px hsl(var(--gold) / 0.45)',
-                          }}
-                        >
-                          <div
-                            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                            style={{
-                              background: 'linear-gradient(135deg, hsl(var(--gold) / 0.22), hsl(var(--gold) / 0.06))',
-                              border: '1px solid hsl(var(--gold) / 0.3)',
-                            }}
-                          >
-                            <Sparkles className="w-5 h-5" style={{ color: 'hsl(var(--gold))' }} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-extrabold">Ready for the next season?</p>
-                            <p className="text-[10px] text-muted-foreground/70 mt-0.5 leading-snug">
-                              Archive {season.name} and open fresh standings.
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => setStartNextOpen(true)}
-                            className="h-9 px-3 rounded-lg text-[11px] font-extrabold btn-press flex items-center gap-1.5 flex-shrink-0"
-                            style={{
-                              background: 'linear-gradient(135deg, hsl(var(--gold) / 0.95), hsl(var(--gold) / 0.7))',
-                              color: 'hsl(0 0% 8%)',
-                              boxShadow: '0 4px 12px -4px hsl(var(--gold) / 0.5)',
-                            }}
-                          >
-                            <Plus className="w-3.5 h-3.5" /> Start
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-                    <StandingsCard standings={standings} userId={user?.id} />
-                    <LifetimeStatsCard userId={user?.id} />
-                    <StartNextSeasonSheet
-                      open={startNextOpen}
-                      onOpenChange={setStartNextOpen}
-                      previousSeason={season}
-                      onCreated={() => { refetchSeason(); }}
-                    />
-                  </>
-                ) : (
-                  <>
-                    {isCommissioner && <CommissionerPanel season={season} entries={entries} onUpdate={handleSeasonUpdate} />}
-                    <NextDraftCard entries={entries} totalDrafts={totalDrafts} />
-                    <StandingsCard standings={standings} userId={user?.id} />
-                    <PlayoffControlCenter
-                      season={season}
-                      matches={matches}
-                      standings={standings}
-                      userId={user?.id}
-                      onUpdate={handleSeasonUpdate}
-                    />
-                    <PlayoffPicture standings={standings} matches={matches} seasonId={season?.id} />
-                    <SeasonDraftHistory entries={entries} totalDrafts={totalDrafts} />
-                    <LifetimeStatsCard userId={user?.id} />
-                  </>
-                )}
-
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
-                  <Link to="/drafts/seasons" className="block">
-                    <button className="w-full h-9 rounded-lg bg-muted/50 text-[11px] font-bold text-foreground/80 transition-colors flex items-center justify-center gap-1.5 btn-press">
-                      Seasons Archive <ChevronRight className="w-3 h-3" />
-                    </button>
-                  </Link>
-                </motion.div>
-              </>
-            ) : (
-              <NoSeasonState />
-            )}
-          </TabsContent>
-
-          <TabsContent value="runedelve" className="space-y-3">
-            <RuneDelveCompeteCard />
-            <NexusDefenseCompeteCard />
-          </TabsContent>
-
-          <TabsContent value="other" className="space-y-3">
-            <PickemCompeteCard />
-            <PortfolioWarsCompeteCard />
-            <ArchivedModesCard />
-          </TabsContent>
-        </Tabs>
+          {/* Community activities */}
+          <CommunityTilesSection isInstalled={isInstalled} />
+        </div>
       </motion.div>
     </div>
   );

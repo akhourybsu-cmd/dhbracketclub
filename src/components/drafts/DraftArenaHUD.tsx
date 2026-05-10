@@ -114,8 +114,8 @@ export function DraftArenaHUD() {
 
           {!isHub && (
             <Link
-              to="/compete"
-              aria-label="Standings"
+              to="/drafts?tab=season"
+              aria-label="Season standings"
               className="w-9 h-9 rounded-lg flex items-center justify-center btn-press"
               style={{
                 background: 'hsl(45 95% 55% / 0.12)',
@@ -134,7 +134,7 @@ export function DraftArenaHUD() {
         onOpenChange={setExitOpen}
         onConfirm={() => {
           setExitOpen(false);
-          navigate('/compete');
+          navigate('/compete', { replace: true });
         }}
       />
     </>
