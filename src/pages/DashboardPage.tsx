@@ -1,1046 +1,327 @@
-import { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+// DH Club Home — Orchestrator
+//
+// Slim, club-aware Home that composes a few modular sections built around
+// the installed-asset system. Each section decides for itself whether to
+// render based on (a) whether its parent asset is installed and (b)
+// whether it has anything to show. The orchestrator's only jobs are:
+//   • Resolve who the user is and which club is active
+//   • Fan out a few cheap data fetches (profile, season, drafts, activity, events)
+//   • Run the next-action ranker
+//   • Hand each module the data it needs
+//
+// Replaces the previous 1000-line Dashboard. Long lists for drafts/brackets/
+// rankings/polls were intentionally moved off Home — they have their own
+// dedicated pages reachable from the AssetLauncher.
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Download, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useClub } from '@/contexts/ClubContext';
-import { Button } from '@/components/ui/button';
-import {
-  Plus, Users, ArrowRight, Trophy, BarChart3, Shield, Download, X, Swords,
-  MessageCircle, Bookmark, Zap, CalendarDays, Clock, MapPin, ChevronRight, ScrollText, Newspaper, Sparkles, TrendingUp
-} from 'lucide-react';
-import { UserAvatar } from '@/components/chat/UserAvatar';
-import { motion, AnimatePresence } from 'framer-motion';
-import { getBracketDisplayStatus, STATUS_CONFIG, TOTAL_GAMES } from '@/lib/bracketUtils';
-import { getDerivedDraftTurn } from '@/lib/draftTurn';
-import { cn } from '@/lib/utils';
+import { useClubAssets } from '@/hooks/useClubAssets';
 import { usePwaInstall } from '@/hooks/usePwaInstall';
-import dhMonogram from '@/assets/dh-monogram.png';
-import draftEmblem from '@/assets/draft-emblem.png';
-import runedelveEmblem from '@/assets/runedelve-emblem.png';
-import nexusEmblem from '@/assets/nexus-emblem.png';
-import pickemEmblem from '@/assets/pickem-emblem.png';
-import { formatDistanceToNow, format, isPast, isToday, isTomorrow, isThisWeek } from 'date-fns';
+import {
+  useCurrentSeason, useSeasonStandings, useSeasonEntries, getSeasonDraftTarget,
+} from '@/hooks/useDraftSeasons';
 import { useActivityFeedUpdates, useDraftListUpdates } from '@/hooks/useRealtimeSubscription';
-import { useCurrentSeason, useSeasonStandings, useSeasonEntries, getSeasonDraftTarget, usePlayoffMatchByDraftIds } from '@/hooks/useDraftSeasons';
-import { PlayoffBadge } from '@/components/draft/PlayoffBadge';
-import { getPlayoffGameLabel } from '@/lib/playoffStyle';
 
-const MODULE_ICONS: Record<string, any> = {
-  bracket_pool: Trophy,
-  ranking: BarChart3,
-  poll: MessageCircle,
-  draft: Bookmark,
-};
+import { HomeHero } from '@/components/home/HomeHero';
+import { RightNowCard } from '@/components/home/RightNowCard';
+import { AssetLauncher } from '@/components/home/AssetLauncher';
+import { LeagueSnapshot } from '@/components/home/LeagueSnapshot';
+import { EventsStrip } from '@/components/home/EventsStrip';
+import { ClubPulse } from '@/components/home/ClubPulse';
+import { EmptyClubState } from '@/components/home/EmptyClubState';
+import { rankNextActions } from '@/lib/home/nextAction';
+import { ENDLESS_MISSION_ID } from '@/lib/nexus/endless';
 
-const MODULE_COLORS: Record<string, string> = {
-  bracket_pool: 'primary',
-  ranking: 'accent',
-  poll: 'warning',
-  draft: 'gold',
-};
+const NEXUS_SAVE_PREFIX = 'nexus_run_state_v1';
 
-// Humanized activity labels
-const ACTIVITY_LABELS: Record<string, string> = {
-  ranking_created: 'created a ranking',
-  ranking_submitted: 'submitted a ranking',
-  poll_created: 'created a poll',
-  poll_voted: 'voted on a poll',
-  draft_created: 'created a draft',
-  draft_completed: 'completed a draft',
-  bracket_submitted: 'submitted a bracket',
-  event_created: 'created an event',
-  post_created: 'started a discussion',
-  event_rsvp: 'RSVPed to an event',
-};
+/** Scan localStorage for an in-flight Nexus run owned by the user. */
+function findEndlessSavedRun(userId: string | undefined): { missionName: string; waveLabel: string } | null {
+  if (!userId || typeof window === 'undefined') return null;
+  for (let i = 0; i < window.localStorage.length; i++) {
+    const k = window.localStorage.key(i);
+    if (!k?.startsWith(`${NEXUS_SAVE_PREFIX}:${userId}:`)) continue;
+    try {
+      const raw = window.localStorage.getItem(k);
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (!parsed?.state || parsed.state.status === 'victory' || parsed.state.status === 'defeat') continue;
+      const isEndless = parsed.missionId === ENDLESS_MISSION_ID;
+      return {
+        missionName: isEndless ? 'Endless Defense' : `Mission ${parsed.missionId}`,
+        waveLabel: `Wave ${(parsed.state.waveIndex ?? 0) + 1}`,
+      };
+    } catch { /* ignore */ }
+  }
+  return null;
+}
 
-const ACTIVITY_ICONS: Record<string, { icon: any; color: string }> = {
-  ranking_created: { icon: BarChart3, color: 'accent' },
-  ranking_submitted: { icon: BarChart3, color: 'accent' },
-  poll_created: { icon: MessageCircle, color: 'warning' },
-  poll_voted: { icon: MessageCircle, color: 'warning' },
-  draft_created: { icon: Bookmark, color: 'gold' },
-  draft_completed: { icon: Bookmark, color: 'gold' },
-  bracket_submitted: { icon: Trophy, color: 'primary' },
-  event_created: { icon: CalendarDays, color: 'success' },
-  post_created: { icon: MessageCircle, color: 'primary' },
-  event_rsvp: { icon: CalendarDays, color: 'success' },
-};
+interface DraftRow {
+  id: string;
+  topic: string;
+  status: string;
+  current_pick_user_id: string | null;
+}
+
+interface ActivityRow {
+  id: string;
+  event_type: string;
+  created_at: string;
+  target_type?: string | null;
+  target_id?: string | null;
+  profiles?: { display_name?: string } | null;
+}
+
+interface EventRow {
+  id: string;
+  title: string;
+  starts_at: string;
+}
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { club } = useClub();
-  const { canInstall, install } = usePwaInstall();
+  const { club, isClubAdmin } = useClub();
+  const { installedAssets, allAssets, loading: assetsLoading, isInstalled } = useClubAssets();
+  const { canInstall, install: doInstall } = usePwaInstall();
+
+  // Season + standings come from existing hooks (Draft Arena's data layer).
   const { season } = useCurrentSeason();
   const { standings } = useSeasonStandings(season?.id);
   const { entries: seasonEntries } = useSeasonEntries(season?.id);
-  const playoffEntryDraftIds = seasonEntries.filter(e => e.is_playoff).map(e => e.draft_id);
-  const playoffMatchByDraft = usePlayoffMatchByDraftIds(playoffEntryDraftIds);
-  const [pools, setPools] = useState<any[]>([]);
-  const [rankings, setRankings] = useState<any[]>([]);
-  const [polls, setPolls] = useState<any[]>([]);
-  const [drafts, setDrafts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  // Light state — user profile + a handful of cheap reads. No bracket/poll/
+  // ranking fetches anymore; those live on dedicated pages.
   const [displayName, setDisplayName] = useState('');
-  const [dashAvatarUrl, setDashAvatarUrl] = useState<string | null>(null);
-  const [bracketStatuses, setBracketStatuses] = useState<Map<string, string>>(new Map());
-  const [memberCounts, setMemberCounts] = useState<Map<string, number>>(new Map());
-  const [dismissedInstall, setDismissedInstall] = useState(false);
-  const [activity, setActivity] = useState<any[]>([]);
-  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
-  const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => {
-    try {
-      const stored = localStorage.getItem('dh-dismissed-home');
-      return stored ? new Set(JSON.parse(stored)) : new Set();
-    } catch { return new Set(); }
-  });
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [drafts, setDrafts] = useState<DraftRow[]>([]);
+  const [activity, setActivity] = useState<ActivityRow[]>([]);
+  const [events, setEvents] = useState<EventRow[]>([]);
+  const [pwaDismissed, setPwaDismissed] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const dismissItem = (id: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDismissedIds(prev => {
-      const next = new Set(prev);
-      next.add(id);
-      localStorage.setItem('dh-dismissed-home', JSON.stringify([...next]));
-      return next;
-    });
-  };
-  const [onlineUsers, setOnlineUsers] = useState<{id: string, name: string, avatar?: string}[]>([]);
-
-  // Online presence
-  useEffect(() => {
-    if (!user || !displayName) return;
-    const channel = supabase.channel('online-presence', { config: { presence: { key: user.id } } });
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
-        const allPresences = Object.values(state).flat().map((p: any) => ({
-          id: p.user_id as string,
-          name: p.display_name as string,
-          avatar: p.avatar_url as string | undefined,
-        }));
-        // Deduplicate by user id (multiple devices)
-        const seen = new Set<string>();
-        const users = allPresences.filter(u => {
-          if (seen.has(u.id)) return false;
-          seen.add(u.id);
-          return true;
-        });
-        setOnlineUsers(users);
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await channel.track({ user_id: user.id, display_name: displayName, avatar_url: dashAvatarUrl });
-        }
-      });
-    return () => { supabase.removeChannel(channel); };
-  }, [user, displayName, dashAvatarUrl]);
-
-  const hydrateDrafts = useCallback(async (draftRows: any[]) => {
-    if (!draftRows?.length) {
-      setDrafts([]);
-      return;
-    }
-
-    const draftIds = draftRows.map((draft) => draft.id);
-    const [{ data: participantData }, { data: pickData }] = await Promise.all([
-      supabase
-        .from('draft_participants')
-        .select('draft_id, user_id, pick_order, profiles:user_id(display_name)')
-        .in('draft_id', draftIds),
-      supabase.from('draft_picks').select('draft_id').in('draft_id', draftIds),
-    ]);
-
-    const pickCounts = new Map<string, number>();
-    pickData?.forEach((pick) => {
-      pickCounts.set(pick.draft_id, (pickCounts.get(pick.draft_id) || 0) + 1);
-    });
-
-    const participantsByDraft = new Map<string, any[]>();
-    participantData?.forEach((participant) => {
-      const existing = participantsByDraft.get(participant.draft_id) || [];
-      existing.push(participant);
-      participantsByDraft.set(participant.draft_id, existing);
-    });
-
-    setDrafts(
-      draftRows.map((draft) => ({
-        ...draft,
-        ...getDerivedDraftTurn(
-          draft,
-          participantsByDraft.get(draft.id) || [],
-          pickCounts.get(draft.id) || 0
-        ),
-      }))
-    );
-  }, []);
+  const hasFeed = isInstalled('feed');
+  const hasEvents = isInstalled('events');
+  const hasDrafts = isInstalled('draft-arena');
 
   const fetchData = useCallback(async () => {
     if (!user) return;
+    setLoading(true);
 
-      // Profile
-      const { data: profile } = await supabase.from('profiles').select('display_name, avatar_url').eq('id', user.id).single();
-      if (profile) {
-        setDisplayName(profile.display_name);
-        setDashAvatarUrl(profile.avatar_url);
-      }
+    const profilePromise = supabase
+      .from('profiles')
+      .select('display_name, avatar_url')
+      .eq('id', user.id)
+      .single();
 
-      // Bracket pools
-      const { data: memberships } = await supabase.from('pool_members').select('pool_id').eq('user_id', user.id);
-      if (memberships && memberships.length > 0) {
-        const poolIds = memberships.map(m => m.pool_id);
-        const { data: poolData } = await supabase
-          .from('pools')
-          .select('id, name, invite_code, lock_time, tournament_id, tournaments(name, season_year)')
-          .in('id', poolIds);
-        if (poolData) setPools(poolData);
+    // Drafts only matter when Draft Arena is installed AND only the active
+    // ones (we don't show stale completed drafts on Home anymore).
+    const draftsPromise = hasDrafts
+      ? supabase
+          .from('drafts')
+          .select('id, topic, status, current_pick_user_id')
+          .in('status', ['in_progress', 'setup'])
+          .order('created_at', { ascending: false })
+          .limit(10)
+      : Promise.resolve({ data: [] as DraftRow[], error: null });
 
-        const { data: brackets } = await supabase
-          .from('brackets')
-          .select('id, pool_id, status')
-          .eq('user_id', user.id)
-          .in('pool_id', poolIds);
+    const activityPromise = hasFeed
+      ? supabase
+          .from('activity_feed')
+          .select('id, event_type, created_at, target_type, target_id, profiles:actor_user_id(display_name)')
+          .order('created_at', { ascending: false })
+          .limit(8)
+      : Promise.resolve({ data: [] as ActivityRow[], error: null });
 
-        if (brackets && poolData) {
-          const bracketPickCounts = new Map<string, number>();
-          if (brackets.length > 0) {
-            const bracketIds = brackets.map(b => b.id);
-            const { data: pickData } = await supabase
-              .from('bracket_picks')
-              .select('bracket_id')
-              .in('bracket_id', bracketIds);
-            if (pickData) {
-              pickData.forEach(p => bracketPickCounts.set(p.bracket_id, (bracketPickCounts.get(p.bracket_id) || 0) + 1));
-            }
-          }
+    const eventsPromise = hasEvents
+      ? supabase
+          .from('events')
+          .select('id, title, starts_at')
+          .gte('starts_at', new Date().toISOString())
+          .order('starts_at', { ascending: true })
+          .limit(6)
+      : Promise.resolve({ data: [] as EventRow[], error: null });
 
-          // Check if all tournament games are decided for each pool
-          const tournamentIds = [...new Set(poolData.map((p: any) => p.tournament_id).filter(Boolean))];
-          const gameCompletionMap = new Map<string, boolean>();
-          if (tournamentIds.length > 0) {
-            for (const pool of poolData) {
-              const tid = (pool as any).tournament_id;
-              if (!tid || gameCompletionMap.has(tid)) continue;
-              const { count: totalGames } = await supabase
-                .from('games')
-                .select('*', { count: 'exact', head: true })
-                .eq('tournament_id', tid)
-                .gt('round_number', 0);
-              const { count: decidedGames } = await supabase
-                .from('games')
-                .select('*', { count: 'exact', head: true })
-                .eq('tournament_id', tid)
-                .gt('round_number', 0)
-                .not('winner_team_id', 'is', null);
-              gameCompletionMap.set(tid, (totalGames ?? 0) > 0 && totalGames === decidedGames);
-            }
-          }
+    const [profileRes, draftsRes, activityRes, eventsRes] = await Promise.all([
+      profilePromise, draftsPromise, activityPromise, eventsPromise,
+    ]);
 
-          const sm = new Map<string, string>();
-          poolData.forEach((p: any) => {
-            const b = brackets.find(br => br.pool_id === p.id);
-            const picksCount = b ? (bracketPickCounts.get(b.id) || 0) : 0;
-            const allDecided = gameCompletionMap.get(p.tournament_id) || false;
-            const ds = getBracketDisplayStatus(b?.status || null, p.lock_time, picksCount, TOTAL_GAMES, allDecided);
-            sm.set(p.id, ds);
-          });
-          setBracketStatuses(sm);
-        }
+    if ('data' in profileRes && profileRes.data) {
+      setDisplayName(profileRes.data.display_name ?? '');
+      setAvatarUrl(profileRes.data.avatar_url ?? null);
+    }
+    setDrafts(((draftsRes as any).data as DraftRow[]) ?? []);
+    setActivity(((activityRes as any).data as ActivityRow[]) ?? []);
+    setEvents(((eventsRes as any).data as EventRow[]) ?? []);
 
-        const { data: allMembers } = await supabase.from('pool_members').select('pool_id').in('pool_id', poolIds);
-        if (allMembers) {
-          const counts = new Map<string, number>();
-          allMembers.forEach(m => counts.set(m.pool_id, (counts.get(m.pool_id) || 0) + 1));
-          setMemberCounts(counts);
-        }
-      }
+    setLoading(false);
+  }, [user, hasDrafts, hasFeed, hasEvents]);
 
-      // Rankings, Polls, Drafts — fetch active ones
-      const [{ data: rankData }, { data: pollData }, { data: draftData }, { data: activityData }, { data: eventsData }] = await Promise.all([
-        supabase.from('rankings').select('*, competitions(title, status)').order('created_at', { ascending: false }).limit(5),
-        supabase.from('polls').select('*, competitions(title, status)').order('created_at', { ascending: false }).limit(5),
-        supabase.from('drafts').select('*, competitions(title, status), current_pick_profiles:current_pick_user_id(display_name)').order('created_at', { ascending: false }).limit(5),
-        supabase.from('activity_feed').select('*, profiles:actor_user_id(display_name)').order('created_at', { ascending: false }).limit(10),
-        supabase.from('events').select('*, profiles:created_by(display_name)').gte('starts_at', new Date().toISOString()).order('starts_at', { ascending: true }).limit(3),
-      ]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-      // Derive effective statuses client-side
-      if (rankData) setRankings(rankData);
-      if (pollData) {
-        setPolls(pollData.map(p => {
-          if (p.status === 'open' && p.closes_at && isPast(new Date(p.closes_at))) {
-            return { ...p, status: 'closed' };
-          }
-          return p;
-        }));
-      }
-      await hydrateDrafts(draftData || []);
-      if (activityData) setActivity(activityData);
-      if (eventsData) setUpcomingEvents(eventsData);
-
-      setLoading(false);
-    }, [user, hydrateDrafts]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  // Realtime: refresh activity feed when new events come in
+  // Realtime: refresh activity + drafts when relevant signals come in.
   useActivityFeedUpdates(() => {
-    if (!user) return;
-    supabase.from('activity_feed').select('*, profiles:actor_user_id(display_name)').order('created_at', { ascending: false }).limit(10).then(({ data }) => {
-      if (data) setActivity(data);
-    });
+    if (!user || !hasFeed) return;
+    supabase
+      .from('activity_feed')
+      .select('id, event_type, created_at, target_type, target_id, profiles:actor_user_id(display_name)')
+      .order('created_at', { ascending: false })
+      .limit(8)
+      .then(({ data }) => { if (data) setActivity(data as ActivityRow[]); });
   });
+  useDraftListUpdates(fetchData, !!user);
 
-  // Realtime: refresh drafts when pick status changes
-  useDraftListUpdates(() => {
-    if (!user) return;
-    fetchData();
-  }, !!user);
+  // ─── Derived ─────────────────────────────────────────────────────
+  const installedSlugs = useMemo(
+    () => new Set(installedAssets.filter(ia => ia.enabled).map(ia => ia.asset.slug)),
+    [installedAssets],
+  );
 
-  const isLocked = (lt: string) => new Date(lt) <= new Date();
+  const draftsRemaining = useMemo(() => {
+    if (!season) return 0;
+    const target = getSeasonDraftTarget(season);
+    const completed = seasonEntries.filter(e => !e.is_playoff).length;
+    return Math.max(0, target - completed);
+  }, [season, seasonEntries]);
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
-  };
+  // Cheap synchronous scan for an in-flight Nexus run — feeds into the
+  // priority ranker so a "Resume your run" card can lead the Right Now
+  // surface when no other action outranks it.
+  const endlessSavedRun = useMemo(
+    () => installedSlugs.has('nexus-defense') ? findEndlessSavedRun(user?.id) : null,
+    [user?.id, installedSlugs],
+  );
 
-  const totalActive = pools.length + drafts.length;
+  const actions = useMemo(() => rankNextActions({
+    userId: user?.id,
+    installedSlugs,
+    drafts,
+    season: season ?? null,
+    draftsRemaining,
+    isClubAdmin,
+    endlessSavedRun,
+    // pickem/operation specifics are also surfaced as live status chips on
+    // the AssetLauncher tiles — the ranker only sees them if/when the
+    // orchestrator is asked to fetch them. Keeping Home queries minimal.
+  }), [user?.id, installedSlugs, drafts, season, draftsRemaining, isClubAdmin, endlessSavedRun]);
 
-  // Season-derived values for hero command strip + league snapshot
-  const myStanding = standings.find(s => s.user_id === user?.id);
-  const regularEntriesCount = seasonEntries.filter(e => !e.is_playoff).length;
+  // Derive the truly-empty signal — nothing installed beyond default
+  // navigation assets, no season, no events, no activity.
+  const gameClassSlugs = ['draft-arena', 'rune-delve', 'nexus-defense', 'nfl-pickem', 'portfolio-wars', 'lockbox', 'brackets'];
+  const hasAnyGameInstalled = gameClassSlugs.some(s => installedSlugs.has(s));
+  const isFreshClub = !loading && !assetsLoading && !hasAnyGameInstalled && !season && events.length === 0 && activity.length === 0;
+
+  const accent = club?.accent_color ?? '152 72% 46%';
   const seasonTarget = season ? getSeasonDraftTarget(season) : 0;
-  const seasonProgress = seasonTarget > 0 ? Math.min(100, Math.round((regularEntriesCount / seasonTarget) * 100)) : 0;
-  const draftsRemaining = Math.max(0, seasonTarget - regularEntriesCount);
-  const formatRank = (r: number) => {
-    const s = ['th', 'st', 'nd', 'rd'];
-    const v = r % 100;
-    return r + (s[(v - 20) % 10] || s[v] || s[0]);
-  };
+  const regularEntries = seasonEntries.filter(e => !e.is_playoff).length;
 
-  // Sort drafts: your-turn first, then in_progress, then setup, then complete
-  const sortedDrafts = [...drafts].sort((a, b) => {
-    const score = (d: any) => {
-      if (d.status === 'in_progress' && d.current_pick_user_id === user?.id) return 0;
-      if (d.status === 'in_progress') return 1;
-      if (d.status === 'setup') return 2;
-      return 3;
-    };
-    return score(a) - score(b);
-  });
-
-  // Build "Needs your attention" items
-  const yourTurnDrafts = drafts.filter((d: any) => d.status === 'in_progress' && d.current_pick_user_id === user?.id);
-  const attentionItems: Array<{ id: string; label: string; sub?: string; to: string; icon: any }> = [];
-  yourTurnDrafts.slice(0, 2).forEach((d: any) => {
-    attentionItems.push({ id: `turn-${d.id}`, label: 'Your pick is up', sub: d.topic, to: `/drafts/${d.id}`, icon: Bookmark });
-  });
-  if (season?.status === 'playoffs') {
-    attentionItems.push({ id: 'playoffs-live', label: 'Playoffs are live', sub: season.name, to: '/compete', icon: Trophy });
-  } else if (season && draftsRemaining > 0 && draftsRemaining <= 2) {
-    attentionItems.push({ id: 'season-ending', label: `Season ends in ${draftsRemaining} draft${draftsRemaining !== 1 ? 's' : ''}`, sub: season.name, to: '/compete', icon: Swords });
-  }
-
-  // Activity priority weighting
-  const HIGH_SIGNAL_EVENTS = new Set(['draft_completed', 'bracket_submitted', 'event_created', 'draft_created']);
-
-
-  if (loading) {
+  // ─── Loading skeleton ────────────────────────────────────────────
+  if (loading || assetsLoading) {
     return (
       <div className="pb-6">
-        {/* Hero skeleton */}
-        <div className="mb-7">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 rounded-xl skeleton-shimmer" />
-            <div className="h-2.5 w-20 rounded skeleton-shimmer" />
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-2xl skeleton-shimmer" />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-3 w-24 rounded skeleton-shimmer" />
+            <div className="h-2 w-32 rounded skeleton-shimmer" />
           </div>
-          <div className="h-7 w-48 rounded-lg skeleton-shimmer mb-2" />
-          <div className="h-3 w-36 rounded skeleton-shimmer" />
+          <div className="w-10 h-10 rounded-2xl skeleton-shimmer" />
         </div>
-        {/* Quick create skeleton */}
-        <div className="grid grid-cols-4 gap-1.5 mb-7">
-          {[1,2,3,4].map(i => <div key={i} className="glass-card py-7 skeleton-shimmer" />)}
+        <div className="h-20 rounded-2xl skeleton-shimmer mb-4" />
+        <div className="flex gap-2 mb-5 overflow-hidden">
+          {[1,2,3,4,5].map(i => <div key={i} className="w-[78px] h-[88px] rounded-2xl skeleton-shimmer flex-shrink-0" />)}
         </div>
-        {/* Cards skeleton */}
-        <div className="space-y-2.5">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="glass-card p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl skeleton-shimmer flex-shrink-0" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-3.5 rounded-md w-2/3 skeleton-shimmer" />
-                  <div className="h-2.5 rounded-md w-1/2 skeleton-shimmer" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <div className="h-28 rounded-2xl skeleton-shimmer mb-5" />
       </div>
     );
   }
 
+  // ─── Render ──────────────────────────────────────────────────────
   return (
     <div className="pb-6">
-      {/* ═══ Hero Section ═══ */}
-      <motion.div
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="relative mb-7"
-      >
-        <div className="absolute -inset-x-8 -top-14 -bottom-8 pointer-events-none" style={{
-          background: 'radial-gradient(ellipse 90% 55% at 50% -15%, hsl(var(--primary) / 0.06), transparent)',
-        }} />
-        <div className="relative z-10">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3 min-w-0">
-              {club?.logo_url ? (
-                <motion.img
-                  src={club.logo_url}
-                  alt={club.name}
-                  className="w-9 h-9 object-cover rounded-xl"
-                  initial={{ opacity: 0, scale: 0.7 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.05, type: 'spring', damping: 18 }}
-                  style={{ filter: 'drop-shadow(0 0 10px hsl(var(--club-accent) / 0.25))' }}
-                />
-              ) : (
-                <motion.img
-                  src={dhMonogram}
-                  alt={club?.name ?? 'DH'}
-                  className="w-9 h-9 object-contain"
-                  initial={{ opacity: 0, scale: 0.7 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.05, type: 'spring', damping: 18 }}
-                  style={{ filter: 'drop-shadow(0 0 10px hsl(var(--club-accent) / 0.18))' }}
-                />
-              )}
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.08 }}
-                className="text-[9px] font-bold uppercase tracking-[0.25em] truncate"
-                style={{ color: 'hsl(var(--club-accent) / 0.65)' }}
-              >
-                {getGreeting()}{club ? ` · ${club.name}` : ''}
-              </motion.p>
-            </div>
-            <Link to="/profile" className="lg:hidden">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.1, type: 'spring', damping: 18 }}
-                className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-extrabold text-primary btn-press overflow-hidden"
-                style={{
-                  background: dashAvatarUrl ? 'transparent' : 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.04))',
-                  border: '1px solid hsl(var(--primary) / 0.1)',
-                }}
-              >
-                {dashAvatarUrl ? (
-                  <img src={dashAvatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  displayName ? displayName[0].toUpperCase() : '?'
-                )}
-              </motion.div>
-            </Link>
-          </div>
-          <motion.h1
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.12 }}
-            className="text-[1.75rem] font-extrabold tracking-tight leading-none"
-          >
-            {displayName || 'there'}{' '}
-            <motion.span
-              initial={{ opacity: 0, scale: 0.5, rotate: -20 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-              transition={{ delay: 0.4, type: 'spring', stiffness: 300, damping: 15 }}
-              className="inline-block"
-            >
-              👋
-            </motion.span>
-          </motion.h1>
-          {!loading && !season && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="text-[13px] text-muted-foreground mt-1.5 font-medium"
-            >
-              {totalActive > 0 ? `${totalActive} active competition${totalActive !== 1 ? 's' : ''}` : 'No active competitions yet'}
-            </motion.p>
-          )}
-          {/* Season Command Strip */}
-          {!loading && season && (
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.18 }}
-              className="flex items-center gap-1.5 mt-3 flex-wrap"
-            >
-              <Link to="/compete" className="command-chip">
-                <Swords className="w-3 h-3" style={{ color: 'hsl(var(--primary))' }} />
-                <span>{season.name}</span>
-              </Link>
-              {myStanding?.rank && (
-                <Link to="/compete" className="command-chip">
-                  <Trophy className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />
-                  <span>{formatRank(myStanding.rank)}</span>
-                  <span className="command-chip-label hidden sm:inline">rank</span>
-                </Link>
-              )}
-              {seasonTarget > 0 && (
-                <Link to="/compete" className="command-chip">
-                  <Bookmark className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />
-                  <span>{regularEntriesCount} of {seasonTarget}</span>
-                </Link>
-              )}
-              {season.status === 'playoffs' && (
-                <span className="command-chip" style={{ background: 'hsl(var(--gold) / 0.15)', borderColor: 'hsl(var(--gold) / 0.4)', color: 'hsl(var(--gold))' }}>
-                  <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-                  Playoffs
-                </span>
-              )}
-            </motion.div>
-          )}
-          {/* Online presence indicator */}
-          {onlineUsers.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.25 }}
-              className="flex items-center gap-2 mt-2.5"
-            >
-              <div className="flex -space-x-1.5">
-                {onlineUsers.slice(0, 5).map(u => (
-                  <div key={u.id} className="ring-2 ring-background rounded-full">
-                    <UserAvatar userId={u.id} name={u.name} avatarUrl={u.avatar} size={22} />
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-                <span className="text-[10px] text-muted-foreground font-medium">
-                  {onlineUsers.length} online
-                </span>
-              </div>
-            </motion.div>
-          )}
-        </div>
-      </motion.div>
+      <HomeHero
+        club={club}
+        displayName={displayName}
+        avatarUrl={avatarUrl}
+        pendingCount={actions.length}
+      />
 
-      {/* ═══ Needs Your Attention ═══ */}
-      {attentionItems.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="space-y-1.5 mb-5"
-        >
-          {attentionItems.map((item) => (
-            <Link key={item.id} to={item.to} className="block group">
-              <div className="attention-card flex items-center gap-3 transition-transform group-active:scale-[0.99]">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{
-                  background: 'linear-gradient(135deg, hsl(var(--gold) / 0.2), hsl(var(--gold) / 0.06))',
-                }}>
-                  <item.icon className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[12px] font-extrabold tracking-tight leading-tight" style={{ color: 'hsl(var(--gold))' }}>{item.label}</p>
-                  {item.sub && <p className="text-[10px] text-muted-foreground/80 font-medium truncate mt-0.5">{item.sub}</p>}
-                </div>
-                <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
-              </div>
-            </Link>
-          ))}
-        </motion.div>
-      )}
-
-      {/* ═══ Quick Create ═══ */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.12, duration: 0.4 }}
-        className="grid grid-cols-5 gap-1.5 sm:gap-2 mb-7"
-      >
-        {[
-          { to: '/drafts', emblem: draftEmblem, label: 'Draft Arena', color: 'gold', primary: true },
-          { to: '/rune-delve', emblem: runedelveEmblem, label: 'Rune Delve', color: 'lore' },
-          { to: '/nexus', emblem: nexusEmblem, label: 'Nexus Defense', color: 'primary' },
-          { to: '/pickem', emblem: pickemEmblem, label: "NFL Pick'em", color: 'destructive' },
-          { to: '/portfolio-wars', icon: TrendingUp, label: 'Portfolio Wars', color: 'success' },
-        ].map((item: any, i) => (
-          <motion.div key={item.to} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 + i * 0.04 }}>
-            <Link to={item.to}>
-              <div
-                className="action-tile py-3"
-                style={item.primary ? {
-                  background: 'linear-gradient(135deg, hsl(var(--gold) / 0.12), hsl(var(--gold) / 0.03))',
-                  borderColor: 'hsl(var(--gold) / 0.3)',
-                  boxShadow: '0 0 18px hsl(var(--gold) / 0.12)',
-                } : undefined}
-              >
-                {item.emblem ? (
-                  <img
-                    src={item.emblem}
-                    alt=""
-                    aria-hidden="true"
-                    className="w-7 h-7 mx-auto mb-1.5 relative z-10 object-contain"
-                    style={{ filter: `drop-shadow(0 2px 6px hsl(var(--${item.color}) / 0.45))` }}
-                  />
-                ) : (
-                  <item.icon
-                    className="w-7 h-7 mx-auto mb-1.5 relative z-10"
-                    style={{
-                      color: `hsl(var(--${item.color}))`,
-                      filter: `drop-shadow(0 2px 6px hsl(var(--${item.color}) / 0.45))`,
-                    }}
-                  />
-                )}
-                <p className="text-[10px] font-bold relative z-10 leading-tight">{item.label}</p>
-              </div>
-            </Link>
-          </motion.div>
-        ))}
-      </motion.div>
-
-      {/* ═══ PWA Install Banner ═══ */}
+      {/* PWA install hint — slim inline chip, only when applicable */}
       <AnimatePresence>
-        {canInstall && !dismissedInstall && (
-          <motion.div
+        {canInstall && !pwaDismissed && (
+          <motion.button
+            type="button"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="mb-7 overflow-hidden"
+            onClick={doInstall}
+            className="w-full mb-3 flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] font-bold text-left active:scale-[0.99] transition"
+            style={{
+              background: `hsl(${accent} / 0.12)`,
+              border: `1px solid hsl(${accent} / 0.28)`,
+              color: `hsl(${accent})`,
+            }}
           >
-            <div className="glass-card arena-edge p-4 flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 relative z-10" style={{
-                background: 'linear-gradient(135deg, hsl(var(--primary) / 0.2), hsl(var(--primary) / 0.06))',
-              }}>
-                <Download className="w-5 h-5 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0 relative z-10">
-                <p className="text-[13px] font-bold">Install DH</p>
-                <p className="text-[10px] text-muted-foreground">Best experience on home screen</p>
-              </div>
-              <button onClick={install} className="rounded-xl font-bold text-xs h-8 px-3.5 flex-shrink-0 relative z-10 btn-premium">
-                Install
-              </button>
-              <button onClick={() => setDismissedInstall(true)} className="text-muted-foreground/60 hover:text-foreground p-1 relative z-10 transition-colors">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </motion.div>
+            <Download className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="flex-1 truncate">Install DH on your phone</span>
+            <span
+              role="button"
+              tabIndex={-1}
+              onClick={(e) => { e.stopPropagation(); setPwaDismissed(true); }}
+              className="text-muted-foreground/60 hover:text-foreground p-1"
+            >
+              <X className="w-3 h-3" />
+            </span>
+          </motion.button>
         )}
       </AnimatePresence>
 
-      {/* ═══ Upcoming Events ═══ */}
-      {upcomingEvents.length > 0 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.18 }}>
-          <div className="section-divider mb-3">
-            <h2 className="section-header mb-0">
-              <CalendarDays className="w-3.5 h-3.5 inline-block mr-1.5 text-primary" />
-              Upcoming Events
-            </h2>
-            <Link to="/events" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors">View All</Link>
-          </div>
-          <div className="space-y-2 mb-7">
-            {upcomingEvents.map((ev: any, i: number) => {
-              const getLabel = (d: string) => {
-                const dt = new Date(d);
-                if (isToday(dt)) return 'Today';
-                if (isTomorrow(dt)) return 'Tomorrow';
-                if (isThisWeek(dt)) return format(dt, 'EEEE');
-                return format(dt, 'MMM d');
-              };
-              return (
-                <motion.div key={ev.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 + i * 0.04 }}>
-                  <Link to={`/events/${ev.id}`} className="block group">
-                    <div className="glass-card p-3.5 transition-all duration-200 group-hover:border-primary/15">
-                      <div className="flex items-center gap-3 relative z-10">
-                        <div className="w-10 h-10 rounded-xl flex flex-col items-center justify-center flex-shrink-0" style={{
-                          background: 'linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--primary) / 0.04))',
-                        }}>
-                          <span className="text-[8px] font-bold text-primary uppercase leading-none">{format(new Date(ev.starts_at), 'MMM')}</span>
-                          <span className="text-[15px] font-extrabold text-primary leading-none">{format(new Date(ev.starts_at), 'd')}</span>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-bold text-[13px] truncate tracking-tight">{ev.title}</h3>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[10px] text-primary/85 font-semibold flex items-center gap-1">
-                              <Clock className="w-2.5 h-2.5" /> {getLabel(ev.starts_at)} · {format(new Date(ev.starts_at), 'h:mm a')}
-                            </span>
-                            {ev.location && (
-                              <span className="text-[10px] text-muted-foreground/70 flex items-center gap-1">
-                                <MapPin className="w-2.5 h-2.5" /> {ev.location}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
-                      </div>
-                    </div>
-                  </Link>
-                </motion.div>
-              );
-            })}
-          </div>
-        </motion.div>
+      {/* Right Now — single highest-priority action */}
+      <RightNowCard actions={actions} />
+
+      {/* Asset launcher — installed apps with live status chips */}
+      {installedAssets.length > 0 && (
+        <AssetLauncher
+          installedAssets={installedAssets.filter(ia => ia.enabled)}
+          canManage={isClubAdmin}
+          accent={accent}
+        />
       )}
 
-
-
-
-      {/* ═══ League Snapshot ═══ */}
-      {season && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.18 }} className="mb-7">
-          <div className="section-divider mb-3">
-            <h2 className="section-header mb-0">
-              <Swords className="w-3.5 h-3.5 inline-block mr-1.5 text-primary" />
-              League
-            </h2>
-            <Link to="/compete" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors inline-flex items-center gap-1">
-              View League <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-          <Link to="/compete" className="block group">
-            <div className="glass-card arena-edge p-4 transition-all duration-200 group-hover:border-primary/20">
-              <div className="flex items-center justify-between mb-3 relative z-10">
-                <div className="min-w-0">
-                  <p className="text-[13px] font-extrabold tracking-tight truncate">{season.name}</p>
-                  <p className="text-[10px] text-muted-foreground/70 font-medium">
-                    {season.status === 'playoffs' ? 'Playoffs in progress' : `Draft ${regularEntriesCount} of ${seasonTarget}`}
-                  </p>
-                </div>
-                {season.status === 'playoffs' ? (
-                  <span className="status-pill" style={{ background: 'hsl(var(--gold) / 0.15)', color: 'hsl(var(--gold))' }}>
-                    <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse mr-1" />
-                    Live
-                  </span>
-                ) : (
-                  <span className="status-pill bg-primary/10 text-primary">{seasonProgress}%</span>
-                )}
-              </div>
-
-              {/* Top 3 podium */}
-              {standings.length > 0 && (
-                <div className="space-y-1 mb-3 relative z-10">
-                  {standings.slice(0, 3).map((s, idx) => {
-                    const colors = ['hsl(var(--gold))', 'hsl(var(--muted-foreground))', 'hsl(35 60% 55%)'];
-                    return (
-                      <div key={s.id} className="flex items-center gap-2">
-                        <span className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-extrabold flex-shrink-0" style={{
-                          background: `${colors[idx]}22`, color: colors[idx],
-                        }}>{idx + 1}</span>
-                        <span className={cn("text-[11px] font-semibold truncate flex-1", s.user_id === user?.id && "text-primary")}>
-                          {s.profiles?.display_name || 'Unknown'}{s.user_id === user?.id ? ' (you)' : ''}
-                        </span>
-                        <span className="text-[11px] font-mono font-bold tabular-nums">{s.season_points}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Progress bar (regular season) */}
-              {season.status !== 'playoffs' && seasonTarget > 0 && (
-                <div className="h-1 rounded-full overflow-hidden relative z-10" style={{ background: 'hsl(var(--muted) / 0.4)' }}>
-                  <div className="h-full transition-all duration-500" style={{
-                    width: `${seasonProgress}%`,
-                    background: 'linear-gradient(90deg, hsl(var(--gold) / 0.7), hsl(var(--gold)))',
-                    boxShadow: '0 0 8px hsl(var(--gold) / 0.4)',
-                  }} />
-                </div>
-              )}
-            </div>
-          </Link>
-        </motion.div>
+      {/* League snapshot — Draft Arena + active season */}
+      {hasDrafts && season && (
+        <LeagueSnapshot
+          season={season}
+          standings={standings as any}
+          regularEntries={regularEntries}
+          seasonTarget={seasonTarget}
+          userId={user?.id}
+        />
       )}
 
-      {/* ═══ Drafts (above Brackets) ═══ */}
-      {(() => {
-        const visibleDrafts = sortedDrafts.filter((d: any) => d.status === 'in_progress' || d.status === 'setup' || !dismissedIds.has(`draft-${d.id}`));
-        if (visibleDrafts.length === 0) return null;
-        return (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-            <div className="section-divider mb-3">
-              <h2 className="section-header mb-0">
-                <Bookmark className="w-3.5 h-3.5 inline-block mr-1.5" style={{ color: 'hsl(var(--gold))' }} />
-                Drafts
-              </h2>
-              <Link to="/drafts" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors">View All</Link>
-            </div>
-            <div className="space-y-2 mb-7">
-              {visibleDrafts.slice(0, 3).map((d: any, i: number) => {
-                const isYourTurn = d.status === 'in_progress' && d.current_pick_user_id === user?.id;
-                const someoneElseTurn = d.status === 'in_progress' && d.current_pick_user_id && d.current_pick_user_id !== user?.id;
-                const playoffMatch = playoffMatchByDraft.get(d.id);
-                const isPlayoff = !!playoffMatch;
-                return (
-                  <motion.div key={d.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 + i * 0.04 }}>
-                    <Link to={`/drafts/${d.id}`} className="block group">
-                      <div
-                        className={cn("glass-card p-3.5 transition-all duration-200 group-hover:border-gold/15 relative overflow-hidden", isYourTurn && "draft-your-turn", isPlayoff && "arena-edge")}
-                        style={isPlayoff ? {
-                          borderLeft: '3px solid hsl(45 93% 52%)',
-                          background: 'linear-gradient(135deg, hsl(45 93% 52% / 0.06), transparent 60%), hsl(var(--card))',
-                          boxShadow: '0 0 16px -4px hsl(45 93% 52% / 0.22)',
-                        } : undefined}
-                      >
-                        <div className="flex items-center gap-3 relative z-10">
-                          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={isPlayoff ? {
-                            background: 'linear-gradient(135deg, hsl(45 93% 52% / 0.28), hsl(38 92% 50% / 0.10))',
-                            boxShadow: '0 0 8px hsl(45 93% 52% / 0.25)',
-                          } : {
-                            background: d.status === 'completed' ? 'hsl(var(--muted) / 0.5)' : 'linear-gradient(135deg, hsl(var(--gold) / 0.15), hsl(var(--gold) / 0.04))',
-                          }}>
-                            {isPlayoff ? (
-                              <Trophy className="w-4 h-4" style={{ color: 'hsl(45 93% 52%)' }} strokeWidth={2.5} />
-                            ) : (
-                              <Bookmark className={cn("w-4 h-4", d.status === 'completed' ? "text-muted-foreground/60" : "")} style={d.status !== 'completed' ? { color: 'hsl(var(--gold))' } : {}} />
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            {isPlayoff && (
-                              <div className="mb-0.5">
-                                <PlayoffBadge round={playoffMatch.round} matchNumber={playoffMatch.match_number} size="xs" />
-                              </div>
-                            )}
-                            <h3 className="font-bold text-[13px] truncate tracking-tight">{d.topic}</h3>
-                            <p className="text-[10px] text-muted-foreground/70 font-medium">
-                              {isPlayoff
-                                ? `${getPlayoffGameLabel(playoffMatch.round, playoffMatch.match_number)} • ${d.status === 'in_progress' ? 'Live' : d.status === 'setup' ? 'Setup' : 'Complete'}`
-                                : `${d.num_rounds} rounds • ${d.status === 'in_progress' ? 'In Progress' : d.status === 'setup' ? 'Setup' : 'Complete'}`}
-                            </p>
-                            {someoneElseTurn && (
-                              <p className="text-[10px] font-semibold mt-0.5 flex items-center gap-1" style={{ color: 'hsl(var(--success))' }}>
-                                <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-                                On the clock: {d.current_pick_profiles?.display_name || 'Someone'}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <span
-                              className={cn(
-                                "status-pill",
-                                isYourTurn ? '' :
-                                isPlayoff ? '' :
-                                d.status === 'in_progress' ? 'bg-success/10 text-success' :
-                                d.status === 'setup' ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
-                              )}
-                              style={
-                                isYourTurn ? { background: 'hsl(var(--gold))', color: 'hsl(var(--background))' } :
-                                isPlayoff ? { background: 'hsl(45 93% 52% / 0.15)', color: 'hsl(45 93% 52%)', border: '1px solid hsl(45 93% 52% / 0.35)' } :
-                                undefined
-                              }
-                            >
-                              {isYourTurn ? 'Your turn' : d.status === 'in_progress' ? 'Live' : d.status === 'setup' ? 'Setup' : 'Complete'}
-                            </span>
-                            {d.status !== 'in_progress' && d.status !== 'setup' ? (
-                              <button onClick={(e) => dismissItem(`draft-${d.id}`, e)} className="p-2.5 -m-1 rounded-md text-muted-foreground/40 hover:text-foreground active:text-foreground transition-colors" aria-label="Dismiss draft">
-                                <X className="w-3.5 h-3.5" />
-                              </button>
-                            ) : (
-                              <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60" />
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </motion.div>
-        );
-      })()}
-
-      {/* ═══ Brackets ═══ */}
-      {(() => {
-        const visiblePools = pools.filter((p: any) => {
-          const bs = bracketStatuses.get(p.id);
-          const locked = isLocked(p.lock_time);
-          const isDone = bs === 'complete' || locked;
-          return !isDone || !dismissedIds.has(`pool-${p.id}`);
-        });
-        if (visiblePools.length === 0) return null;
-        return (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.28 }}>
-            <div className="section-divider mb-3">
-              <h2 className="section-header mb-0">
-                <Trophy className="w-3.5 h-3.5 inline-block mr-1.5 text-primary" />
-                Brackets
-              </h2>
-              <Link to="/brackets" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors">View All</Link>
-            </div>
-            <div className="space-y-2 mb-7">
-              {visiblePools.slice(0, 3).map((pool: any, i: number) => {
-                const bs = bracketStatuses.get(pool.id) || 'none';
-                const bsCfg = STATUS_CONFIG[bs];
-                const locked = isLocked(pool.lock_time);
-                const members = memberCounts.get(pool.id) || 0;
-                return (
-                  <motion.div key={pool.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.04 }}>
-                    <Link to={`/pools/${pool.id}`} className="block group">
-                      <div className="glass-card p-3.5 transition-all duration-200 group-hover:border-primary/15">
-                        <div className="flex items-center gap-3 relative z-10">
-                          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{
-                            background: (bs === 'complete' || locked) ? 'hsl(var(--muted) / 0.5)' : 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.04))',
-                          }}>
-                            <Trophy className={cn("w-4 h-4", (bs === 'complete' || locked) ? "text-muted-foreground/60" : "text-primary")} />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <h3 className="font-bold text-[13px] truncate tracking-tight">{pool.name}</h3>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className="text-[10px] text-muted-foreground/70 font-medium">{pool.tournaments?.name}</span>
-                              <span className="w-0.5 h-0.5 rounded-full bg-muted-foreground/15" />
-                              <span className="text-[10px] text-muted-foreground/70 flex items-center gap-0.5 font-medium">
-                                <Users className="w-2.5 h-2.5" /> {members}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <span className={cn("status-pill", bsCfg.className)}>{bsCfg.label}</span>
-                            {(bs === 'complete' || locked) ? (
-                              <button onClick={(e) => dismissItem(`pool-${pool.id}`, e)} className="p-1 rounded-md text-muted-foreground/40 hover:text-foreground active:text-foreground transition-colors">
-                                <X className="w-3.5 h-3.5" />
-                              </button>
-                            ) : (
-                              <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/60" />
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </motion.div>
-        );
-      })()}
-
-      {/* Rankings & Polls archived — accessible via Compete > More */}
-
-      {/* ═══ Empty state — no activity at all ═══ */}
-      {!loading && totalActive === 0 && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="glass-card arena-edge p-10 text-center"
-        >
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 relative z-10">
-            <img src={dhMonogram} alt="DH" className="w-10 h-10 object-contain opacity-50" />
-          </div>
-          <p className="text-sm font-bold relative z-10 mb-1">Welcome to DH</p>
-          <p className="text-xs text-muted-foreground leading-relaxed relative z-10 mb-5">Start competing with your crew — drafts, brackets, and more.</p>
-          <div className="flex flex-wrap gap-2 justify-center relative z-10">
-            <Link to="/drafts/create">
-              <button className="flex items-center gap-2 font-bold rounded-xl px-4 py-2.5 text-[13px] btn-premium btn-press">
-                <Bookmark className="w-4 h-4" /> New Draft
-              </button>
-            </Link>
-            <Link to="/compete">
-              <button className="flex items-center gap-2 font-bold rounded-xl px-4 py-2.5 text-[13px] btn-press" style={{
-                background: 'hsl(var(--surface-elevated))',
-                border: '1px solid hsl(var(--border) / 0.5)',
-              }}>
-                <Swords className="w-4 h-4" /> Compete
-              </button>
-            </Link>
-          </div>
-        </motion.div>
+      {/* Up Next events strip */}
+      {hasEvents && events.length > 0 && (
+        <EventsStrip events={events} accent={accent} />
       )}
 
-      {/* ═══ Recent Activity ═══ */}
-      {activity.length > 0 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
-          <div className="section-divider mb-3">
-            <h2 className="section-header mb-0">
-              <Zap className="w-3.5 h-3.5 inline-block mr-1.5 text-primary" />
-              Recent Activity
-            </h2>
-            <Link to="/feed" className="text-[10px] font-bold text-primary/80 hover:text-primary transition-colors inline-flex items-center gap-1">
-              <Newspaper className="w-3 h-3" /> Open Feed
-            </Link>
-          </div>
-          <div className="glass-card divide-y divide-border/20 overflow-hidden">
-            {activity.slice(0, 5).map((a: any) => {
-              const actConfig = ACTIVITY_ICONS[a.event_type];
-              const ActIcon = actConfig?.icon || Zap;
-              const actColor = actConfig?.color || 'primary';
-              const label = ACTIVITY_LABELS[a.event_type] || a.event_type.replace(/_/g, ' ');
-              const isHighSignal = HIGH_SIGNAL_EVENTS.has(a.event_type);
-
-              // Build link target based on activity type
-              const targetLink = a.target_id && a.target_type
-                ? a.target_type === 'ranking' ? `/rankings/${a.target_id}`
-                  : a.target_type === 'poll' ? `/polls/${a.target_id}`
-                  : a.target_type === 'draft' ? `/drafts/${a.target_id}`
-                  : a.target_type === 'bracket' ? `/pools/${a.target_id}`
-                  : a.target_type === 'event' ? `/events/${a.target_id}`
-                  : a.target_type === 'post' ? `/posts/${a.target_id}`
-                  : null
-                : null;
-
-              const content = (
-                <div className={cn("px-4 py-3 flex items-center gap-3 relative z-10", !isHighSignal && "opacity-65")}>
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 relative" style={{
-                    background: `linear-gradient(135deg, hsl(var(--${actColor}) / 0.12), hsl(var(--${actColor}) / 0.04))`,
-                  }}>
-                    <ActIcon className="w-3 h-3" style={{ color: `hsl(var(--${actColor}))` }} />
-                    {isHighSignal && (
-                      <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full" style={{
-                        background: `hsl(var(--${actColor}))`,
-                        boxShadow: `0 0 6px hsl(var(--${actColor}) / 0.6)`,
-                      }} />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[12px] font-medium truncate">
-                      <span className="font-bold">{a.profiles?.display_name || 'Someone'}</span>{' '}
-                      <span className="text-muted-foreground">{label}</span>
-                    </p>
-                    <p className="text-[9px] text-muted-foreground/60 font-medium">
-                      {formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}
-                    </p>
-                  </div>
-                </div>
-              );
-
-              return targetLink ? (
-                <Link key={a.id} to={targetLink} className="block hover:bg-muted/20 transition-colors">
-                  {content}
-                </Link>
-              ) : (
-                <div key={a.id}>{content}</div>
-              );
-            })}
-          </div>
-        </motion.div>
+      {/* Club pulse — high-signal activity */}
+      {hasFeed && activity.length > 0 && (
+        <ClubPulse activity={activity} />
       )}
 
-      {/* ═══ Feed entry point (always visible secondary CTA) ═══ */}
-      {activity.length === 0 && (
-        <Link to="/feed" className="block group">
-          <div className="glass-card p-4 flex items-center gap-3 transition-all duration-200 group-hover:border-primary/15">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{
-              background: 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.04))',
-            }}>
-              <Newspaper className="w-4 h-4 text-primary" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-bold tracking-tight">The Feed</p>
-              <p className="text-[10px] text-muted-foreground/70 font-medium">Activity, posts & discussions</p>
-            </div>
-            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
-          </div>
-        </Link>
+      {/* Fresh-club empty state — only when truly nothing to surface */}
+      {isFreshClub && (
+        <EmptyClubState isAdmin={isClubAdmin} accent={accent} clubName={club?.name} />
       )}
 
+      {/* Catalog hint when there are installable assets the club hasn't picked up yet
+          (admins only, so we don't waste a tile on members who can't install) */}
+      {!isFreshClub && isClubAdmin && installedAssets.length < allAssets.length && (
+        <p className="text-center text-[10.5px] text-muted-foreground/55 font-medium mt-1">
+          {allAssets.length - installedAssets.length} more in the asset library
+        </p>
+      )}
     </div>
   );
 }
