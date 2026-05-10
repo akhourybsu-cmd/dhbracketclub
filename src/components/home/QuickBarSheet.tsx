@@ -253,7 +253,7 @@ function Row({
             onClick={onMoveUp}
             disabled={isFirst}
             className="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-30 active:scale-90 transition"
-            style={{ background: 'hsl(var(--muted) / 0.35)', color: 'hsl(var(--foreground) / 0.7)' }}
+            style={{ background: 'hsl(var(--muted) / 0.35)', color: 'hsl(var(--foreground))' }}
             aria-label={`Move ${asset.asset.name} up`}
           >
             <ArrowUp className="w-3.5 h-3.5" />
@@ -263,7 +263,7 @@ function Row({
             onClick={onMoveDown}
             disabled={isLast}
             className="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-30 active:scale-90 transition"
-            style={{ background: 'hsl(var(--muted) / 0.35)', color: 'hsl(var(--foreground) / 0.7)' }}
+            style={{ background: 'hsl(var(--muted) / 0.35)', color: 'hsl(var(--foreground))' }}
             aria-label={`Move ${asset.asset.name} down`}
           >
             <ArrowDown className="w-3.5 h-3.5" />
