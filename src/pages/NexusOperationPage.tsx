@@ -6,8 +6,24 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useActiveOperation, useIsAppAdmin, startNewOperation, endOperation } from '@/hooks/useNexusOperation';
 import { useDisplayedSigils, awardOperationRewards } from '@/hooks/useNexusRewards';
 import { NexusAvatarWithSigil } from '@/components/nexus/NexusAvatarWithSigil';
+import { MapLayoutPreview } from '@/components/nexus/MapLayoutPreview';
 import { ENDLESS_MISSION_ID } from '@/lib/nexus/endless';
+import { getLayout, type MapLayoutId } from '@/lib/nexus/mapLayouts';
 import { toast } from 'sonner';
+
+/**
+ * Map a co-op operation to a layout for display purposes. Phase drives the
+ * choice — easier maps for early phases, the boss map for the siege phase —
+ * so the visual narrative tracks operation progress.
+ */
+function pickCoopLayoutId(phase: number): MapLayoutId {
+  switch (phase) {
+    case 1: return 'partner_lanes';
+    case 2: return 'four_gate';
+    case 3: return 'nexus_siege';
+    default: return 'shared_reactor';
+  }
+}
 
 const PHASE_META = [
   { idx: 1, label: 'Repel the Swarm', metric: 'Enemies neutralized', unit: '' },
@@ -149,6 +165,65 @@ export default function NexusOperationPage() {
           <Stat icon={<Trophy className="w-3 h-3" />} label="Phase" value={`${isComplete ? 3 : operation.current_phase}/3`} />
         </div>
       </motion.div>
+
+      {/* Co-op layout banner — phase-driven, pure presentation */}
+      {(() => {
+        const layoutId = pickCoopLayoutId(isComplete ? 3 : operation.current_phase);
+        const layout = getLayout(layoutId);
+        if (!layout) return null;
+        const accent = layout.preview.accent;
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative mb-3 nx-clip-sm overflow-hidden flex items-center gap-3 p-3"
+            style={{
+              background: `radial-gradient(ellipse 60% 80% at 100% 0%, ${accent.replace(')', ' / 0.16)')}, transparent 60%), linear-gradient(180deg, hsl(218 38% 11%), hsl(218 42% 7%))`,
+              border: `1px solid ${accent.replace(')', ' / 0.4)')}`,
+              boxShadow: `0 0 12px -6px ${accent.replace(')', ' / 0.45)')}`,
+            }}
+          >
+            <MapLayoutPreview layout={layout} size="md" pulse={!isComplete} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span
+                  className="nx-pulse-dot inline-block w-1.5 h-1.5 rounded-full"
+                  style={{ background: accent, boxShadow: `0 0 6px ${accent}` }}
+                />
+                <p className="nx-title text-[9px]" style={{ color: accent, letterSpacing: '0.22em' }}>
+                  {isComplete ? 'OPERATION COMPLETE · LAYOUT' : `PHASE ${operation.current_phase} LAYOUT`}
+                </p>
+              </div>
+              <p className="text-[13px] font-black truncate">{layout.name}</p>
+              <p className="text-[10.5px] text-foreground/65 leading-snug line-clamp-2">{layout.tagline}</p>
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <span
+                  className="nx-title text-[8px] px-1.5 py-0.5"
+                  style={{
+                    color: accent,
+                    background: accent.replace(')', ' / 0.16)'),
+                    border: `1px solid ${accent.replace(')', ' / 0.35)')}`,
+                    letterSpacing: '0.18em',
+                  }}
+                >
+                  {layout.preview.spawns}× ENTRY
+                </span>
+                <span
+                  className="nx-title text-[8px] px-1.5 py-0.5"
+                  style={{
+                    color: 'hsl(45 100% 70%)',
+                    background: 'hsl(45 100% 60% / 0.14)',
+                    border: '1px solid hsl(45 100% 60% / 0.3)',
+                    letterSpacing: '0.18em',
+                  }}
+                >
+                  {layout.preview.cores}× CORE
+                </span>
+              </div>
+            </div>
+          </motion.div>
+        );
+      })()}
 
       {/* Rewards distributed banner — appears once op completes */}
       {isComplete && (

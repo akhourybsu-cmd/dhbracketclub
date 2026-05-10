@@ -9,9 +9,12 @@ import { recordNexusRun, useNexusProgress } from '@/hooks/useNexusProgress';
 import { useResolvedMission } from '@/hooks/useMissionCalibrations';
 import { useNexusSfx } from '@/hooks/useNexusSfx';
 import { resolveModifiers, modifierTone } from '@/lib/nexus/modifiers';
-import { isEndlessMission } from '@/lib/nexus/endless';
+import { isEndlessMission, ENDLESS_MISSION_ID } from '@/lib/nexus/endless';
 import { submitOperationContribution } from '@/hooks/useNexusOperation';
 import { usePendingBoost, consumeBoostForRun, awardEndlessRewards } from '@/hooks/useNexusRewards';
+import { getBriefing } from '@/lib/nexus/missionBriefings';
+import { getEnginePathVariant, type MapLayoutId } from '@/lib/nexus/mapLayouts';
+import { getEndlessLayoutSelection } from '@/components/nexus/EndlessMapSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { saveBattle, loadBattle, clearBattle, SAVE_THROTTLE_MS } from '@/lib/nexus/battlePersist';
@@ -58,6 +61,16 @@ export default function NexusBattlePage() {
           ...(pendingBoost.effect_config ?? {}),
         }
       : undefined;
+    // Resolve which engine path variant this run uses. Endless honors the
+    // player's saved map-selector choice; solo missions read their briefing's
+    // assigned layout. Multi-spawn / multi-core layouts collapse to 'default'
+    // inside getEnginePathVariant().
+    const briefing = getBriefing(mission.id);
+    const uiLayoutId: MapLayoutId | undefined =
+      mission.id === ENDLESS_MISSION_ID
+        ? getEndlessLayoutSelection()
+        : briefing?.layoutId;
+    const pathVariantId = getEnginePathVariant(uiLayoutId);
     setState(
       initBattle(mission.id, abilities, {
         mission,
@@ -65,6 +78,7 @@ export default function NexusBattlePage() {
         enemyShieldMult: enemyMods.shieldMult,
         enemySpeedMult: enemyMods.speedMult,
         boost,
+        pathVariantId,
       }),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps

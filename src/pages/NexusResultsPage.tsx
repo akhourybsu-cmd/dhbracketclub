@@ -6,6 +6,10 @@ import { useResolvedMissions } from '@/hooks/useMissionCalibrations';
 import { TOWERS } from '@/lib/nexus/towers';
 import type { TowerKind, AbilityKind } from '@/lib/nexus/types';
 import { NexusRewardsPanel } from '@/components/nexus/NexusRewardsPanel';
+import { MapLayoutPreview } from '@/components/nexus/MapLayoutPreview';
+import { getBriefing } from '@/lib/nexus/missionBriefings';
+import { getLayout, getLayoutsByCategory, type MapLayoutId } from '@/lib/nexus/mapLayouts';
+import { ENDLESS_MISSION_ID } from '@/lib/nexus/endless';
 
 interface RunInsight {
   towerBuilds: Record<TowerKind, number>;
@@ -76,6 +80,21 @@ export default function NexusResultsPage() {
   const accent = won ? 'cyan' : 'rose';
   const ringHex = won ? 'hsl(188 92% 56%)' : 'hsl(350 90% 60%)';
 
+  // Resolve briefing + layout for the deployment-record strip below the verdict.
+  // Endless runs honor the localStorage selection set by the loadout map picker;
+  // solo runs read the briefing's static layoutId.
+  const briefing = getBriefing(id);
+  const isEndless = id === ENDLESS_MISSION_ID;
+  let layoutId: MapLayoutId | undefined = briefing?.layoutId;
+  if (isEndless) {
+    try {
+      const stored = window.localStorage.getItem('nexus_endless_layout_v1') as MapLayoutId | null;
+      const valid = stored && getLayoutsByCategory('endless').some(l => l.id === stored);
+      if (valid) layoutId = stored as MapLayoutId;
+    } catch { /* private mode etc. — fall back to briefing */ }
+  }
+  const layout = getLayout(layoutId);
+
   return (
     <div className="max-w-md mx-auto pb-6 px-3 pt-4">
       {/* Verdict seal */}
@@ -137,6 +156,35 @@ export default function NexusResultsPage() {
           </div>
         )}
       </div>
+
+      {/* Deployment record — which layout the run took place on */}
+      {layout && (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="relative mb-3 nx-clip-sm overflow-hidden flex items-center gap-3 p-2.5"
+          style={{
+            background: 'linear-gradient(180deg, hsl(218 35% 11%), hsl(218 38% 7%))',
+            border: `1px solid ${layout.preview.accent.replace(')', ' / 0.32)')}`,
+          }}
+        >
+          <MapLayoutPreview layout={layout} size="sm" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span
+                className="nx-pulse-dot inline-block w-1.5 h-1.5 rounded-full"
+                style={{ background: layout.preview.accent, boxShadow: `0 0 6px ${layout.preview.accent}` }}
+              />
+              <p className="nx-title text-[9px]" style={{ color: layout.preview.accent, letterSpacing: '0.22em' }}>
+                {isEndless ? 'ENDLESS DEPLOYMENT · LAYOUT' : `MISSION ${String(id).padStart(2, '0')} · LAYOUT`}
+              </p>
+            </div>
+            <p className="text-[12px] font-black truncate">{layout.name}</p>
+            <p className="text-[10px] text-foreground/65 leading-snug line-clamp-2">{layout.tagline}</p>
+          </div>
+        </motion.div>
+      )}
 
       {/* Primary stats */}
       <div className="grid grid-cols-2 gap-2 mb-3">

@@ -1,13 +1,34 @@
-// Battlefield grid: 7 cols × 9 rows. Single S-curve path to fit portrait.
-// Build tiles flank the path. Coordinates are { col, row }.
+// Nexus Defense — Grid & Path Layouts
+//
+// Battlefield is a 7×9 grid with a single enemy traversal path. Multiple path
+// variants are supported so different missions / endless selections can route
+// hostiles along visually distinct shapes.
+//
+// Each variant must:
+//   • Stay inside the 7×9 grid
+//   • Use a single contiguous orthogonal path (no diagonals, no branches)
+//   • End at a single nexus cell
+//
+// Multi-spawn / multi-core UI map layouts (twin_gate, dual_nexus, four_gate,
+// crossfire_grid, …) intentionally fall back to the canonical 'default' path
+// at the engine level — multi-source routing is a separate engine pass.
+//
+// Backwards compat: `PATH`, `BUILD_TILES`, `NEXUS_CELL`, `isPath`, `isBuildable`,
+// and `pathToXY` are still exported as the canonical-layout helpers for any
+// caller that doesn't yet thread a layout id (the simulator, tests, etc.).
 
 export const GRID_COLS = 7;
 export const GRID_ROWS = 9;
 
 export interface Cell { col: number; row: number; }
 
-// Path cells in order (enemy traversal)
-export const PATH: Cell[] = [
+/* ─── Path variants ──────────────────────────────────────────────────
+   Keep cell counts within ±2 of the default (23) to preserve balance.
+   Each path is single-spawn → single-nexus. */
+
+const PATH_DEFAULT: Cell[] = [
+  // Original S-curve (left-top → bottom-right). Used as the canonical
+  // routing for every mission/layout that doesn't ship its own variant.
   { col: 0, row: 0 },
   { col: 1, row: 0 },
   { col: 2, row: 0 },
@@ -30,42 +51,176 @@ export const PATH: Cell[] = [
   { col: 5, row: 6 },
   { col: 5, row: 7 },
   { col: 5, row: 8 },
-  { col: 6, row: 8 }, // nexus core
+  { col: 6, row: 8 },
 ];
 
-const pathSet = new Set(PATH.map(c => `${c.col},${c.row}`));
-export function isPath(col: number, row: number): boolean {
-  return pathSet.has(`${col},${row}`);
+const PATH_BEND: Cell[] = [
+  // Single bend — simple, used for the tutorial / classic-lane endless.
+  // Enters top-left, runs across, drops down the right column.
+  { col: 0, row: 0 },
+  { col: 1, row: 0 },
+  { col: 2, row: 0 },
+  { col: 3, row: 0 },
+  { col: 4, row: 0 },
+  { col: 5, row: 0 },
+  { col: 6, row: 0 },
+  { col: 6, row: 1 },
+  { col: 6, row: 2 },
+  { col: 6, row: 3 },
+  { col: 6, row: 4 },
+  { col: 6, row: 5 },
+  { col: 6, row: 6 },
+  { col: 6, row: 7 },
+  { col: 6, row: 8 },
+];
+
+const PATH_ZIGZAG: Cell[] = [
+  // Multi-bend zig-zag corridor. Heavy chokepoints reward splash towers.
+  { col: 0, row: 0 },
+  { col: 1, row: 0 },
+  { col: 2, row: 0 },
+  { col: 2, row: 1 },
+  { col: 2, row: 2 },
+  { col: 3, row: 2 },
+  { col: 4, row: 2 },
+  { col: 4, row: 3 },
+  { col: 4, row: 4 },
+  { col: 3, row: 4 },
+  { col: 2, row: 4 },
+  { col: 2, row: 5 },
+  { col: 2, row: 6 },
+  { col: 3, row: 6 },
+  { col: 4, row: 6 },
+  { col: 5, row: 6 },
+  { col: 6, row: 6 },
+  { col: 6, row: 7 },
+  { col: 6, row: 8 },
+];
+
+const PATH_SPIRAL: Cell[] = [
+  // Inward spiral — long path, lots of fire windows on the inner coil.
+  { col: 0, row: 0 },
+  { col: 1, row: 0 },
+  { col: 2, row: 0 },
+  { col: 3, row: 0 },
+  { col: 4, row: 0 },
+  { col: 5, row: 0 },
+  { col: 6, row: 0 },
+  { col: 6, row: 1 },
+  { col: 6, row: 2 },
+  { col: 6, row: 3 },
+  { col: 6, row: 4 },
+  { col: 6, row: 5 },
+  { col: 6, row: 6 },
+  { col: 5, row: 6 },
+  { col: 4, row: 6 },
+  { col: 3, row: 6 },
+  { col: 3, row: 5 },
+  { col: 3, row: 4 },
+  { col: 4, row: 4 },
+  { col: 5, row: 4 },
+  { col: 5, row: 5 },
+  { col: 5, row: 6 },
+  { col: 5, row: 7 },
+  { col: 5, row: 8 },
+  { col: 6, row: 8 },
+];
+
+/** Engine-level path variant ids. Adding a new id requires a path entry here. */
+export type PathVariantId = 'default' | 'bend' | 'zigzag' | 'spiral';
+
+const PATHS_BY_VARIANT: Record<PathVariantId, Cell[]> = {
+  default: PATH_DEFAULT,
+  bend: PATH_BEND,
+  zigzag: PATH_ZIGZAG,
+  spiral: PATH_SPIRAL,
+};
+
+/* ─── Layout factory ─────────────────────────────────────────────── */
+
+export interface GridLayout {
+  variantId: PathVariantId;
+  PATH: Cell[];
+  BUILD_TILES: Cell[];
+  NEXUS_CELL: Cell;
+  isPath(col: number, row: number): boolean;
+  isBuildable(col: number, row: number): boolean;
+  pathToXY(pathIndex: number, progress: number): { x: number; y: number };
 }
 
-// Build tiles = every non-path cell that touches the path orthogonally
-const buildList: Cell[] = [];
-for (let r = 0; r < GRID_ROWS; r++) {
-  for (let c = 0; c < GRID_COLS; c++) {
-    if (isPath(c, r)) continue;
-    const adj = [
-      [c - 1, r], [c + 1, r], [c, r - 1], [c, r + 1],
-    ];
-    if (adj.some(([cc, rr]) => isPath(cc, rr))) buildList.push({ col: c, row: r });
+function buildLayout(variantId: PathVariantId): GridLayout {
+  const path = PATHS_BY_VARIANT[variantId];
+  const pathSet = new Set(path.map(c => `${c.col},${c.row}`));
+
+  function isPathFn(col: number, row: number): boolean {
+    return pathSet.has(`${col},${row}`);
   }
-}
-export const BUILD_TILES: Cell[] = buildList;
-const buildSet = new Set(BUILD_TILES.map(c => `${c.col},${c.row}`));
-export function isBuildable(col: number, row: number): boolean {
-  return buildSet.has(`${col},${row}`);
-}
 
-export const NEXUS_CELL: Cell = PATH[PATH.length - 1];
+  // Build tiles: every non-path cell that's orthogonally adjacent to a path cell.
+  const buildList: Cell[] = [];
+  for (let r = 0; r < GRID_ROWS; r++) {
+    for (let c = 0; c < GRID_COLS; c++) {
+      if (isPathFn(c, r)) continue;
+      const adj: Array<[number, number]> = [
+        [c - 1, r], [c + 1, r], [c, r - 1], [c, r + 1],
+      ];
+      if (adj.some(([cc, rr]) => isPathFn(cc, rr))) buildList.push({ col: c, row: r });
+    }
+  }
+  const buildSet = new Set(buildList.map(c => `${c.col},${c.row}`));
 
-// Convert a path-progress (index + fractional 0..1) to (x, y) in cell units
-export function pathToXY(pathIndex: number, progress: number): { x: number; y: number } {
-  const a = PATH[Math.min(pathIndex, PATH.length - 1)];
-  const b = PATH[Math.min(pathIndex + 1, PATH.length - 1)];
   return {
-    x: a.col + (b.col - a.col) * progress,
-    y: a.row + (b.row - a.row) * progress,
+    variantId,
+    PATH: path,
+    BUILD_TILES: buildList,
+    NEXUS_CELL: path[path.length - 1],
+    isPath: isPathFn,
+    isBuildable(col: number, row: number) {
+      return buildSet.has(`${col},${row}`);
+    },
+    pathToXY(pathIndex: number, progress: number) {
+      const a = path[Math.min(pathIndex, path.length - 1)];
+      const b = path[Math.min(pathIndex + 1, path.length - 1)];
+      return {
+        x: a.col + (b.col - a.col) * progress,
+        y: a.row + (b.row - a.row) * progress,
+      };
+    },
   };
 }
+
+/** Memoised per-variant layout — built lazily on first request. */
+const LAYOUT_CACHE = new Map<PathVariantId, GridLayout>();
+
+export function getGridLayout(variantId?: PathVariantId | string | null): GridLayout {
+  // Defensive: any unknown id (including legacy saved runs without a variant)
+  // collapses to 'default'. Callers should never crash on a bad id.
+  const v = (variantId && variantId in PATHS_BY_VARIANT)
+    ? (variantId as PathVariantId)
+    : 'default';
+  let layout = LAYOUT_CACHE.get(v);
+  if (!layout) {
+    layout = buildLayout(v);
+    LAYOUT_CACHE.set(v, layout);
+  }
+  return layout;
+}
+
+/* ─── Default exports (canonical layout) — backwards compat ─────────
+   These keep the original public API working: simulator, tests, and any
+   caller that doesn't yet thread a layout id will continue to behave
+   exactly as before. */
+
+const DEFAULT_LAYOUT = getGridLayout('default');
+
+export const PATH: Cell[] = DEFAULT_LAYOUT.PATH;
+export const BUILD_TILES: Cell[] = DEFAULT_LAYOUT.BUILD_TILES;
+export const NEXUS_CELL: Cell = DEFAULT_LAYOUT.NEXUS_CELL;
+export const isPath = DEFAULT_LAYOUT.isPath;
+export const isBuildable = DEFAULT_LAYOUT.isBuildable;
+export const pathToXY = DEFAULT_LAYOUT.pathToXY;
+
+/* ─── Math helper (path-independent) ─────────────────────────────── */
 
 export function distanceCells(ax: number, ay: number, bx: number, by: number): number {
   const dx = ax - bx;

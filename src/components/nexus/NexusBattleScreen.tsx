@@ -1,9 +1,9 @@
-import { Fragment } from 'react';
+import { Fragment, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ABILITIES } from '@/lib/nexus/abilities';
 import { ENEMIES } from '@/lib/nexus/enemies';
 import { TOWERS, towerDamageAt, towerRangeAt, towerSellValue, towerUpgradeCost } from '@/lib/nexus/towers';
-import { GRID_COLS, GRID_ROWS, isBuildable, isPath, NEXUS_CELL, PATH, pathToXY } from '@/lib/nexus/grid';
+import { GRID_COLS, GRID_ROWS, getGridLayout } from '@/lib/nexus/grid';
 import { BattleState, TowerKind } from '@/lib/nexus/types';
 import { cn } from '@/lib/utils';
 import { Heart, ChevronUp, X } from 'lucide-react';
@@ -32,15 +32,20 @@ interface Props {
   onStartWave: () => void;
 }
 
-// Build SVG polyline `points` attribute for the enemy path (centers of each cell)
-const PATH_POINTS = PATH
-  .map((c) => `${(c.col + 0.5) * (100 / GRID_COLS)},${(c.row + 0.5) * (100 / GRID_ROWS)}`)
-  .join(' ');
-
 export function NexusBattleScreen({
   state, selectedTowerKind, selectedTowerId,
   onSelectKind, onPlace, onSelectTower, onUpgrade, onSell, onCastAbility, onStartWave,
 }: Props) {
+  // Layout-aware grid helpers — every render reads the path/build tiles for
+  // the run's active variant. Cached per variantId by getGridLayout().
+  const layout = useMemo(() => getGridLayout(state.pathVariantId), [state.pathVariantId]);
+  const { isPath, isBuildable, NEXUS_CELL, pathToXY } = layout;
+  // SVG polyline points for the path (centers of each cell). Recomputed when
+  // the variant changes — cheap, stable for the lifetime of the run.
+  const PATH_POINTS = useMemo(
+    () => layout.PATH.map((c) => `${(c.col + 0.5) * (100 / GRID_COLS)},${(c.row + 0.5) * (100 / GRID_ROWS)}`).join(' '),
+    [layout],
+  );
   const cells = [];
   for (let r = 0; r < GRID_ROWS; r++) {
     for (let c = 0; c < GRID_COLS; c++) cells.push({ c, r });

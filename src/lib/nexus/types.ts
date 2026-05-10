@@ -164,6 +164,12 @@ export interface BattleState {
   boostReconWaves?: number;
   /** When the timed-window combat boost expires (engine elapsedMs). */
   boostExpiresAtMs?: number;
+  /**
+   * Engine path variant for this run. Optional for backwards compatibility
+   * with persisted saves from before layout-aware routing — `getGridLayout()`
+   * collapses any missing/unknown id to 'default' so legacy runs still play.
+   */
+  pathVariantId?: string;
 }
 
 export type BattleEvent =

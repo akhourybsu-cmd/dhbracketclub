@@ -10,6 +10,10 @@ import { resolveModifiers, modifierTone } from '@/lib/nexus/modifiers';
 import { ENDLESS_MISSION_ID } from '@/lib/nexus/endless';
 import { useActiveOperation } from '@/hooks/useNexusOperation';
 import { NexusBoostPicker } from '@/components/nexus/NexusBoostPicker';
+import { MissionBriefingCard } from '@/components/nexus/MissionBriefingCard';
+import { EndlessMapSelector, useEndlessLayout } from '@/components/nexus/EndlessMapSelector';
+import { getBriefing } from '@/lib/nexus/missionBriefings';
+import { getLayout } from '@/lib/nexus/mapLayouts';
 
 const TOWER_HSL: Record<TowerKind, { c: string; bg: string; text: string }> = {
   pulse: { c: 'hsl(188 92% 56%)', bg: 'hsl(188 92% 56% / 0.12)', text: 'hsl(188 92% 78%)' },
@@ -25,6 +29,9 @@ export default function NexusLoadoutPage() {
   const { mission, loading } = useResolvedMission(id);
   const isEndless = id === ENDLESS_MISSION_ID;
   const { operation } = useActiveOperation();
+  // Endless layout selection — read once at the top so the hook order stays
+  // stable across loading → loaded → error transitions.
+  const [endlessLayoutId] = useEndlessLayout();
   // Endless runs auto-contribute to whichever op is active when the run finishes
   // (server-side resolution). Banner just reflects current state.
   const contributingToOp = isEndless && operation?.status === 'active';
@@ -32,11 +39,34 @@ export default function NexusLoadoutPage() {
   if (loading) return <div className="p-6 text-center text-muted-foreground">Loading mission…</div>;
   if (!mission) return <div className="p-6">Mission not found.</div>;
 
+  const baseBriefing = getBriefing(mission.id);
+  // For endless runs, override the briefing's layout with the player's saved
+  // map-selector choice so the briefing card and result page agree.
+  const briefing = baseBriefing && isEndless
+    ? { ...baseBriefing, layoutId: endlessLayoutId, tagline: getLayout(endlessLayoutId)?.tagline ?? baseBriefing.tagline }
+    : baseBriefing;
+
   return (
     <div className="max-w-md mx-auto pb-6 px-1">
+      {briefing && (
+        <div className="mt-1 mb-3">
+          <MissionBriefingCard
+            briefing={briefing}
+            missionNumber={mission.id === ENDLESS_MISSION_ID ? undefined : mission.id}
+            title={mission.name}
+          />
+        </div>
+      )}
+
+      {/* Endless players get a map-selector card right under the briefing */}
+      {isEndless && <EndlessMapSelector />}
       <div className="mb-4 mt-1">
-        <div className="nx-title text-[9px]" style={{ color: 'hsl(var(--nx-cyan))' }}>MISSION {String(mission.id).padStart(2, '0')}</div>
-        <h1 className="text-2xl font-black tracking-tight">{mission.name}</h1>
+        {!briefing && (
+          <>
+            <div className="nx-title text-[9px]" style={{ color: 'hsl(var(--nx-cyan))' }}>MISSION {String(mission.id).padStart(2, '0')}</div>
+            <h1 className="text-2xl font-black tracking-tight">{mission.name}</h1>
+          </>
+        )}
 
         {isEndless && (
           contributingToOp && operation ? (

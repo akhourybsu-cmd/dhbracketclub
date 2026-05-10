@@ -1,6 +1,6 @@
 import { ABILITIES } from './abilities';
 import { ENEMIES } from './enemies';
-import { PATH, distanceCells, isBuildable, pathToXY } from './grid';
+import { distanceCells, getGridLayout, type PathVariantId } from './grid';
 import { MISSIONS, getMission } from './missions';
 import { TOWERS, towerDamageAt, towerFireRateAt, towerRangeAt, towerSellValue, towerUpgradeCost } from './towers';
 import { aggregateModifiers, emptyAggregated, resolveModifiers } from './modifiers';
@@ -28,6 +28,8 @@ export interface InitBattleOptions {
   enemyHpMult?: Partial<Record<EnemyKind, number>>;
   enemyShieldMult?: Partial<Record<EnemyKind, number>>;
   enemySpeedMult?: number;
+  /** Engine path variant for this run. Defaults to 'default' (canonical S-curve). */
+  pathVariantId?: PathVariantId;
   /** Active pre-run boost. Effects parsed from the catalog row. */
   boost?: {
     code: string;
@@ -107,6 +109,7 @@ export function initBattle(missionId: number, abilities: AbilityKind[], opts: In
     boostCoresMult: boost?.coresMult ?? 1,
     boostReconWaves: boost?.reconWaves ?? 0,
     boostExpiresAtMs: boost?.durationMs ? boost.durationMs : undefined,
+    pathVariantId: opts.pathVariantId ?? 'default',
   };
 }
 
@@ -123,6 +126,9 @@ export function tick(state: BattleState, mission: MissionDef): BattleState {
     spawnQueues: state.spawnQueues.map(q => ({ ...q })),
     events: state.events.filter(ev => state.elapsedMs - ev.t < EVENT_TTL_MS),
   };
+  // Resolve the active grid layout for this run. Defensive lookup — any
+  // missing/unknown variant collapses to the canonical default.
+  const { PATH, pathToXY } = getGridLayout(s.pathVariantId);
   s.elapsedMs += TICK_MS;
   s.abilities.forEach(a => { a.cooldownMs = Math.max(0, a.cooldownMs - TICK_MS); });
 
@@ -395,6 +401,9 @@ export function startWave(state: BattleState, mission: MissionDef): BattleState 
 }
 
 export function placeTower(state: BattleState, kind: TowerKind, col: number, row: number): { state: BattleState; ok: boolean; reason?: string } {
+  // Buildability depends on the run's path variant — every layout has its
+  // own set of path-adjacent build tiles.
+  const { isBuildable } = getGridLayout(state.pathVariantId);
   if (!isBuildable(col, row)) return { state, ok: false, reason: 'Not a build tile' };
   if (state.towers.some(t => t.cell.col === col && t.cell.row === row)) return { state, ok: false, reason: 'Occupied' };
   const cost = Math.max(1, Math.round(TOWERS[kind].cost * (state.modTowerCostMult?.[kind] ?? 1)));
