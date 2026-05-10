@@ -27,11 +27,17 @@ import {
 import { useActivityFeedUpdates, useDraftListUpdates } from '@/hooks/useRealtimeSubscription';
 
 import { HomeHero } from '@/components/home/HomeHero';
+import { QuickBar } from '@/components/home/QuickBar';
+import { QuickBarSheet } from '@/components/home/QuickBarSheet';
+import { useQuickBar } from '@/components/home/useQuickBar';
 import { RightNowCard } from '@/components/home/RightNowCard';
 import { AssetLauncher } from '@/components/home/AssetLauncher';
+import { Highlights, type HighlightItem } from '@/components/home/Highlights';
 import { LeagueSnapshot } from '@/components/home/LeagueSnapshot';
 import { EventsStrip } from '@/components/home/EventsStrip';
 import { ClubPulse } from '@/components/home/ClubPulse';
+import { MembersOnline } from '@/components/home/MembersOnline';
+import { DiscoverStrip } from '@/components/home/DiscoverStrip';
 import { EmptyClubState } from '@/components/home/EmptyClubState';
 import { rankNextActions } from '@/lib/home/nextAction';
 import { ENDLESS_MISSION_ID } from '@/lib/nexus/endless';
@@ -104,6 +110,15 @@ export default function DashboardPage() {
   const hasFeed = isInstalled('feed');
   const hasEvents = isInstalled('events');
   const hasDrafts = isInstalled('draft-arena');
+  const hasNexus = isInstalled('nexus-defense');
+
+  // QuickBar — user's pinned apps + edit sheet open state
+  const enabledAssets = useMemo(
+    () => installedAssets.filter(ia => ia.enabled),
+    [installedAssets],
+  );
+  const quickBar = useQuickBar(enabledAssets);
+  const [qbOpen, setQbOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -216,6 +231,59 @@ export default function DashboardPage() {
   const seasonTarget = season ? getSeasonDraftTarget(season) : 0;
   const regularEntries = seasonEntries.filter(e => !e.is_playoff).length;
 
+  // Build highlights from activity_feed (cheap — already fetched above) and
+  // any other signals we have on hand. Filtered to celebratory event types.
+  const highlights = useMemo<HighlightItem[]>(() => {
+    if (!hasFeed) return [];
+    const items: HighlightItem[] = [];
+    for (const a of activity) {
+      if (a.event_type === 'draft_completed' && a.target_id) {
+        items.push({
+          id: `feed-${a.id}`,
+          kind: 'draft-winner',
+          tag: 'DRAFT COMPLETE',
+          headline: a.profiles?.display_name ? `${a.profiles.display_name} closed a draft` : 'A draft just wrapped',
+          sub: 'Tap for results',
+          to: `/drafts/${a.target_id}`,
+          at: a.created_at,
+          tint: '45 95% 55%',
+        });
+      } else if (a.event_type === 'bracket_submitted' && a.target_id) {
+        items.push({
+          id: `feed-${a.id}`,
+          kind: 'feed-event',
+          tag: 'BRACKET LOCKED IN',
+          headline: a.profiles?.display_name ? `${a.profiles.display_name} submitted a bracket` : 'New bracket submitted',
+          to: `/pools/${a.target_id}`,
+          at: a.created_at,
+          tint: '210 80% 60%',
+        });
+      } else if (a.event_type === 'event_created' && a.target_id) {
+        items.push({
+          id: `feed-${a.id}`,
+          kind: 'feed-event',
+          tag: 'NEW EVENT',
+          headline: a.profiles?.display_name ? `${a.profiles.display_name} added an event` : 'A new event is up',
+          to: `/events/${a.target_id}`,
+          at: a.created_at,
+          tint: '38 100% 60%',
+        });
+      } else if (a.event_type === 'post_created' && a.target_id) {
+        items.push({
+          id: `feed-${a.id}`,
+          kind: 'feed-event',
+          tag: 'NEW DISCUSSION',
+          headline: a.profiles?.display_name ? `${a.profiles.display_name} started a discussion` : 'New discussion',
+          to: `/posts/${a.target_id}`,
+          at: a.created_at,
+          tint: '195 80% 65%',
+        });
+      }
+      if (items.length >= 6) break;
+    }
+    return items;
+  }, [activity, hasFeed]);
+
   // ─── Loading skeleton ────────────────────────────────────────────
   if (loading || assetsLoading) {
     return (
@@ -245,6 +313,13 @@ export default function DashboardPage() {
         displayName={displayName}
         avatarUrl={avatarUrl}
         pendingCount={actions.length}
+      />
+
+      {/* QuickBar — user-pinned dock. Sits above everything for muscle memory. */}
+      <QuickBar
+        pinned={quickBar.pinned}
+        accent={accent}
+        onEditClick={() => setQbOpen(true)}
       />
 
       {/* PWA install hint — slim inline chip, only when applicable */}
@@ -281,13 +356,17 @@ export default function DashboardPage() {
       <RightNowCard actions={actions} />
 
       {/* Asset launcher — installed apps with live status chips */}
-      {installedAssets.length > 0 && (
+      {enabledAssets.length > 0 && (
         <AssetLauncher
-          installedAssets={installedAssets.filter(ia => ia.enabled)}
+          installedAssets={enabledAssets}
           canManage={isClubAdmin}
           accent={accent}
         />
       )}
+
+      {/* Highlights — recent club wins. Pulls double duty as a screen-fill
+          module on quiet days and a celebratory surface on busy ones. */}
+      <Highlights items={highlights} />
 
       {/* League snapshot — Draft Arena + active season */}
       {hasDrafts && season && (
@@ -310,18 +389,42 @@ export default function DashboardPage() {
         <ClubPulse activity={activity} />
       )}
 
+      {/* Members online — small presence strip (renders nothing if you're alone) */}
+      <MembersOnline
+        myDisplayName={displayName}
+        myAvatarUrl={avatarUrl}
+        accent={accent}
+      />
+
+      {/* Discover — admin-only un-installed assets */}
+      <DiscoverStrip
+        allAssets={allAssets}
+        installedAssets={installedAssets}
+        isAdmin={isClubAdmin}
+        accent={accent}
+      />
+
       {/* Fresh-club empty state — only when truly nothing to surface */}
       {isFreshClub && (
         <EmptyClubState isAdmin={isClubAdmin} accent={accent} clubName={club?.name} />
       )}
 
-      {/* Catalog hint when there are installable assets the club hasn't picked up yet
-          (admins only, so we don't waste a tile on members who can't install) */}
-      {!isFreshClub && isClubAdmin && installedAssets.length < allAssets.length && (
-        <p className="text-center text-[10.5px] text-muted-foreground/55 font-medium mt-1">
-          {allAssets.length - installedAssets.length} more in the asset library
-        </p>
-      )}
+      {/* QuickBar customization sheet — portaled, mounts only when open */}
+      <AnimatePresence>
+        {qbOpen && (
+          <QuickBarSheet
+            pinned={quickBar.pinned}
+            available={quickBar.available}
+            max={quickBar.max}
+            accent={accent}
+            onPin={quickBar.pin}
+            onUnpin={quickBar.unpin}
+            onMove={quickBar.move}
+            onReset={quickBar.reset}
+            onClose={() => setQbOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

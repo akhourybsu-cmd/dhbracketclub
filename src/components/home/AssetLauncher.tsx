@@ -90,7 +90,7 @@ export function AssetLauncher({ installedAssets, canManage, accent }: Props) {
     >
       <div className="flex items-center justify-between mb-2 px-4 sm:px-0">
         <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-muted-foreground/65">
-          ◆ Your Apps
+          ◆ All Apps
         </p>
         <p className="text-[9.5px] font-medium text-muted-foreground/55 tabular-nums">
           {ordered.length}
