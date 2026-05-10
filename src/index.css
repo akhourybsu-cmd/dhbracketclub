@@ -437,6 +437,78 @@
     color: hsl(var(--foreground));
   }
 
+  /* ═══ Phase 2 — modals, badges, dividers, accent text ═══ */
+
+  /* Dialogs / Sheets / Popovers / Drawers — stronger definition over tinted page bg.
+     The Radix overlay is bg-black/80 which is fine; we just need the panels to read
+     as elevated surfaces. */
+  .light [role="dialog"],
+  .light [data-radix-popper-content-wrapper] > * {
+    box-shadow: var(--shadow-elevated);
+  }
+  .light [role="dialog"].bg-background,
+  .light [data-radix-popper-content-wrapper] > .bg-background,
+  .light .bg-popover {
+    background-color: hsl(var(--popover));
+    border-color: hsl(var(--border));
+  }
+  /* Soften the pitch-black overlay a touch in light mode (still dim, less harsh) */
+  .light [data-radix-dialog-overlay].bg-black\/80,
+  .light [data-radix-alert-dialog-overlay].bg-black\/80 {
+    background-color: hsl(160 25% 6% / 0.55);
+  }
+
+  /* Low-opacity borders collapse to invisible on light surfaces — restore them */
+  .light .border-border\/10,
+  .light .border-border\/15,
+  .light .border-border\/20,
+  .light .border-border\/25,
+  .light .border-border\/30,
+  .light .border-border\/40,
+  .light .border-border\/50 {
+    border-color: hsl(var(--border) / 0.7);
+  }
+
+  /* Low-opacity muted backgrounds used as chips / hover states */
+  .light .bg-muted\/10,
+  .light .bg-muted\/15,
+  .light .bg-muted\/20,
+  .light .bg-muted\/25,
+  .light .bg-muted\/30 {
+    background-color: hsl(var(--muted) / 0.55);
+  }
+  .light .bg-muted\/40,
+  .light .bg-muted\/50,
+  .light .bg-muted\/60 {
+    background-color: hsl(var(--muted) / 0.85);
+  }
+
+  /* Accent / brand text at low opacity — boost so they pass AA on white cards */
+  .light .text-primary\/40,
+  .light .text-primary\/50,
+  .light .text-primary\/60,
+  .light .text-primary\/70 { color: hsl(var(--primary) / 0.92); }
+  .light .text-accent\/40,
+  .light .text-accent\/50,
+  .light .text-accent\/60,
+  .light .text-accent\/70 { color: hsl(var(--accent) / 0.92); }
+  .light .text-destructive\/50,
+  .light .text-destructive\/60,
+  .light .text-destructive\/70 { color: hsl(var(--destructive) / 0.92); }
+
+  /* Badges — secondary/outline variants need real contrast on white cards */
+  .light [class*="bg-secondary"]:not([class*="bg-secondary-foreground"]) {
+    color: hsl(var(--secondary-foreground));
+  }
+
+  /* Form labels — make sure native + shadcn labels stay strong */
+  .light label { color: hsl(var(--foreground) / 0.92); }
+
+  /* Focus ring — stronger visibility on white inputs */
+  .light *:focus-visible {
+    outline-color: hsl(var(--primary));
+  }
+
   /* Noise grain overlay — subtle version for light mode */
   .light body::before {
     content: '';
