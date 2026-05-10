@@ -13,6 +13,7 @@ import { motion } from 'framer-motion';
 import { Users, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useClub } from '@/contexts/ClubContext';
 import { UserAvatar } from '@/components/chat/UserAvatar';
 
 interface OnlineUser { id: string; name: string; avatar?: string }
