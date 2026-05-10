@@ -314,6 +314,34 @@
 @layer components {
   /* ═══ Light mode contrast boosters ═══ */
 
+  /* Safety net — low-opacity text utilities collapse to ~1.7-2.4:1 contrast on
+     light-mode white cards. Force any sub-65% opacity muted/foreground text or
+     icons back to full (or near-full) opacity. The deeper light-mode tokens
+     are already legible at 100%. Specificity (0,2,0) beats Tailwind's (0,1,0)
+     — no !important needed. Dark mode is unaffected. */
+  .light .text-muted-foreground\/40,
+  .light .text-muted-foreground\/45,
+  .light .text-muted-foreground\/50,
+  .light .text-muted-foreground\/55,
+  .light .text-muted-foreground\/60,
+  .light .text-muted-foreground\/65 {
+    color: hsl(var(--muted-foreground));
+  }
+  .light .text-foreground\/40,
+  .light .text-foreground\/45,
+  .light .text-foreground\/50,
+  .light .text-foreground\/55,
+  .light .text-foreground\/60,
+  .light .text-foreground\/65,
+  .light .text-foreground\/70 {
+    color: hsl(var(--foreground) / 0.88);
+  }
+  .light .bg-muted-foreground\/30,
+  .light .bg-muted-foreground\/40,
+  .light .bg-muted-foreground\/50 {
+    background-color: hsl(var(--muted-foreground) / 0.75);
+  }
+
   /* Cards — stronger definition against tinted page bg */
   .light .glass-card {
     background-color: hsl(0 0% 100%);
