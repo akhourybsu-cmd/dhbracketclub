@@ -27,11 +27,13 @@ interface Props {
 
 export function MembersOnline({ myDisplayName, myAvatarUrl, accent }: Props) {
   const { user } = useAuth();
+  const { club } = useClub();
   const [users, setUsers] = useState<OnlineUser[]>([]);
 
   useEffect(() => {
-    if (!user || !myDisplayName) return;
-    const channel = supabase.channel('online-presence', { config: { presence: { key: user.id } } });
+    if (!user || !myDisplayName || !club?.id) return;
+    // Club-scoped presence channel — members only see others in their own club.
+    const channel = supabase.channel(`online-presence:${club.id}`, { config: { presence: { key: user.id } } });
     channel
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
@@ -50,7 +52,7 @@ export function MembersOnline({ myDisplayName, myAvatarUrl, accent }: Props) {
         }
       });
     return () => { supabase.removeChannel(channel); };
-  }, [user, myDisplayName, myAvatarUrl]);
+  }, [user, myDisplayName, myAvatarUrl, club?.id]);
 
   if (users.length <= 1) return null; // only me online (or nobody)
 
