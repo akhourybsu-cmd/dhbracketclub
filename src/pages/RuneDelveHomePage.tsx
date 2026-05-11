@@ -9,6 +9,8 @@ import { useRuneWallet } from '@/hooks/useRuneShards';
 import { useLoadout } from '@/hooks/useLoadout';
 import { CLASS_LIST, getClass, levelFromXp, titleForLevel, type HeroClass } from '@/lib/runedelve/classConfig';
 import { chapterFor, chapterMeta } from '@/lib/runedelve/levelGenerator';
+import { getLayoutForLevel } from '@/lib/runedelve/chamberAssignment';
+import { ContinueDelveBanner } from '@/components/runedelve/ContinueDelveBanner';
 import { ClassBadge } from '@/components/runedelve/ClassBadge';
 import { ShardBalance } from '@/components/runedelve/ShardBalance';
 import { RELIC_BY_ID } from '@/lib/runedelve/relics';
@@ -161,51 +163,24 @@ export default function RuneDelveHomePage() {
   );
   const aheadGap = ahead ? ahead.highest_completed_level - (progress.highest_completed_level ?? 0) : 0;
 
+  // Resolve the chamber layout for the player's current level so the Continue
+  // affordance reads as "I'm about to enter this specific chamber" rather
+  // than a generic "L24" tile.
+  const currentLayout = getLayoutForLevel(currentLevel);
+
   return (
     <div className="space-y-4 pb-8">
-      {/* Continue banner */}
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="glass-card p-5 relative overflow-hidden" style={{
-          background: 'linear-gradient(160deg, hsl(var(--primary) / 0.12), hsl(var(--accent) / 0.06))',
-          borderColor: 'hsl(var(--primary) / 0.2)',
-        }}>
-          <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <span className="font-rd-display px-2 py-0.5 rounded-md text-[9px] font-extrabold bg-primary/20 text-primary tracking-[0.18em]">CHAPTER {chapter}</span>
-            <span className="text-[10px] font-extrabold text-foreground/70 uppercase tracking-wider">L{chapterStart}–{chapterEnd}</span>
-          </div>
-          <h2 className="rd-title text-2xl tracking-wide leading-tight text-foreground">{chapMeta.name}</h2>
-          <p className="text-[12px] text-foreground/75 mb-1 italic">{chapMeta.subtitle}</p>
-          <p className="text-[11px] font-extrabold text-primary mb-3">Welcome back, <span className="font-rd-display">{hero.hero_name}</span></p>
-
-          <div className="space-y-2 mb-3">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="font-bold text-muted-foreground">Chapter {chapter} progress</span>
-              <span className="font-mono font-bold tabular-nums">{completedInChapter}/50</span>
-            </div>
-            <div className="h-1.5 rounded-full bg-muted/50 overflow-hidden">
-              <div className="h-full bg-primary transition-all" style={{ width: `${chapterPct}%` }} />
-            </div>
-          </div>
-
-          <button
-            onClick={() => navigate(`/rune-delve/play/${currentLevel}`)}
-            className="rd-btn-juice rd-shimmer w-full h-12 rounded-xl font-extrabold text-sm btn-press flex items-center justify-center gap-2"
-            style={{
-              background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)))',
-              color: 'white',
-              boxShadow: 'var(--shadow-glow)',
-            }}
-          >
-            <Swords className="w-4 h-4" /> Continue · Level {currentLevel}
-          </button>
-          <Link
-            to="/rune-delve/levels"
-            className="mt-2 w-full h-10 rounded-lg bg-muted/40 flex items-center justify-center gap-1.5 text-[12px] font-bold btn-press"
-          >
-            <Map className="w-3.5 h-3.5" /> Level Map
-          </Link>
-        </div>
-      </motion.div>
+      {/* Continue Delve — the chamber-shaped resume affordance */}
+      <ContinueDelveBanner
+        layout={currentLayout}
+        levelNumber={currentLevel}
+        chapterNumber={chapter}
+        chapterName={chapMeta.name}
+        chapterSubtitle={chapMeta.subtitle}
+        cleared={completedInChapter}
+        total={50}
+        heroName={hero.hero_name}
+      />
 
       {/* TODAY — daily ritual: Daily Challenge + Quests, side-by-side compact */}
       <Section label="Today" />

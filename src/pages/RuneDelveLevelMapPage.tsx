@@ -11,6 +11,8 @@ import {
   type ObjectiveType,
 } from '@/lib/runedelve/levelGenerator';
 import { mechanicsForLevel, introMechanicForLevel, getMechanic } from '@/lib/runedelve/mechanics';
+import { getLayoutForLevel } from '@/lib/runedelve/chamberAssignment';
+import { DungeonPathPreview } from '@/components/runedelve/DungeonPathPreview';
 import { cn } from '@/lib/utils';
 
 export default function RuneDelveLevelMapPage() {
@@ -97,105 +99,29 @@ export default function RuneDelveLevelMapPage() {
             const tier = difficultyTierFor(lvl.level_number);
             const milestone = isMilestoneLevel(lvl.level_number);
             const opener = isChapterOpener(lvl.level_number);
-            const objType = lvl.objective_type as ObjectiveType;
             const lvlMechanics = mechanicsForLevel(lvl.level_number);
             const newestMechanic = lvlMechanics.length ? getMechanic(lvlMechanics[lvlMechanics.length - 1]) : null;
             const introId = introMechanicForLevel(lvl.level_number);
             const mods = (lvl.modifiers ?? {}) as { secondary_objective?: unknown; boss_rule?: unknown };
             const hasSecondary = !!mods.secondary_objective;
             const hasBossRule = !!mods.boss_rule;
+            const layout = getLayoutForLevel(lvl.level_number);
             return (
-              <button
+              <DungeonPathPreview
                 key={lvl.level_number}
-                disabled={!isUnlocked}
-                onClick={() => navigate(`/rune-delve/play/${lvl.level_number}`)}
-                className={cn(
-                  'relative aspect-square rounded-xl p-2 flex flex-col items-center justify-center gap-0.5 btn-press border overflow-hidden',
-                  isCurrent && 'border-primary',
-                  !isUnlocked && 'opacity-40 cursor-not-allowed',
-                  isCleared && 'bg-success/10 border-success/40',
-                  !isCleared && isUnlocked && !milestone && 'bg-muted/20 border-border/40',
-                  milestone && isUnlocked && !isCleared && 'border-gold/50',
-                  !isUnlocked && 'bg-muted/10 border-border/30',
-                )}
-                style={{
-                  ...(isCurrent ? { boxShadow: 'var(--shadow-glow)' } : undefined),
-                  ...(milestone && isUnlocked && !isCleared
-                    ? {
-                        background: 'linear-gradient(135deg, hsl(var(--gold) / 0.12), hsl(var(--premium-warm) / 0.06))',
-                        boxShadow: 'var(--shadow-gold)',
-                      }
-                    : undefined),
-                }}
-                aria-label={`Level ${lvl.level_number}${!isUnlocked ? ' (locked)' : ''}${milestone ? ' (milestone)' : ''}`}
-              >
-                {/* Status icons (top-right) */}
-                {!isUnlocked && (
-                  <Lock className="w-3.5 h-3.5 text-muted-foreground absolute top-1.5 right-1.5" />
-                )}
-                {isCleared && (
-                  <Check className="w-3.5 h-3.5 absolute top-1.5 right-1.5" style={{ color: 'hsl(var(--success))' }} />
-                )}
-                {milestone && !isCleared && isUnlocked && (
-                  <Crown className="w-3.5 h-3.5 absolute top-1.5 right-1.5" style={{ color: 'hsl(var(--gold))' }} />
-                )}
-
-                {/* Chapter opener gleam (only when no mechanic icon would collide) */}
-                {opener && isUnlocked && !newestMechanic && (
-                  <Sparkles className="w-3 h-3 absolute top-1.5 left-1.5" style={{ color: 'hsl(var(--accent))' }} />
-                )}
-
-                {/* Mechanic icon (top-left) — and NEW pip if this level introduces it */}
-                {newestMechanic && isUnlocked && (
-                  <span
-                    className="absolute top-1 left-1 inline-flex items-center justify-center w-4 h-4 rounded-md bg-background/70 border border-primary/30 text-[10px] leading-none"
-                    title={newestMechanic.name}
-                    aria-label={`Mechanic: ${newestMechanic.name}`}
-                  >
-                    {newestMechanic.icon}
-                  </span>
-                )}
-                {introId && isUnlocked && (
-                  <span className="absolute -top-1 -left-1 px-1 py-px rounded-sm text-[7px] font-extrabold uppercase tracking-wider bg-primary text-primary-foreground shadow">
-                    New
-                  </span>
-                )}
-
-                {/* "Next up" subtle pulse on current level */}
-                {isCurrent && (
-                  <span
-                    className="absolute inset-0 rounded-xl pointer-events-none animate-pulse"
-                    style={{ boxShadow: 'inset 0 0 0 1.5px hsl(var(--primary) / 0.5)' }}
-                  />
-                )}
-
-                <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Lv</span>
-                <span className={cn(
-                  'text-xl font-extrabold tabular-nums leading-none',
-                  isCurrent && 'text-primary rd-breath',
-                  milestone && !isCleared && isUnlocked && 'text-gold rd-breath-slow',
-                )}>{lvl.level_number}</span>
-                <div className="flex gap-0.5 mt-0.5">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <span
-                      key={i}
-                      className="w-1 h-1 rounded-full"
-                      style={{ background: i < tier ? 'hsl(var(--gold))' : 'hsl(var(--muted) / 0.5)' }}
-                    />
-                  ))}
-                </div>
-                {objType !== 'defeat_all' && isUnlocked && (
-                  <span className="text-[7px] font-bold uppercase tracking-wider text-primary mt-0.5 truncate w-full text-center">
-                    {objType === 'survive' ? 'Survive' : objType === 'reach_score' ? 'Score' : 'Elite'}
-                  </span>
-                )}
-                {/* Corner glyphs — bonus goal & boss rule hints. */}
-                {(hasSecondary || hasBossRule) && isUnlocked && (
-                  <span className="absolute bottom-1 right-1 text-[10px] leading-none" aria-hidden>
-                    {hasBossRule ? '👑' : '🎯'}
-                  </span>
-                )}
-              </button>
+                levelNumber={lvl.level_number}
+                layout={layout}
+                tier={tier}
+                isUnlocked={isUnlocked}
+                isCleared={isCleared}
+                isCurrent={isCurrent}
+                isMilestone={milestone}
+                isOpener={opener}
+                mechanicIcon={newestMechanic?.icon}
+                mechanicLabel={newestMechanic?.name}
+                introducesMechanic={!!introId}
+                cornerGlyph={hasBossRule ? '👑' : hasSecondary ? '🎯' : null}
+              />
             );
           })}
         </div>
