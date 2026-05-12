@@ -110,8 +110,8 @@ export default function ProfilePage() {
       setAvatarUrl(urlWithCacheBust);
       toast.success('Avatar updated!');
       play('success');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to upload avatar');
+    } catch (err) {
+      toast.error(sanitizeUploadError(err, 'Failed to upload avatar'));
       play('error');
     } finally {
       setUploading(false);
