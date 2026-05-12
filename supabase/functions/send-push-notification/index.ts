@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
 
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
 
-    // ── GET VAPID public key ──
+    // ── GET VAPID public key (intentionally public — needed before login to subscribe) ──
     if (req.method === "GET" || body?.action === "get_vapid_public_key") {
       if (!vapidPublicKey) return jsonResponse({ error: "VAPID public key is not configured" }, 500);
       return jsonResponse({ vapidPublicKey });
@@ -122,10 +122,39 @@ Deno.serve(async (req) => {
     webpush.setVapidDetails("https://dryhorse.app", vapidPublicKey, vapidPrivateKey);
     const supabase = getSupabase();
 
+    // ── Auth gate for any send/test action ──
+    const authHeader = req.headers.get("Authorization");
+    const cronSecret = req.headers.get("x-cron-secret") || "";
+    const expectedCron = Deno.env.get("CRON_SHARED_SECRET") || "";
+    const isCron = !!(expectedCron && cronSecret === expectedCron);
+
+    let callerId: string | null = null;
+    let isAdmin = false;
+    if (!isCron) {
+      if (!authHeader?.startsWith("Bearer ")) {
+        return jsonResponse({ error: "Unauthorized" }, 401);
+      }
+      const { createClient: createUserClient } = await import("https://esm.sh/@supabase/supabase-js@2.49.1");
+      const userClient = createUserClient(
+        supabaseUrl,
+        Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "",
+        { global: { headers: { Authorization: authHeader } } },
+      );
+      const { data: { user } } = await userClient.auth.getUser();
+      if (!user) return jsonResponse({ error: "Unauthorized" }, 401);
+      callerId = user.id;
+      const { data: adminRow } = await userClient.rpc("is_app_admin", { _user_id: user.id });
+      isAdmin = !!adminRow;
+    }
+
     // ══════════════════════════════════════════
     // ── TEST NOTIFICATION ──
     // ══════════════════════════════════════════
     if (body.test && body.user_id) {
+      // Users can only test against themselves; admins/cron may target anyone.
+      if (!isCron && !isAdmin && body.user_id !== callerId) {
+        return jsonResponse({ error: "Forbidden" }, 403);
+      }
       const { data: subscriptions } = await supabase
         .from("push_subscriptions")
         .select("endpoint, p256dh, auth, user_id")
