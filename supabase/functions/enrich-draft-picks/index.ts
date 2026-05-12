@@ -832,6 +832,37 @@ serve(async (req) => {
       throw new Error("Missing required environment variables");
     }
 
+    // ── Auth gate ──
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userClient = createClient(
+      SUPABASE_URL,
+      Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "",
+      { global: { headers: { Authorization: authHeader } } },
+    );
+    const { data: { user } } = await userClient.auth.getUser();
+    if (!user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── Rate limit (AI fan-out is expensive) ──
+    const { data: quota } = await userClient.rpc("consume_ai_quota", {
+      _function_name: "enrich-draft-picks",
+      _max_requests: 30,
+      _window_minutes: 10,
+    });
+    if (quota && (quota as any).allowed === false) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded", retry_after: (quota as any).retry_after }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { draft_id, pick_ids } = await req.json();
 
