@@ -94,6 +94,7 @@ const AdminAssetCatalogPage = lazy(() => import("./pages/AdminAssetCatalogPage")
 const ClubAssetsPage = lazy(() => import("./pages/ClubAssetsPage"));
 import { AdminRoute } from "./components/auth/AdminRoute";
 import { ClubAdminRoute } from "./components/auth/ClubAdminRoute";
+import { AssetGuard } from "./components/auth/AssetGuard";
 const NexusHomePage = lazy(() => import("./pages/NexusHomePage"));
 const NexusMissionsPage = lazy(() => import("./pages/NexusMissionsPage"));
 const NexusLoadoutPage = lazy(() => import("./pages/NexusLoadoutPage"));
