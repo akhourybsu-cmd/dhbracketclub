@@ -174,6 +174,31 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  // ── Admin OR cron-secret gate (one-shot maintenance only) ──
+  const expected = Deno.env.get('CRON_SHARED_SECRET');
+  const provided = req.headers.get('x-cron-secret') || '';
+  let authorized = !!(expected && provided === expected);
+  if (!authorized) {
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      const userClient = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY') || '',
+        { global: { headers: { Authorization: authHeader } } },
+      );
+      const { data: { user } } = await userClient.auth.getUser();
+      if (user) {
+        const { data: isAdmin } = await userClient.rpc('is_app_admin', { _user_id: user.id });
+        authorized = !!isAdmin;
+      }
+    }
+  }
+  if (!authorized) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
