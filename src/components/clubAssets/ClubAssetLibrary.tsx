@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, Package, Loader2 } from 'lucide-react';
+import { Search, X, Package, Loader2, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useClubAssets } from '@/hooks/useClubAssets';
@@ -21,17 +21,29 @@ const TABS: { id: FilterTab; label: string }[] = [
   { id: 'experimental', label: 'Beta' },
 ];
 
+/** Pull a user-facing error message off a thrown PostgrestError / Error / unknown. */
+function errMessage(err: unknown): string {
+  if (err && typeof err === 'object') {
+    const e = err as { message?: string; details?: string; hint?: string };
+    return e.message || e.details || e.hint || 'Something went wrong';
+  }
+  return 'Something went wrong';
+}
+
 export function ClubAssetLibrary() {
   const {
     allAssets, installedAssets, loading,
-    install, uninstall, setEnabled, setVisible,
-    refresh,
+    pendingInstall, pendingUninstall, pendingToggle,
+    install, uninstall, restore,
+    setEnabled, setVisible,
   } = useClubAssets();
 
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [search, setSearch] = useState('');
   const [sheetAsset, setSheetAsset] = useState<PlatformAsset | null>(null);
-  const [installing, setInstalling] = useState(false);
+  // Sheet's own pending state — separate from the per-card pending sets so
+  // the sheet's "Installing…" button locks independently.
+  const [sheetInstalling, setSheetInstalling] = useState(false);
 
   const installedMap = useMemo(() =>
     new Map(installedAssets.map(ia => [ia.asset_id, ia])),
@@ -57,41 +69,79 @@ export function ClubAssetLibrary() {
 
   const installedCount = installedAssets.length;
 
-  const handleInstall = useCallback(async (asset: PlatformAsset) => {
-    setInstalling(true);
+  /** One-tap install path — used for zero-config assets. Inline spinner + subtle toast. */
+  const handleQuickInstall = useCallback(async (asset: PlatformAsset) => {
     try {
       await install(asset.id);
-    } catch {
-      toast.error('Failed to install asset');
-    } finally {
-      setInstalling(false);
+      toast.success(`${asset.name} added`, {
+        description: 'Members can use it now.',
+        duration: 2200,
+      });
+    } catch (err) {
+      toast.error(`Couldn't install ${asset.name}`, {
+        description: errMessage(err),
+      });
     }
   }, [install]);
 
+  /** Sheet install path — used for configurable assets. Sheet shows its own state. */
+  const handleSheetInstall = useCallback(async (asset: PlatformAsset) => {
+    setSheetInstalling(true);
+    try {
+      await install(asset.id);
+    } catch (err) {
+      toast.error(`Couldn't install ${asset.name}`, {
+        description: errMessage(err),
+      });
+      throw err; // let the sheet stay on confirm step
+    } finally {
+      setSheetInstalling(false);
+    }
+  }, [install]);
+
+  /** Uninstall with a 5-second Undo toast — the row is removed optimistically. */
   const handleUninstall = useCallback(async (installed: InstalledAsset) => {
+    const snapshot = installed;
+    const name = installed.asset.name;
     try {
       await uninstall(installed.id);
-      toast.success(`${installed.asset.name} removed`);
-    } catch {
-      toast.error('Failed to remove asset');
+      toast.success(`${name} removed`, {
+        description: 'Tap undo to restore.',
+        duration: 5000,
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            restore(snapshot).catch(err => {
+              toast.error(`Couldn't restore ${name}`, { description: errMessage(err) });
+            });
+          },
+        },
+      });
+    } catch (err) {
+      toast.error(`Couldn't remove ${name}`, { description: errMessage(err) });
     }
-  }, [uninstall]);
+  }, [uninstall, restore]);
 
   const handleToggleEnabled = useCallback(async (installed: InstalledAsset) => {
+    const next = !installed.enabled;
     try {
-      await setEnabled(installed.id, !installed.enabled);
-      toast.success(installed.enabled ? 'Asset disabled' : 'Asset enabled');
-    } catch {
-      toast.error('Failed to update asset');
+      await setEnabled(installed.id, next);
+      // No toast spam — the card itself flips state. Quiet success is good UX.
+    } catch (err) {
+      toast.error(`Couldn't ${next ? 'enable' : 'disable'} ${installed.asset.name}`, {
+        description: errMessage(err),
+      });
     }
   }, [setEnabled]);
 
   const handleToggleVisible = useCallback(async (installed: InstalledAsset) => {
+    const next = !installed.visible_to_members;
     try {
-      await setVisible(installed.id, !installed.visible_to_members);
-      toast.success(installed.visible_to_members ? 'Hidden from members' : 'Visible to members');
-    } catch {
-      toast.error('Failed to update asset');
+      await setVisible(installed.id, next);
+    } catch (err) {
+      toast.error(`Couldn't ${next ? 'show' : 'hide'} ${installed.asset.name}`, {
+        description: errMessage(err),
+      });
     }
   }, [setVisible]);
 
@@ -130,7 +180,12 @@ export function ClubAssetLibrary() {
           className="pl-9 pr-9 h-9 text-sm bg-muted/20 border-border/20 rounded-xl"
         />
         {search && (
-          <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted/50">
+          <button
+            type="button"
+            onClick={() => setSearch('')}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted/50"
+            aria-label="Clear search"
+          >
             <X className="w-3.5 h-3.5 text-muted-foreground/60" />
           </button>
         )}
@@ -169,6 +224,22 @@ export function ClubAssetLibrary() {
         })}
       </div>
 
+      {/* One-tap install hint — only shown when nothing is installed yet so
+          users learn the new affordance without feeling lectured to. */}
+      {installedCount === 0 && filtered.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-start gap-2 px-3 py-2 rounded-xl bg-primary/8 border border-primary/15"
+        >
+          <Sparkles className="w-3.5 h-3.5 mt-0.5 text-primary flex-shrink-0" />
+          <p className="text-[11px] text-foreground/80 leading-snug">
+            Tap <span className="font-bold text-primary">Add to Club</span> on any asset to install it instantly.
+            Configurable assets open a setup card before installing.
+          </p>
+        </motion.div>
+      )}
+
       {/* Asset grid */}
       <AnimatePresence mode="popLayout">
         {filtered.length === 0 ? (
@@ -188,28 +259,37 @@ export function ClubAssetLibrary() {
           </motion.div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {filtered.map(asset => (
-              <AssetCard
-                key={asset.id}
-                asset={asset}
-                installed={installedMap.get(asset.id)}
-                onInstall={a => setSheetAsset(a)}
-                onConfigure={ia => toast.info(`Configure ${ia.asset.name} — coming soon`)}
-                onToggleEnabled={handleToggleEnabled}
-                onToggleVisible={handleToggleVisible}
-              />
-            ))}
+            {filtered.map(asset => {
+              const installed = installedMap.get(asset.id);
+              return (
+                <AssetCard
+                  key={asset.id}
+                  asset={asset}
+                  installed={installed}
+                  requiresSheet={asset.requires_configuration}
+                  isInstalling={pendingInstall.has(asset.id)}
+                  isUninstalling={installed ? pendingUninstall.has(installed.id) : false}
+                  isToggling={installed ? pendingToggle.has(installed.id) : false}
+                  onInstall={a => setSheetAsset(a)}
+                  onQuickInstall={handleQuickInstall}
+                  onUninstall={handleUninstall}
+                  onConfigure={ia => toast.info(`Configure ${ia.asset.name} — coming soon`)}
+                  onToggleEnabled={handleToggleEnabled}
+                  onToggleVisible={handleToggleVisible}
+                />
+              );
+            })}
           </div>
         )}
       </AnimatePresence>
 
-      {/* Install bottom sheet */}
+      {/* Install bottom sheet — only used when the asset needs configuration */}
       <InstallAssetSheet
         asset={sheetAsset}
         open={!!sheetAsset}
-        installing={installing}
+        installing={sheetInstalling}
         onClose={() => setSheetAsset(null)}
-        onInstall={handleInstall}
+        onInstall={handleSheetInstall}
         onConfigureNow={a => toast.info(`Configure ${a.name} — coming soon`)}
       />
     </div>
