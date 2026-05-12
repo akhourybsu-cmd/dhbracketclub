@@ -136,13 +136,20 @@ function PageFallback() {
   );
 }
 
-const ProtectedPage = ({ children }: { children: React.ReactNode }) => (
+const ProtectedPage = ({
+  children,
+  assetSlug,
+}: {
+  children: React.ReactNode;
+  /** When set, also requires the named asset to be installed for the active club. App admins bypass. */
+  assetSlug?: string;
+}) => (
   <ProtectedRoute>
     <ClubGate>
       <AppLayout>
         <PageTransition>
           <Suspense fallback={<PageFallback />}>
-            {children}
+            {assetSlug ? <AssetGuard slug={assetSlug}>{children}</AssetGuard> : children}
           </Suspense>
         </PageTransition>
       </AppLayout>
