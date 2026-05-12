@@ -39,6 +39,9 @@ import { ClubPulse } from '@/components/home/ClubPulse';
 import { MembersOnline } from '@/components/home/MembersOnline';
 import { DiscoverStrip } from '@/components/home/DiscoverStrip';
 import { EmptyClubState } from '@/components/home/EmptyClubState';
+import { ClubOnboardingFlow } from '@/components/onboarding/ClubOnboardingFlow';
+import { WhatIsNewCard } from '@/components/onboarding/WhatIsNewCard';
+import { useClubOnboarding, useNewFeatures } from '@/hooks/useOnboarding';
 import { rankNextActions } from '@/lib/home/nextAction';
 import { ENDLESS_MISSION_ID } from '@/lib/nexus/endless';
 
@@ -119,6 +122,10 @@ export default function DashboardPage() {
   );
   const quickBar = useQuickBar(enabledAssets);
   const [qbOpen, setQbOpen] = useState(false);
+
+  // Onboarding framework — first-time tour + "What's New" prompts
+  const onboarding = useClubOnboarding();
+  const newFeatures = useNewFeatures();
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -322,6 +329,18 @@ export default function DashboardPage() {
         onEditClick={() => setQbOpen(true)}
       />
 
+      {/* "What's New" — surface unseen, newly-installed important features */}
+      {newFeatures.newFeatures.length > 0 && (
+        <WhatIsNewCard
+          newFeatures={newFeatures.newFeatures}
+          accent={accent}
+          onFeatureCompleted={(key, ver) => newFeatures.setStatus(key, ver, 'completed')}
+          onFeatureDismissed={(key, ver) => newFeatures.setStatus(key, ver, 'dismissed')}
+          onFeatureRemindLater={(key, ver) => newFeatures.setStatus(key, ver, 'remind_later')}
+          onDismissAll={newFeatures.dismissAll}
+        />
+      )}
+
       {/* PWA install hint — slim inline chip, only when applicable */}
       <AnimatePresence>
         {canInstall && !pwaDismissed && (
@@ -425,6 +444,17 @@ export default function DashboardPage() {
           />
         )}
       </AnimatePresence>
+
+      {/* First-time club onboarding — full-screen, dismissible, runs once */}
+      <ClubOnboardingFlow
+        open={onboarding.needsFirstTime}
+        club={club}
+        displayName={displayName}
+        installedAssets={enabledAssets}
+        isAdmin={isClubAdmin}
+        onComplete={onboarding.complete}
+        onDismiss={onboarding.dismiss}
+      />
     </div>
   );
 }

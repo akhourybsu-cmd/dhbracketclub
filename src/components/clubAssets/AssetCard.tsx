@@ -6,10 +6,12 @@ import {
   Bookmark, Sparkles, Shield, Trophy, TrendingUp, Lock,
   MessageSquareText, CalendarDays, ScrollText, Newspaper,
   MessageCircle, BarChart3, FileText, Link2, Star,
-  Brackets, EyeOff, Settings,
+  Brackets, EyeOff, Settings, BookOpen,
 } from 'lucide-react';
 import type { PlatformAsset, InstalledAsset } from '@/types/assets';
 import { CATEGORY_META } from '@/types/assets';
+import { resolveOnboarding } from '@/lib/onboarding/registry';
+import { FeatureOnboardingModal } from '@/components/onboarding/FeatureOnboardingModal';
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Bookmark, Sparkles, Shield, Trophy, TrendingUp, Lock,
@@ -61,6 +63,9 @@ export const AssetCard = memo(function AssetCard({
   const categoryMeta = CATEGORY_META[asset.category] ?? { label: asset.category, color: 'hsl(var(--muted-foreground))' };
   const bgClass = CATEGORY_BG[asset.category] ?? 'from-muted/40 to-muted/10';
   const busy = !!(isInstalling || isUninstalling);
+
+  // Preview-onboarding modal state — admins can rehearse the user-facing tour.
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   // Detect the install→installed transition so we can play a brief "✓" pulse.
   const prevInstalledRef = useRef(isInstalled);
@@ -205,6 +210,14 @@ export const AssetCard = memo(function AssetCard({
         ) : (
           <>
             <button
+              onClick={() => setPreviewOpen(true)}
+              disabled={busy}
+              className="flex items-center gap-1 px-2.5 h-7 rounded-lg text-[10px] font-bold bg-muted/30 hover:bg-muted/50 text-foreground/70 transition-colors border border-border/15 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Preview the onboarding members will see"
+            >
+              <BookOpen className="w-3 h-3" /> Preview
+            </button>
+            <button
               onClick={() => onConfigure(installed!)}
               disabled={busy}
               className="flex items-center gap-1 px-2.5 h-7 rounded-lg text-[10px] font-bold bg-muted/30 hover:bg-muted/50 text-foreground/70 transition-colors border border-border/15 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -255,6 +268,17 @@ export const AssetCard = memo(function AssetCard({
           </>
         )}
       </div>
+
+      {/* Admin preview — same tutorial members will see */}
+      {isInstalled && (
+        <FeatureOnboardingModal
+          open={previewOpen}
+          onboarding={resolveOnboarding(asset)}
+          accent={asset.category === 'games' ? '152 72% 46%' : '195 80% 55%'}
+          onClose={() => setPreviewOpen(false)}
+          previewMode
+        />
+      )}
     </motion.div>
   );
 });
