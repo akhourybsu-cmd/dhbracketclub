@@ -19,6 +19,7 @@ import NotificationPreferencesSection from '@/components/profile/NotificationPre
 import SecurityInfoPanel from '@/components/profile/SecurityInfoPanel';
 import AdminHub from '@/components/profile/AdminHub';
 import SoundSettingsCard from '@/components/profile/SoundSettingsCard';
+import { ProfileCelebrationsSection } from '@/components/celebrations/ProfileCelebrationsSection';
 import LinkedAccounts from '@/components/profile/LinkedAccounts';
 
 export default function ProfilePage() {
@@ -457,6 +458,11 @@ export default function ProfilePage() {
           </div>
         </Link>
       )}
+
+      {/* Celebrations — only renders if the plugin is installed for this club */}
+      <div className="mb-4">
+        <ProfileCelebrationsSection />
+      </div>
 
       <NotificationPreferencesSection />
 

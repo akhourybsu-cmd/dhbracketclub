@@ -331,6 +331,37 @@ const REGISTRY: Record<string, FeatureOnboarding> = {
     ],
     primaryCta: { label: 'Open Shared Media', route: '/shared' },
   },
+
+  'birthdays-milestones': {
+    featureKey: 'birthdays-milestones',
+    displayName: 'Celebrations',
+    shortDescription: 'Birthdays and milestones for your club.',
+    featureType: 'social',
+    importance: 'standard',
+    version: 1,
+    iconKey: 'PartyPopper',
+    tags: ['Birthdays', 'Milestones', 'Reminders'],
+    onboardingTitle: 'Celebrations are on',
+    onboardingSummary: 'Track birthdays and club milestones so your group never misses a moment.',
+    onboardingSteps: [
+      {
+        title: 'Add your birthday',
+        body: 'Year is optional and stays private unless you opt in. You can also hide your birthday or share it with admins only.',
+        iconKey: 'Cake',
+      },
+      {
+        title: 'See what\'s coming up',
+        body: 'Today\'s celebrations and the next few upcoming ones appear right on Home.',
+        iconKey: 'CalendarHeart',
+      },
+      {
+        title: 'Toast and wish',
+        body: 'On a celebration day, tap to post a quick message to your club.',
+        iconKey: 'PartyPopper',
+      },
+    ],
+    primaryCta: { label: 'Open Celebrations', route: '/celebrations' },
+  },
 };
 
 /* ─── Selectors ─────────────────────────────────────────────────────── */

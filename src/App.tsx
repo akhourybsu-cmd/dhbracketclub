@@ -78,6 +78,7 @@ const RuneDelveBestiaryPage = lazy(() => import("./pages/RuneDelveBestiaryPage")
 const RuneDelveDailyPage = lazy(() => import("./pages/RuneDelveDailyPage"));
 const RuneDelveEndlessPage = lazy(() => import("./pages/RuneDelveEndlessPage"));
 const RuneDelveQuestsPage = lazy(() => import("./pages/RuneDelveQuestsPage"));
+const CelebrationsPage = lazy(() => import("./pages/CelebrationsPage"));
 const RequestClubPage = lazy(() => import("./pages/RequestClubPage"));
 const AdminClubsPage = lazy(() => import("./pages/AdminClubsPage"));
 const ClubSettingsPage = lazy(() => import("./pages/ClubSettingsPage"));
@@ -266,6 +267,7 @@ function AnimatedRoutes() {
         <Route path="/nexus/mission-workshop" element={<ProtectedPage><NexusLayout><NexusMissionWorkshopPage /></NexusLayout></ProtectedPage>} />
 
         <Route path="/profile" element={<ProtectedPage><ProfilePage /></ProtectedPage>} />
+        <Route path="/celebrations" element={<ProtectedPage><CelebrationsPage /></ProtectedPage>} />
 
         {/* Clubs (multi-tenant) */}
         <Route path="/club/request" element={<ProtectedRoute><Suspense fallback={<PageFallback />}><RequestClubPage /></Suspense></ProtectedRoute>} />

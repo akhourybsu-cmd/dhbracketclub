@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { Building2, ArrowLeft, Copy, Plus, Users, Crown, KeyRound, Eye, EyeOff, RefreshCw, Package, ChevronRight, Sparkles } from 'lucide-react';
+import { CelebrationSettingsPanel } from '@/components/celebrations/CelebrationSettingsPanel';
 
 type InviteCode = {
   id: string;
@@ -398,6 +399,14 @@ export default function ClubSettingsPage() {
             </div>
           </section>
         )}
+
+        {/* Plugin: Celebrations — only renders when birthdays-milestones is installed */}
+        <div className="mb-4">
+          <CelebrationSettingsPanel
+            installed={installedAssets.some(ia => ia.asset.slug === 'birthdays-milestones' && ia.enabled)}
+            isAdmin={isClubAdmin}
+          />
+        </div>
 
         {/* Members */}
         <section className="glass-card p-5 space-y-3">

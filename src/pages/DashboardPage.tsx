@@ -42,6 +42,8 @@ import { EmptyClubState } from '@/components/home/EmptyClubState';
 import { ClubOnboardingFlow } from '@/components/onboarding/ClubOnboardingFlow';
 import { WhatIsNewCard } from '@/components/onboarding/WhatIsNewCard';
 import { useClubOnboarding, useNewFeatures } from '@/hooks/useOnboarding';
+import { CelebrationsHomeWidget } from '@/components/celebrations/CelebrationsHomeWidget';
+import { useCelebrationSettings } from '@/hooks/useCelebrations';
 import { rankNextActions } from '@/lib/home/nextAction';
 import { ENDLESS_MISSION_ID } from '@/lib/nexus/endless';
 
@@ -126,6 +128,11 @@ export default function DashboardPage() {
   // Onboarding framework — first-time tour + "What's New" prompts
   const onboarding = useClubOnboarding();
   const newFeatures = useNewFeatures();
+
+  // Celebrations plugin (only renders if asset is installed)
+  const hasCelebrations = isInstalled('birthdays-milestones');
+  const { settings: celebrationSettings } = useCelebrationSettings();
+  const showCelebrationsOnHome = hasCelebrations && (celebrationSettings?.show_on_home !== false);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -373,6 +380,9 @@ export default function DashboardPage() {
 
       {/* Right Now — single highest-priority action */}
       <RightNowCard actions={actions} />
+
+      {/* Celebrations — Today / Upcoming / Empty card, only when plugin enabled */}
+      {showCelebrationsOnHome && <CelebrationsHomeWidget enabled />}
 
       {/* Asset launcher — installed apps with live status chips */}
       {enabledAssets.length > 0 && (
