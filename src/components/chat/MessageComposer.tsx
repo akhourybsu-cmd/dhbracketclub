@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from './UserAvatar';
 import { supabase } from '@/integrations/supabase/client';
+import { validateImageFile, buildUserScopedPath, sanitizeUploadError } from '@/lib/uploadValidation';
 
 export interface MentionMember {
   id: string;
