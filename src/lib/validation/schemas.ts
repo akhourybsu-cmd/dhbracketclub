@@ -84,8 +84,8 @@ export const safeUrl = z
   .string()
   .trim()
   .url('Invalid URL')
-  .refine((u) => /^https?:\/\//i.test(u), 'Only http/https URLs allowed')
-  .max(2_048, 'URL too long');
+  .max(2_048, 'URL too long')
+  .refine((u) => /^https?:\/\//i.test(u), 'Only http/https URLs allowed');
 
 /** Helpers ---------------------------------------------------------------- */
 
