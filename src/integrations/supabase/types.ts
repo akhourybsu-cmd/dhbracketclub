@@ -5815,6 +5815,15 @@ export type Database = {
         Args: { _password: string; _user_id: string }
         Returns: string
       }
+      log_admin_action: {
+        Args: {
+          _action: string
+          _metadata?: Json
+          _target_id?: string
+          _target_type?: string
+        }
+        Returns: string
+      }
       purchase_boost: { Args: { _boost_code: string }; Returns: Json }
       recompute_nfl_week_status: {
         Args: { _week_id: string }
