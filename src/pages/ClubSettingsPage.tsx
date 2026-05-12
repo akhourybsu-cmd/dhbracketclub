@@ -51,13 +51,24 @@ export default function ClubSettingsPage() {
 
   const loadAll = useCallback(async () => {
     if (!club) return;
-    const [{ data: c }, { data: m }, { data: pwd }] = await Promise.all([
+    const [{ data: c }, { data: m, error: mErr }, { data: pwd }] = await Promise.all([
       (supabase as any).from('invite_codes').select('id, code, is_active, used_at').eq('club_id', club.id).order('created_at', { ascending: false }),
-      (supabase as any).from('club_members').select('id, user_id, role, joined_at, profile:user_id(display_name, avatar_url)').eq('club_id', club.id).order('joined_at', { ascending: true }),
+      (supabase as any).from('club_members').select('id, user_id, role, joined_at').eq('club_id', club.id).order('joined_at', { ascending: true }),
       (supabase as any).rpc('get_club_password', { _club_id: club.id }),
     ]);
+    if (mErr) console.warn('[ClubSettings] members load error', mErr);
     if (c) setCodes(c as InviteCode[]);
-    if (m) setMembers(m as Member[]);
+    if (m && m.length) {
+      const ids = (m as any[]).map((x) => x.user_id);
+      const { data: profs } = await (supabase as any)
+        .from('profiles')
+        .select('id, display_name, avatar_url')
+        .in('id', ids);
+      const byId = new Map((profs ?? []).map((p: any) => [p.id, p]));
+      setMembers((m as any[]).map((row) => ({ ...row, profile: byId.get(row.user_id) })) as Member[]);
+    } else {
+      setMembers([]);
+    }
     setClubPassword((pwd as string | null) ?? '');
     setPasswordVisible(club.password_visible ?? true);
   }, [club]);
