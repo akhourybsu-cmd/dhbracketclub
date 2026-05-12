@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from './UserAvatar';
 import { supabase } from '@/integrations/supabase/client';
+import { validateImageFile, buildUserScopedPath, sanitizeUploadError } from '@/lib/uploadValidation';
 
 export interface MentionMember {
   id: string;
@@ -123,14 +124,13 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
 
     const handleFilesSelected = (files: FileList | null) => {
       if (!files) return;
-      const imageFiles = Array.from(files).filter(f => {
-        if (!f.type.startsWith('image/')) return false;
-        if (f.size > MAX_FILE_SIZE) {
-          toast.error(`${f.name} exceeds 10MB limit`);
-          return false;
-        }
-        return true;
-      }).slice(0, 4 - pendingImages.length);
+      const accepted: File[] = [];
+      for (const f of Array.from(files)) {
+        const v = validateImageFile(f, { maxBytes: MAX_FILE_SIZE, label: f.name || 'Image' });
+        if (!v.ok) { toast.error(v.error!); continue; }
+        accepted.push(f);
+      }
+      const imageFiles = accepted.slice(0, 4 - pendingImages.length);
       const newPending = imageFiles.map(file => ({
         file,
         previewUrl: URL.createObjectURL(file),
@@ -157,12 +157,20 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
       if (!userId || pendingImages.length === 0) return [];
       const results = await Promise.all(
         pendingImages.map(async (pending) => {
-          const ext = pending.file.name.split('.').pop() || 'jpg';
-          const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+          // Re-validate to derive a safe extension from MIME — never trust
+          // the original filename when writing into shared storage.
+          const v = validateImageFile(pending.file, { maxBytes: MAX_FILE_SIZE });
+          if (!v.ok) { toast.error(v.error!); return null; }
+          const path = buildUserScopedPath(userId, v.ext!);
           const { error } = await supabase.storage
             .from('chat-attachments-private')
-            .upload(path, pending.file, { cacheControl: '3600', upsert: false });
+            .upload(path, pending.file, {
+              cacheControl: '3600',
+              upsert: false,
+              contentType: pending.file.type,
+            });
           if (!error) return `lovable-private://chat-attachments-private/${path}`;
+          toast.error(sanitizeUploadError(error, 'Failed to upload image'));
           return null;
         })
       );

@@ -18,6 +18,7 @@ import { formatDistanceToNow } from 'date-fns';
 import NotificationPreferencesSection from '@/components/profile/NotificationPreferences';
 import SecurityInfoPanel from '@/components/profile/SecurityInfoPanel';
 import AdminHub from '@/components/profile/AdminHub';
+import { validateImageFile, sanitizeUploadError } from '@/lib/uploadValidation';
 import SoundSettingsCard from '@/components/profile/SoundSettingsCard';
 import { ProfileCelebrationsSection } from '@/components/celebrations/ProfileCelebrationsSection';
 import LinkedAccounts from '@/components/profile/LinkedAccounts';
@@ -74,23 +75,21 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be under 5MB');
+    const v = validateImageFile(file, { maxBytes: 5 * 1024 * 1024, label: 'Avatar' });
+    if (!v.ok) {
+      toast.error(v.error!);
       return;
     }
 
     setUploading(true);
     try {
-      const ext = file.name.split('.').pop() || 'jpg';
-      const filePath = `${user.id}/avatar.${ext}`;
+      // Always derive the extension from MIME via validateImageFile —
+      // never trust the user-supplied filename when writing to storage.
+      const filePath = `${user.id}/avatar.${v.ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, file, { upsert: true, contentType: file.type });
 
       if (uploadError) throw uploadError;
 
@@ -111,8 +110,8 @@ export default function ProfilePage() {
       setAvatarUrl(urlWithCacheBust);
       toast.success('Avatar updated!');
       play('success');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to upload avatar');
+    } catch (err) {
+      toast.error(sanitizeUploadError(err, 'Failed to upload avatar'));
       play('error');
     } finally {
       setUploading(false);
