@@ -124,14 +124,13 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
 
     const handleFilesSelected = (files: FileList | null) => {
       if (!files) return;
-      const imageFiles = Array.from(files).filter(f => {
-        if (!f.type.startsWith('image/')) return false;
-        if (f.size > MAX_FILE_SIZE) {
-          toast.error(`${f.name} exceeds 10MB limit`);
-          return false;
-        }
-        return true;
-      }).slice(0, 4 - pendingImages.length);
+      const accepted: File[] = [];
+      for (const f of Array.from(files)) {
+        const v = validateImageFile(f, { maxBytes: MAX_FILE_SIZE, label: f.name || 'Image' });
+        if (!v.ok) { toast.error(v.error!); continue; }
+        accepted.push(f);
+      }
+      const imageFiles = accepted.slice(0, 4 - pendingImages.length);
       const newPending = imageFiles.map(file => ({
         file,
         previewUrl: URL.createObjectURL(file),
