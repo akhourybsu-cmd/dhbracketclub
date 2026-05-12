@@ -3,8 +3,10 @@ import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-mo
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import {
-  Pin, Reply, Trash2, Pencil, Check, X, MessageSquare, Loader2,
+  Pin, Reply, Trash2, Pencil, Check, X, MessageSquare, Loader2, Flag,
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { UserAvatar, getUserColor } from './UserAvatar';
 import type { Message } from './types';
 import { QUICK_EMOJIS } from './types';
@@ -139,6 +141,8 @@ function MessageBubbleInner({
     onToggleOverlay?.(open ? msg.id : null);
   }, [msg.id, onToggleOverlay]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showReportConfirm, setShowReportConfirm] = useState(false);
+  const [reporting, setReporting] = useState(false);
   const [overlayBelow, setOverlayBelow] = useState(false);
   const bubbleWrapperRef = useRef<HTMLDivElement>(null);
   const editRef = useRef<HTMLTextAreaElement>(null);
@@ -198,6 +202,24 @@ function MessageBubbleInner({
     onDeleteMessage(msg.id);
     setShowDeleteConfirm(false);
     setShowOverlay(false);
+  };
+
+  const confirmReport = async () => {
+    if (reporting) return;
+    setReporting(true);
+    const { error } = await (supabase as any)
+      .from('message_reports')
+      .insert({ message_id: msg.id, reporter_id: currentUserId, reason: 'flagged_by_member' });
+    setReporting(false);
+    setShowReportConfirm(false);
+    setShowOverlay(false);
+    if (error) {
+      const dup = (error.code === '23505') || /duplicate/i.test(error.message || '');
+      if (dup) toast.success('You\'ve already reported this message.');
+      else toast.error('Couldn\'t submit report.');
+    } else {
+      toast.success('Report sent to admins.');
+    }
   };
 
   const imageUrls = extractImageUrls(msg.content);
@@ -420,7 +442,7 @@ function MessageBubbleInner({
                   >
                     <Pin className="w-3.5 h-3.5 text-muted-foreground/70" />
                   </button>
-                  {isOwn && (
+                  {isOwn ? (
                     <>
                       <button
                         onClick={(e) => { e.stopPropagation(); onStartEditing(msg); setShowOverlay(false); }}
@@ -437,6 +459,14 @@ function MessageBubbleInner({
                         <Trash2 className="w-3.5 h-3.5 text-destructive" />
                       </button>
                     </>
+                  ) : (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowReportConfirm(true); setShowOverlay(false); }}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-destructive/10 transition-colors active:scale-90"
+                      title="Report"
+                    >
+                      <Flag className="w-3.5 h-3.5 text-muted-foreground/70" />
+                    </button>
                   )}
                 </motion.div>
               )}
@@ -470,6 +500,26 @@ function MessageBubbleInner({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Report confirmation dialog */}
+      <AlertDialog open={showReportConfirm} onOpenChange={setShowReportConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Report this message?</AlertDialogTitle>
+            <AlertDialogDescription>An admin will be notified to review it. You can only report each message once.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={reporting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmReport}
+              disabled={reporting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {reporting ? 'Sending…' : 'Report'}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -10,7 +10,6 @@ interface MessageListProps {
   selectedChannel: Channel | null;
   userId: string | undefined;
   currentDisplayName?: string;
-  searchQuery: string;
   onToggleReaction: (messageId: string, emoji: string) => void;
   onOpenThread: (msg: Message) => void;
   onTogglePin: (msg: Message) => void;
@@ -42,7 +41,7 @@ function getDateLabel(dateStr: string) {
 }
 
 export function MessageList({
-  messages, selectedChannel, userId, currentDisplayName, searchQuery,
+  messages, selectedChannel, userId, currentDisplayName,
   onToggleReaction, onOpenThread, onTogglePin,
   onStartEditing, onDeleteMessage, onSaveEdit,
   editingMessageId, editContent, onEditContentChange, onCancelEdit,
@@ -179,9 +178,7 @@ export function MessageList({
     setNewMsgCount(0);
   };
 
-  const filtered = searchQuery
-    ? messages.filter(m => m.content.toLowerCase().includes(searchQuery.toLowerCase()))
-    : messages;
+  const filtered = messages;
 
   // Determine unread divider position
   const unreadDividerAfterIdx = (() => {

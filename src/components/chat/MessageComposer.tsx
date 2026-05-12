@@ -272,6 +272,9 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
             <div className="relative flex-shrink-0">
               <button
                 onClick={() => setShowAttachMenu(!showAttachMenu)}
+                aria-label={showAttachMenu ? 'Close attachment menu' : 'Add attachment'}
+                aria-expanded={showAttachMenu}
+                type="button"
                 className={cn(
                   "w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 active:scale-90",
                   showAttachMenu
@@ -356,8 +359,10 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
           <button
             onClick={handleSend}
             disabled={!canSend}
+            aria-label={uploading ? 'Sending message' : 'Send message'}
+            type="button"
             className={cn(
-              "flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-150 active:scale-90",
+              "flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-150 active:scale-90 disabled:cursor-not-allowed",
               canSend
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "bg-muted/40 text-muted-foreground/40"

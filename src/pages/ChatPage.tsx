@@ -470,8 +470,7 @@ export default function ChatPage() {
 
   const handleDeleteChannel = async (channelId: string) => {
     if (!user) return;
-    // Delete messages first (cascade may not cover all), then the channel
-    await supabase.from('messages').delete().eq('channel_id', channelId);
+    // messages.channel_id has ON DELETE CASCADE — no need to nuke rows client-side.
     const { error } = await supabase.from('channels').delete().eq('id', channelId);
     if (error) {
       toast.error('Failed to delete channel');
@@ -712,7 +711,6 @@ export default function ChatPage() {
                   selectedChannel={selectedChannel}
                   userId={user?.id}
                   currentDisplayName={currentDisplayName}
-                  searchQuery={searchResults ? '' : ''}
                   onToggleReaction={toggleReaction}
                   onOpenThread={openThread}
                   onTogglePin={handleTogglePin}
