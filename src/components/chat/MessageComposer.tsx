@@ -157,12 +157,20 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
       if (!userId || pendingImages.length === 0) return [];
       const results = await Promise.all(
         pendingImages.map(async (pending) => {
-          const ext = pending.file.name.split('.').pop() || 'jpg';
-          const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+          // Re-validate to derive a safe extension from MIME — never trust
+          // the original filename when writing into shared storage.
+          const v = validateImageFile(pending.file, { maxBytes: MAX_FILE_SIZE });
+          if (!v.ok) { toast.error(v.error!); return null; }
+          const path = buildUserScopedPath(userId, v.ext!);
           const { error } = await supabase.storage
             .from('chat-attachments-private')
-            .upload(path, pending.file, { cacheControl: '3600', upsert: false });
+            .upload(path, pending.file, {
+              cacheControl: '3600',
+              upsert: false,
+              contentType: pending.file.type,
+            });
           if (!error) return `lovable-private://chat-attachments-private/${path}`;
+          toast.error(sanitizeUploadError(error, 'Failed to upload image'));
           return null;
         })
       );
