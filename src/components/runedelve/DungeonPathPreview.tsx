@@ -118,7 +118,7 @@ export function DungeonPathPreview({
       {isCurrent && (
         <span
           className="absolute inset-0 rounded-xl pointer-events-none animate-pulse"
-          style={{ boxShadow: `inset 0 0 0 1.5px ${accentBorder}` }}
+          style={{ boxShadow: `inset 0 0 0 1.5px hsl(${layout.preview.accent} / 0.7)` }}
         />
       )}
 
