@@ -110,11 +110,13 @@ export function AddMilestoneModal({ open, onClose, editing, isAdmin, accent = '1
     onClose();
   };
 
-  const visibilityOptions: { v: CelebrationVisibility; label: string; show: boolean }[] = [
-    { v: 'club', label: 'Club', show: true },
-    { v: 'admins_only', label: 'Admins', show: isAdmin },
-    { v: 'hidden', label: 'Hidden', show: isAdmin },
-  ].filter(o => o.show);
+  const visibilityOptions: { v: CelebrationVisibility; label: string; show: boolean }[] = (
+    [
+      { v: 'club', label: 'Club', show: true },
+      { v: 'admins_only', label: 'Admins', show: isAdmin },
+      { v: 'hidden', label: 'Hidden', show: isAdmin },
+    ] as { v: CelebrationVisibility; label: string; show: boolean }[]
+  ).filter(o => o.show);
 
   return createPortal(
     <motion.div
