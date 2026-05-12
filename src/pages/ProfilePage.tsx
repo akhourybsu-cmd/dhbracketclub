@@ -18,6 +18,7 @@ import { formatDistanceToNow } from 'date-fns';
 import NotificationPreferencesSection from '@/components/profile/NotificationPreferences';
 import SecurityInfoPanel from '@/components/profile/SecurityInfoPanel';
 import AdminHub from '@/components/profile/AdminHub';
+import { validateImageFile, sanitizeUploadError } from '@/lib/uploadValidation';
 import SoundSettingsCard from '@/components/profile/SoundSettingsCard';
 import { ProfileCelebrationsSection } from '@/components/celebrations/ProfileCelebrationsSection';
 import LinkedAccounts from '@/components/profile/LinkedAccounts';
