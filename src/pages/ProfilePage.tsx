@@ -74,23 +74,21 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be under 5MB');
+    const v = validateImageFile(file, { maxBytes: 5 * 1024 * 1024, label: 'Avatar' });
+    if (!v.ok) {
+      toast.error(v.error!);
       return;
     }
 
     setUploading(true);
     try {
-      const ext = file.name.split('.').pop() || 'jpg';
-      const filePath = `${user.id}/avatar.${ext}`;
+      // Always derive the extension from MIME via validateImageFile —
+      // never trust the user-supplied filename when writing to storage.
+      const filePath = `${user.id}/avatar.${v.ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, file, { upsert: true, contentType: file.type });
 
       if (uploadError) throw uploadError;
 
