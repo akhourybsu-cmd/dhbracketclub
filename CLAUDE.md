@@ -1,0 +1,116 @@
+# DH Club — Claude Context
+
+Mobile-first social/competition app for clubs. React + Vite + TypeScript + Supabase + Tailwind + shadcn/ui + framer-motion + lucide-react.
+
+## Mental model
+
+DH Club is a **multi-tenant club app**. Each user has a single active **club**; that club installs **assets/plugins** from a global catalog. Almost every UI surface gates on whether a given asset is installed for the current club.
+
+```
+Auth → Club → Installed Assets → Plugin UI surfaces (Home / Settings / Profile / Dedicated routes)
+```
+
+**Never assume a feature is available — always gate on `useClubAssets().isInstalled(slug)`.** If you want a quick "what slug am I checking?" answer, look in [`src/types/assets.ts`](src/types/assets.ts) → `NAV_ASSET_SLUGS`.
+
+## Core systems (read these first)
+
+| Concern | Where it lives |
+|---|---|
+| Authentication | [`src/contexts/AuthContext.tsx`](src/contexts/AuthContext.tsx) (`useAuth()`) |
+| Active club + admin flag | [`src/contexts/ClubContext.tsx`](src/contexts/ClubContext.tsx) (`useClub()` → `club`, `membership`, `isClubAdmin`, `isPlatformOwner`, `isAppAdmin`) |
+| Installed plugins | [`src/hooks/useClubAssets.ts`](src/hooks/useClubAssets.ts) — `installedAssets`, `allAssets`, `isInstalled(slug)`, optimistic install/uninstall/toggle with rollback, `pendingInstall/Uninstall/Toggle` sets |
+| Asset catalog | `platform_assets` table (DB) — names, slugs, categories, descriptions, sort_order |
+| Per-club installs | `club_installed_assets` table — joined `(club_id, asset_id)` with `enabled` + `visible_to_members` flags |
+| Asset library UI | [`src/components/clubAssets/`](src/components/clubAssets/) — `ClubAssetLibrary`, `AssetCard`, `InstallAssetSheet` |
+| Onboarding framework | [`src/lib/onboarding/`](src/lib/onboarding/) + [`src/components/onboarding/`](src/components/onboarding/) + [`src/hooks/useOnboarding.ts`](src/hooks/useOnboarding.ts) |
+| Home screen orchestrator | [`src/pages/DashboardPage.tsx`](src/pages/DashboardPage.tsx) — slim composer of `home/` modules |
+| Home modules | [`src/components/home/`](src/components/home/) — `HomeHero`, `QuickBar`, `RightNowCard`, `AssetLauncher`, `LeagueSnapshot`, `EventsStrip`, `ClubPulse`, `Highlights`, `MembersOnline`, `DiscoverStrip`, `EmptyClubState` |
+
+## Asset/plugin system — how to add a new one
+
+1. Insert a row into `platform_assets` via a Supabase migration (slug, name, category, short_description, full_description, icon_name, placement_area, sort_order).
+2. (Optional) Create per-plugin tables + RLS policies in the same migration.
+3. Add the slug → route to `NAV_ASSET_SLUGS` in [`src/types/assets.ts`](src/types/assets.ts) so nav filtering works.
+4. Add an entry to the onboarding registry in [`src/lib/onboarding/registry.ts`](src/lib/onboarding/registry.ts) — the existing "What's New" flow will auto-surface a 3-step tutorial when the asset is installed.
+5. Add the lazy route in [`src/App.tsx`](src/App.tsx).
+6. Gate every plugin surface on `isInstalled('your-slug')`.
+7. (Optional) Add per-plugin settings table and an admin panel — mount it inside `ClubSettingsPage` conditionally.
+
+Existing slugs (canonical list in `NAV_ASSET_SLUGS`):
+`draft-arena`, `rune-delve`, `nexus-defense`, `nfl-pickem`, `brackets`, `portfolio-wars`, `lockbox`, `chat`, `events`, `lore`, `feed`, `polls`, `rankings`, `posts`, `shared-media`, `birthdays-milestones`.
+
+## Conventions
+
+- **Mobile-first.** Bottom-sheet modals via `createPortal(node, document.body)` to escape transform contexts (PageTransition, framer-motion route wrappers). The first time someone forgets this, the sheet ends up positioned relative to a transformed ancestor instead of the viewport.
+- **Tailwind + shadcn/ui.** Don't introduce new icon libraries; use `lucide-react`. Colors via `hsl(var(--...))` tokens — full set in [`src/index.css`](src/index.css).
+- **Light/dark mode.** Always test both; never use raw hex/rgb that fails contrast in one mode.
+- **`(supabase as any).from('...')`** is the pattern for tables whose types aren't in the generated Supabase types yet. Use real types once they're generated.
+- **Optimistic updates with rollback** is the standard for mutations. Pattern: capture snapshot → optimistic state update → await Supabase call → catch + restore snapshot on error. See `useClubAssets` for the canonical implementation.
+- **Stale-closure gotcha**: long-lived callbacks (toast onClick, portaled buttons) capture state at their creation time. If your mutator's `useCallback` depends on a state array and the array updates before the callback fires, you'll get stale reads. Mirror the array in a `useRef` updated via `useEffect`. See `useClubAssets.installedRef` for the canonical fix.
+- **Onboarding for new plugins is automatic** — just register in `registry.ts`. The What's New flow + admin Preview button + first-time tour all pick it up.
+- **RLS policies are the security boundary.** Hooks trust policies; don't double-filter unless you also need to hide rows from a client's local view (e.g., `visibility === 'hidden'`).
+
+## Major features (last six months)
+
+These are stable; reference them as patterns, don't reinvent.
+
+| Feature | Surfaces | Key files |
+|---|---|---|
+| Compete reorg | `/compete` (banner list of installed games), `/drafts` (Drafts / Season / Commissioner tabs) | [`src/pages/CompetePage.tsx`](src/pages/CompetePage.tsx), [`src/pages/DraftsListPage.tsx`](src/pages/DraftsListPage.tsx) |
+| Nexus Defense game refresh | Hub, Missions, Loadout, Battle, Results pages; engine path variants | [`src/lib/nexus/`](src/lib/nexus/), [`src/components/nexus/`](src/components/nexus/) |
+| Rune Delve chamber layouts | Home, Level Map | [`src/lib/runedelve/runeLayouts.ts`](src/lib/runedelve/runeLayouts.ts), [`src/lib/runedelve/chamberAssignment.ts`](src/lib/runedelve/chamberAssignment.ts), [`src/components/runedelve/`](src/components/runedelve/) |
+| Home redesign (club-aware mobile command center) | `/dashboard` | [`src/pages/DashboardPage.tsx`](src/pages/DashboardPage.tsx), [`src/components/home/`](src/components/home/) |
+| Customizable QuickBar + screen-filling modules | Home dock + What's New, Members Online, Discover, Highlights | [`src/components/home/QuickBar.tsx`](src/components/home/QuickBar.tsx), [`src/components/home/useQuickBar.ts`](src/components/home/useQuickBar.ts) |
+| Asset Library with optimistic install + undo | `/club/assets` | [`src/components/clubAssets/`](src/components/clubAssets/), [`src/hooks/useClubAssets.ts`](src/hooks/useClubAssets.ts) |
+| Onboarding framework (club intro + What's New + admin preview) | Auto-mounts on Home + Asset Library | [`src/lib/onboarding/`](src/lib/onboarding/), [`src/components/onboarding/`](src/components/onboarding/), [`src/hooks/useOnboarding.ts`](src/hooks/useOnboarding.ts) |
+| Birthdays & Milestones (first installable plugin) | `/celebrations`, Home widget, Club Settings panel, Profile section | [`src/components/celebrations/`](src/components/celebrations/), [`src/hooks/useCelebrations.ts`](src/hooks/useCelebrations.ts), [`src/lib/celebrations/dates.ts`](src/lib/celebrations/dates.ts) |
+
+## Routing patterns
+
+Single-club model (no `/clubs/:clubId/...` in user-facing routes). Plugin routes look like `/drafts`, `/celebrations`, `/nexus`, etc.
+
+Auth + club guards live in [`src/App.tsx`](src/App.tsx):
+- `<ProtectedPage>` — requires auth
+- `<ClubAdminRoute>` — requires admin role in active club
+
+## Migrations
+
+`supabase/migrations/` — timestamp-prefixed SQL files. Conventions:
+- Reuse the existing `set_updated_at()` trigger function.
+- Always include `enable row level security` + named, idempotent (`drop policy if exists` then `create policy`) policies.
+- Asset library inserts use `on conflict (slug) do update set ...` so re-running is safe.
+- When adding plugin tables, write RLS that joins via `public.club_members` to enforce club-scoped visibility.
+
+## Storage namespaces (localStorage keys)
+
+| Key prefix | Owner |
+|---|---|
+| `dh_home_quickbar_v1:` | QuickBar pinned apps per (user, club) |
+| `dh_onboarding_v1:` | Onboarding status per (user, club) |
+| `nexus_run_state_v1:` | In-flight Nexus battle saves per (user, mission) |
+| `nexus_endless_layout_v1` | Endless map layout choice |
+
+## Don'ts
+
+- Don't bypass `useClubAssets().isInstalled(slug)` to access plugin UI — clubs that haven't installed the asset must see nothing.
+- Don't hardcode the 5-game launcher tile grid (deleted from the old Dashboard).
+- Don't put per-feature long lists on the Home screen — they belong on the feature's own page.
+- Don't use the `posts` flow as a generic "compose" surface without checking the existing route params it accepts (`?title=`, `?body=` are supported via `URLSearchParams`).
+- Don't introduce drag-and-drop libraries (no `@dnd-kit` etc.) — arrow buttons for reordering have been the convention.
+- Don't write to `installedAssets` directly — always go through `useClubAssets` mutators for the optimistic-rollback semantics.
+
+## Dev workflow
+
+```bash
+npm run dev      # Vite dev server on :8080
+npx tsc --noEmit # Type check (must pass before commit)
+npx vite build   # Production build
+```
+
+`tsc --noEmit` is the gate. The repo has no formal test suite; verification is `tsc` + `vite build` + browser smoke-test in the Claude Preview iframe.
+
+## Notes for future sessions
+
+- This file is auto-loaded by Claude Code. Keep it tight — index, not encyclopedia.
+- When adding a new major feature/plugin, update the **Major features** table and the **Storage namespaces** table if applicable.
+- Add new gotchas to **Conventions** so they don't get re-discovered.
