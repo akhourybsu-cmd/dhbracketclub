@@ -8,8 +8,8 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Trash2 } from 'lucide-react';
-import type { Channel, Category } from './types';
+import { Trash2, Hash, Megaphone, Shield, CalendarDays } from 'lucide-react';
+import type { Channel, Category, ChannelType, PostPermission } from './types';
 
 const EMOJI_OPTIONS = [
   '💬', '📢', '🏀', '🎬', '🍕', '🎲', '✈️', '🏆',
@@ -17,21 +17,33 @@ const EMOJI_OPTIONS = [
   '❤️', '🌍', '📸', '🛠️', '💰', '🎤', '🐶', '🚀',
 ];
 
+type ChannelUpdates = Partial<Pick<Channel, 'name' | 'description' | 'icon' | 'category_id' | 'is_default' | 'channel_type' | 'post_permission'>>;
+
 interface ChannelSettingsDialogProps {
   channel: Channel;
   categories: Category[];
   open: boolean;
+  isAdmin?: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpdate: (channelId: string, updates: Partial<Pick<Channel, 'name' | 'description' | 'icon' | 'category_id' | 'is_default'>>) => Promise<boolean>;
+  onUpdate: (channelId: string, updates: ChannelUpdates) => Promise<boolean>;
   onDelete: (channelId: string) => void;
 }
 
-export function ChannelSettingsDialog({ channel, categories, open, onOpenChange, onUpdate, onDelete }: ChannelSettingsDialogProps) {
+const TYPE_OPTIONS: { id: ChannelType; label: string; icon: typeof Hash; hint: string }[] = [
+  { id: 'general',       label: 'General',       icon: Hash,         hint: 'Everyone can post' },
+  { id: 'announcements', label: 'Announcements', icon: Megaphone,    hint: 'Admins post, members read' },
+  { id: 'admin_only',    label: 'Admin Only',    icon: Shield,       hint: 'Only admins see or post' },
+  { id: 'event',         label: 'Event',         icon: CalendarDays, hint: 'Tied to a club event' },
+];
+
+export function ChannelSettingsDialog({ channel, categories, open, isAdmin, onOpenChange, onUpdate, onDelete }: ChannelSettingsDialogProps) {
   const [name, setName] = useState(channel.name);
   const [description, setDescription] = useState(channel.description || '');
   const [icon, setIcon] = useState(channel.icon || '');
   const [categoryId, setCategoryId] = useState(channel.category_id || '');
   const [isDefault, setIsDefault] = useState(channel.is_default);
+  const [channelType, setChannelType] = useState<ChannelType>(channel.channel_type || 'general');
+  const [postPermission, setPostPermission] = useState<PostPermission>(channel.post_permission || 'all');
   const [saving, setSaving] = useState(false);
 
   // Reset form state whenever the channel changes OR dialog opens
@@ -42,7 +54,13 @@ export function ChannelSettingsDialog({ channel, categories, open, onOpenChange,
     setIcon(channel.icon || '');
     setCategoryId(channel.category_id || '');
     setIsDefault(channel.is_default);
+    setChannelType(channel.channel_type || 'general');
+    setPostPermission(channel.post_permission || 'all');
   }, [channel.id, open]);
+
+  // Announcements + admin_only imply admin-only posting; keep state in sync.
+  const effectivePermission: PostPermission =
+    channelType === 'announcements' || channelType === 'admin_only' ? 'admins' : postPermission;
 
   const handleSave = async () => {
     if (!name.trim()) return;
@@ -54,6 +72,8 @@ export function ChannelSettingsDialog({ channel, categories, open, onOpenChange,
       icon: icon || null,
       category_id: categoryId || null,
       is_default: isDefault,
+      channel_type: channelType,
+      post_permission: effectivePermission,
     });
     setSaving(false);
     if (success) onOpenChange(false);
@@ -128,6 +148,51 @@ export function ChannelSettingsDialog({ channel, categories, open, onOpenChange,
               </select>
             </div>
 
+            {/* Channel type — admin-only */}
+            {isAdmin && (
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-muted-foreground">Channel Type</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {TYPE_OPTIONS.map(opt => {
+                    const Icon = opt.icon;
+                    const selected = channelType === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setChannelType(opt.id)}
+                        className={`flex items-start gap-2 rounded-xl border p-2.5 text-left transition-all ${
+                          selected
+                            ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
+                            : 'border-border/30 hover:bg-muted/40'
+                        }`}
+                      >
+                        <Icon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${selected ? 'text-primary' : 'text-muted-foreground/70'}`} />
+                        <div className="min-w-0">
+                          <p className={`text-[12px] font-bold ${selected ? 'text-primary' : 'text-foreground/85'}`}>{opt.label}</p>
+                          <p className="text-[10px] text-muted-foreground/70 leading-tight mt-0.5">{opt.hint}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Post permission — admin-only, hidden when type forces it */}
+            {isAdmin && channelType === 'general' && (
+              <div className="flex items-center justify-between py-1">
+                <div>
+                  <Label className="text-xs font-semibold">Admins-only Posting</Label>
+                  <p className="text-[11px] text-muted-foreground/70">Members can still read; only admins can post.</p>
+                </div>
+                <Switch
+                  checked={postPermission === 'admins'}
+                  onCheckedChange={(v) => setPostPermission(v ? 'admins' : 'all')}
+                />
+              </div>
+            )}
+
             {/* Default toggle */}
             <div className="flex items-center justify-between py-1">
               <div>
@@ -141,9 +206,10 @@ export function ChannelSettingsDialog({ channel, categories, open, onOpenChange,
               {saving ? 'Saving…' : 'Save Changes'}
             </Button>
 
-            <Separator />
+            {isAdmin && <Separator />}
 
-            {/* Danger zone */}
+            {/* Danger zone — admin-only */}
+            {isAdmin && (
             <div className="space-y-2">
               <p className="text-[10px] font-bold uppercase tracking-wider text-destructive/70">Danger Zone</p>
               <AlertDialog>
@@ -171,6 +237,7 @@ export function ChannelSettingsDialog({ channel, categories, open, onOpenChange,
                 </AlertDialogContent>
               </AlertDialog>
             </div>
+            )}
           </div>
         </ScrollArea>
       </DialogContent>

@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useClub } from '@/contexts/ClubContext';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { Hash, ChevronLeft, Pin, Search, X, Link2, Settings, Menu } from 'lucide-react';
+import { Hash, ChevronLeft, Pin, Search, X, Link2, Settings, Menu, Megaphone, Shield, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useNavDrawer } from '@/contexts/NavDrawerContext';
 import { format } from 'date-fns';
@@ -27,6 +28,7 @@ import { notifyThreadReply } from '@/lib/chatNotifications';
 
 export default function ChatPage() {
   const { user } = useAuth();
+  const { isClubAdmin } = useClub();
   const navigate = useNavigate();
   const { setOpen: setNavDrawerOpen } = useNavDrawer();
   const composerRef = useRef<MessageComposerHandle>(null);
@@ -144,8 +146,10 @@ export default function ChatPage() {
     ]);
     if (cats) setCategories(cats);
     if (chs) {
-      setChannels(chs as Channel[]);
-      const chIds = chs.map((c: any) => c.id);
+      // Hide admin_only channels from non-admins (RLS doesn't gate this — channels are club-scoped only).
+      const visibleChs = (chs as Channel[]).filter(c => c.channel_type !== 'admin_only' || isClubAdmin);
+      setChannels(visibleChs);
+      const chIds = visibleChs.map((c: any) => c.id);
       const { data: lastMsgs } = await supabase
         .from('messages')
         .select('channel_id, content, created_at, user_id, profiles:user_id(display_name)')
@@ -191,21 +195,21 @@ export default function ChatPage() {
         let target: Channel | undefined;
         try {
           const savedId = localStorage.getItem('last_chat_channel_id');
-          if (savedId) target = (chs as Channel[]).find(c => c.id === savedId);
+          if (savedId) target = visibleChs.find(c => c.id === savedId);
         } catch {}
-        if (!target) target = (chs as Channel[]).find(c => c.is_default) || (chs[0] as Channel);
+        if (!target) target = visibleChs.find(c => c.is_default) || (chs[0] as Channel);
         if (target) {
           setSelectedChannel(target);
           if (isDesktop) setShowChannelList(false);
         }
       } else {
         // If the currently selected channel still exists, refresh its data from the fetch
-        const refreshed = (chs as Channel[]).find(c => c.id === selectedChannelRef.current!.id);
+        const refreshed = visibleChs.find(c => c.id === selectedChannelRef.current!.id);
         if (refreshed) setSelectedChannel(refreshed);
       }
     }
     setLoading(false);
-  }, [user]);
+  }, [user, isClubAdmin]);
 
   useEffect(() => { fetchChannels(); }, [fetchChannels]);
 
@@ -452,7 +456,7 @@ export default function ChatPage() {
     }
   };
 
-  const handleUpdateChannel = async (channelId: string, updates: Partial<Pick<Channel, 'name' | 'description' | 'icon' | 'category_id' | 'is_default'>>): Promise<boolean> => {
+  const handleUpdateChannel = async (channelId: string, updates: Partial<Pick<Channel, 'name' | 'description' | 'icon' | 'category_id' | 'is_default' | 'channel_type' | 'post_permission'>>): Promise<boolean> => {
     if (!user) return false;
     const { error } = await supabase.from('channels').update(updates).eq('id', channelId);
     if (error) {
@@ -573,6 +577,17 @@ export default function ChatPage() {
   const pinnedCount = useMemo(() => messages.filter(m => m.is_pinned).length, [messages]);
   const showSidePanel = !!threadParent || showPinned;
 
+  const channelType = selectedChannel?.channel_type || 'general';
+  const postPermission = selectedChannel?.post_permission || 'all';
+  const isAnnouncement = channelType === 'announcements';
+  const isAdminOnly = channelType === 'admin_only';
+  const canPost = postPermission === 'all' || isClubAdmin;
+  const lockedReason = isAdminOnly
+    ? 'Admin-only channel'
+    : isAnnouncement
+      ? 'Only admins can post announcements'
+      : 'Only admins can post here';
+
   /* ═══ CHANNEL LIST VIEW (mobile only — desktop uses sidebar) ═══ */
   if (showChannelList) {
     return (
@@ -624,15 +639,55 @@ export default function ChatPage() {
       {/* Main content area */}
       <div className="flex flex-col flex-1 min-w-0">
         {/* Header */}
-        <div className="flex items-center gap-2 py-2 border-b border-border/20 flex-shrink-0 sticky top-0 z-10" style={{ background: 'hsl(var(--background) / 0.85)', backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)', paddingTop: 'max(0.5rem, env(safe-area-inset-top, 0px))', paddingLeft: 'max(0.625rem, env(safe-area-inset-left, 0px))', paddingRight: 'max(0.625rem, env(safe-area-inset-right, 0px))' }}>
+        <div
+          className="flex items-center gap-2 py-2 border-b flex-shrink-0 sticky top-0 z-10"
+          style={{
+            background: isAnnouncement
+              ? 'linear-gradient(180deg, hsl(var(--premium-warm) / 0.12), hsl(var(--background) / 0.9))'
+              : 'hsl(var(--background) / 0.85)',
+            borderColor: isAnnouncement ? 'hsl(var(--premium-warm) / 0.35)' : 'hsl(var(--border) / 0.2)',
+            backdropFilter: 'blur(20px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+            paddingTop: 'max(0.5rem, env(safe-area-inset-top, 0px))',
+            paddingLeft: 'max(0.625rem, env(safe-area-inset-left, 0px))',
+            paddingRight: 'max(0.625rem, env(safe-area-inset-right, 0px))',
+          }}
+        >
           <button onClick={() => { setShowChannelList(true); setThreadParent(null); setThreadMessages([]); setShowPinned(false); }} className="p-1.5 -ml-0.5 rounded-lg hover:bg-muted/50 active:bg-muted/70 transition-colors lg:hidden">
             <ChevronLeft className="w-5 h-5 text-foreground/70" />
           </button>
-          <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/12 text-sm flex-shrink-0">
-            {(selectedChannel?.icon && selectedChannel.icon !== 'hash') ? selectedChannel.icon : (CHANNEL_EMOJI[selectedChannel?.name || ''] || <Hash className="w-3.5 h-3.5 text-primary/80" />)}
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0"
+            style={{
+              background: isAnnouncement
+                ? 'hsl(var(--premium-warm) / 0.18)'
+                : isAdminOnly
+                  ? 'hsl(var(--destructive) / 0.15)'
+                  : 'hsl(var(--primary) / 0.12)',
+            }}
+          >
+            {isAnnouncement
+              ? <Megaphone className="w-3.5 h-3.5" style={{ color: 'hsl(var(--premium-warm))' }} />
+              : isAdminOnly
+                ? <Shield className="w-3.5 h-3.5 text-destructive/80" />
+                : (selectedChannel?.icon && selectedChannel.icon !== 'hash')
+                  ? selectedChannel.icon
+                  : (CHANNEL_EMOJI[selectedChannel?.name || ''] || <Hash className="w-3.5 h-3.5 text-primary/80" />)}
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="font-bold text-[15px] tracking-tight leading-tight truncate">{selectedChannel?.name}</h2>
+            <div className="flex items-center gap-1.5">
+              <h2 className="font-bold text-[15px] tracking-tight leading-tight truncate">{selectedChannel?.name}</h2>
+              {isAnnouncement && (
+                <span className="text-[9px] font-extrabold uppercase tracking-[0.12em] px-1.5 py-0.5 rounded-md flex-shrink-0" style={{ background: 'hsl(var(--premium-warm) / 0.15)', color: 'hsl(var(--premium-warm))' }}>
+                  Announcements
+                </span>
+              )}
+              {isAdminOnly && (
+                <span className="text-[9px] font-extrabold uppercase tracking-[0.12em] px-1.5 py-0.5 rounded-md flex-shrink-0 bg-destructive/15 text-destructive">
+                  Admins
+                </span>
+              )}
+            </div>
             {selectedChannel?.description && <p className="text-[10px] text-muted-foreground/70 truncate leading-tight">{selectedChannel.description}</p>}
           </div>
           <button onClick={() => { setShowSearch(!showSearch); setSearchQuery(''); setSearchResults(null); }} className={cn("p-2 rounded-full transition-colors", showSearch ? "bg-primary/15 text-primary" : "hover:bg-muted/50 text-muted-foreground/70")}>
@@ -755,17 +810,31 @@ export default function ChatPage() {
                         </motion.div>
                       )}
                     </AnimatePresence>
-                    <MessageComposer
-                      ref={composerRef}
-                      value={newMessage}
-                      onChange={setNewMessage}
-                      onSend={handleSend}
-                      onTyping={broadcastTyping}
-                      disabled={sending}
-                      placeholder={`Message #${selectedChannel?.name || ''}`}
-                      members={members}
-                      userId={user?.id}
-                    />
+                    {canPost ? (
+                      <MessageComposer
+                        ref={composerRef}
+                        value={newMessage}
+                        onChange={setNewMessage}
+                        onSend={handleSend}
+                        onTyping={broadcastTyping}
+                        disabled={sending}
+                        placeholder={isAnnouncement ? `Post an announcement to #${selectedChannel?.name || ''}` : `Message #${selectedChannel?.name || ''}`}
+                        members={members}
+                        userId={user?.id}
+                      />
+                    ) : (
+                      <div
+                        className="flex items-center gap-2 px-4 py-3 text-[12px] font-semibold text-muted-foreground/80"
+                        style={{
+                          background: 'hsl(var(--muted) / 0.3)',
+                          borderTop: '1px solid hsl(var(--border) / 0.2)',
+                          paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+                        }}
+                      >
+                        <Lock className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
+                        <span>{lockedReason}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </>
@@ -794,6 +863,7 @@ export default function ChatPage() {
           channel={settingsChannel}
           categories={categories}
           open={!!settingsChannel}
+          isAdmin={isClubAdmin}
           onOpenChange={(open) => { if (!open) setSettingsChannel(null); }}
           onUpdate={handleUpdateChannel}
           onDelete={handleDeleteChannel}
