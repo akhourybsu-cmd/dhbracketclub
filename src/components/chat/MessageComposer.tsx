@@ -200,8 +200,12 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
 
       if (textareaRef.current) textareaRef.current.style.height = 'auto';
       setMentionQuery(null);
-      const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
-      if (isDesktop) textareaRef.current?.focus();
+      // Keep the soft keyboard open on mobile after send. Calling focus()
+      // synchronously inside the user-initiated handler is what convinces
+      // iOS/Android to keep (or re-open) the keyboard. Paired with
+      // onMouseDown preventDefault on the send button (below) so focus
+      // never actually leaves the textarea on tap.
+      textareaRef.current?.focus();
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -358,6 +362,7 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
           {/* Send button — external, circular */}
           <button
             onClick={handleSend}
+            onMouseDown={(e) => { e.preventDefault(); /* keep keyboard open: don't transfer focus */ }}
             disabled={!canSend}
             aria-label={uploading ? 'Sending message' : 'Send message'}
             type="button"
