@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, Fragment, memo, useMemo } from 'react';
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import {
@@ -151,6 +151,22 @@ function MessageBubbleInner({
   const replyIconOpacity = useTransform(dragX, [0, SWIPE_THRESHOLD], [0, 1]);
   const replyIconScale = useTransform(dragX, [0, SWIPE_THRESHOLD], [0.5, 1]);
   const [swiped, setSwiped] = useState(false);
+  const reduceMotion = useReducedMotion();
+
+  // Subtle entrance: own messages rise a touch more (they came from the
+  // composer below); received slide in from the same direction but
+  // gentler. Both use a snappy spring so it never feels delayed.
+  const enterInitial = reduceMotion
+    ? { opacity: 1 }
+    : { opacity: 0, y: isOwn ? 8 : 6, scale: 0.97 };
+  const enterAnimate = { opacity: 1, y: 0, scale: 1 };
+  const enterTransition = reduceMotion
+    ? { duration: 0 }
+    : { type: 'spring' as const, damping: 28, stiffness: 420, mass: 0.6 };
+
+  const tinyHaptic = useCallback(() => {
+    if (!reduceMotion) navigator.vibrate?.(4);
+  }, [reduceMotion]);
 
   useEffect(() => {
     const el = editRef.current;
@@ -178,7 +194,8 @@ function MessageBubbleInner({
     const rect = bubbleWrapperRef.current?.getBoundingClientRect();
     setOverlayBelow(!!rect && rect.top < HEADER_OFFSET + 44);
     setShowOverlay(true);
-  }, [isBeingEdited, setShowOverlay]);
+    tinyHaptic();
+  }, [isBeingEdited, setShowOverlay, tinyHaptic]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     if (isBeingEdited) return;
@@ -196,7 +213,8 @@ function MessageBubbleInner({
     e?.stopPropagation();
     onToggleReaction(msg.id, emoji);
     setShowOverlay(false);
-  }, [msg.id, onToggleReaction, setShowOverlay]);
+    tinyHaptic();
+  }, [msg.id, onToggleReaction, setShowOverlay, tinyHaptic]);
 
   const confirmDelete = () => {
     onDeleteMessage(msg.id);
@@ -237,6 +255,9 @@ function MessageBubbleInner({
           msg._optimistic && "opacity-70"
         )}
         style={{ x: dragX }}
+        initial={enterInitial}
+        animate={enterAnimate}
+        transition={enterTransition}
         drag={isBeingEdited ? false : "x"}
         dragDirectionLock
         dragConstraints={{ left: 0, right: SWIPE_THRESHOLD + 10 }}
@@ -374,20 +395,27 @@ function MessageBubbleInner({
                   "-mt-1 relative z-10 flex flex-wrap gap-1",
                   isOwn ? "justify-end pr-1" : "justify-start pl-1"
                 )}>
-                  {msg.reactions.map(r => (
-                    <button
-                      key={r.emoji}
-                      onClick={(e) => { e.stopPropagation(); handleReaction(r.emoji); }}
-                      className={cn(
-                        "inline-flex items-center gap-1 h-6 px-1.5 rounded-full text-[11px] border shadow-sm backdrop-blur-sm transition-all duration-150 active:scale-90",
-                        r.user_reacted
-                          ? "border-primary/30 bg-primary/15 text-primary"
-                          : "border-border/30 bg-background/95 text-foreground/80 hover:bg-background"
-                      )}
-                    >
-                      {r.emoji} <span className="font-bold text-[10px]">{r.count}</span>
-                    </button>
-                  ))}
+                  <AnimatePresence initial={false}>
+                    {msg.reactions.map(r => (
+                      <motion.button
+                        key={r.emoji}
+                        layout
+                        initial={reduceMotion ? false : { opacity: 0, scale: 0.6, y: -2 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.6, y: -2 }}
+                        transition={reduceMotion ? { duration: 0 } : { type: 'spring', damping: 22, stiffness: 480 }}
+                        onClick={(e) => { e.stopPropagation(); handleReaction(r.emoji); }}
+                        className={cn(
+                          "inline-flex items-center gap-1 h-6 px-1.5 rounded-full text-[11px] border shadow-sm backdrop-blur-sm transition-colors duration-150 active:scale-90",
+                          r.user_reacted
+                            ? "border-primary/30 bg-primary/15 text-primary"
+                            : "border-border/30 bg-background/95 text-foreground/80 hover:bg-background"
+                        )}
+                      >
+                        {r.emoji} <span className="font-bold text-[10px]">{r.count}</span>
+                      </motion.button>
+                    ))}
+                  </AnimatePresence>
                 </div>
               )}
             </div>

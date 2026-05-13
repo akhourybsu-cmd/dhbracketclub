@@ -805,33 +805,48 @@ export default function ChatPage() {
                         </motion.div>
                       )}
                     </AnimatePresence>
-                    {canPost ? (
-                      <MessageComposer
-                        ref={composerRef}
-                        value={newMessage}
-                        onChange={setNewMessage}
-                        onSend={handleSend}
-                        onTyping={broadcastTyping}
-                        disabled={sending}
-                        placeholder={isAnnouncement ? `Post an announcement to #${selectedChannel?.name || ''}` : `Message #${selectedChannel?.name || ''}`}
-                        members={members}
-                        userId={user?.id}
-                      />
-                    ) : (
-                      <div
-                        role="status"
-                        aria-live="polite"
-                        className="flex items-center gap-2 px-4 py-3 text-[12px] font-semibold text-muted-foreground/80"
-                        style={{
-                          background: 'hsl(var(--muted) / 0.3)',
-                          borderTop: '1px solid hsl(var(--border) / 0.2)',
-                          paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
-                        }}
-                      >
-                        <Lock className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" aria-hidden="true" />
-                        <span>{lockedReason}</span>
-                      </div>
-                    )}
+                    <AnimatePresence initial={false} mode="wait">
+                      {canPost ? (
+                        <motion.div
+                          key="composer"
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 6 }}
+                          transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+                        >
+                          <MessageComposer
+                            ref={composerRef}
+                            value={newMessage}
+                            onChange={setNewMessage}
+                            onSend={handleSend}
+                            onTyping={broadcastTyping}
+                            disabled={sending}
+                            placeholder={isAnnouncement ? `Post an announcement to #${selectedChannel?.name || ''}` : `Message #${selectedChannel?.name || ''}`}
+                            members={members}
+                            userId={user?.id}
+                          />
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="locked"
+                          role="status"
+                          aria-live="polite"
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 6 }}
+                          transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+                          className="flex items-center gap-2 px-4 py-3 text-[12px] font-semibold text-muted-foreground/80"
+                          style={{
+                            background: 'hsl(var(--muted) / 0.3)',
+                            borderTop: '1px solid hsl(var(--border) / 0.2)',
+                            paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+                          }}
+                        >
+                          <Lock className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" aria-hidden="true" />
+                          <span>{lockedReason}</span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 )}
               </>

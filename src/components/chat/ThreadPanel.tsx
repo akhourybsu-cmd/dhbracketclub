@@ -1,5 +1,5 @@
 import { useRef, useEffect, Fragment, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { MessageSquare, X, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -56,6 +56,7 @@ interface ThreadPanelProps {
 
 export function ThreadPanel({ parent, replies, replyValue, onReplyChange, onSendReply, onClose }: ThreadPanelProps) {
   const endRef = useRef<HTMLDivElement>(null);
+  const reduceMotion = useReducedMotion();
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [replies]);
 
   const parentImages = extractImageUrls(parent.content);
@@ -118,11 +119,18 @@ export function ThreadPanel({ parent, replies, replyValue, onReplyChange, onSend
       <div className="flex-1 overflow-y-auto px-4">
         <div className="py-3 space-y-3">
           {replies.length === 0 && <p className="text-xs text-muted-foreground/70 text-center py-8">No replies yet</p>}
+          <AnimatePresence initial={false}>
           {replies.map(msg => {
             const replyImages = extractImageUrls(msg.content);
             const replyLinks = replyLinksByMsgId.get(msg.id) ?? [];
             return (
-              <div key={msg.id} className={cn("flex gap-2.5", msg._optimistic && "opacity-70")}>
+              <motion.div
+                key={msg.id}
+                initial={reduceMotion ? false : { opacity: 0, y: 6, scale: 0.97 }}
+                animate={{ opacity: msg._optimistic ? 0.7 : 1, y: 0, scale: 1 }}
+                transition={reduceMotion ? { duration: 0 } : { type: 'spring', damping: 28, stiffness: 420, mass: 0.6 }}
+                className="flex gap-2.5"
+              >
                 <UserAvatar userId={msg.user_id} name={msg.profiles?.display_name || '?'} avatarUrl={msg.profiles?.avatar_url} size={24} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 mb-0.5">
@@ -150,9 +158,10 @@ export function ThreadPanel({ parent, replies, replyValue, onReplyChange, onSend
                     </span>
                   )}
                 </div>
-              </div>
+              </motion.div>
             );
           })}
+          </AnimatePresence>
           <div ref={endRef} />
         </div>
       </div>
