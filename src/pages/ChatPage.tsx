@@ -696,8 +696,8 @@ export default function ChatPage() {
               <Pin className="w-[18px] h-[18px]" />
             </button>
           )}
-          {selectedChannel && (
-            <button onClick={() => setSettingsChannel(selectedChannel)} className="p-2 rounded-full hover:bg-muted/50 text-muted-foreground/70 transition-colors" title="Channel Settings">
+          {selectedChannel && isClubAdmin && (
+            <button onClick={() => setSettingsChannel(selectedChannel)} className="p-2 rounded-full hover:bg-muted/50 text-muted-foreground/70 transition-colors" title="Channel Settings" aria-label="Channel settings">
               <Settings className="w-[18px] h-[18px]" />
             </button>
           )}
@@ -819,6 +819,8 @@ export default function ChatPage() {
                       />
                     ) : (
                       <div
+                        role="status"
+                        aria-live="polite"
                         className="flex items-center gap-2 px-4 py-3 text-[12px] font-semibold text-muted-foreground/80"
                         style={{
                           background: 'hsl(var(--muted) / 0.3)',
@@ -826,7 +828,7 @@ export default function ChatPage() {
                           paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
                         }}
                       >
-                        <Lock className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
+                        <Lock className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" aria-hidden="true" />
                         <span>{lockedReason}</span>
                       </div>
                     )}

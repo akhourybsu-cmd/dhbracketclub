@@ -52,6 +52,22 @@ export function MessageReportsPanel({ installed, isAdmin }: MessageReportsPanelP
     fetchReports();
   }, [installed, isAdmin, fetchReports]);
 
+  // Realtime: refetch the queue on any insert/update so admin sees new
+  // reports + status flips from other admin sessions without manual refresh.
+  useEffect(() => {
+    if (!installed || !isAdmin) return;
+    const ch = supabase
+      .channel('message-reports-admin')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'message_reports' }, () => {
+        fetchReports();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'message_reports' }, () => {
+        fetchReports();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [installed, isAdmin, fetchReports]);
+
   const handleAction = async (id: string, status: 'reviewed' | 'dismissed') => {
     setActingId(id);
     const prev = reports;
