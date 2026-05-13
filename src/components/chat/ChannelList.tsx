@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import type { Channel, Category, ChannelMeta } from './types';
 import { CHANNEL_EMOJI } from './types';
+import { getChannelTypeMeta } from './channelTypeMeta';
 
 interface ChannelListProps {
   channels: Channel[];
@@ -15,6 +16,7 @@ interface ChannelListProps {
   channelMeta: Map<string, ChannelMeta>;
   selectedChannel: Channel | null;
   currentUserId?: string;
+  isAdmin?: boolean;
   loading: boolean;
   onSelectChannel: (ch: Channel) => void;
   onCreateChannel: (name: string, categoryId: string) => void;
@@ -37,16 +39,20 @@ interface ChannelRowProps {
   meta: ChannelMeta | undefined;
   isCurrent: boolean;
   currentUserId?: string;
+  isAdmin?: boolean;
   reorderEnabled: boolean;
   onSelect: () => void;
   onOpenSettings?: (ch: Channel) => void;
 }
 
-const ChannelRow = memo(function ChannelRow({ ch, meta, isCurrent, currentUserId, reorderEnabled, onSelect, onOpenSettings }: ChannelRowProps) {
+const ChannelRow = memo(function ChannelRow({ ch, meta, isCurrent, currentUserId, isAdmin, reorderEnabled, onSelect, onOpenSettings }: ChannelRowProps) {
   const dragControls = useDragControls();
   const lastIsMine = !!currentUserId && meta?.lastAuthorId === currentUserId;
   // Hard guard: never show unread when the latest message is from the current user
   const isUnread = !!meta?.unread && !lastIsMine;
+  const typeMeta = getChannelTypeMeta(ch.channel_type);
+  const TypeIcon = typeMeta.icon;
+  const isElevated = ch.channel_type === 'announcements' || ch.channel_type === 'admin_only';
   const emoji = (ch.icon && ch.icon !== 'hash') ? ch.icon : CHANNEL_EMOJI[ch.name];
   const hasPreview = !!meta?.lastMessage;
 
@@ -85,11 +91,16 @@ const ChannelRow = memo(function ChannelRow({ ch, meta, isCurrent, currentUserId
         )}
       >
         {/* Icon tile */}
-        <div className={cn(
-          "w-10 h-10 rounded-xl flex items-center justify-center text-base flex-shrink-0 transition-colors relative",
-          isUnread ? "bg-primary/12" : "bg-muted/40",
-        )}>
-          {emoji ? emoji : <Hash className="w-4 h-4 text-muted-foreground/60" />}
+        <div
+          className={cn(
+            "w-10 h-10 rounded-xl flex items-center justify-center text-base flex-shrink-0 transition-colors relative",
+            !isElevated && (isUnread ? "bg-primary/12" : "bg-muted/40"),
+          )}
+          style={isElevated ? { background: `hsl(${typeMeta.accent} / ${isUnread ? 0.22 : 0.14})` } : undefined}
+        >
+          {isElevated
+            ? <TypeIcon className="w-4 h-4" style={{ color: `hsl(${typeMeta.accent})` }} />
+            : emoji ? emoji : <Hash className="w-4 h-4 text-muted-foreground/60" />}
           {isCurrent && (
             <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-background" />
           )}
@@ -99,10 +110,21 @@ const ChannelRow = memo(function ChannelRow({ ch, meta, isCurrent, currentUserId
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
             <span className={cn(
-              "text-[14px] tracking-tight truncate",
+              "text-[14px] tracking-tight truncate flex items-center gap-1.5",
               isUnread ? "font-bold text-foreground" : "font-semibold text-foreground/85",
             )}>
-              {ch.name}
+              <span className="truncate">{ch.name}</span>
+              {isElevated && (
+                <span
+                  className="text-[8px] font-extrabold uppercase tracking-[0.12em] px-1 py-0.5 rounded-md flex-shrink-0 leading-none"
+                  style={{
+                    background: `hsl(${typeMeta.accent} / 0.12)`,
+                    color: `hsl(${typeMeta.accent})`,
+                  }}
+                >
+                  {ch.channel_type === 'announcements' ? 'News' : 'Admin'}
+                </span>
+              )}
             </span>
             {meta?.lastMessageAt && (
               <span className={cn(
@@ -144,8 +166,8 @@ const ChannelRow = memo(function ChannelRow({ ch, meta, isCurrent, currentUserId
           </button>
         )}
 
-        {/* Settings */}
-        {onOpenSettings && (
+        {/* Settings — admin only */}
+        {onOpenSettings && isAdmin && (
           <button
             onClick={e => { e.stopPropagation(); onOpenSettings(ch); }}
             className="flex-shrink-0 p-1.5 rounded-md opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-muted/50 transition-opacity hidden lg:block"
@@ -162,14 +184,16 @@ const ChannelRow = memo(function ChannelRow({ ch, meta, isCurrent, currentUserId
   prev.ch.id === next.ch.id &&
   prev.ch.name === next.ch.name &&
   prev.ch.icon === next.ch.icon &&
+  prev.ch.channel_type === next.ch.channel_type &&
   prev.isCurrent === next.isCurrent &&
   prev.meta === next.meta &&
   prev.reorderEnabled === next.reorderEnabled &&
-  prev.currentUserId === next.currentUserId
+  prev.currentUserId === next.currentUserId &&
+  prev.isAdmin === next.isAdmin
 );
 
 export function ChannelList({
-  channels, categories, channelMeta, selectedChannel, currentUserId,
+  channels, categories, channelMeta, selectedChannel, currentUserId, isAdmin,
   loading, onSelectChannel, onCreateChannel, onReorderChannels,
   onOpenSettings, onCreateCategory,
 }: ChannelListProps) {
@@ -228,16 +252,18 @@ export function ChannelList({
             <h1 className="text-2xl font-extrabold tracking-tight">Chat</h1>
             <p className="text-[11px] text-muted-foreground/50 font-medium mt-0.5">DH conversations</p>
           </div>
-          <div className="flex items-center gap-1">
-            {onCreateCategory && (
-              <Button size="sm" variant="ghost" onClick={() => setShowNewCategory(true)} className="h-9 w-9 p-0 rounded-full hover:bg-muted/30" title="New Category" aria-label="New Category">
-                <FolderPlus className="w-4 h-4" />
+          {isAdmin && (
+            <div className="flex items-center gap-1">
+              {onCreateCategory && (
+                <Button size="sm" variant="ghost" onClick={() => setShowNewCategory(true)} className="h-9 w-9 p-0 rounded-full hover:bg-muted/30" title="New Category" aria-label="New Category">
+                  <FolderPlus className="w-4 h-4" />
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" onClick={() => setShowNewChannel(true)} className="h-9 w-9 p-0 rounded-full hover:bg-muted/30" title="New Channel" aria-label="New Channel">
+                <Plus className="w-4 h-4" />
               </Button>
-            )}
-            <Button size="sm" variant="ghost" onClick={() => setShowNewChannel(true)} className="h-9 w-9 p-0 rounded-full hover:bg-muted/30" title="New Channel" aria-label="New Channel">
-              <Plus className="w-4 h-4" />
-            </Button>
-          </div>
+            </div>
+          )}
         </div>
 
         {/* New Category inline form */}
@@ -294,7 +320,8 @@ export function ChannelList({
                       meta={channelMeta.get(ch.id)}
                       isCurrent={selectedChannel?.id === ch.id}
                       currentUserId={currentUserId}
-                      reorderEnabled={!!onReorderChannels}
+                      isAdmin={isAdmin}
+                      reorderEnabled={!!onReorderChannels && !!isAdmin}
                       onSelect={() => onSelectChannel(ch)}
                       onOpenSettings={onOpenSettings}
                     />

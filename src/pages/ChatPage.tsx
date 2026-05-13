@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { Hash, ChevronLeft, Pin, Search, X, Link2, Settings, Menu, Megaphone, Shield, Lock } from 'lucide-react';
+import { Hash, ChevronLeft, Pin, Search, X, Link2, Settings, Menu, Lock } from 'lucide-react';
+import { getChannelTypeMeta } from '@/components/chat/channelTypeMeta';
 import { useNavigate } from 'react-router-dom';
 import { useNavDrawer } from '@/contexts/NavDrawerContext';
 import { format } from 'date-fns';
@@ -581,6 +582,9 @@ export default function ChatPage() {
   const postPermission = selectedChannel?.post_permission || 'all';
   const isAnnouncement = channelType === 'announcements';
   const isAdminOnly = channelType === 'admin_only';
+  const isElevated = isAnnouncement || isAdminOnly;
+  const typeMeta = getChannelTypeMeta(channelType);
+  const TypeIcon = typeMeta.icon;
   const canPost = postPermission === 'all' || isClubAdmin;
   const lockedReason = isAdminOnly
     ? 'Admin-only channel'
@@ -599,6 +603,7 @@ export default function ChatPage() {
             channelMeta={channelMeta}
             selectedChannel={selectedChannel}
             currentUserId={user?.id}
+            isAdmin={isClubAdmin}
             loading={loading}
             onSelectChannel={selectChannel}
             onCreateChannel={handleCreateChannel}
@@ -642,10 +647,10 @@ export default function ChatPage() {
         <div
           className="flex items-center gap-2 py-2 border-b flex-shrink-0 sticky top-0 z-10"
           style={{
-            background: isAnnouncement
-              ? 'linear-gradient(180deg, hsl(var(--premium-warm) / 0.12), hsl(var(--background) / 0.9))'
+            background: isElevated
+              ? `linear-gradient(180deg, hsl(${typeMeta.accent} / 0.12), hsl(var(--background) / 0.9))`
               : 'hsl(var(--background) / 0.85)',
-            borderColor: isAnnouncement ? 'hsl(var(--premium-warm) / 0.35)' : 'hsl(var(--border) / 0.2)',
+            borderColor: isElevated ? `hsl(${typeMeta.accent} / 0.35)` : 'hsl(var(--border) / 0.2)',
             backdropFilter: 'blur(20px) saturate(180%)',
             WebkitBackdropFilter: 'blur(20px) saturate(180%)',
             paddingTop: 'max(0.5rem, env(safe-area-inset-top, 0px))',
@@ -658,33 +663,23 @@ export default function ChatPage() {
           </button>
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0"
-            style={{
-              background: isAnnouncement
-                ? 'hsl(var(--premium-warm) / 0.18)'
-                : isAdminOnly
-                  ? 'hsl(var(--destructive) / 0.15)'
-                  : 'hsl(var(--primary) / 0.12)',
-            }}
+            style={{ background: `hsl(${typeMeta.accent} / ${isElevated ? 0.18 : 0.12})` }}
           >
-            {isAnnouncement
-              ? <Megaphone className="w-3.5 h-3.5" style={{ color: 'hsl(var(--premium-warm))' }} />
-              : isAdminOnly
-                ? <Shield className="w-3.5 h-3.5 text-destructive/80" />
-                : (selectedChannel?.icon && selectedChannel.icon !== 'hash')
-                  ? selectedChannel.icon
-                  : (CHANNEL_EMOJI[selectedChannel?.name || ''] || <Hash className="w-3.5 h-3.5 text-primary/80" />)}
+            {isElevated
+              ? <TypeIcon className="w-3.5 h-3.5" style={{ color: `hsl(${typeMeta.accent})` }} />
+              : (selectedChannel?.icon && selectedChannel.icon !== 'hash')
+                ? selectedChannel.icon
+                : (CHANNEL_EMOJI[selectedChannel?.name || ''] || <Hash className="w-3.5 h-3.5 text-primary/80" />)}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
               <h2 className="font-bold text-[15px] tracking-tight leading-tight truncate">{selectedChannel?.name}</h2>
-              {isAnnouncement && (
-                <span className="text-[9px] font-extrabold uppercase tracking-[0.12em] px-1.5 py-0.5 rounded-md flex-shrink-0" style={{ background: 'hsl(var(--premium-warm) / 0.15)', color: 'hsl(var(--premium-warm))' }}>
-                  Announcements
-                </span>
-              )}
-              {isAdminOnly && (
-                <span className="text-[9px] font-extrabold uppercase tracking-[0.12em] px-1.5 py-0.5 rounded-md flex-shrink-0 bg-destructive/15 text-destructive">
-                  Admins
+              {isElevated && (
+                <span
+                  className="text-[9px] font-extrabold uppercase tracking-[0.12em] px-1.5 py-0.5 rounded-md flex-shrink-0"
+                  style={{ background: `hsl(${typeMeta.accent} / 0.15)`, color: `hsl(${typeMeta.accent})` }}
+                >
+                  {isAnnouncement ? 'Announcements' : 'Admins'}
                 </span>
               )}
             </div>

@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { Building2, ArrowLeft, Copy, Plus, Users, Crown, KeyRound, Eye, EyeOff, RefreshCw, Package, ChevronRight, Sparkles } from 'lucide-react';
 import { CelebrationSettingsPanel } from '@/components/celebrations/CelebrationSettingsPanel';
+import { MessageReportsPanel } from '@/components/chat/MessageReportsPanel';
 
 type InviteCode = {
   id: string;
@@ -404,6 +405,14 @@ export default function ClubSettingsPage() {
         <div className="mb-4">
           <CelebrationSettingsPanel
             installed={installedAssets.some(ia => ia.asset.slug === 'birthdays-milestones' && ia.enabled)}
+            isAdmin={isClubAdmin}
+          />
+        </div>
+
+        {/* Plugin: Message Reports — admin moderation queue, gated on chat installed */}
+        <div className="mb-4">
+          <MessageReportsPanel
+            installed={installedAssets.some(ia => ia.asset.slug === 'chat' && ia.enabled)}
             isAdmin={isClubAdmin}
           />
         </div>

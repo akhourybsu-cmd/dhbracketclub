@@ -8,8 +8,9 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Trash2, Hash, Megaphone, Shield, CalendarDays } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import type { Channel, Category, ChannelType, PostPermission } from './types';
+import { CHANNEL_TYPE_META, CHANNEL_TYPE_ORDER } from './channelTypeMeta';
 
 const EMOJI_OPTIONS = [
   '💬', '📢', '🏀', '🎬', '🍕', '🎲', '✈️', '🏆',
@@ -29,12 +30,7 @@ interface ChannelSettingsDialogProps {
   onDelete: (channelId: string) => void;
 }
 
-const TYPE_OPTIONS: { id: ChannelType; label: string; icon: typeof Hash; hint: string }[] = [
-  { id: 'general',       label: 'General',       icon: Hash,         hint: 'Everyone can post' },
-  { id: 'announcements', label: 'Announcements', icon: Megaphone,    hint: 'Admins post, members read' },
-  { id: 'admin_only',    label: 'Admin Only',    icon: Shield,       hint: 'Only admins see or post' },
-  { id: 'event',         label: 'Event',         icon: CalendarDays, hint: 'Tied to a club event' },
-];
+const TYPE_OPTIONS = CHANNEL_TYPE_ORDER.map(id => ({ id, ...CHANNEL_TYPE_META[id] }));
 
 export function ChannelSettingsDialog({ channel, categories, open, isAdmin, onOpenChange, onUpdate, onDelete }: ChannelSettingsDialogProps) {
   const [name, setName] = useState(channel.name);
