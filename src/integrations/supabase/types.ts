@@ -506,6 +506,59 @@ export type Database = {
           },
         ]
       }
+      club_celebration_settings: {
+        Row: {
+          admins_can_manage_all: boolean
+          allow_members_to_add_birthdays: boolean
+          allow_members_to_create_milestones: boolean
+          auto_generate_connect_prompts: boolean
+          club_id: string
+          created_at: string
+          day_of_reminder: boolean
+          reminder_days_before: number
+          show_in_connect: boolean
+          show_on_home: boolean
+          show_on_profiles: boolean
+          updated_at: string
+        }
+        Insert: {
+          admins_can_manage_all?: boolean
+          allow_members_to_add_birthdays?: boolean
+          allow_members_to_create_milestones?: boolean
+          auto_generate_connect_prompts?: boolean
+          club_id: string
+          created_at?: string
+          day_of_reminder?: boolean
+          reminder_days_before?: number
+          show_in_connect?: boolean
+          show_on_home?: boolean
+          show_on_profiles?: boolean
+          updated_at?: string
+        }
+        Update: {
+          admins_can_manage_all?: boolean
+          allow_members_to_add_birthdays?: boolean
+          allow_members_to_create_milestones?: boolean
+          auto_generate_connect_prompts?: boolean
+          club_id?: string
+          created_at?: string
+          day_of_reminder?: boolean
+          reminder_days_before?: number
+          show_in_connect?: boolean
+          show_on_home?: boolean
+          show_on_profiles?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_celebration_settings_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       club_installed_assets: {
         Row: {
           asset_id: string
@@ -588,6 +641,59 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "club_members_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_milestones: {
+        Row: {
+          club_id: string
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          milestone_date: string
+          recurrence: string
+          title: string
+          type: string
+          updated_at: string
+          user_id: string | null
+          visibility: string
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          milestone_date: string
+          recurrence?: string
+          title: string
+          type?: string
+          updated_at?: string
+          user_id?: string | null
+          visibility?: string
+        }
+        Update: {
+          club_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          milestone_date?: string
+          recurrence?: string
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string | null
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_milestones_club_id_fkey"
             columns: ["club_id"]
             isOneToOne: false
             referencedRelation: "clubs"
@@ -2293,6 +2399,56 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_birthdays: {
+        Row: {
+          birth_day: number
+          birth_month: number
+          birth_year: number | null
+          club_id: string
+          created_at: string
+          id: string
+          reminder_opt_in: boolean
+          show_age: boolean
+          updated_at: string
+          user_id: string
+          visibility: string
+        }
+        Insert: {
+          birth_day: number
+          birth_month: number
+          birth_year?: number | null
+          club_id: string
+          created_at?: string
+          id?: string
+          reminder_opt_in?: boolean
+          show_age?: boolean
+          updated_at?: string
+          user_id: string
+          visibility?: string
+        }
+        Update: {
+          birth_day?: number
+          birth_month?: number
+          birth_year?: number | null
+          club_id?: string
+          created_at?: string
+          id?: string
+          reminder_opt_in?: boolean
+          show_age?: boolean
+          updated_at?: string
+          user_id?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_birthdays_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
             referencedColumns: ["id"]
           },
         ]
