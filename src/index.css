@@ -236,7 +236,7 @@
     /* ── Gradients ── */
     --gradient-primary: linear-gradient(135deg, hsl(152 60% 23%), hsl(152 65% 36%));
     --gradient-accent: linear-gradient(135deg, hsl(172 52% 26%), hsl(172 58% 36%));
-    --gradient-surface: linear-gradient(180deg, hsl(0 0% 100%), hsl(150 8% 93%));
+    --gradient-surface: linear-gradient(180deg, hsl(var(--card)), hsl(var(--background))); /* token-driven so palette nudges stay in sync */
     --gradient-hero: radial-gradient(ellipse 80% 50% at 50% -20%, hsl(152 60% 27% / 0.07), transparent);
     --gradient-hero-accent: radial-gradient(ellipse 60% 40% at 80% 10%, hsl(172 52% 28% / 0.04), transparent);
     --gradient-hero-warm: radial-gradient(ellipse 50% 30% at 20% 20%, hsl(28 72% 38% / 0.03), transparent);
@@ -345,6 +345,12 @@
   .light .text-foreground\/65,
   .light .text-foreground\/70 {
     color: hsl(var(--foreground) / 0.88);
+  }
+  .light .bg-muted-foreground\/10,
+  .light .bg-muted-foreground\/15,
+  .light .bg-muted-foreground\/20,
+  .light .bg-muted-foreground\/25 {
+    background-color: hsl(var(--muted-foreground) / 0.55);
   }
   .light .bg-muted-foreground\/30,
   .light .bg-muted-foreground\/40,
@@ -491,6 +497,20 @@
   .light .bg-muted\/50,
   .light .bg-muted\/60 {
     background-color: hsl(var(--muted) / 0.85);
+  }
+
+  /* Low-opacity card backgrounds collapse to near-invisible on the new
+     soft-white card surface (~99% lightness). Bump faded card chips
+     back to a value that still reads as a distinct elevated surface. */
+  .light .bg-card\/30,
+  .light .bg-card\/40,
+  .light .bg-card\/50 {
+    background-color: hsl(var(--card) / 0.85);
+  }
+  .light .bg-card\/60,
+  .light .bg-card\/70,
+  .light .bg-card\/80 {
+    background-color: hsl(var(--card) / 0.95);
   }
 
   /* Accent / brand text at low opacity — boost so they pass AA on white cards */
@@ -2960,11 +2980,11 @@
 /* ─── NEXUS DEFENSE — Daylight Command (steel + ice cyan) ───────── */
 .light .nx-mode {
   --background: 205 35% 96%;
-  --card: 0 0% 100%;
-  --popover: 0 0% 100%;
+  --card: 205 14% 99%;           /* soft off-white with cool cyan hint, less brilliant */
+  --popover: 205 14% 99%;
   --muted: 205 25% 92%;
   --border: 200 35% 78%;
-  --input: 200 35% 78%;
+  --input: 205 14% 99%;          /* match card */
   --secondary: 205 25% 90%;
   --foreground: 215 40% 14%;
   --card-foreground: 215 40% 14%;
@@ -2985,10 +3005,10 @@
     repeating-linear-gradient(90deg, transparent 0, transparent 56px, hsl(215 40% 20% / 0.05) 56px, hsl(215 40% 20% / 0.05) 57px);
 }
 .light .nx-mode .nx-panel {
-  background: linear-gradient(180deg, hsl(0 0% 100% / 0.95), hsl(205 30% 96% / 0.95)) !important;
+  background: linear-gradient(180deg, hsl(205 14% 99% / 0.97), hsl(205 30% 96% / 0.97)) !important;
   border-color: hsl(200 50% 60% / 0.45) !important;
   color: hsl(215 40% 14%) !important;
-  box-shadow: 0 1px 0 hsl(0 0% 100%) inset, 0 6px 20px hsl(215 40% 20% / 0.08) !important;
+  box-shadow: 0 1px 0 hsl(205 14% 99%) inset, 0 6px 20px hsl(215 40% 20% / 0.08) !important;
 }
 .light .nx-mode .text-white,
 .light .nx-mode [class*="text-white/"] { color: hsl(215 40% 14%) !important; }
@@ -3000,11 +3020,11 @@
 /* ─── PICK'EM — Daylight Stadium (chalk + turf) ─────────────────── */
 .light .pk-mode {
   --background: 150 25% 96%;
-  --card: 0 0% 100%;
-  --popover: 0 0% 100%;
+  --card: 150 10% 99%;           /* soft off-white with turf-green hint */
+  --popover: 150 10% 99%;
   --muted: 150 18% 92%;
   --border: 152 30% 78%;
-  --input: 152 30% 78%;
+  --input: 150 10% 99%;          /* match card */
   --secondary: 150 18% 90%;
   --foreground: 160 30% 12%;
   --card-foreground: 160 30% 12%;
@@ -3025,11 +3045,11 @@
     repeating-linear-gradient(90deg, transparent 0, transparent 56px, hsl(160 30% 20% / 0.06) 56px, hsl(160 30% 20% / 0.06) 57px);
 }
 .light .pk-mode .glass-card {
-  background: linear-gradient(180deg, hsl(0 0% 100% / 0.96), hsl(150 25% 96% / 0.96)) !important;
+  background: linear-gradient(180deg, hsl(150 10% 99% / 0.97), hsl(150 25% 96% / 0.97)) !important;
   border: 1px solid hsl(152 30% 65% / 0.45) !important;
   color: hsl(160 30% 12%) !important;
   box-shadow:
-    inset 0 1px 0 hsl(0 0% 100%),
+    inset 0 1px 0 hsl(150 10% 99%),
     0 6px 18px hsl(160 30% 20% / 0.08) !important;
   backdrop-filter: none !important;
 }
@@ -3046,11 +3066,11 @@
 /* ─── DRAFT ARENA — Daylight Coliseum (parchment + champagne gold) ── */
 .light .da-mode {
   --background: 45 35% 96%;
-  --card: 0 0% 100%;
-  --popover: 0 0% 100%;
+  --card: 45 24% 99%;            /* soft parchment off-white, not stark printer paper */
+  --popover: 45 24% 99%;
   --muted: 45 25% 92%;
   --border: 45 40% 72%;
-  --input: 45 40% 72%;
+  --input: 45 24% 99%;           /* match card so inputs read as paper */
   --secondary: 45 25% 90%;
   --foreground: 30 30% 14%;
   --card-foreground: 30 30% 14%;
@@ -3072,11 +3092,11 @@
 }
 .light .da-mode .da-card,
 .light .da-mode .da-glass {
-  background: linear-gradient(180deg, hsl(0 0% 100% / 0.95), hsl(45 30% 96% / 0.95)) !important;
+  background: linear-gradient(180deg, hsl(45 24% 99% / 0.97), hsl(45 30% 96% / 0.97)) !important;
   border: 1px solid hsl(45 70% 50% / 0.35) !important;
   color: hsl(30 30% 14%) !important;
   box-shadow:
-    inset 0 1px 0 hsl(0 0% 100%),
+    inset 0 1px 0 hsl(45 24% 99%),
     0 1px 0 hsl(45 95% 55% / 0.18) inset,
     0 6px 18px hsl(30 40% 20% / 0.08) !important;
 }
@@ -3086,7 +3106,7 @@
   color: hsl(30 30% 14%) !important;
 }
 .light .da-mode .da-back {
-  background: hsl(0 0% 100% / 0.85) !important;
+  background: hsl(45 24% 99% / 0.88) !important;
   border-color: hsl(45 70% 50% / 0.4) !important;
   color: hsl(30 30% 14%) !important;
 }
@@ -3109,11 +3129,11 @@
 /* ─── PORTFOLIO WARS — Daylight Trading Floor (paper + bull-green) ── */
 .light .pw-mode {
   --background: 220 30% 96%;
-  --card: 0 0% 100%;
-  --popover: 0 0% 100%;
+  --card: 220 10% 99%;           /* soft off-white with cool slate hint */
+  --popover: 220 10% 99%;
   --muted: 220 20% 92%;
   --border: 220 25% 78%;
-  --input: 220 25% 78%;
+  --input: 220 10% 99%;          /* match card */
   --secondary: 220 20% 90%;
   --foreground: 220 40% 14%;
   --card-foreground: 220 40% 14%;
@@ -3127,11 +3147,11 @@
   color: hsl(220 40% 14%);
 }
 .light .pw-mode .glass-card {
-  background: linear-gradient(180deg, hsl(0 0% 100% / 0.96), hsl(220 25% 96% / 0.96)) !important;
+  background: linear-gradient(180deg, hsl(220 10% 99% / 0.97), hsl(220 25% 96% / 0.97)) !important;
   border: 1px solid hsl(var(--pw-bull) / 0.32) !important;
   color: hsl(220 40% 14%) !important;
   box-shadow:
-    inset 0 1px 0 hsl(0 0% 100%),
+    inset 0 1px 0 hsl(220 10% 99%),
     0 6px 18px hsl(220 40% 20% / 0.08) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
