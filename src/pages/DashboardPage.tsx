@@ -48,6 +48,13 @@ import { rankNextActions } from '@/lib/home/nextAction';
 import { ENDLESS_MISSION_ID } from '@/lib/nexus/endless';
 
 const NEXUS_SAVE_PREFIX = 'nexus_run_state_v1';
+const PWA_DISMISS_KEY = 'dh_pwa_install_dismissed_v1';
+
+/** Read the PWA-install dismissed flag once on mount. SSR-safe. */
+function readPwaDismissed(): boolean {
+  if (typeof window === 'undefined') return false;
+  try { return window.localStorage.getItem(PWA_DISMISS_KEY) === '1'; } catch { return false; }
+}
 
 /** Scan localStorage for an in-flight Nexus run owned by the user. */
 function findEndlessSavedRun(userId: string | undefined): { missionName: string; waveLabel: string } | null {
@@ -109,7 +116,12 @@ export default function DashboardPage() {
   const [drafts, setDrafts] = useState<DraftRow[]>([]);
   const [activity, setActivity] = useState<ActivityRow[]>([]);
   const [events, setEvents] = useState<EventRow[]>([]);
-  const [pwaDismissed, setPwaDismissed] = useState(false);
+  const [pwaDismissed, setPwaDismissed] = useState(readPwaDismissed);
+
+  const dismissPwa = useCallback(() => {
+    setPwaDismissed(true);
+    try { window.localStorage.setItem(PWA_DISMISS_KEY, '1'); } catch { /* private mode, no-op */ }
+  }, []);
   const [loading, setLoading] = useState(true);
 
   const hasFeed = isInstalled('feed');
@@ -321,7 +333,10 @@ export default function DashboardPage() {
 
   // ─── Render ──────────────────────────────────────────────────────
   return (
-    <div className="pb-6">
+    <div
+      className="pb-6"
+      style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
+    >
       <HomeHero
         club={club}
         displayName={displayName}
@@ -348,33 +363,42 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* PWA install hint — slim inline chip, only when applicable */}
+      {/* PWA install hint — slim inline chip, only when applicable.
+          Two real buttons (install + dismiss) sit inside the chip so screen
+          readers see them as separate actions instead of a nested
+          role="button" inside another button. Dismiss persists via
+          localStorage so users aren't re-prompted on every refresh. */}
       <AnimatePresence>
         {canInstall && !pwaDismissed && (
-          <motion.button
-            type="button"
+          <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            onClick={doInstall}
-            className="w-full mb-3 flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] font-bold text-left active:scale-[0.99] transition"
+            className="w-full mb-4 flex items-center gap-1 rounded-xl pr-1 text-[11px] font-bold"
             style={{
               background: `hsl(${accent} / 0.12)`,
               border: `1px solid hsl(${accent} / 0.28)`,
               color: `hsl(${accent})`,
             }}
           >
-            <Download className="w-3.5 h-3.5 flex-shrink-0" />
-            <span className="flex-1 truncate">Install DH on your phone</span>
-            <span
-              role="button"
-              tabIndex={-1}
-              onClick={(e) => { e.stopPropagation(); setPwaDismissed(true); }}
-              className="text-muted-foreground/60 hover:text-foreground p-1"
+            <button
+              type="button"
+              onClick={doInstall}
+              className="flex-1 flex items-center gap-2 text-left px-3 py-2 rounded-l-xl active:scale-[0.99] transition"
+              aria-label="Install DH on your phone"
+            >
+              <Download className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
+              <span className="flex-1 truncate">Install DH on your phone</span>
+            </button>
+            <button
+              type="button"
+              onClick={dismissPwa}
+              aria-label="Dismiss install prompt"
+              className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-current opacity-65 hover:opacity-100 active:scale-90 transition"
             >
               <X className="w-3 h-3" />
-            </span>
-          </motion.button>
+            </button>
+          </motion.div>
         )}
       </AnimatePresence>
 
