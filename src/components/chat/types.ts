@@ -44,7 +44,9 @@ export type ChannelMeta = {
   unread: boolean;
 };
 
-export const QUICK_EMOJIS = ['👍', '❤️', '😂', '🔥', '💀', '👀', '🎯', '💯'];
+// Trimmed to 6 (iMessage-style tapback count) so the action overlay
+// fits comfortably on narrow phones alongside Reply / Pin / Edit / Delete.
+export const QUICK_EMOJIS = ['👍', '❤️', '😂', '🔥', '💀', '👀'];
 
 export const CHANNEL_EMOJI: Record<string, string> = {
   general: '💬',

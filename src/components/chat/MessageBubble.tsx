@@ -1,4 +1,5 @@
-import { useState, useRef, useCallback, useEffect, Fragment, memo, useMemo } from 'react';
+import { useState, useRef, useCallback, useEffect, useLayoutEffect, Fragment, memo, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useMotionValue, useTransform, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -143,8 +144,9 @@ function MessageBubbleInner({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showReportConfirm, setShowReportConfirm] = useState(false);
   const [reporting, setReporting] = useState(false);
-  const [overlayBelow, setOverlayBelow] = useState(false);
+  const [overlayPos, setOverlayPos] = useState<{ left: number; top: number } | null>(null);
   const bubbleWrapperRef = useRef<HTMLDivElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
   const editRef = useRef<HTMLTextAreaElement>(null);
 
   const dragX = useMotionValue(0);
@@ -184,6 +186,44 @@ function MessageBubbleInner({
     return () => document.removeEventListener('keydown', handleEsc);
   }, [showOverlay, setShowOverlay]);
 
+  // Close overlay on any scroll within the chat — matches messaging-app
+  // muscle memory ("scroll dismisses").
+  useEffect(() => {
+    if (!showOverlay) return;
+    const onScroll = () => setShowOverlay(false);
+    window.addEventListener('scroll', onScroll, true); // capture so descendant scroll containers trigger it too
+    return () => window.removeEventListener('scroll', onScroll, true);
+  }, [showOverlay, setShowOverlay]);
+
+  // Reset measured position whenever the overlay closes so the next open
+  // computes fresh coords (bubble may have moved due to new messages).
+  useEffect(() => {
+    if (!showOverlay) setOverlayPos(null);
+  }, [showOverlay]);
+
+  // Measure and clamp overlay position. Runs after the portaled overlay
+  // mounts so we can read its real width/height — then we anchor it to
+  // the bubble and clamp to the viewport with an 8px safe margin.
+  useLayoutEffect(() => {
+    if (!showOverlay) return;
+    const overlay = overlayRef.current;
+    const bubble = bubbleWrapperRef.current;
+    if (!overlay || !bubble) return;
+    const ov = overlay.getBoundingClientRect();
+    const bb = bubble.getBoundingClientRect();
+    const margin = 8;
+    const placeBelow = bb.top < HEADER_OFFSET + ov.height + margin;
+    // Anchor on the user's side (own → right edge, others → left edge)
+    let left = isOwn ? bb.right - ov.width : bb.left;
+    // Clamp horizontally to viewport
+    const maxLeft = window.innerWidth - ov.width - margin;
+    left = Math.max(margin, Math.min(left, maxLeft));
+    const top = placeBelow
+      ? Math.min(bb.bottom + margin, window.innerHeight - ov.height - margin)
+      : Math.max(margin, bb.top - ov.height - margin);
+    setOverlayPos({ left, top });
+  }, [showOverlay, isOwn]);
+
   const isBeingEdited = editingMessageId === msg.id;
   const isFirstInBlock = !sameAuthor;
   const isLastInBlock = !nextSameAuthor;
@@ -191,8 +231,8 @@ function MessageBubbleInner({
 
   const openOverlay = useCallback(() => {
     if (isBeingEdited) return;
-    const rect = bubbleWrapperRef.current?.getBoundingClientRect();
-    setOverlayBelow(!!rect && rect.top < HEADER_OFFSET + 44);
+    // Position is computed in useLayoutEffect once the overlay is mounted;
+    // we just request it to open here.
     setShowOverlay(true);
     tinyHaptic();
   }, [isBeingEdited, setShowOverlay, tinyHaptic]);
@@ -429,77 +469,6 @@ function MessageBubbleInner({
               </div>
             )}
 
-            {/* Action overlay */}
-            <AnimatePresence>
-              {showOverlay && (
-                <motion.div
-                  key="inline-bar"
-                  initial={{ opacity: 0, scale: 0.9, y: 6 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, y: 6 }}
-                  transition={{ type: 'spring', damping: 26, stiffness: 380 }}
-                  className={cn(
-                    "absolute z-50 pointer-events-auto flex items-center gap-0.5 px-1.5 py-1 bg-background/95 backdrop-blur-lg border border-border/20 shadow-lg rounded-xl",
-                    overlayBelow ? "-bottom-11" : "-top-11",
-                    isOwn ? "right-0" : "left-0"
-                  )}
-                  onClick={(e) => e.stopPropagation()}
-                  onTap={(e) => e.stopPropagation?.()}
-                >
-                  {QUICK_EMOJIS.map(emoji => (
-                    <button
-                      key={emoji}
-                      onClick={(e) => handleReaction(emoji, e)}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 text-base transition-colors active:scale-90 flex-shrink-0"
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                  <div className="w-px h-5 bg-border/20 mx-0.5" />
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onOpenThread(msg); setShowOverlay(false); }}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 transition-colors active:scale-90"
-                    title="Reply"
-                  >
-                    <Reply className="w-3.5 h-3.5 text-muted-foreground/70" />
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onTogglePin(msg); setShowOverlay(false); }}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 transition-colors active:scale-90"
-                    title={msg.is_pinned ? 'Unpin' : 'Pin'}
-                  >
-                    <Pin className="w-3.5 h-3.5 text-muted-foreground/70" />
-                  </button>
-                  {isOwn ? (
-                    <>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onStartEditing(msg); setShowOverlay(false); }}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 transition-colors active:scale-90"
-                        title="Edit"
-                      >
-                        <Pencil className="w-3.5 h-3.5 text-muted-foreground/70" />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); setShowOverlay(false); }}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-destructive/10 transition-colors active:scale-90"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setShowReportConfirm(true); setShowOverlay(false); }}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-destructive/10 transition-colors active:scale-90"
-                      title="Report"
-                    >
-                      <Flag className="w-3.5 h-3.5 text-muted-foreground/70" />
-                    </button>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-
             {/* Thread indicator */}
             {(msg.reply_count || 0) > 0 && (
               <button
@@ -517,6 +486,107 @@ function MessageBubbleInner({
           </div>
         </div>
       </motion.div>
+
+      {/* Action overlay — portaled to body so it escapes the message list's
+          overflow-x-hidden clip. Position is measured + clamped to the
+          viewport so the bar always appears in full. A transparent
+          backdrop catches outside taps to dismiss. */}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {showOverlay && (
+            <Fragment key="overlay-wrapper">
+              <motion.div
+                key="overlay-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.12 }}
+                onClick={() => setShowOverlay(false)}
+                onTap={() => setShowOverlay(false)}
+                aria-hidden="true"
+                className="fixed inset-0 z-[55]"
+                style={{ background: 'transparent' }}
+              />
+              <motion.div
+                key="overlay-bar"
+                ref={overlayRef}
+                initial={{ opacity: 0, scale: 0.9, y: 6 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 6 }}
+                transition={{ type: 'spring', damping: 26, stiffness: 380 }}
+                onClick={(e) => e.stopPropagation()}
+                onTap={(e) => e.stopPropagation?.()}
+                role="menu"
+                className="fixed z-[60] flex items-center gap-0.5 px-1.5 py-1 bg-background/95 backdrop-blur-lg border border-border/20 shadow-lg rounded-xl overflow-x-auto"
+                style={{
+                  left: overlayPos?.left ?? 0,
+                  top: overlayPos?.top ?? 0,
+                  visibility: overlayPos ? 'visible' : 'hidden',
+                  maxWidth: 'calc(100vw - 16px)',
+                  scrollbarWidth: 'none',
+                }}
+              >
+                {QUICK_EMOJIS.map(emoji => (
+                  <button
+                    key={emoji}
+                    onClick={(e) => handleReaction(emoji, e)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 text-base transition-colors active:scale-90 flex-shrink-0"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+                <div className="w-px h-5 bg-border/20 mx-0.5 flex-shrink-0" />
+                <button
+                  onClick={(e) => { e.stopPropagation(); onOpenThread(msg); setShowOverlay(false); }}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 transition-colors active:scale-90 flex-shrink-0"
+                  title="Reply"
+                  aria-label="Reply"
+                >
+                  <Reply className="w-3.5 h-3.5 text-muted-foreground/70" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onTogglePin(msg); setShowOverlay(false); }}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 transition-colors active:scale-90 flex-shrink-0"
+                  title={msg.is_pinned ? 'Unpin' : 'Pin'}
+                  aria-label={msg.is_pinned ? 'Unpin' : 'Pin'}
+                >
+                  <Pin className="w-3.5 h-3.5 text-muted-foreground/70" />
+                </button>
+                {isOwn ? (
+                  <>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onStartEditing(msg); setShowOverlay(false); }}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted/50 transition-colors active:scale-90 flex-shrink-0"
+                      title="Edit"
+                      aria-label="Edit message"
+                    >
+                      <Pencil className="w-3.5 h-3.5 text-muted-foreground/70" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); setShowOverlay(false); }}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-destructive/10 transition-colors active:scale-90 flex-shrink-0"
+                      title="Delete"
+                      aria-label="Delete message"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowReportConfirm(true); setShowOverlay(false); }}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-destructive/10 transition-colors active:scale-90 flex-shrink-0"
+                    title="Report"
+                    aria-label="Report message"
+                  >
+                    <Flag className="w-3.5 h-3.5 text-muted-foreground/70" />
+                  </button>
+                )}
+              </motion.div>
+            </Fragment>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
