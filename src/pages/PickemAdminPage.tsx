@@ -150,6 +150,7 @@ export default function PickemAdminPage() {
     setImportingSeason(true);
     setImportProgress({ done: 0, total: 18 });
     let totalGames = 0;
+    let consecutiveEmpty = 0;
     try {
       for (let w = 1; w <= 18; w++) {
         const { data, error } = await supabase.functions.invoke('sync-nfl-week', {
@@ -157,10 +158,17 @@ export default function PickemAdminPage() {
         });
         if (error) {
           toast.error(`Week ${w} failed: ${error.message}`);
+          consecutiveEmpty++;
         } else {
           totalGames += data?.upserts ?? 0;
+          if (data?.empty || (data?.upserts ?? 0) === 0) consecutiveEmpty++;
+          else consecutiveEmpty = 0;
         }
         setImportProgress({ done: w, total: 18 });
+        if (consecutiveEmpty >= 3 && totalGames === 0) {
+          toast.error(`ESPN has no ${season.year} schedule published yet. Try again once the NFL releases the schedule.`);
+          break;
+        }
       }
       toast.success(`Season import complete: ${totalGames} games`);
       refetchWeeks();
