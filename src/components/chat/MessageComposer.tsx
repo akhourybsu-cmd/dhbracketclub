@@ -1,11 +1,13 @@
 import { useRef, useEffect, useCallback, useState, forwardRef, useImperativeHandle } from 'react';
 import { toast } from 'sonner';
-import { Send, Plus, Image, Camera, X, Loader2 } from 'lucide-react';
+import { Send, Plus, Image, Camera, X, Loader2, ImagePlay } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from './UserAvatar';
 import { supabase } from '@/integrations/supabase/client';
 import { validateImageFile, buildUserScopedPath, sanitizeUploadError } from '@/lib/uploadValidation';
+import { GifPicker } from './GifPicker';
+import { isGifProviderConfigured } from '@/lib/gifProvider';
 
 export interface MentionMember {
   id: string;
@@ -48,8 +50,10 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
     const [mentionStart, setMentionStart] = useState(0);
 
     const [showAttachMenu, setShowAttachMenu] = useState(false);
+    const [showGifPicker, setShowGifPicker] = useState(false);
     const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
     const [uploading, setUploading] = useState(false);
+    const gifEnabled = isGifProviderConfigured();
 
     useImperativeHandle(ref, () => ({
       focus: () => textareaRef.current?.focus(),
@@ -176,6 +180,18 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
       );
       return results.filter((url): url is string => url !== null);
     };
+
+    // Picking a GIF sends it immediately (no compose step) — matches
+    // iMessage/WhatsApp behavior. Tenor URLs are public CDN, so they
+    // bypass the upload path entirely.
+    const handleGifSelected = useCallback((url: string) => {
+      if (disabled) return;
+      onSend([url]);
+      setShowGifPicker(false);
+      setShowAttachMenu(false);
+      // Keep the soft keyboard open after send, same trick as the send button.
+      textareaRef.current?.focus();
+    }, [disabled, onSend]);
 
     const handleSend = async () => {
       const hasText = value.trim().length > 0;
@@ -312,6 +328,15 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
                       <Camera className="w-4 h-4 text-primary/70" />
                       <span className="font-medium">Take Photo</span>
                     </button>
+                    {gifEnabled && (
+                      <button
+                        onClick={() => { setShowAttachMenu(false); setShowGifPicker(true); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm hover:bg-muted/40 transition-colors text-foreground/80"
+                      >
+                        <ImagePlay className="w-4 h-4 text-primary/70" />
+                        <span className="font-medium">GIF</span>
+                      </button>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -379,6 +404,19 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
             }
           </button>
         </div>
+
+        {/* GIF picker — portaled bottom-sheet, only when configured */}
+        {gifEnabled && (
+          <AnimatePresence>
+            {showGifPicker && (
+              <GifPicker
+                open={showGifPicker}
+                onClose={() => setShowGifPicker(false)}
+                onSelect={handleGifSelected}
+              />
+            )}
+          </AnimatePresence>
+        )}
       </div>
     );
   }
