@@ -253,15 +253,22 @@ export default function ChatPage() {
     return () => { supabase.removeChannel(ch); };
   }, [user]);
   useEffect(() => {
-    if (!user) return;
-    supabase.from('profiles').select('id, display_name, avatar_url').then(({ data }) => {
-      if (data) {
-        setMembers(data.map(p => ({ id: p.id, display_name: p.display_name, avatar_url: p.avatar_url })));
-        const me = data.find(p => p.id === user.id);
+    if (!user || !club?.id) return;
+    (async () => {
+      const { data: memberRows } = await supabase
+        .from('club_members')
+        .select('user_id, profiles:user_id(id, display_name, avatar_url)')
+        .eq('club_id', club.id);
+      if (memberRows) {
+        const list = memberRows
+          .map((r: any) => r.profiles)
+          .filter((p: any) => p && p.id && p.display_name);
+        setMembers(list.map((p: any) => ({ id: p.id, display_name: p.display_name, avatar_url: p.avatar_url })));
+        const me = list.find((p: any) => p.id === user.id);
         if (me) setCurrentDisplayName(me.display_name);
       }
-    });
-  }, [user]);
+    })();
+  }, [user, club?.id]);
 
   /* ═══ FETCH MESSAGES ═══ */
   useEffect(() => {
