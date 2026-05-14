@@ -70,7 +70,15 @@ Deno.serve(async (req) => {
     const data = await r.json();
 
     const events: any[] = data?.events ?? [];
-    if (events.length === 0) return json({ message: 'No games on ESPN for this week', games: 0 });
+    if (events.length === 0) {
+      return json({
+        ok: true,
+        empty: true,
+        upserts: 0,
+        finals: 0,
+        message: `ESPN has no games published for ${body.season_year} season (seasontype=${seasontype}, week=${body.week_number}). The schedule may not be released yet.`,
+      });
+    }
 
     // Resolve/create the nfl_week row using ESPN's week boundaries
     let weekStart: string | null = null;
