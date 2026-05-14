@@ -29,7 +29,7 @@ import { notifyThreadReply } from '@/lib/chatNotifications';
 
 export default function ChatPage() {
   const { user } = useAuth();
-  const { isClubAdmin } = useClub();
+  const { isClubAdmin, club } = useClub();
   const navigate = useNavigate();
   const { setOpen: setNavDrawerOpen } = useNavDrawer();
   const composerRef = useRef<MessageComposerHandle>(null);
