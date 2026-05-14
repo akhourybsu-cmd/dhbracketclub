@@ -459,7 +459,7 @@ export default function ChatPage() {
 
   const handleUpdateChannel = async (channelId: string, updates: Partial<Pick<Channel, 'name' | 'description' | 'icon' | 'category_id' | 'is_default' | 'channel_type' | 'post_permission'>>): Promise<boolean> => {
     if (!user) return false;
-    const { error } = await supabase.from('channels').update(updates).eq('id', channelId);
+    const { error } = await supabase.from('channels').update(updates as any).eq('id', channelId);
     if (error) {
       toast.error('Failed to update channel');
       return false;
