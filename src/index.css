@@ -156,12 +156,18 @@
 
   /* Light mode */
   .light {
-    /* ── Base surfaces ── */
-    --background: 150 8% 93%;           /* slightly tinted, not stark white */
+    /* ── Base surfaces ──
+       Goal: a paper-feeling palette that never reads as "brilliant white".
+       Page bg keeps a noticeable warm-green tint so it reads as paper, not
+       printer paper; cards drop from pure 100% to 99% with a subtle brand
+       hint, taking the eye-burning edge off while keeping them clearly
+       above the page. The page/card lightness gap is preserved (~6%) so
+       elevation still reads at a glance. */
+    --background: 150 14% 93%;          /* warmer paper tint, more visible against cards */
     --foreground: 160 25% 6%;           /* deep ink — high contrast body text */
-    --card: 0 0% 100%;                  /* pure white cards pop on tinted bg */
+    --card: 150 8% 99%;                 /* soft off-white with brand hue, not stark */
     --card-foreground: 160 25% 6%;
-    --popover: 0 0% 100%;
+    --popover: 150 8% 99%;
     --popover-foreground: 160 25% 6%;
 
     /* ── Brand ── */
@@ -170,11 +176,11 @@
     --primary-glow: 152 65% 38%;
 
     /* ── Secondary ── */
-    --secondary: 150 8% 86%;            /* more distinct from background */
+    --secondary: 150 10% 84%;           /* more distinct from background */
     --secondary-foreground: 160 15% 18%; /* darker for legibility */
 
     /* ── Muted — the critical fix ── */
-    --muted: 150 8% 88%;
+    --muted: 150 10% 87%;
     --muted-foreground: 160 15% 24%;    /* 36% → 24% lightness = 6.2:1 on white (was 2.6:1 @60% opacity) */
 
     /* ── Accent ── */
@@ -185,25 +191,25 @@
     --destructive-foreground: 0 0% 100%;
 
     /* ── Structural ── */
-    --border: 150 12% 68%;              /* 82% → 68% lightness — visible dividers */
-    --input: 0 0% 100%;                 /* pure white inputs stand out on tinted bg */
+    --border: 150 12% 66%;              /* 68% → 66% lightness — slightly more visible against the warmer bg */
+    --input: 150 8% 99%;                /* matches card — soft off-white inputs */
     --ring: 152 60% 27%;
     --radius: 0.75rem;
 
     /* ── Sidebar ── */
-    --sidebar-background: 0 0% 100%;
+    --sidebar-background: 150 8% 99%;   /* matches card surface */
     --sidebar-foreground: 160 15% 24%;  /* match muted-foreground improvement */
     --sidebar-primary: 152 60% 27%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 150 10% 90%;
+    --sidebar-accent: 150 12% 90%;
     --sidebar-accent-foreground: 160 18% 14%;
     --sidebar-border: 150 12% 72%;
     --sidebar-ring: 152 60% 27%;
 
     /* ── Semantic surfaces ── */
-    --surface: 150 8% 90%;
-    --surface-elevated: 0 0% 100%;
-    --surface-overlay: 150 8% 92%;
+    --surface: 150 10% 89%;
+    --surface-elevated: 150 8% 99%;
+    --surface-overlay: 150 12% 91%;
 
     /* ── Semantic status ── */
     --success: 152 55% 28%;
@@ -239,10 +245,14 @@
     --gradient-arena-edge: linear-gradient(180deg, hsl(152 60% 27% / 0.04) 0%, transparent 40%);
     --gradient-arena-floor: linear-gradient(180deg, transparent 60%, hsl(150 8% 90% / 0.4) 100%);
 
-    /* ── Chat bubbles ── */
+    /* ── Chat bubbles ──
+       Cards in light mode are now ~99% lightness with a brand tint, so
+       received bubbles need a noticeably darker fill to read as a bubble
+       rather than a faint outline. 92% on 99% card ≈ 1.2:1 contrast on
+       the surface itself, while text sits at ~10:1 on the bubble. */
     --chat-own: 215 58% 40%;
-    --chat-own-bg: 215 58% 40% / 0.12;
-    --chat-incoming: 150 6% 96%;        /* near-white with warmth, distinct from page bg */
+    --chat-own-bg: 215 58% 40% / 0.14;  /* slight bump from 0.12 for clearer own-bubble fill */
+    --chat-incoming: 150 12% 91%;       /* tinted gray, clearly distinct from soft-white cards */
   }
 
   * {
@@ -344,7 +354,7 @@
 
   /* Cards — stronger definition against tinted page bg */
   .light .glass-card {
-    background-color: hsl(0 0% 100%);
+    background-color: hsl(var(--card));   /* soft off-white via token, no more pure 100% */
     border-color: hsl(var(--border) / 0.65);
     box-shadow: var(--shadow-card);
   }
@@ -382,15 +392,15 @@
     color: hsl(var(--primary));
   }
 
-  /* Inputs — white bg with visible border on tinted bg */
+  /* Inputs — soft off-white bg via token (was pure 100%) with visible border */
   .light .form-input {
-    background-color: hsl(0 0% 100%);
+    background-color: hsl(var(--input));
     border-color: hsl(var(--border) / 0.8);
   }
   .light input,
   .light textarea,
   .light select {
-    background-color: hsl(0 0% 100%) !important;
+    background-color: hsl(var(--input)) !important;
     border-color: hsl(var(--border)) !important;
   }
   .light input:focus,
