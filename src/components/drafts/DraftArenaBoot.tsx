@@ -53,12 +53,8 @@ export function DraftArenaBoot() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: 0.35 } }}
           transition={{ duration: 0.18 }}
-          className="fixed inset-0 z-[100] overflow-hidden flex flex-col items-center justify-center px-6"
+          className="da-mode da-boot fixed inset-0 z-[100] overflow-hidden flex flex-col items-center justify-center px-6"
           style={{
-            background:
-              'radial-gradient(ellipse 70% 50% at 50% 38%, hsl(45 95% 55% / 0.28), transparent 60%),' +
-              'radial-gradient(ellipse 90% 60% at 50% 110%, hsl(152 72% 36% / 0.22), transparent 70%),' +
-              'linear-gradient(180deg, hsl(160 50% 4%), hsl(160 60% 2%))',
             paddingTop: 'env(safe-area-inset-top, 0px)',
             paddingBottom: 'env(safe-area-inset-bottom, 0px)',
           }}
@@ -66,10 +62,8 @@ export function DraftArenaBoot() {
           {/* Subtle arena floor grid */}
           <div
             aria-hidden
-            className="absolute inset-0 pointer-events-none opacity-40"
+            className="da-boot-grid absolute inset-0 pointer-events-none opacity-40"
             style={{
-              backgroundImage:
-                'repeating-linear-gradient(90deg, transparent 0, transparent 56px, hsl(45 95% 55% / 0.06) 56px, hsl(45 95% 55% / 0.06) 57px)',
               maskImage: 'linear-gradient(180deg, transparent 0%, black 25%, black 75%, transparent 100%)',
               WebkitMaskImage: 'linear-gradient(180deg, transparent 0%, black 25%, black 75%, transparent 100%)',
             }}
@@ -78,12 +72,7 @@ export function DraftArenaBoot() {
           {/* Spotlight flares */}
           <div
             aria-hidden
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background:
-                'radial-gradient(circle at 18% 12%, hsl(45 95% 70% / 0.18), transparent 35%),' +
-                'radial-gradient(circle at 82% 12%, hsl(45 95% 70% / 0.18), transparent 35%)',
-            }}
+            className="da-boot-corner-glow absolute inset-0 pointer-events-none"
           />
 
           {/* Emblem with rotating ring */}
@@ -94,33 +83,23 @@ export function DraftArenaBoot() {
             className="relative w-32 h-32 mb-7 flex items-center justify-center"
           >
             <motion.div
-              className="absolute inset-0 rounded-full"
+              className="da-boot-emblem-glow absolute inset-0 rounded-full"
               animate={{ opacity: [0.35, 0.7, 0.35], scale: [1, 1.08, 1] }}
               transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-              style={{
-                background:
-                  'radial-gradient(circle at 50% 50%, hsl(45 95% 55% / 0.55), transparent 70%)',
-                filter: 'blur(10px)',
-              }}
+              style={{ filter: 'blur(10px)' }}
             />
             <motion.div
-              className="absolute inset-0 rounded-full border"
+              className="da-boot-emblem absolute inset-0 rounded-full border"
               animate={{ rotate: 360 }}
               transition={{ duration: 8, ease: 'linear', repeat: Infinity }}
-              style={{
-                borderStyle: 'dashed',
-                borderColor: 'hsl(45 95% 55% / 0.55)',
-                boxShadow:
-                  '0 0 24px hsl(45 95% 55% / 0.4), inset 0 0 18px hsl(152 72% 46% / 0.18)',
-              }}
+              style={{ borderStyle: 'dashed' }}
             />
             <img
               src={draftEmblem}
               alt="Draft Arena"
               width={104}
               height={104}
-              className="relative w-[104px] h-[104px] object-contain"
-              style={{ filter: 'drop-shadow(0 0 18px hsl(45 95% 55% / 0.65))' }}
+              className="da-boot-emblem-img relative w-[104px] h-[104px] object-contain"
             />
           </motion.div>
 
@@ -131,25 +110,13 @@ export function DraftArenaBoot() {
             transition={{ delay: 0.15, duration: 0.4 }}
             className="text-center"
           >
-            <p
-              className="text-[10px] font-extrabold uppercase tracking-[0.32em] mb-1.5"
-              style={{ color: 'hsl(45 95% 60%)' }}
-            >
+            <p className="da-boot-eyebrow text-[10px] font-extrabold uppercase tracking-[0.32em] mb-1.5">
               ◆ DH · Draft League ◆
             </p>
-            <h1
-              className="text-[26px] font-black leading-none tracking-tight"
-              style={{
-                background:
-                  'linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(45 95% 60% / 0.95) 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                textShadow: '0 0 24px hsl(45 95% 55% / 0.35)',
-              }}
-            >
+            <h1 className="da-boot-title text-[26px] font-black leading-none tracking-tight">
               Draft Arena
             </h1>
-            <p className="text-[10px] font-bold mt-1.5" style={{ color: 'hsl(150 12% 78%)' }}>
+            <p className="text-[10px] font-bold mt-1.5 text-foreground/55">
               Stepping into the war room
             </p>
           </motion.div>
@@ -161,22 +128,10 @@ export function DraftArenaBoot() {
             transition={{ delay: 0.3, duration: 0.4 }}
             className="mt-8 w-full max-w-[260px]"
           >
-            <div
-              className="relative h-1.5 rounded-full overflow-hidden"
-              style={{
-                background: 'hsl(160 35% 8%)',
-                boxShadow:
-                  'inset 0 1px 2px hsl(0 0% 0% / 0.7), inset 0 0 0 1px hsl(45 95% 55% / 0.2)',
-              }}
-            >
+            <div className="da-boot-bar-track relative h-1.5 rounded-full overflow-hidden">
               <motion.div
-                className="h-full relative"
-                style={{
-                  width: `${progress}%`,
-                  background:
-                    'linear-gradient(90deg, hsl(152 72% 46%), hsl(45 95% 55%) 60%, hsl(45 100% 70%))',
-                  boxShadow: '0 0 14px hsl(45 95% 55% / 0.85)',
-                }}
+                className="da-boot-bar-fill h-full relative"
+                style={{ width: `${progress}%` }}
               >
                 <span
                   className="absolute right-0 top-0 bottom-0 w-5"
@@ -195,13 +150,12 @@ export function DraftArenaBoot() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.22 }}
-                  className="text-[9px] font-extrabold uppercase tracking-[0.24em]"
-                  style={{ color: 'hsl(45 95% 60%)' }}
+                  className="da-boot-eyebrow text-[9px] font-extrabold uppercase tracking-[0.24em]"
                 >
                   {STAGES[stage]}
                 </motion.p>
               </AnimatePresence>
-              <span className="text-[10px] font-mono tabular-nums text-white/55">
+              <span className="text-[10px] font-mono tabular-nums text-foreground/55">
                 {progress}%
               </span>
             </div>

@@ -46,15 +46,8 @@ export function DraftArenaHUD() {
   return (
     <>
       <header
-        className="sticky top-0 z-40 w-full border-b backdrop-blur-xl"
-        style={{
-          paddingTop: 'env(safe-area-inset-top, 0px)',
-          background:
-            'linear-gradient(180deg, hsl(160 45% 6% / 0.96), hsl(160 50% 4% / 0.82))',
-          borderColor: 'hsl(45 80% 50% / 0.22)',
-          boxShadow:
-            '0 1px 0 hsl(45 95% 55% / 0.15), 0 6px 18px -10px hsl(45 95% 55% / 0.4)',
-        }}
+        className="da-hud sticky top-0 z-40 w-full border-b backdrop-blur-xl"
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         <div className="flex items-center gap-2 h-12 px-2 max-w-[640px] mx-auto">
           <button
@@ -67,29 +60,17 @@ export function DraftArenaHUD() {
           </button>
 
           <Link to="/drafts" className="flex-1 min-w-0 flex items-center gap-2.5 btn-press">
-            <span
-              className="relative w-7 h-7 rounded-lg flex items-center justify-center shrink-0 overflow-hidden"
-              style={{
-                background:
-                  'radial-gradient(circle at 30% 30%, hsl(45 95% 55% / 0.35), hsl(152 72% 36% / 0.22))',
-                border: '1px solid hsl(45 95% 55% / 0.45)',
-                boxShadow: '0 0 12px hsl(45 95% 55% / 0.35)',
-              }}
-            >
+            <span className="da-hud-emblem relative w-7 h-7 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
               <img
                 src={draftEmblem}
                 alt=""
                 width={20}
                 height={20}
-                className="w-5 h-5 object-contain"
-                style={{ filter: 'drop-shadow(0 0 4px hsl(45 95% 55% / 0.8))' }}
+                className="da-hud-emblem-img w-5 h-5 object-contain"
               />
             </span>
             <div className="flex-1 min-w-0 leading-tight">
-              <p
-                className="text-[12px] font-black uppercase tracking-[0.18em] truncate"
-                style={{ color: 'hsl(45 95% 60%)' }}
-              >
+              <p className="da-hud-title text-[12px] font-black uppercase tracking-[0.18em] truncate">
                 Draft Arena
               </p>
               <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/60 truncate">
@@ -99,15 +80,7 @@ export function DraftArenaHUD() {
           </Link>
 
           {seasonChip && (
-            <span
-              className="h-9 px-2.5 rounded-lg flex items-center text-[11px] font-black tabular-nums uppercase"
-              style={{
-                background: 'hsl(45 95% 55% / 0.14)',
-                border: '1px solid hsl(45 95% 55% / 0.36)',
-                color: 'hsl(45 95% 70%)',
-                textShadow: '0 0 8px hsl(45 95% 55% / 0.35)',
-              }}
-            >
+            <span className="da-hud-chip h-9 px-2.5 rounded-lg flex items-center text-[11px] font-black tabular-nums uppercase">
               {seasonChip}
             </span>
           )}
@@ -116,12 +89,7 @@ export function DraftArenaHUD() {
             <Link
               to="/drafts?tab=season"
               aria-label="Season standings"
-              className="w-9 h-9 rounded-lg flex items-center justify-center btn-press"
-              style={{
-                background: 'hsl(45 95% 55% / 0.12)',
-                border: '1px solid hsl(45 95% 55% / 0.28)',
-                color: 'hsl(45 95% 60%)',
-              }}
+              className="da-hud-action w-9 h-9 rounded-lg flex items-center justify-center btn-press"
             >
               <Trophy className="w-4 h-4" />
             </Link>

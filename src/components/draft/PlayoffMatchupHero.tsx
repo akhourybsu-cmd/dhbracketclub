@@ -10,7 +10,9 @@ import {
   type PlayoffRound,
 } from '@/lib/playoffStyle';
 
-const GOLD = '45 93% 52%';
+// Reference the .da-mode token so the gold automatically deepens on
+// the Daylight Coliseum (light) variant — no per-component theme check.
+const GOLD = 'var(--da-gold)';
 
 interface PlayerSide {
   userId: string | null;

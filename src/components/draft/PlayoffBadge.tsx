@@ -21,22 +21,12 @@ export function PlayoffBadge({ round, matchNumber, showRoundLabel = false, size 
 
   return (
     <span className={cn('inline-flex items-center', className)}>
-      <span
-        className={cn('inline-flex items-center font-extrabold uppercase tracking-wider rounded', sizeCls)}
-        style={{
-          background: 'linear-gradient(135deg, hsl(45 93% 52% / 0.95), hsl(38 92% 50% / 0.85))',
-          color: 'hsl(160 10% 5%)',
-          boxShadow: '0 0 8px hsl(45 93% 52% / 0.35)',
-        }}
-      >
+      <span className={cn('playoff-badge inline-flex items-center font-extrabold uppercase tracking-wider rounded', sizeCls)}>
         <Trophy className={iconCls} strokeWidth={2.5} />
         {getPlayoffRoundShort(round)}
       </span>
       {showRoundLabel && (
-        <span
-          className="ml-1 text-[9px] font-bold uppercase tracking-wider"
-          style={{ color: 'hsl(45 93% 52%)' }}
-        >
+        <span className="playoff-badge-label ml-1 text-[9px] font-bold uppercase tracking-wider">
           {getPlayoffGameLabel(round, matchNumber)}
         </span>
       )}

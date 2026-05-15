@@ -16,12 +16,7 @@ export function DraftArenaExitDialog({
 }) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent
-        className="border-gold/30"
-        style={{
-          background: 'linear-gradient(180deg, hsl(160 35% 7%), hsl(160 50% 4%))',
-        }}
-      >
+      <AlertDialogContent className="da-exit-dialog border-gold/30">
         <AlertDialogHeader>
           <AlertDialogTitle className="text-white text-lg font-black tracking-tight">
             Leave the Draft Arena?
@@ -31,7 +26,7 @@ export function DraftArenaExitDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel className="bg-white/5 border-white/15 text-white hover:bg-white/10">
+          <AlertDialogCancel className="da-exit-cancel bg-white/5 border-white/15 text-white hover:bg-white/10">
             Stay in the Arena
           </AlertDialogCancel>
           <AlertDialogAction

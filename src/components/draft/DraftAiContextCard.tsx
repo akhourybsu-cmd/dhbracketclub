@@ -93,13 +93,13 @@ export function DraftAiContextCard({
             className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
             style={{
               background: hasOverride
-                ? 'hsl(45 100% 65% / 0.15)'
+                ? 'hsl(var(--da-gold-bright) / 0.15)'
                 : 'hsl(var(--primary) / 0.12)',
             }}
           >
             <Sparkles
               className="w-3.5 h-3.5"
-              style={{ color: hasOverride ? 'hsl(45 100% 65%)' : 'hsl(var(--primary))' }}
+              style={{ color: hasOverride ? 'hsl(var(--da-gold-bright))' : 'hsl(var(--primary))' }}
             />
           </div>
           <div className="min-w-0 flex-1">
@@ -137,7 +137,7 @@ export function DraftAiContextCard({
         <SheetContent side="bottom" className="rounded-t-2xl max-h-[90vh] overflow-y-auto">
           <SheetHeader className="text-left">
             <SheetTitle className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4" style={{ color: 'hsl(45 100% 65%)' }} />
+              <Sparkles className="w-4 h-4" style={{ color: 'hsl(var(--da-gold-bright))' }} />
               Adjust AI Context
             </SheetTitle>
             <SheetDescription className="text-[12px]">
