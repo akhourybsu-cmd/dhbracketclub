@@ -13,11 +13,14 @@ type Props = {
   pick?: NflPick;
   onPick: (teamId: string) => void;
   saving?: boolean;
+  weekLocked?: boolean;
+  cardLocked?: boolean;
 };
 
-export function GamePickCard({ game, pick, onPick, saving }: Props) {
+export function GamePickCard({ game, pick, onPick, saving, weekLocked, cardLocked }: Props) {
   const { play } = useSoundEffect();
-  const locked = isGameLocked(game);
+  const locked = weekLocked ?? isGameLocked(game);
+  const blocked = locked || cardLocked;
   const isFinal = game.status === 'final';
   const isLive = game.status === 'live';
   const pickedId = pick?.picked_team_id;
