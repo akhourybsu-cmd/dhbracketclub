@@ -134,6 +134,8 @@ export function GamePickCard({ game, pick, onPick, saving, weekLocked, cardLocke
           </span>
         ) : locked ? (
           <span className="pk-stamp pk-stamp-locked"><Lock className="w-2.5 h-2.5" /> Locked</span>
+        ) : cardLocked ? (
+          <span className="pk-stamp pk-stamp-locked"><Lock className="w-2.5 h-2.5" /> Card locked</span>
         ) : (
           <span className="text-[10px] font-extrabold uppercase tracking-wider text-success">Open</span>
         )}
