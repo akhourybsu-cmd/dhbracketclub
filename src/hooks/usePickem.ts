@@ -21,6 +21,10 @@ export type NflSeason = {
   current_week: number;
   starts_at: string;
   ends_at: string;
+  pick_lock_minutes: number;
+  hide_unresolved_future_weeks: boolean;
+  visible_week_window: number | null;
+  require_finalized_schedule: boolean;
 };
 
 export type NflWeek = {
