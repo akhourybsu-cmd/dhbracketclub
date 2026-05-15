@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { TeamLogo } from './TeamLogo';
-import type { NflGame, NflPick } from '@/hooks/usePickem';
+import type { NflGame, NflPick, NflTeamRecord } from '@/hooks/usePickem';
 import { isGameLocked } from '@/hooks/usePickem';
 import { useSoundEffect } from '@/hooks/useSoundEffect';
 
@@ -15,9 +15,43 @@ type Props = {
   saving?: boolean;
   weekLocked?: boolean;
   cardLocked?: boolean;
+  /** Optional season-records map (team_id → record) for displaying W-L + recent form. */
+  records?: Map<string, NflTeamRecord>;
 };
 
-export function GamePickCard({ game, pick, onPick, saving, weekLocked, cardLocked }: Props) {
+/** Compact season record + recent-form chip. */
+function TeamRecordRow({ record }: { record?: NflTeamRecord }) {
+  if (!record || record.games_played === 0) {
+    return <p className="text-[9px] font-bold text-muted-foreground/55 tabular-nums leading-tight">0-0</p>;
+  }
+  const wl = record.ties > 0
+    ? `${record.wins}-${record.losses}-${record.ties}`
+    : `${record.wins}-${record.losses}`;
+  const form = (record.recent_form || '').slice(0, 5);
+  return (
+    <div className="flex items-center gap-1 leading-tight">
+      <p className="text-[10px] font-extrabold tabular-nums text-foreground/85">{wl}</p>
+      {form.length > 0 && (
+        <span className="flex items-center gap-[2px]" aria-label={`Last ${form.length} games: ${form}`}>
+          {Array.from(form).map((c, i) => (
+            <span
+              key={i}
+              className={cn(
+                'inline-block w-1 h-1 rounded-full',
+                c === 'W' && 'bg-success',
+                c === 'L' && 'bg-destructive/70',
+                c === 'T' && 'bg-muted-foreground/55',
+              )}
+              aria-hidden
+            />
+          ))}
+        </span>
+      )}
+    </div>
+  );
+}
+
+export function GamePickCard({ game, pick, onPick, saving, weekLocked, cardLocked, records }: Props) {
   const { play } = useSoundEffect();
   const locked = weekLocked ?? isGameLocked(game);
   const blocked = locked || cardLocked;
@@ -98,6 +132,12 @@ export function GamePickCard({ game, pick, onPick, saving, weekLocked, cardLocke
             isWinner && 'text-success',
           )}>{team?.abbr}</p>
           <p className="text-[10px] text-muted-foreground/80 truncate">{team?.name}</p>
+          {/* Season W-L + last-5 form. Helps users pick without leaving the page. */}
+          {records && teamId && (
+            <div className="mt-0.5">
+              <TeamRecordRow record={records.get(teamId)} />
+            </div>
+          )}
         </div>
         <div className="flex flex-col items-end gap-0.5">
           {(isFinal || isLive) && score !== null && (

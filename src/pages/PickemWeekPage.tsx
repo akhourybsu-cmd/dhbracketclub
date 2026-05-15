@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   useActiveSeason, useSeasonWeeks, useWeekGames, useMyWeekPicks, useMyTiebreaker,
+  useSeasonTeamRecords,
   savePick, saveTiebreaker, deleteMyPick, deriveWeekStatus, isWeekLocked, weekLockAt, useCardLock,
 } from '@/hooks/usePickem';
 import { GamePickCard } from '@/components/pickem/GamePickCard';
@@ -28,6 +29,7 @@ export default function PickemWeekPage() {
   const { games, refetch: refetchGames } = useWeekGames(week?.id);
   const { picks, refetch: refetchPicks } = useMyWeekPicks(week?.id);
   const { tiebreaker, refetch: refetchTb } = useMyTiebreaker(week?.id);
+  const { records: teamRecords } = useSeasonTeamRecords(season?.id);
   const [savingId, setSavingId] = useState<string | null>(null);
   const { locked: cardLocked, setLocked: setCardLocked } = useCardLock(user?.id, week?.id);
 
@@ -217,6 +219,7 @@ export default function PickemWeekPage() {
                 <GamePickCard
                   game={game}
                   pick={myPick}
+                  records={teamRecords}
                   onPick={(teamId) => handlePick(game.id, teamId)}
                   saving={savingId === game.id}
                   weekLocked={weekLocked}

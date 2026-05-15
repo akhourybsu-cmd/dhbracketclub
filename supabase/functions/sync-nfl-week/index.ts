@@ -151,7 +151,11 @@ Deno.serve(async (req) => {
 
       const stateRaw = comp.status?.type?.state ?? ev.status?.type?.state;
       const completed = comp.status?.type?.completed ?? ev.status?.type?.completed;
-      const status = completed ? 'final' : stateRaw === 'in' ? 'in_progress' : 'scheduled';
+      // BUGFIX: previously emitted 'in_progress' which violates the
+      // nfl_games.status CHECK constraint (only allows scheduled/live/final).
+      // Every live ESPN game would silently fail to update — viewers saw
+      // games stuck on 'scheduled' even mid-broadcast.
+      const status = completed ? 'final' : stateRaw === 'in' ? 'live' : 'scheduled';
 
       const homeScore = homeC.score != null ? Number(homeC.score) : null;
       const awayScore = awayC.score != null ? Number(awayC.score) : null;

@@ -90,6 +90,18 @@ export type NflSeasonStanding = {
   profiles?: { display_name: string; avatar_url: string | null };
 };
 
+export type NflTeamRecord = {
+  team_id: string;
+  season_id: string;
+  wins: number;
+  losses: number;
+  ties: number;
+  games_played: number;
+  point_diff_avg: number;
+  /** Newest-left up to 5 chars: "WWLWL". May be null if no completed games. */
+  recent_form: string | null;
+};
+
 /* Active season */
 export function useActiveSeason() {
   const [season, setSeason] = useState<NflSeason | null>(null);
@@ -215,6 +227,17 @@ export function useWeekGames(weekId?: string) {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [weekId, refetch]);
+
+  // Defensive poll while ANY game in the slate is live. Realtime usually
+  // catches DB writes within seconds, but if the websocket drops or a
+  // sync invocation just lands on the server, this guarantees viewers
+  // never sit on stale scores during a live slate.
+  const hasLiveGame = games.some((g) => g.status === 'live');
+  useEffect(() => {
+    if (!weekId || !hasLiveGame) return;
+    const id = window.setInterval(refetch, 30_000);
+    return () => window.clearInterval(id);
+  }, [weekId, hasLiveGame, refetch]);
 
   return { games, loading, refetch };
 }
@@ -346,6 +369,42 @@ export function useSeasonStandings(seasonId?: string) {
   }, [seasonId, refetch]);
 
   return { standings, loading, refetch };
+}
+
+/* Team records for a season (derived view: nfl_team_records).
+   Returns a Map keyed by team_id for O(1) lookup in render loops. */
+export function useSeasonTeamRecords(seasonId?: string) {
+  const [records, setRecords] = useState<Map<string, NflTeamRecord>>(new Map());
+  const [loading, setLoading] = useState(true);
+
+  const refetch = useCallback(async () => {
+    if (!seasonId) { setRecords(new Map()); setLoading(false); return; }
+    setLoading(true);
+    const { data } = await (supabase as any)
+      .from('nfl_team_records')
+      .select('*')
+      .eq('season_id', seasonId);
+    const map = new Map<string, NflTeamRecord>();
+    for (const r of (data ?? []) as NflTeamRecord[]) map.set(r.team_id, r);
+    setRecords(map);
+    setLoading(false);
+  }, [seasonId]);
+
+  useEffect(() => { refetch(); }, [refetch]);
+
+  // Records derive from nfl_games. When a game flips to 'final', the view
+  // updates automatically — but we still need a client-side trigger to
+  // refetch. Listen on the underlying table.
+  useEffect(() => {
+    if (!seasonId) return;
+    const ch = supabase.channel(`nfl-team-records-${seasonId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'nfl_games', filter: `season_id=eq.${seasonId}` },
+        () => refetch())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [seasonId, refetch]);
+
+  return { records, loading, refetch };
 }
 
 /* Helpers */
