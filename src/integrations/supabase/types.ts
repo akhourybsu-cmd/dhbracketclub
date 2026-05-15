@@ -3476,33 +3476,45 @@ export type Database = {
           created_at: string
           current_week: number
           ends_at: string
+          hide_unresolved_future_weeks: boolean
           id: string
           name: string
+          pick_lock_minutes: number
+          require_finalized_schedule: boolean
           starts_at: string
           status: string
           updated_at: string
+          visible_week_window: number | null
           year: number
         }
         Insert: {
           created_at?: string
           current_week?: number
           ends_at: string
+          hide_unresolved_future_weeks?: boolean
           id?: string
           name: string
+          pick_lock_minutes?: number
+          require_finalized_schedule?: boolean
           starts_at: string
           status?: string
           updated_at?: string
+          visible_week_window?: number | null
           year: number
         }
         Update: {
           created_at?: string
           current_week?: number
           ends_at?: string
+          hide_unresolved_future_weeks?: boolean
           id?: string
           name?: string
+          pick_lock_minutes?: number
+          require_finalized_schedule?: boolean
           starts_at?: string
           status?: string
           updated_at?: string
+          visible_week_window?: number | null
           year?: number
         }
         Relationships: []
@@ -6001,6 +6013,7 @@ export type Database = {
         }
         Returns: string
       }
+      nfl_week_lock_at: { Args: { _week_id: string }; Returns: string }
       purchase_boost: { Args: { _boost_code: string }; Returns: Json }
       recompute_nfl_week_status: {
         Args: { _week_id: string }
