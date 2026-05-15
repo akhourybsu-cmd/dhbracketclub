@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Shield, Plus, Save, Loader2, Calculator, RefreshCw, Download } from 'lucide-react';
+import { ChevronLeft, Shield, Plus, Save, Loader2, Calculator, RefreshCw, Download, Settings2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useActiveSeason, useSeasonWeeks, useTeams, useWeekGames } from '@/hooks/usePickem';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 
 export default function PickemAdminPage() {
   const { user } = useAuth();
