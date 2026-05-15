@@ -31,7 +31,7 @@ export function GamePickCard({ game, pick, onPick, saving, weekLocked, cardLocke
   useEffect(() => () => { if (sweepTimerRef.current) clearTimeout(sweepTimerRef.current); }, []);
 
   function handleTap(side: 'home' | 'away', teamId: string) {
-    if (locked || saving) return;
+    if (blocked || saving) return;
     play('tap');
     setSweptSide(side);
     if (sweepTimerRef.current) clearTimeout(sweepTimerRef.current);
