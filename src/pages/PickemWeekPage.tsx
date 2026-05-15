@@ -219,6 +219,8 @@ export default function PickemWeekPage() {
                   pick={myPick}
                   onPick={(teamId) => handlePick(game.id, teamId)}
                   saving={savingId === game.id}
+                  weekLocked={weekLocked}
+                  cardLocked={cardLocked}
                 />
               </motion.div>
             );
@@ -242,6 +244,9 @@ export default function PickemWeekPage() {
           total={totalGames}
           remaining={remaining}
           status={slipStatus}
+          cardLocked={cardLocked}
+          onToggleCardLock={() => setCardLocked(!cardLocked)}
+          weekLockAt={lockMoment}
         />
       )}
     </div>
