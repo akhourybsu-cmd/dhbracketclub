@@ -52,8 +52,8 @@ export function GamePickCard({ game, pick, onPick, saving, weekLocked, cardLocke
     return (
       <motion.button
         type="button"
-        disabled={locked || saving}
-        whileTap={!locked && !saving ? { scale: 0.97 } : undefined}
+        disabled={blocked || saving}
+        whileTap={!blocked && !saving ? { scale: 0.97 } : undefined}
         transition={{ type: 'spring', stiffness: 400, damping: 22 }}
         onClick={() => handleTap(side, teamId)}
         className={cn(
