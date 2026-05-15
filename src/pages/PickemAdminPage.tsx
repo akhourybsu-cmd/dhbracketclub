@@ -226,6 +226,9 @@ export default function PickemAdminPage() {
         </div>
       )}
 
+      {/* League Settings */}
+      {season && <LeagueSettingsCard season={season} onSaved={refetchSeason} />}
+
       {/* Weeks */}
       <div className="glass-card p-4">
         <div className="flex items-center justify-between mb-2">
