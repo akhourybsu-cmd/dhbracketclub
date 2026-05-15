@@ -359,6 +359,112 @@ export function deriveWeekStatus(games: NflGame[]): NflWeek['status'] {
   return 'partially_locked';
 }
 
-export function isGameLocked(game: NflGame): boolean {
-  return new Date(game.kickoff_at).getTime() <= Date.now() || game.status !== 'scheduled';
+/**
+ * Returns the moment picks for the entire week freeze:
+ * (first scheduled kickoff) − season.pick_lock_minutes.
+ * Returns null if there are no games yet.
+ */
+export function weekLockAt(games: NflGame[], season?: NflSeason | null): Date | null {
+  if (!games.length) return null;
+  const firstMs = Math.min(...games.map((g) => new Date(g.kickoff_at).getTime()));
+  const lockMin = season?.pick_lock_minutes ?? 10;
+  return new Date(firstMs - lockMin * 60_000);
+}
+
+/** True once the entire week's pick window has closed. */
+export function isWeekLocked(games: NflGame[], season?: NflSeason | null): boolean {
+  const lock = weekLockAt(games, season);
+  if (!lock) return false;
+  if (Date.now() >= lock.getTime()) return true;
+  // Defensive: if any game has already kicked, the week is locked regardless.
+  return games.some((g) => g.status !== 'scheduled');
+}
+
+/** Back-compat: per-game lock derived from the week-level lock. */
+export function isGameLocked(game: NflGame, games?: NflGame[], season?: NflSeason | null): boolean {
+  if (game.status !== 'scheduled') return true;
+  if (games && games.length) return isWeekLocked(games, season);
+  return new Date(game.kickoff_at).getTime() <= Date.now();
+}
+
+/** Delete a single pick (tap-to-unselect). */
+export async function deleteMyPick(pickId: string) {
+  const { error } = await (supabase as any).from('nfl_picks').delete().eq('id', pickId);
+  if (error) throw error;
+}
+
+/**
+ * Apply commissioner visibility rules to the week list for non-admins.
+ * Admins always see everything.
+ */
+export function filterVisibleWeeks(
+  weeks: NflWeek[],
+  season: NflSeason | null,
+  weekGameCounts: Record<string, number>,
+  isAdmin: boolean,
+): NflWeek[] {
+  if (!season || isAdmin) return weeks;
+  let list = [...weeks];
+
+  if (season.require_finalized_schedule) {
+    list = list.filter((w) => (weekGameCounts[w.id] ?? 0) > 0);
+  }
+
+  if (season.hide_unresolved_future_weeks) {
+    // Show all weeks up to the first non-scored week (inclusive).
+    const sorted = [...list].sort((a, b) => a.week_number - b.week_number);
+    const cutoffIdx = sorted.findIndex((w) => w.status !== 'scored');
+    if (cutoffIdx >= 0) list = sorted.slice(0, cutoffIdx + 1);
+  }
+
+  if (season.visible_week_window && season.visible_week_window > 0) {
+    const sorted = [...list].sort((a, b) => a.week_number - b.week_number);
+    const firstUnscored = sorted.findIndex((w) => w.status !== 'scored');
+    const start = firstUnscored < 0 ? 0 : firstUnscored;
+    const scored = sorted.slice(0, start);
+    const window = sorted.slice(start, start + season.visible_week_window);
+    list = [...scored, ...window];
+  }
+
+  return list;
+}
+
+/** Lightweight count-of-games-per-week for visibility filtering. */
+export function useSeasonWeekGameCounts(seasonId?: string) {
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (!seasonId) { setCounts({}); return; }
+    (supabase as any)
+      .from('nfl_games')
+      .select('week_id')
+      .eq('season_id', seasonId)
+      .then(({ data }: any) => {
+        const acc: Record<string, number> = {};
+        for (const row of data || []) acc[row.week_id] = (acc[row.week_id] ?? 0) + 1;
+        setCounts(acc);
+      });
+  }, [seasonId]);
+  return counts;
+}
+
+/** Personal "lock my card" guard — localStorage only, per (user, week). */
+export function useCardLock(userId?: string, weekId?: string) {
+  const key = userId && weekId ? `dh_pickem_card_lock_v1:${userId}:${weekId}` : null;
+  const [locked, setLocked] = useState<boolean>(() => {
+    if (!key) return false;
+    try { return localStorage.getItem(key) === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    if (!key) { setLocked(false); return; }
+    try { setLocked(localStorage.getItem(key) === '1'); } catch { setLocked(false); }
+  }, [key]);
+  const setAndPersist = useCallback((next: boolean) => {
+    setLocked(next);
+    if (!key) return;
+    try {
+      if (next) localStorage.setItem(key, '1');
+      else localStorage.removeItem(key);
+    } catch { /* ignore */ }
+  }, [key]);
+  return { locked, setLocked: setAndPersist };
 }
