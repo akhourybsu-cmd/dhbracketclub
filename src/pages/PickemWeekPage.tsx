@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   useActiveSeason, useSeasonWeeks, useWeekGames, useMyWeekPicks, useMyTiebreaker,
-  savePick, saveTiebreaker, deriveWeekStatus, isGameLocked,
+  savePick, saveTiebreaker, deleteMyPick, deriveWeekStatus, isWeekLocked, weekLockAt, useCardLock,
 } from '@/hooks/usePickem';
 import { GamePickCard } from '@/components/pickem/GamePickCard';
 import { TiebreakerInput } from '@/components/pickem/TiebreakerInput';
@@ -29,23 +29,45 @@ export default function PickemWeekPage() {
   const { picks, refetch: refetchPicks } = useMyWeekPicks(week?.id);
   const { tiebreaker, refetch: refetchTb } = useMyTiebreaker(week?.id);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const { locked: cardLocked, setLocked: setCardLocked } = useCardLock(user?.id, week?.id);
 
   const featured = games.find((g) => g.id === week?.featured_game_id);
   const weekStatus = week ? (games.length > 0 ? deriveWeekStatus(games) : week.status) : 'upcoming';
   const pickedCount = picks.length;
   const totalGames = games.length;
   const remaining = Math.max(0, totalGames - pickedCount);
-  const allLocked = totalGames > 0 && games.every(isGameLocked);
+  const weekLocked = isWeekLocked(games, season);
+  const lockMoment = weekLockAt(games, season);
   const slipStatus: 'open' | 'partial' | 'complete' | 'locked' =
-    allLocked ? 'locked'
+    weekLocked ? 'locked'
     : remaining === 0 ? 'complete'
     : weekStatus === 'partially_locked' ? 'partial'
     : 'open';
 
-  const nextOpen = games.find((g) => !isGameLocked(g));
+  const nextOpen = games.find((g) => g.status === 'scheduled' && new Date(g.kickoff_at).getTime() > Date.now());
+  const interactionsBlocked = weekLocked || cardLocked;
 
   async function handlePick(gameId: string, teamId: string) {
     if (!user || !week || !season) return;
+    if (interactionsBlocked) {
+      if (cardLocked && !weekLocked) toast('Card locked — unlock to change picks', { duration: 1400 });
+      return;
+    }
+    // Tap-to-unselect: if user taps the team they already picked, delete the pick.
+    const existing = picks.find((p) => p.game_id === gameId);
+    if (existing && existing.picked_team_id === teamId) {
+      setSavingId(gameId);
+      try {
+        await deleteMyPick(existing.id);
+        await refetchPicks();
+        toast('Pick removed', { duration: 900 });
+      } catch (e: any) {
+        toast.error(e.message || 'Could not remove pick');
+      } finally {
+        setSavingId(null);
+      }
+      return;
+    }
     setSavingId(gameId);
     try {
       await savePick({
@@ -56,8 +78,6 @@ export default function PickemWeekPage() {
         picked_team_id: teamId,
       });
       await refetchPicks();
-      // Only show pop-up confirmation when a NEW pick is added
-      // (avoid noise on every change). Quick toast.
       toast.success('Pick saved', { duration: 1100 });
     } catch (e: any) {
       toast.error(e.message || 'Could not save pick — game may be locked');
@@ -199,6 +219,8 @@ export default function PickemWeekPage() {
                   pick={myPick}
                   onPick={(teamId) => handlePick(game.id, teamId)}
                   saving={savingId === game.id}
+                  weekLocked={weekLocked}
+                  cardLocked={cardLocked}
                 />
               </motion.div>
             );
@@ -222,6 +244,9 @@ export default function PickemWeekPage() {
           total={totalGames}
           remaining={remaining}
           status={slipStatus}
+          cardLocked={cardLocked}
+          onToggleCardLock={() => setCardLocked(!cardLocked)}
+          weekLockAt={lockMoment}
         />
       )}
     </div>

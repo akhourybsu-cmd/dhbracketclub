@@ -13,11 +13,14 @@ type Props = {
   pick?: NflPick;
   onPick: (teamId: string) => void;
   saving?: boolean;
+  weekLocked?: boolean;
+  cardLocked?: boolean;
 };
 
-export function GamePickCard({ game, pick, onPick, saving }: Props) {
+export function GamePickCard({ game, pick, onPick, saving, weekLocked, cardLocked }: Props) {
   const { play } = useSoundEffect();
-  const locked = isGameLocked(game);
+  const locked = weekLocked ?? isGameLocked(game);
+  const blocked = locked || cardLocked;
   const isFinal = game.status === 'final';
   const isLive = game.status === 'live';
   const pickedId = pick?.picked_team_id;
@@ -28,7 +31,7 @@ export function GamePickCard({ game, pick, onPick, saving }: Props) {
   useEffect(() => () => { if (sweepTimerRef.current) clearTimeout(sweepTimerRef.current); }, []);
 
   function handleTap(side: 'home' | 'away', teamId: string) {
-    if (locked || saving) return;
+    if (blocked || saving) return;
     play('tap');
     setSweptSide(side);
     if (sweepTimerRef.current) clearTimeout(sweepTimerRef.current);
@@ -49,8 +52,8 @@ export function GamePickCard({ game, pick, onPick, saving }: Props) {
     return (
       <motion.button
         type="button"
-        disabled={locked || saving}
-        whileTap={!locked && !saving ? { scale: 0.97 } : undefined}
+        disabled={blocked || saving}
+        whileTap={!blocked && !saving ? { scale: 0.97 } : undefined}
         transition={{ type: 'spring', stiffness: 400, damping: 22 }}
         onClick={() => handleTap(side, teamId)}
         className={cn(
@@ -131,6 +134,8 @@ export function GamePickCard({ game, pick, onPick, saving }: Props) {
           </span>
         ) : locked ? (
           <span className="pk-stamp pk-stamp-locked"><Lock className="w-2.5 h-2.5" /> Locked</span>
+        ) : cardLocked ? (
+          <span className="pk-stamp pk-stamp-locked"><Lock className="w-2.5 h-2.5" /> Card locked</span>
         ) : (
           <span className="text-[10px] font-extrabold uppercase tracking-wider text-success">Open</span>
         )}

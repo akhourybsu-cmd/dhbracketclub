@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Shield, Plus, Save, Loader2, Calculator, RefreshCw, Download } from 'lucide-react';
+import { ChevronLeft, Shield, Plus, Save, Loader2, Calculator, RefreshCw, Download, Settings2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useActiveSeason, useSeasonWeeks, useTeams, useWeekGames } from '@/hooks/usePickem';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 
 export default function PickemAdminPage() {
   const { user } = useAuth();
@@ -225,6 +226,9 @@ export default function PickemAdminPage() {
         </div>
       )}
 
+      {/* League Settings */}
+      {season && <LeagueSettingsCard season={season} onSaved={refetchSeason} />}
+
       {/* Weeks */}
       <div className="glass-card p-4">
         <div className="flex items-center justify-between mb-2">
@@ -339,6 +343,82 @@ function GameAdminRow({ game, onSaveFinal, onDelete }: { game: any; onSaveFinal:
         <Save className="w-3 h-3" />
       </Button>
       <Button size="sm" variant="ghost" onClick={() => onDelete(game.id)} className="text-destructive">×</Button>
+    </div>
+  );
+}
+
+function LeagueSettingsCard({ season, onSaved }: { season: any; onSaved: () => void }) {
+  const [lockMin, setLockMin] = useState<string>(String(season.pick_lock_minutes ?? 10));
+  const [hideFuture, setHideFuture] = useState<boolean>(!!season.hide_unresolved_future_weeks);
+  const [windowN, setWindowN] = useState<string>(season.visible_week_window != null ? String(season.visible_week_window) : '');
+  const [requireSched, setRequireSched] = useState<boolean>(season.require_finalized_schedule !== false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setLockMin(String(season.pick_lock_minutes ?? 10));
+    setHideFuture(!!season.hide_unresolved_future_weeks);
+    setWindowN(season.visible_week_window != null ? String(season.visible_week_window) : '');
+    setRequireSched(season.require_finalized_schedule !== false);
+  }, [season.id, season.pick_lock_minutes, season.hide_unresolved_future_weeks, season.visible_week_window, season.require_finalized_schedule]);
+
+  async function save() {
+    setSaving(true);
+    const lockMinNum = Math.max(0, Math.min(720, parseInt(lockMin || '10', 10) || 10));
+    const windowNum = windowN.trim() === '' ? null : Math.max(1, parseInt(windowN, 10) || 1);
+    const { error } = await (supabase as any)
+      .from('nfl_seasons')
+      .update({
+        pick_lock_minutes: lockMinNum,
+        hide_unresolved_future_weeks: hideFuture,
+        visible_week_window: windowNum,
+        require_finalized_schedule: requireSched,
+      })
+      .eq('id', season.id);
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success('League settings saved');
+    onSaved();
+  }
+
+  return (
+    <div className="glass-card p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <Settings2 className="w-4 h-4 text-gold" />
+        <h2 className="font-extrabold text-[13px]">League Settings</h2>
+      </div>
+
+      <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/20 p-2.5">
+        <div className="min-w-0">
+          <p className="text-[12px] font-bold">Hide future weeks until prior is scored</p>
+          <p className="text-[10px] text-muted-foreground leading-snug">Members only see the current week and earlier results.</p>
+        </div>
+        <Switch checked={hideFuture} onCheckedChange={setHideFuture} />
+      </div>
+
+      <div className="rounded-lg bg-muted/20 p-2.5 space-y-1.5">
+        <p className="text-[12px] font-bold">Visible week window</p>
+        <p className="text-[10px] text-muted-foreground leading-snug">Cap how many upcoming weeks members can see at once. Leave blank for all.</p>
+        <Input type="number" min={1} placeholder="All weeks" value={windowN} onChange={(e) => setWindowN(e.target.value)} className="h-9" />
+      </div>
+
+      <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/20 p-2.5">
+        <div className="min-w-0">
+          <p className="text-[12px] font-bold">Hide weeks with no schedule yet</p>
+          <p className="text-[10px] text-muted-foreground leading-snug">Recommended — only weeks with synced games appear to members.</p>
+        </div>
+        <Switch checked={requireSched} onCheckedChange={setRequireSched} />
+      </div>
+
+      <div className="rounded-lg bg-muted/20 p-2.5 space-y-1.5">
+        <p className="text-[12px] font-bold">Lock picks N minutes before first kickoff</p>
+        <p className="text-[10px] text-muted-foreground leading-snug">All picks for the week freeze at this cutoff. Default 10.</p>
+        <Input type="number" min={0} max={720} value={lockMin} onChange={(e) => setLockMin(e.target.value)} className="h-9" />
+      </div>
+
+      <Button size="sm" className="w-full" onClick={save} disabled={saving}>
+        {saving ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}
+        Save settings
+      </Button>
     </div>
   );
 }
