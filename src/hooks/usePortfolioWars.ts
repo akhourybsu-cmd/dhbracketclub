@@ -46,19 +46,26 @@ export interface PwAccolade {
   value: number | null;
 }
 
-/** Most relevant challenge for the lobby: prefer active > upcoming > most recent completed. */
+/** Most relevant challenge for the lobby: prefer active > upcoming > most recent completed.
+ *  Always scoped to the caller's current club (admins otherwise see every club's row). */
 export function useCurrentChallenge() {
+  const { club } = useClub();
+  const clubId = club?.id;
   return useQuery({
-    queryKey: ['pw-current-challenge'],
+    queryKey: ['pw-current-challenge', clubId],
+    enabled: !!clubId,
     queryFn: async () => {
-      // Try active
+      // Try active/locked first
       const { data: act } = await supabase.from('pw_challenges').select('*')
+        .eq('club_id', clubId!)
         .in('status', ['active', 'locked']).order('week_start', { ascending: false }).limit(1).maybeSingle();
       if (act) return act as PwChallenge;
       const { data: up } = await supabase.from('pw_challenges').select('*')
+        .eq('club_id', clubId!)
         .eq('status', 'upcoming').order('week_start', { ascending: true }).limit(1).maybeSingle();
       if (up) return up as PwChallenge;
       const { data: done } = await supabase.from('pw_challenges').select('*')
+        .eq('club_id', clubId!)
         .in('status', ['completed', 'archived']).order('week_start', { ascending: false }).limit(1).maybeSingle();
       return (done as PwChallenge) || null;
     },
@@ -67,10 +74,14 @@ export function useCurrentChallenge() {
 }
 
 export function useAllChallenges() {
+  const { club } = useClub();
+  const clubId = club?.id;
   return useQuery({
-    queryKey: ['pw-challenges'],
+    queryKey: ['pw-challenges', clubId],
+    enabled: !!clubId,
     queryFn: async () => {
       const { data, error } = await supabase.from('pw_challenges').select('*')
+        .eq('club_id', clubId!)
         .order('week_start', { ascending: false });
       if (error) throw error;
       return (data || []) as PwChallenge[];
@@ -94,19 +105,45 @@ export function useMyEntry(challengeId?: string) {
 }
 
 export function useChallengeLeaderboard(challengeId?: string) {
+  const { user } = useAuth();
+  const { club } = useClub();
+  const clubId = club?.id;
   const qc = useQueryClient();
   const query = useQuery({
-    queryKey: ['pw-leaderboard', challengeId],
-    enabled: !!challengeId,
+    queryKey: ['pw-leaderboard', challengeId, clubId, user?.id],
+    enabled: !!challengeId && !!clubId,
     queryFn: async () => {
-      const { data: entries, error } = await supabase.from('pw_entries')
+      // Look up the challenge's status + club to decide what to show.
+      const { data: ch } = await supabase.from('pw_challenges')
+        .select('id, club_id, status').eq('id', challengeId!).maybeSingle();
+      if (!ch) return [];
+      // Cross-club guard: even if RLS would allow (admin), never mix clubs.
+      if ((ch as any).club_id !== clubId) return [];
+
+      const status = (ch as any).status as PwStatus;
+      let q = supabase.from('pw_entries')
         .select('*, pw_picks(*)').eq('challenge_id', challengeId!);
+      // Before lock: don't reveal anyone else's portfolio — only show the viewer's own row.
+      if (status === 'upcoming') {
+        q = q.eq('user_id', user?.id || '00000000-0000-0000-0000-000000000000');
+      } else {
+        // Locked/active/completed: only entries that were actually locked in.
+        q = q.not('locked_at', 'is', null);
+      }
+      const { data: entries, error } = await q;
       if (error) throw error;
-      const userIds = [...new Set((entries || []).map((e: any) => e.user_id))];
-      const { data: profs } = await supabase.from('profiles')
-        .select('id, display_name, avatar_url').in('id', userIds);
+
+      // Defensive: drop entries missing all 3 picks once locked.
+      const rows = (entries || []).filter((e: any) =>
+        status === 'upcoming' ? true : Array.isArray(e.pw_picks) && e.pw_picks.length === 3,
+      );
+
+      const userIds = [...new Set(rows.map((e: any) => e.user_id))];
+      const { data: profs } = userIds.length
+        ? await supabase.from('profiles').select('id, display_name, avatar_url').in('id', userIds)
+        : { data: [] as any[] };
       const profMap = new Map((profs || []).map((p: any) => [p.id, p]));
-      return (entries || []).map((e: any) => ({
+      return rows.map((e: any) => ({
         ...e,
         profile: profMap.get(e.user_id) || null,
       })).sort((a: any, b: any) => {
@@ -135,11 +172,15 @@ export function useChallengeLeaderboard(challengeId?: string) {
 }
 
 export function useChallengeAccolades(challengeId?: string) {
+  const { club } = useClub();
+  const clubId = club?.id;
   return useQuery({
-    queryKey: ['pw-accolades', challengeId],
-    enabled: !!challengeId,
+    queryKey: ['pw-accolades', challengeId, clubId],
+    enabled: !!challengeId && !!clubId,
     queryFn: async () => {
-      const { data, error } = await supabase.from('pw_accolades').select('*').eq('challenge_id', challengeId!);
+      const { data, error } = await supabase.from('pw_accolades').select('*')
+        .eq('challenge_id', challengeId!)
+        .eq('club_id', clubId!);
       if (error) throw error;
       return (data || []) as PwAccolade[];
     },
