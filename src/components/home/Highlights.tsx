@@ -16,9 +16,9 @@
 
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sparkles, Trophy, Bookmark, Users, Newspaper } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { Sparkles, Trophy, Newspaper } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { SectionHeader } from './SectionHeader';
 
 export type HighlightKind = 'draft-winner' | 'op-complete' | 'feed-event';
 
@@ -64,14 +64,12 @@ export function Highlights({ items }: Props) {
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       className="-mx-4 sm:mx-0 mb-5"
     >
-      <div className="flex items-center justify-between mb-2 px-4 sm:px-0">
-        <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-muted-foreground/65 inline-flex items-center gap-1.5">
-          <Sparkles className="w-3 h-3" /> Highlights
-        </p>
-        <p className="text-[9.5px] font-medium text-muted-foreground/55 tabular-nums">
-          {cards.length}
-        </p>
-      </div>
+      <SectionHeader
+        label="Highlights"
+        icon={Sparkles}
+        count={cards.length}
+        className="mb-2 px-4 sm:px-0"
+      />
       <div
         className="flex gap-2 overflow-x-auto px-4 sm:px-0 pb-1"
         style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
@@ -91,18 +89,22 @@ function HighlightCard({ item }: { item: HighlightItem }) {
       className="flex-shrink-0 w-[200px] active:scale-[0.99] transition-transform"
     >
       <div
-        className="relative h-[88px] rounded-2xl p-3 flex items-start gap-2.5 overflow-hidden"
+        className="relative h-[88px] rounded-2xl p-3 flex items-start gap-2.5 overflow-hidden bg-card border border-border/40"
         style={{
-          background: `radial-gradient(ellipse 80% 100% at 100% 0%, ${accent.replace(')', ' / 0.18)')}, transparent 70%), linear-gradient(180deg, hsl(var(--card)), hsl(var(--card) / 0.92))`,
-          border: `1px solid ${accent.replace(')', ' / 0.28)')}`,
-          boxShadow: `0 0 14px -8px ${accent.replace(')', ' / 0.45)')}`,
+          boxShadow: 'inset 0 1px 0 hsl(var(--foreground) / 0.04)',
         }}
       >
+        {/* Whisper of app color at the top-right corner — passive sections
+            shouldn't paint the whole tile in accent. */}
+        <span
+          aria-hidden
+          className="absolute -top-px right-3 left-3 h-px pointer-events-none"
+          style={{ background: `linear-gradient(90deg, transparent 30%, ${accent.replace(')', ' / 0.45)')}, transparent)` }}
+        />
         <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 relative"
           style={{
-            background: `linear-gradient(135deg, ${accent.replace(')', ' / 0.18)')}, ${accent.replace(')', ' / 0.04)')})`,
-            border: `1px solid ${accent.replace(')', ' / 0.28)')}`,
+            background: `linear-gradient(135deg, ${accent.replace(')', ' / 0.16)')}, ${accent.replace(')', ' / 0.04)')})`,
             color: accent,
           }}
         >

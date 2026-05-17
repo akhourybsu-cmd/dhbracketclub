@@ -76,20 +76,21 @@ export function QuickBar({ pinned, accent, onEditClick }: Props) {
           type="button"
           onClick={onEditClick}
           aria-label="Customize quick bar"
-          className="flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center active:scale-95 transition"
-          style={{
-            background: `hsl(${accent} / 0.10)`,
-            border: `1.5px dashed hsl(${accent} / 0.4)`,
-            color: `hsl(${accent})`,
-          }}
+          className="flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center active:scale-95 transition text-muted-foreground/65 hover:text-foreground/85 bg-muted/20 border border-dashed border-border/45"
         >
-          <Pencil className="w-3.5 h-3.5" strokeWidth={2.4} />
+          <Pencil className="w-3.5 h-3.5" strokeWidth={2.2} />
         </button>
       </div>
     </motion.div>
   );
 }
 
+/**
+ * Calm-shell tile: neutral glass surface that matches every other quick-action
+ * tile, with the app's accent color reserved for the emblem/icon ONLY. This is
+ * the design rule for the DH Club shell — the shell should feel like one
+ * platform, with app personality lighting up only the brand mark on the tile.
+ */
 function QuickTile({ slug, name, fallbackAccent }: { slug: string; name: string; fallbackAccent: string }) {
   const meta = META[slug];
   const tint = meta?.tint ?? fallbackAccent;
@@ -103,23 +104,33 @@ function QuickTile({ slug, name, fallbackAccent }: { slug: string; name: string;
       aria-label={name}
     >
       <div
-        className="relative h-12 rounded-2xl flex items-center justify-center overflow-hidden"
+        className="relative h-12 rounded-2xl flex items-center justify-center overflow-hidden bg-card border border-border/40"
         style={{
-          background: `radial-gradient(ellipse 70% 80% at 50% 0%, hsl(${tint} / 0.18), transparent 70%), linear-gradient(180deg, hsl(var(--card)), hsl(var(--card) / 0.92))`,
-          border: `1px solid hsl(${tint} / 0.32)`,
-          boxShadow: `0 0 12px -8px hsl(${tint} / 0.5)`,
+          /* Subtle inner highlight at the top — no app color in the surface itself. */
+          boxShadow: 'inset 0 1px 0 hsl(var(--foreground) / 0.04)',
         }}
       >
+        {/* Whisper-faint accent glow at the bottom edge so the tile still
+            hints at its app identity without painting the whole surface. */}
+        <span
+          aria-hidden
+          className="absolute inset-x-3 bottom-0 h-px"
+          style={{ background: `linear-gradient(90deg, transparent, hsl(${tint} / 0.45), transparent)` }}
+        />
         {meta?.emblem ? (
           <img
             src={meta.emblem}
             alt=""
             aria-hidden="true"
-            className="w-7 h-7 object-contain"
-            style={{ filter: `drop-shadow(0 1.5px 4px hsl(${tint} / 0.55))` }}
+            className="w-7 h-7 object-contain relative"
+            style={{ filter: `drop-shadow(0 1px 3px hsl(${tint} / 0.45))` }}
           />
         ) : Icon ? (
-          <Icon className="w-5 h-5" style={{ color: `hsl(${tint})` }} strokeWidth={2.2} />
+          <Icon
+            className="w-5 h-5 relative"
+            style={{ color: `hsl(${tint})` }}
+            strokeWidth={2.2}
+          />
         ) : (
           <Bookmark className="w-5 h-5 text-muted-foreground" />
         )}

@@ -13,6 +13,8 @@
 
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import { SectionHeader } from './SectionHeader';
 import {
   Bookmark, Sparkles, Shield, Target, TrendingUp, Lock, Trophy, MessageSquareText,
   CalendarDays, ScrollText, Newspaper, MessageCircle, BarChart3, FileText, Link2,
@@ -88,14 +90,11 @@ export function AssetLauncher({ installedAssets, canManage, accent }: Props) {
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       className="-mx-4 sm:mx-0 mb-5"
     >
-      <div className="flex items-center justify-between mb-2 px-4 sm:px-0">
-        <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-muted-foreground/65">
-          ◆ All Apps
-        </p>
-        <p className="text-[9.5px] font-medium text-muted-foreground/55 tabular-nums">
-          {ordered.length}
-        </p>
-      </div>
+      <SectionHeader
+        label="All Apps"
+        count={ordered.length}
+        className="mb-2 px-4 sm:px-0"
+      />
       <div
         className="flex gap-2 overflow-x-auto px-4 sm:px-0 sm:flex-wrap pb-1"
         style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
@@ -136,48 +135,60 @@ function AssetTile({
       className="flex-shrink-0 w-[78px] sm:w-[88px] active:scale-95 transition-transform"
     >
       <div
-        className="relative h-[88px] sm:h-[96px] rounded-2xl overflow-hidden flex flex-col items-center justify-center gap-1.5 px-1"
+        className={cn(
+          "relative h-[88px] sm:h-[96px] rounded-2xl overflow-hidden flex flex-col items-center justify-center gap-1.5 px-1 bg-card border transition-colors",
+          // Urgent state EARNS the accent border. Other states stay neutral
+          // so the shell doesn't shout from every tile at once.
+          status?.tone === 'urgent' ? 'border-transparent' : 'border-border/40',
+        )}
         style={{
-          background: `radial-gradient(ellipse 70% 80% at 50% 0%, hsl(${tint} / 0.16), transparent 70%), linear-gradient(180deg, hsl(var(--card)), hsl(var(--card) / 0.92))`,
-          border: `1px solid hsl(${tint} / 0.28)`,
-          boxShadow: `0 0 14px -8px hsl(${tint} / 0.4)`,
+          boxShadow: 'inset 0 1px 0 hsl(var(--foreground) / 0.04)',
         }}
       >
-        {/* Urgent ring — pulsing accent for attention-grabbing tiles */}
+        {/* Urgent ring — pulsing accent reserved for true attention items */}
         {status?.tone === 'urgent' && (
-          <span
-            aria-hidden
-            className="absolute inset-0 rounded-2xl pointer-events-none"
-            style={{
-              boxShadow: `inset 0 0 0 1.5px hsl(45 100% 60% / 0.55)`,
-              animation: 'home-pulse 2.4s ease-in-out infinite',
-            }}
-          />
+          <>
+            <span
+              aria-hidden
+              className="absolute inset-0 rounded-2xl pointer-events-none"
+              style={{
+                boxShadow: `inset 0 0 0 1.5px hsl(45 100% 60% / 0.55)`,
+                animation: 'home-pulse 2.4s ease-in-out infinite',
+              }}
+            />
+            <style>{`@keyframes home-pulse { 0%,100% { opacity: 0.65; } 50% { opacity: 1; } }`}</style>
+          </>
         )}
-        <style>{`@keyframes home-pulse { 0%,100% { opacity: 0.65; } 50% { opacity: 1; } }`}</style>
 
-        {/* Emblem / icon */}
+        {/* Whisper accent — bottom hair-line so the tile still hints at its
+            app identity without painting the whole surface. */}
+        <span
+          aria-hidden
+          className="absolute inset-x-3 bottom-0 h-px pointer-events-none"
+          style={{ background: `linear-gradient(90deg, transparent, hsl(${tint} / 0.4), transparent)` }}
+        />
+
+        {/* Emblem / icon — the ONE place the app's color lives on the tile. */}
         {meta?.emblem ? (
           <img
             src={meta.emblem}
             alt=""
             aria-hidden="true"
-            className="w-9 h-9 sm:w-10 sm:h-10 object-contain"
-            style={{ filter: `drop-shadow(0 2px 6px hsl(${tint} / 0.55))` }}
+            className="w-9 h-9 sm:w-10 sm:h-10 object-contain relative"
+            style={{ filter: `drop-shadow(0 2px 5px hsl(${tint} / 0.45))` }}
           />
         ) : Icon ? (
           <div
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center relative"
             style={{
-              background: `linear-gradient(135deg, hsl(${tint} / 0.18), hsl(${tint} / 0.04))`,
-              border: `1px solid hsl(${tint} / 0.28)`,
+              background: `linear-gradient(135deg, hsl(${tint} / 0.16), hsl(${tint} / 0.04))`,
               color: `hsl(${tint})`,
             }}
           >
             <Icon className="w-4 h-4" />
           </div>
         ) : (
-          <div className="w-9 h-9 rounded-xl bg-muted/30 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-xl bg-muted/30 flex items-center justify-center relative">
             <Bookmark className="w-4 h-4 text-muted-foreground" />
           </div>
         )}

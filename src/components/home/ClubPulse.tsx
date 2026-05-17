@@ -9,9 +9,10 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  Bookmark, Trophy, CalendarDays, MessageCircle, BarChart3, Newspaper, ChevronRight, Activity,
+  Bookmark, Trophy, CalendarDays, MessageCircle, BarChart3, Activity,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { SectionHeader } from './SectionHeader';
 
 const HIGH_SIGNAL = new Set([
   'draft_completed', 'draft_created',
@@ -69,23 +70,13 @@ export function ClubPulse({ activity }: Props) {
       className="mb-5"
     >
       <Link to="/feed" className="block group active:scale-[0.99] transition-transform">
-        <div
-          className="rounded-2xl overflow-hidden"
-          style={{
-            background: 'linear-gradient(180deg, hsl(var(--card)), hsl(var(--card) / 0.92))',
-            border: '1px solid hsl(var(--border) / 0.4)',
-          }}
-        >
-          <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border/15">
-            <div className="flex items-center gap-1.5">
-              <Activity className="w-3 h-3 text-muted-foreground/65" />
-              <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-muted-foreground/65">
-                Club Pulse
-              </p>
-            </div>
-            <span className="text-[9.5px] font-bold inline-flex items-center gap-0.5 text-muted-foreground/60 group-hover:text-foreground">
-              <Newspaper className="w-2.5 h-2.5" /> Feed
-            </span>
+        <div className="rounded-2xl overflow-hidden bg-card border border-border/40">
+          <div className="px-3.5 py-2.5 border-b border-border/15">
+            <SectionHeader
+              label="Club Pulse"
+              icon={Activity}
+              className="mb-0"
+            />
           </div>
           <ul>
             {filtered.map((a, idx) => {

@@ -7,8 +7,9 @@
 
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CalendarDays, ChevronRight } from 'lucide-react';
+import { CalendarDays } from 'lucide-react';
 import { format, isToday, isTomorrow, isThisWeek } from 'date-fns';
+import { SectionHeader } from './SectionHeader';
 
 interface EventLite {
   id: string;
@@ -32,17 +33,12 @@ export function EventsStrip({ events, accent }: Props) {
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       className="-mx-4 sm:mx-0 mb-5"
     >
-      <div className="flex items-center justify-between mb-2 px-4 sm:px-0">
-        <div className="flex items-center gap-1.5">
-          <CalendarDays className="w-3 h-3" style={{ color: `hsl(${accent})` }} />
-          <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-muted-foreground/65">
-            Up Next
-          </p>
-        </div>
-        <Link to="/events" className="text-[9.5px] font-bold inline-flex items-center gap-0.5 text-muted-foreground/60 hover:text-foreground">
-          All <ChevronRight className="w-2.5 h-2.5" />
-        </Link>
-      </div>
+      <SectionHeader
+        label="Up Next"
+        icon={CalendarDays}
+        to="/events"
+        className="mb-2 px-4 sm:px-0"
+      />
       <div
         className="flex gap-2 overflow-x-auto px-4 sm:px-0 pb-1"
         style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
@@ -60,18 +56,11 @@ export function EventsStrip({ events, accent }: Props) {
               to={`/events/${ev.id}`}
               className="flex-shrink-0 w-[170px] active:scale-[0.98] transition-transform"
             >
-              <div
-                className="rounded-xl p-2.5 flex items-center gap-2.5 h-[68px]"
-                style={{
-                  background: 'linear-gradient(180deg, hsl(var(--card)), hsl(var(--card) / 0.9))',
-                  border: `1px solid hsl(${accent} / 0.22)`,
-                }}
-              >
+              <div className="rounded-xl p-2.5 flex items-center gap-2.5 h-[68px] bg-card border border-border/40">
                 <div
                   className="w-11 h-11 rounded-lg flex flex-col items-center justify-center flex-shrink-0"
                   style={{
-                    background: `linear-gradient(135deg, hsl(${accent} / 0.16), hsl(${accent} / 0.04))`,
-                    border: `1px solid hsl(${accent} / 0.28)`,
+                    background: `linear-gradient(135deg, hsl(${accent} / 0.18), hsl(${accent} / 0.05))`,
                   }}
                 >
                   <span className="text-[8px] font-extrabold uppercase leading-none" style={{ color: `hsl(${accent})` }}>{monthLabel}</span>
