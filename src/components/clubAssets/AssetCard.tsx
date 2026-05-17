@@ -12,6 +12,7 @@ import type { PlatformAsset, InstalledAsset } from '@/types/assets';
 import { CATEGORY_META } from '@/types/assets';
 import { resolveOnboarding } from '@/lib/onboarding/registry';
 import { FeatureOnboardingModal } from '@/components/onboarding/FeatureOnboardingModal';
+import { StatusPill } from '@/components/ui/status-pill';
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Bookmark, Sparkles, Shield, Trophy, TrendingUp, Lock,
@@ -120,16 +121,18 @@ export const AssetCard = memo(function AssetCard({
         />
       )}
 
-      {/* Premium / experimental badges */}
+      {/* Premium / experimental badges — shared StatusPill family. */}
       {asset.is_premium && (
-        <span className="absolute top-3 right-3 flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-yellow-400/15 text-yellow-500 border border-yellow-400/20">
+        <StatusPill variant="premium" size="xs" className="absolute top-3 right-3">
           <Crown className="w-2.5 h-2.5" /> PRO
-        </span>
+        </StatusPill>
       )}
       {asset.category === 'experimental' && (
-        <span className="absolute top-3 right-3 flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-purple-500/15 text-purple-400 border border-purple-500/20">
+        // Experimental keeps its purple identity via the accent prop —
+        // hue is preserved while the shape/weight matches the pill family.
+        <StatusPill accent="270 70% 60%" size="xs" className="absolute top-3 right-3">
           <FlaskConical className="w-2.5 h-2.5" /> BETA
-        </span>
+        </StatusPill>
       )}
 
       {/* Header: icon + name */}
@@ -145,19 +148,17 @@ export const AssetCard = memo(function AssetCard({
           <div className="flex items-center gap-1.5 flex-wrap">
             <h3 className="font-extrabold text-[14px] tracking-tight leading-tight">{asset.name}</h3>
             {isInstalled && isEnabled && (
-              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-primary/12 text-primary border border-primary/20">
+              <StatusPill variant="success" size="xs">
                 <Check className="w-2.5 h-2.5" /> On
-              </span>
+              </StatusPill>
             )}
             {isInstalled && !isEnabled && (
-              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-muted/50 text-muted-foreground/60 border border-border/20">
-                Disabled
-              </span>
+              <StatusPill variant="disabled" size="xs">Disabled</StatusPill>
             )}
             {isHidden && (
-              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-muted/40 text-muted-foreground/50 border border-border/20">
+              <StatusPill variant="disabled" size="xs">
                 <EyeOff className="w-2.5 h-2.5" /> Hidden
-              </span>
+              </StatusPill>
             )}
           </div>
           <span

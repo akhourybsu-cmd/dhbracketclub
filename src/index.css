@@ -2750,6 +2750,15 @@
 }
 .da-banner-pulse { animation: daBannerPulse 3.4s ease-in-out infinite; }
 
+/* ── Compete CTA button pulse (banner-agnostic, theme-neutral).
+   Used by <CompeteCTAButton pulse /> to mark "act now" states without
+   stealing any banner-specific keyframe. Subtle scale + shadow breath. */
+@keyframes competeCtaPulse {
+  0%, 100% { transform: scale(1);     filter: brightness(1); }
+  50%      { transform: scale(1.025); filter: brightness(1.08); }
+}
+.compete-cta-pulse { animation: competeCtaPulse 2.6s ease-in-out infinite; }
+
 /* ── Arena page primitives (only active inside .da-mode shell) ── */
 
 /* Card surface — gold-tinted glass-card replacement */

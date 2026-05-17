@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { StatusPill } from '@/components/ui/status-pill';
 import {
   Bookmark, Plus, ArrowRight, Users, Play, Trophy, Award, Target, Archive,
   Calendar, TrendingUp, Crown, Swords, Shield, ChevronRight, ChevronDown,
@@ -157,9 +158,7 @@ function NextDraftCard({ entries, totalDrafts }: { entries: any[]; totalDrafts: 
           <Bookmark className="w-4 h-4" style={{ color: 'hsl(var(--gold))' }} />
           <h3 className="font-bold text-[13px]">{label}</h3>
           {isLive && (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/12 text-success text-[9px] font-bold border border-success/15">
-              <span className="live-dot w-1.5 h-1.5" /> LIVE
-            </span>
+            <StatusPill variant="live" size="xs" dot pulse>LIVE</StatusPill>
           )}
           {!isRegularSeasonComplete && (
             <span className="text-[9px] text-muted-foreground/60 ml-auto tabular-nums">

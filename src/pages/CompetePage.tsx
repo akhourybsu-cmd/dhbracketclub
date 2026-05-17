@@ -13,6 +13,7 @@ import { useCurrentSeason, useSeasonEntries, getSeasonDraftTarget } from '@/hook
 import { cn } from '@/lib/utils';
 import { useClubAssets } from '@/hooks/useClubAssets';
 import { StatusPill } from '@/components/ui/status-pill';
+import { CompeteCTAButton } from '@/components/compete/CompeteCTAButton';
 import runedelveEmblem from '@/assets/runedelve-emblem.png';
 import nexusEmblem from '@/assets/nexus-emblem.png';
 import pickemEmblem from '@/assets/pickem-emblem.png';
@@ -114,10 +115,9 @@ function RuneDelveCompeteCard() {
                 style={{ background: 'linear-gradient(180deg, hsl(150 30% 98%), hsl(152 70% 70%))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', textShadow: '0 0 18px hsl(152 80% 40% / 0.4)' }}>
                 Rune Delve
               </h2>
-              <div className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider"
-                style={{ background: 'linear-gradient(135deg, hsl(152 72% 46%), hsl(152 70% 38%))', color: 'hsl(160 30% 6%)', boxShadow: '0 4px 14px hsl(152 80% 35% / 0.5), inset 0 1px 0 hsl(150 80% 80% / 0.5)' }}>
-                Enter <ChevronRight className="w-3.5 h-3.5" strokeWidth={3} />
-              </div>
+              <CompeteCTAButton accent="152 72% 46%" accentDeep="152 70% 38%">
+                Enter
+              </CompeteCTAButton>
             </div>
           </div>
         </div>
@@ -157,10 +157,9 @@ function NexusDefenseCompeteCard() {
                 style={{ background: 'linear-gradient(180deg, hsl(195 30% 98%), hsl(195 90% 70%))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', textShadow: '0 0 18px hsl(195 95% 45% / 0.45)' }}>
                 Nexus Defense
               </h2>
-              <div className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider"
-                style={{ background: 'linear-gradient(135deg, hsl(195 95% 52%), hsl(210 90% 48%))', color: 'hsl(215 50% 6%)', boxShadow: '0 4px 14px hsl(200 95% 40% / 0.5), inset 0 1px 0 hsl(190 95% 85% / 0.55)' }}>
-                Deploy <ChevronRight className="w-3.5 h-3.5" strokeWidth={3} />
-              </div>
+              <CompeteCTAButton accent="195 95% 52%" accentDeep="210 90% 48%" ink="215 50% 6%">
+                Deploy
+              </CompeteCTAButton>
             </div>
           </div>
         </div>
@@ -220,10 +219,9 @@ function DraftArenaEnterBanner({ season, entries, totalDrafts, myUserId }: {
                 Draft Arena
               </h2>
               <p className="text-[10.5px] font-bold text-white/65 leading-snug mb-2.5 line-clamp-2">{subline}</p>
-              <div className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider"
-                style={{ background: 'linear-gradient(135deg, hsl(45 100% 65%), hsl(40 95% 50%))', color: 'hsl(160 30% 6%)', boxShadow: '0 4px 14px hsl(45 95% 40% / 0.5), inset 0 1px 0 hsl(45 100% 90% / 0.55)' }}>
-                {ctaLabel} <ChevronRight className="w-3.5 h-3.5" strokeWidth={3} />
-              </div>
+              <CompeteCTAButton accent="45 100% 65%" accentDeep="40 95% 50%" pulse={pulse}>
+                {ctaLabel}
+              </CompeteCTAButton>
             </div>
           </div>
         </div>
@@ -326,10 +324,9 @@ function PickemCompeteCard() {
                     {subline}{myStanding && <span className="ml-1.5" style={{ color: 'hsl(45 95% 65%)' }}>· #{myStanding.rank ?? '—'} · {myStanding.total_correct}/{myStanding.total_picked}</span>}
                   </p>}
               </div>
-              <div className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider"
-                style={{ background: 'linear-gradient(135deg, hsl(45 95% 55%), hsl(38 95% 48%))', color: 'hsl(160 40% 6%)', boxShadow: '0 4px 14px hsl(45 95% 40% / 0.55), inset 0 1px 0 hsl(45 100% 85% / 0.55)' }}>
-                {ctaLabel} <ChevronRight className="w-3.5 h-3.5" strokeWidth={3} />
-              </div>
+              <CompeteCTAButton accent="45 95% 55%" accentDeep="38 95% 48%" ink="160 40% 6%" pulse={isLive && noPicksYet}>
+                {ctaLabel}
+              </CompeteCTAButton>
             </div>
           </div>
         </div>
@@ -402,10 +399,9 @@ function PortfolioWarsCompeteCard() {
               </div>
               <h2 className="font-black text-[18px] leading-none tracking-tight mb-1" style={{ background: 'linear-gradient(180deg, hsl(150 30% 98%), hsl(152 80% 70%))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Portfolio Wars</h2>
               <p className="text-[10px] font-semibold mb-2" style={{ color: 'hsl(150 12% 75%)' }}>Pick 3 stocks. Beat the market. Beat your friends.</p>
-              <div className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[11px] font-black uppercase tracking-wider"
-                style={{ background: 'linear-gradient(135deg, hsl(152 80% 48%), hsl(152 80% 38%))', color: 'hsl(220 60% 4%)', boxShadow: '0 4px 14px hsl(152 80% 35% / 0.5)' }}>
-                {cta} <ChevronRight className="w-3.5 h-3.5" strokeWidth={3} />
-              </div>
+              <CompeteCTAButton accent="152 80% 48%" accentDeep="152 80% 38%" ink="220 60% 4%">
+                {cta}
+              </CompeteCTAButton>
             </div>
           </div>
         </div>

@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Trophy, ChevronRight, Crown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { StatusPill } from '@/components/ui/status-pill';
 
 interface StandingLite {
   id: string;
@@ -60,13 +61,7 @@ export function LeagueSnapshot({ season, standings, regularEntries, seasonTarget
               </p>
             </div>
             {isPlayoffs ? (
-              <span
-                className="text-[9px] font-extrabold uppercase tracking-[0.18em] px-1.5 py-0.5 rounded-md leading-none flex items-center gap-1"
-                style={{ background: 'hsl(var(--gold) / 0.16)', color: 'hsl(var(--gold))', border: '1px solid hsl(var(--gold) / 0.32)' }}
-              >
-                <span className="w-1 h-1 rounded-full bg-current animate-pulse" />
-                Playoffs
-              </span>
+              <StatusPill variant="premium" size="xs" dot pulse>Playoffs</StatusPill>
             ) : (
               <span className="text-[9.5px] font-bold tabular-nums text-muted-foreground/70">
                 {regularEntries}/{seasonTarget} drafts

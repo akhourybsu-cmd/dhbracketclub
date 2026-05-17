@@ -10,10 +10,11 @@ import { motion } from 'framer-motion';
 import {
   Bookmark, Sparkles, TrendingUp, Lock, Trophy, MessageSquareText,
   CalendarDays, ScrollText, Newspaper, MessageCircle, BarChart3,
-  FileText, Link2, Plus, ChevronRight,
+  FileText, Link2, Plus,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { PlatformAsset, InstalledAsset } from '@/types/assets';
+import { SectionHeader } from './SectionHeader';
 
 const ICON_BY_SLUG: Record<string, LucideIcon> = {
   'draft-arena':    Bookmark,
@@ -73,17 +74,12 @@ export function DiscoverStrip({ allAssets, installedAssets, isAdmin, accent }: P
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       className="-mx-4 sm:mx-0 mb-5"
     >
-      <div className="flex items-center justify-between mb-2 px-4 sm:px-0">
-        <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-muted-foreground/65 inline-flex items-center gap-1.5">
-          <Plus className="w-3 h-3" /> Discover
-        </p>
-        <Link
-          to="/club/assets"
-          className="text-[9.5px] font-bold inline-flex items-center gap-0.5 text-muted-foreground/60 hover:text-foreground"
-        >
-          All <ChevronRight className="w-2.5 h-2.5" />
-        </Link>
-      </div>
+      <SectionHeader
+        label="Discover"
+        icon={Plus}
+        to="/club/assets"
+        className="mb-2 px-4 sm:px-0"
+      />
       <div
         className="flex gap-2 overflow-x-auto px-4 sm:px-0 pb-1"
         style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}

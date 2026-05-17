@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Hash, ChevronLeft, Pin, Search, X, Link2, Settings, Menu, Lock } from 'lucide-react';
 import { getChannelTypeMeta } from '@/components/chat/channelTypeMeta';
+import { StatusPill } from '@/components/ui/status-pill';
 import { useNavigate } from 'react-router-dom';
 import { useNavDrawer } from '@/contexts/NavDrawerContext';
 import { format } from 'date-fns';
@@ -682,12 +683,9 @@ export default function ChatPage() {
             <div className="flex items-center gap-1.5">
               <h2 className="font-bold text-[15px] tracking-tight leading-tight truncate">{selectedChannel?.name}</h2>
               {isElevated && (
-                <span
-                  className="text-[9px] font-extrabold uppercase tracking-[0.12em] px-1.5 py-0.5 rounded-md flex-shrink-0"
-                  style={{ background: `hsl(${typeMeta.accent} / 0.15)`, color: `hsl(${typeMeta.accent})` }}
-                >
+                <StatusPill accent={typeMeta.accent} size="xs" className="flex-shrink-0">
                   {isAnnouncement ? 'Announcements' : 'Admins'}
-                </span>
+                </StatusPill>
               )}
             </div>
             {selectedChannel?.description && <p className="text-[10px] text-muted-foreground/70 truncate leading-tight">{selectedChannel.description}</p>}

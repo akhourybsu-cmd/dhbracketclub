@@ -64,15 +64,26 @@ type VariantTokens = {
   fg: string;
 };
 
+/* Variant tokens. Notes:
+ *  - success/danger/premium/live use the global success/destructive/gold
+ *    tokens, which already adapt across light/dark.
+ *  - warning/pending/info use hardcoded hues (the tokens for those don't
+ *    exist globally). Lightness anchored around 48-55% so the fg reads on
+ *    both light cards (~99% L) and dark cards (~7% L) without theme
+ *    overrides. Previously these used 65-70% L which was unreadable on
+ *    light cards.
+ *  - disabled uses var(--muted-foreground) as fg + var(--muted) as bg,
+ *    with opacity-65 added at the wrapper level for the "this is off" feel.
+ */
 const VARIANTS: Record<StatusPillVariant, VariantTokens> = {
   success:  { bg: 'var(--success)',     border: 'var(--success)',     fg: 'var(--success)' },
-  warning:  { bg: '38 95% 55%',         border: '38 95% 55%',         fg: '38 95% 65%' },
+  warning:  { bg: '38 90% 50%',         border: '38 90% 50%',         fg: '38 90% 50%' },
   danger:   { bg: 'var(--destructive)', border: 'var(--destructive)', fg: 'var(--destructive)' },
-  info:     { bg: '195 80% 60%',        border: '195 80% 60%',        fg: '195 80% 70%' },
+  info:     { bg: '195 80% 50%',        border: '195 80% 50%',        fg: '195 80% 48%' },
   neutral:  { bg: 'var(--muted-foreground)', border: 'var(--border)',  fg: 'var(--muted-foreground)' },
   premium:  { bg: 'var(--gold)',        border: 'var(--gold)',        fg: 'var(--gold)' },
   live:     { bg: 'var(--success)',     border: 'var(--success)',     fg: 'var(--success)' },
-  pending:  { bg: '45 100% 55%',        border: '45 100% 55%',        fg: '45 100% 65%' },
+  pending:  { bg: '45 95% 50%',         border: '45 95% 50%',         fg: '45 90% 45%' },
   disabled: { bg: 'var(--muted)',       border: 'var(--border)',      fg: 'var(--muted-foreground)' },
 };
 

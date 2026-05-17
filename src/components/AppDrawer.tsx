@@ -180,7 +180,7 @@ export function AppDrawer({ open, onOpenChange, unreadChatCount = 0 }: AppDrawer
         <div className="px-4 py-3 border-t border-border/25 flex items-center justify-between gap-2">
           <ThemeToggle />
           <button
-            onClick={async () => { await signOut(); }}
+            onClick={async () => { play('tap'); await signOut(); }}
             className="flex items-center gap-1.5 text-[12px] font-semibold text-muted-foreground hover:text-destructive transition-colors px-3 py-2 rounded-lg hover:bg-destructive/10 min-h-[44px]"
           >
             <LogOut className="w-4 h-4" />

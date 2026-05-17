@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import type { Channel, Category, ChannelMeta } from './types';
 import { CHANNEL_EMOJI } from './types';
 import { getChannelTypeMeta } from './channelTypeMeta';
+import { StatusPill } from '@/components/ui/status-pill';
 
 interface ChannelListProps {
   channels: Channel[];
@@ -115,15 +116,9 @@ const ChannelRow = memo(function ChannelRow({ ch, meta, isCurrent, currentUserId
             )}>
               <span className="truncate">{ch.name}</span>
               {isElevated && (
-                <span
-                  className="text-[8px] font-extrabold uppercase tracking-[0.12em] px-1 py-0.5 rounded-md flex-shrink-0 leading-none"
-                  style={{
-                    background: `hsl(${typeMeta.accent} / 0.12)`,
-                    color: `hsl(${typeMeta.accent})`,
-                  }}
-                >
+                <StatusPill accent={typeMeta.accent} size="xs" className="flex-shrink-0">
                   {ch.channel_type === 'announcements' ? 'News' : 'Admin'}
-                </span>
+                </StatusPill>
               )}
             </span>
             {meta?.lastMessageAt && (
