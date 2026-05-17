@@ -9,7 +9,7 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  Bookmark, Trophy, CalendarDays, MessageCircle, BarChart3, Activity,
+  Bookmark, Trophy, CalendarDays, MessageCircle, BarChart3, Activity, ChevronRight,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { SectionHeader } from './SectionHeader';
