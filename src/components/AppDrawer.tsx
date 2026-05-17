@@ -100,7 +100,7 @@ export function AppDrawer({ open, onOpenChange, unreadChatCount = 0 }: AppDrawer
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="left"
-        className="p-0 w-[86vw] max-w-[340px] sm:max-w-[360px] flex flex-col gap-0 border-r border-border/40 bg-background"
+        className="p-0 w-[86vw] max-w-[340px] sm:max-w-[360px] flex flex-col gap-0 border-r border-border/30 bg-background"
         style={{
           paddingTop: 'env(safe-area-inset-top, 0px)',
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
@@ -110,7 +110,7 @@ export function AppDrawer({ open, onOpenChange, unreadChatCount = 0 }: AppDrawer
         <SheetDescription className="sr-only">Browse all sections of the app</SheetDescription>
 
         {/* Identity header */}
-        <div className="px-5 pt-5 pb-4 border-b border-border/30 flex items-center gap-3">
+        <div className="px-5 pt-5 pb-4 border-b border-border/25 flex items-center gap-3">
           {club?.logo_url ? (
             <img src={club.logo_url} alt={club.name} className="w-11 h-11 object-cover rounded-xl" />
           ) : (
@@ -130,7 +130,9 @@ export function AppDrawer({ open, onOpenChange, unreadChatCount = 0 }: AppDrawer
         <nav className="flex-1 overflow-y-auto px-2.5 py-3">
           {sections.map((sec) => (
             <div key={sec.label} className="mb-3">
-              <p className="px-3 mb-1 text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+              {/* Matches the SectionHeader spec used across Home so eyebrows
+                  read as one visual family across the shell. */}
+              <p className="px-3 mb-1 text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-muted-foreground/70">
                 {sec.label}
               </p>
               <div className="flex flex-col gap-0.5">
@@ -152,7 +154,17 @@ export function AppDrawer({ open, onOpenChange, unreadChatCount = 0 }: AppDrawer
                       <Icon className={cn('w-[18px] h-[18px] flex-shrink-0', active && 'text-primary')} />
                       <span className="flex-1 truncate">{item.label}</span>
                       {item.badge && item.badge > 0 ? (
-                        <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                        // Unread count chip — uses the calm-shell pill family
+                        // (token-driven, no hardcoded color) so it visually
+                        // belongs with StatusPill chips elsewhere.
+                        <span
+                          className="min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-extrabold tabular-nums flex items-center justify-center border"
+                          style={{
+                            backgroundColor: 'hsl(var(--primary) / 0.18)',
+                            borderColor: 'hsl(var(--primary) / 0.4)',
+                            color: 'hsl(var(--primary))',
+                          }}
+                        >
                           {item.badge > 9 ? '9+' : item.badge}
                         </span>
                       ) : null}
@@ -165,7 +177,7 @@ export function AppDrawer({ open, onOpenChange, unreadChatCount = 0 }: AppDrawer
         </nav>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t border-border/30 flex items-center justify-between gap-2">
+        <div className="px-4 py-3 border-t border-border/25 flex items-center justify-between gap-2">
           <ThemeToggle />
           <button
             onClick={async () => { await signOut(); }}

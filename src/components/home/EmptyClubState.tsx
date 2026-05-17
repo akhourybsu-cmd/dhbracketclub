@@ -25,23 +25,31 @@ export function EmptyClubState({ isAdmin, accent, clubName }: Props) {
       animate={{ opacity: 1, y: 0 }}
       className="mb-5"
     >
-      <div
-        className="relative overflow-hidden rounded-2xl p-5 text-center"
-        style={{
-          background: `radial-gradient(ellipse 90% 60% at 50% 0%, hsl(${accent} / 0.18), transparent 70%), linear-gradient(180deg, hsl(var(--card)), hsl(var(--card) / 0.9))`,
-          border: `1px solid hsl(${accent} / 0.32)`,
-        }}
-      >
+      {/* Calm shell card — accent earns its place in the primary CTA + a
+          top hairline + the eyebrow, instead of painting the whole card
+          in the club color like before. */}
+      <div className="relative overflow-hidden rounded-2xl p-5 text-center bg-card border border-border/40">
+        {/* Whisper of club identity at the top edge. */}
+        <span
+          aria-hidden
+          className="absolute inset-x-6 top-0 h-px pointer-events-none"
+          style={{ background: `linear-gradient(90deg, transparent, hsl(${accent} / 0.5), transparent)` }}
+        />
         <div
           className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3"
           style={{
-            background: `linear-gradient(135deg, hsl(${accent} / 0.22), hsl(${accent} / 0.06))`,
-            border: `1px solid hsl(${accent} / 0.32)`,
+            background: `linear-gradient(135deg, hsl(${accent} / 0.20), hsl(${accent} / 0.06))`,
           }}
         >
-          <img src={dhMonogram} alt="" className="w-7 h-7 object-contain" style={{ filter: `drop-shadow(0 0 6px hsl(${accent} / 0.5))` }} />
+          <img src={dhMonogram} alt="" className="w-7 h-7 object-contain" style={{ filter: `drop-shadow(0 1px 3px hsl(${accent} / 0.4))` }} />
         </div>
-        <p className="text-[9px] font-extrabold uppercase tracking-[0.25em]" style={{ color: `hsl(${accent})` }}>
+        {/* Eyebrow uses the same type spec as SectionHeader so it visually
+            belongs to the same family. Centered version (the shared
+            component is justify-between for row layouts). */}
+        <p
+          className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] mb-1"
+          style={{ color: `hsl(${accent})` }}
+        >
           {isAdmin ? 'New Club · Set It Up' : 'New Club · Welcome'}
         </p>
         <h2 className="text-base font-extrabold tracking-tight mt-1">

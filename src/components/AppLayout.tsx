@@ -164,15 +164,22 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-      {/* Mobile top header with hamburger */}
+      {/* Mobile top header with hamburger.
+          Calm shell rules:
+          - Hamburger and profile tap targets are both 44×44 (Apple HIG min).
+          - Backdrop blur softened from 20px/180% to 16px/160% so the header
+            feels premium without dominating.
+          - Border opacity reduced to /25 to match the surrounding shell.
+          - Symmetric left/right padding keeps the right-side avatar from
+            feeling cramped against the screen edge or notch safe area. */}
       {showMobileHeader && (
         <header
-          className="lg:hidden sticky top-0 z-40 flex items-center gap-2 h-12 px-2 border-b border-border/30 bg-background/85"
+          className="lg:hidden sticky top-0 z-40 flex items-center gap-2 h-12 border-b border-border/25 bg-background/80"
           style={{
-            backdropFilter: 'blur(20px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+            backdropFilter: 'blur(16px) saturate(160%)',
+            WebkitBackdropFilter: 'blur(16px) saturate(160%)',
             paddingLeft: 'max(0.5rem, env(safe-area-inset-left, 0px))',
-            paddingRight: 'max(0.5rem, env(safe-area-inset-right, 0px))',
+            paddingRight: 'max(0.75rem, env(safe-area-inset-right, 0px))',
           }}
         >
           <button
@@ -186,7 +193,11 @@ function AppLayoutInner({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <h1 className="text-[15px] font-bold tracking-tight truncate">{mobileTitle}</h1>
           </div>
-          <Link to="/profile" className="p-1 rounded-full active:opacity-80" aria-label="Profile">
+          <Link
+            to="/profile"
+            aria-label="Profile"
+            className="rounded-full active:opacity-80 min-w-[44px] min-h-[44px] flex items-center justify-center -mr-1"
+          >
             {club?.logo_url ? (
               <img src={club.logo_url} alt="" className="w-8 h-8 rounded-full object-cover border border-border/40" />
             ) : (

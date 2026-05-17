@@ -16,6 +16,8 @@ import {
   useUpcomingCelebrations, useTodayCelebrations, type UpcomingCelebration,
 } from '@/hooks/useCelebrations';
 import { AddBirthdayModal } from './AddBirthdayModal';
+import { SectionHeader } from '@/components/home/SectionHeader';
+import { StatusPill } from '@/components/ui/status-pill';
 
 const CELEBRATION_ACCENT = '14 90% 60%'; // warm coral — celebratory but not garish
 
@@ -152,31 +154,25 @@ function TodayCard({ celebrations }: { celebrations: UpcomingCelebration[] }) {
 /* ─── Upcoming card ─────────────────────────────────────────────── */
 
 function UpcomingCard({ celebrations }: { celebrations: UpcomingCelebration[] }) {
+  // Passive section: neutral shell-card outer surface (warmth lives inside,
+  // in the avatar tiles + StatusPill for the close-by celebrations). Keeps
+  // birthdays from competing with urgent app actions on Home.
   const accent = CELEBRATION_ACCENT;
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      className="relative overflow-hidden rounded-2xl mb-4"
-      style={{
-        background: 'linear-gradient(180deg, hsl(var(--card)), hsl(var(--card) / 0.92))',
-        border: `1px solid hsl(${accent} / 0.28)`,
-      }}
+      className="relative overflow-hidden rounded-2xl mb-4 bg-card border border-border/40"
     >
-      <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border/15">
-        <div className="flex items-center gap-1.5">
-          <CalendarHeart className="w-3 h-3 flex-shrink-0" style={{ color: `hsl(${accent})` }} />
-          <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em]" style={{ color: `hsl(${accent})` }}>
-            Upcoming Celebrations
-          </p>
-        </div>
-        <Link
+      <div className="px-3.5 py-2.5 border-b border-border/15">
+        <SectionHeader
+          label="Upcoming Celebrations"
+          icon={CalendarHeart}
           to="/celebrations"
-          className="text-[9.5px] font-bold inline-flex items-center gap-0.5 text-muted-foreground/65 hover:text-foreground transition-colors"
-        >
-          View all <ChevronRight className="w-2.5 h-2.5" />
-        </Link>
+          linkLabel="View all"
+          className="mb-0"
+        />
       </div>
       <ul>
         {celebrations.map((c, idx) => (
@@ -189,7 +185,6 @@ function UpcomingCard({ celebrations }: { celebrations: UpcomingCelebration[] })
               className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{
                 background: `linear-gradient(135deg, hsl(${accent} / 0.20), hsl(${accent} / 0.04))`,
-                border: `1px solid hsl(${accent} / 0.28)`,
                 color: `hsl(${accent})`,
               }}
             >
@@ -202,16 +197,15 @@ function UpcomingCard({ celebrations }: { celebrations: UpcomingCelebration[] })
                 {c.subline}
               </p>
             </div>
-            <span
-              className="text-[10px] font-extrabold uppercase tracking-[0.12em] px-1.5 py-0.5 rounded-md flex-shrink-0"
-              style={{
-                background: c.daysAway <= 7 ? `hsl(${accent} / 0.16)` : 'hsl(var(--muted) / 0.45)',
-                color: c.daysAway <= 7 ? `hsl(${accent})` : 'hsl(var(--muted-foreground))',
-                border: c.daysAway <= 7 ? `1px solid hsl(${accent} / 0.32)` : '1px solid hsl(var(--border) / 0.3)',
-              }}
-            >
-              {c.daysAway === 1 ? 'Tomorrow' : c.daysAway <= 7 ? `${c.daysAway}d` : c.subline}
-            </span>
+            {c.daysAway <= 7 ? (
+              <StatusPill accent={accent} size="xs">
+                {c.daysAway === 1 ? 'Tomorrow' : `${c.daysAway}d`}
+              </StatusPill>
+            ) : (
+              <StatusPill variant="neutral" size="xs">
+                {c.subline}
+              </StatusPill>
+            )}
           </li>
         ))}
       </ul>

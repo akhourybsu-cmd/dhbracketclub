@@ -12,6 +12,7 @@ import { useCurrentDay, useMyLock, useDayLocks } from '@/hooks/useLockbox';
 import { useCurrentSeason, useSeasonEntries, getSeasonDraftTarget } from '@/hooks/useDraftSeasons';
 import { cn } from '@/lib/utils';
 import { useClubAssets } from '@/hooks/useClubAssets';
+import { StatusPill } from '@/components/ui/status-pill';
 import runedelveEmblem from '@/assets/runedelve-emblem.png';
 import nexusEmblem from '@/assets/nexus-emblem.png';
 import pickemEmblem from '@/assets/pickem-emblem.png';
@@ -45,7 +46,7 @@ function LockboxCompeteCard() {
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <h2 className="font-bold text-[15px] tracking-tight">DH Lockbox</h2>
-                <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-destructive/12 text-destructive">DAILY</span>
+                <StatusPill variant="danger" size="xs">Daily</StatusPill>
               </div>
               <p className="text-[11px] text-muted-foreground/70">{contextLine}</p>
             </div>
@@ -307,11 +308,13 @@ function PickemCompeteCard() {
                 className="relative w-[88px] h-[88px] object-contain drop-shadow-[0_4px_18px_hsl(45_95%_50%/0.55)]" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5 h-3">
+              <div className="flex items-center gap-2 mb-0.5">
                 <span className="text-[9px] font-extrabold uppercase tracking-[0.22em]" style={{ color: 'hsl(45 95% 65%)' }}>◆ NFL Pick'em</span>
-                {loading ? <span aria-hidden className="inline-block h-2.5 w-10 rounded-full pk-skeleton" />
-                  : isLive ? <span className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider" style={{ color: 'hsl(152 70% 65%)' }}><span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'hsl(152 70% 55%)' }} />Live</span>
-                  : null}
+                {loading ? (
+                  <span aria-hidden className="inline-block h-2.5 w-10 rounded-full pk-skeleton" />
+                ) : isLive ? (
+                  <StatusPill variant="live" size="xs" dot pulse>Live</StatusPill>
+                ) : null}
               </div>
               <h2 className="font-extrabold text-[22px] leading-none tracking-tight mb-1.5"
                 style={{ background: 'linear-gradient(180deg, hsl(45 30% 98%), hsl(45 95% 65%))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>

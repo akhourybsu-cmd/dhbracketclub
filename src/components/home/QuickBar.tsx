@@ -12,7 +12,7 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  Bookmark, Sparkles, Shield, Target, TrendingUp, Lock, Trophy,
+  Bookmark, TrendingUp, Lock, Trophy,
   MessageSquareText, CalendarDays, ScrollText, Newspaper, MessageCircle,
   BarChart3, FileText, Link2, Pencil,
 } from 'lucide-react';

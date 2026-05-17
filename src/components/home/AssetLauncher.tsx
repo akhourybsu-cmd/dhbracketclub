@@ -15,8 +15,9 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { SectionHeader } from './SectionHeader';
+import { StatusPill, type StatusPillVariant } from '@/components/ui/status-pill';
 import {
-  Bookmark, Sparkles, Shield, Target, TrendingUp, Lock, Trophy, MessageSquareText,
+  Bookmark, TrendingUp, Lock, Trophy, MessageSquareText,
   CalendarDays, ScrollText, Newspaper, MessageCircle, BarChart3, FileText, Link2,
   Plus,
 } from 'lucide-react';
@@ -62,11 +63,14 @@ const ASSET_META: Record<string, TileMeta> = {
   'shared-media':   { to: '/shared',          icon: Link2,            tint: '195 80% 65%' },
 };
 
-const TONE_HSL: Record<AssetStatusTone, string> = {
-  urgent: '45 100% 60%',  // gold — needs your attention
-  live:   '150 80% 60%',  // green pulse — something is happening
-  info:   '195 80% 65%',  // soft blue — informational
-  idle:   '0 0% 100% / 0.45',
+/** Map AssetLauncher's tone semantics onto the shared StatusPill variant
+ *  system, so every "live / your-turn / wave 24" chip across the app
+ *  speaks the same visual vocabulary. */
+const TONE_TO_VARIANT: Record<AssetStatusTone, StatusPillVariant> = {
+  urgent: 'pending', // amber, attention-grabbing
+  live:   'live',    // green, actively happening
+  info:   'info',    // soft blue, informational
+  idle:   'neutral',
 };
 
 export function AssetLauncher({ installedAssets, canManage, accent }: Props) {
@@ -198,18 +202,17 @@ function AssetTile({
           {name}
         </p>
 
-        {/* Status chip */}
+        {/* Status chip — semantic StatusPill so every tile speaks the same
+            visual vocabulary. Live / pending states pulse a small dot. */}
         {status ? (
-          <span
-            className="text-[8px] font-bold uppercase tracking-[0.12em] px-1.5 py-0.5 rounded-md leading-none truncate max-w-full"
-            style={{
-              background: `hsl(${TONE_HSL[status.tone]} / 0.16)`,
-              color: `hsl(${TONE_HSL[status.tone]})`,
-              border: `1px solid hsl(${TONE_HSL[status.tone]} / 0.32)`,
-            }}
+          <StatusPill
+            variant={TONE_TO_VARIANT[status.tone]}
+            size="xs"
+            dot={status.tone === 'live' || status.tone === 'urgent'}
+            pulse={status.tone === 'live' || status.tone === 'urgent'}
           >
             {status.text}
-          </span>
+          </StatusPill>
         ) : (
           <span className="text-[8px] font-medium text-muted-foreground/40 uppercase tracking-[0.18em]">
             Open
