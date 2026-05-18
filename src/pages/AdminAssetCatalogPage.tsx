@@ -9,7 +9,7 @@ import {
   Loader2, RefreshCw, BarChart3,
   Bookmark, Sparkles, Shield, Trophy, TrendingUp, Lock,
   MessageSquareText, CalendarDays, ScrollText, Newspaper,
-  MessageCircle, FileText, Link2, Star, Brackets,
+  MessageCircle, FileText, Link2, Star, Brackets, BookOpen,
 } from 'lucide-react';
 import type { PlatformAsset } from '@/types/assets';
 import { CATEGORY_META } from '@/types/assets';
@@ -17,7 +17,7 @@ import { CATEGORY_META } from '@/types/assets';
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Bookmark, Sparkles, Shield, Trophy, TrendingUp, Lock,
   MessageSquareText, CalendarDays, ScrollText, Newspaper,
-  MessageCircle, BarChart3, FileText, Link2, Star, Brackets,
+  MessageCircle, BarChart3, FileText, Link2, Star, Brackets, BookOpen,
 };
 
 interface AssetWithStats extends PlatformAsset {
