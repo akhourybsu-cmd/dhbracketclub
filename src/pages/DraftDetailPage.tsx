@@ -1081,6 +1081,7 @@ export default function DraftDetailPage() {
             <motion.div
               initial={{ opacity: 0, scale: 0.97 }}
               animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, y: 6, transition: { duration: 0.15 } }}
               transition={{ type: 'spring', stiffness: 220, damping: 22 }}
               className="relative overflow-hidden rounded-2xl mb-5"
               style={{
