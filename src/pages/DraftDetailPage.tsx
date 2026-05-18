@@ -1126,10 +1126,6 @@ export default function DraftDetailPage() {
                     <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 mt-0.5">
                       Round {currentRound} · Pick #{currentPickNumber}
                     </p>
-                    <OnTheClockTimer
-                      lastPickAt={picks.length > 0 ? (picks[picks.length - 1] as any)?.picked_at : null}
-                      draftStartedAt={draft?.updated_at}
-                    />
                   </>
                 ) : (
                   <>
@@ -1142,6 +1138,10 @@ export default function DraftDetailPage() {
                     </p>
                   </>
                 )}
+                <OnTheClockTimer
+                  lastPickAt={picks.length > 0 ? (picks[picks.length - 1] as any)?.picked_at : null}
+                  draftStartedAt={draft?.updated_at}
+                />
               </div>
             </motion.div>
           ) : (
