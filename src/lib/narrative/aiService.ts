@@ -24,6 +24,7 @@
 //     reviews & approves each one before the engine applies anything.
 //   • Player rewriting tools must never see GM-only context.
 
+import { supabase } from '@/integrations/supabase/client';
 import type { ChronicleStat, RollOutcome } from './chronicleRuleset';
 
 /** Returned when AI is not yet wired up. The UI checks this so it can
@@ -36,11 +37,15 @@ export function aiUnavailable(reason = 'AI provider not configured for this buil
   return { available: false, reason };
 }
 
-/** Top-level switch — flips to true once a real provider is wired in.
- *  Read by the UI to enable/disable AI buttons. Reads VITE_AI_PROVIDER
- *  if you want to flip it via env, otherwise stays false. */
+/** Top-level switch. The narrative-ai edge function is always deployed —
+ *  but the LOVABLE_API_KEY env var on the function side determines whether
+ *  it can actually call the model. The client-side switch lets us turn AI
+ *  on/off without redeploying the function: set
+ *      VITE_NARRATIVE_AI_ENABLED=1
+ *  to enable, leave unset to keep the AI panel in the friendly
+ *  "not configured" state. */
 export function isAiConfigured(): boolean {
-  return ((import.meta.env.VITE_AI_PROVIDER as string | undefined) ?? '').length > 0;
+  return ((import.meta.env.VITE_NARRATIVE_AI_ENABLED as string | undefined) ?? '').length > 0;
 }
 
 /* ─── Shared types ───────────────────────────────────────────── */
@@ -142,40 +147,69 @@ export const GM_TOOLS: GmToolMeta[] = [
 /* ─── GM AI invocation ────────────────────────────────────────── */
 
 /**
- * Stub: returns a clearly-marked placeholder so the UI degrades
- * gracefully when no AI provider is configured. Real implementation
- * should call a Supabase Edge Function passing the typed context above.
+ * Phase 2: invokes the `narrative-ai` edge function with full GM context.
+ * The function loads its own canonical campaign + memory + GM-only data
+ * server-side (using the caller's session for auth + service-role for
+ * data) — what we pass in `context` is hint metadata only, never trusted
+ * as authoritative state.
+ *
+ * Returns:
+ *   - AiSuggestion on success (draft + structured stateUpdates).
+ *   - AiUnavailable on any failure or when AI is gated off client-side.
  */
 export async function invokeGmTool(
   tool: GmToolKey,
   context: AiGmContext,
 ): Promise<AiSuggestion | AiUnavailable> {
-  if (!isAiConfigured()) {
-    return aiUnavailable();
+  if (!isAiConfigured()) return aiUnavailable();
+  try {
+    const { data, error } = await supabase.functions.invoke('narrative-ai', {
+      body: {
+        campaign_id: context.campaignId,
+        tool,
+        prompt: context.prompt ?? null,
+      },
+    });
+    if (error) return aiUnavailable(`AI gateway error: ${error.message ?? 'unknown'}`);
+    if (!data || typeof data !== 'object') return aiUnavailable('Empty AI response.');
+    if ('error' in data) return aiUnavailable(String((data as any).error));
+    return {
+      draft: String((data as any).draft ?? ''),
+      stateUpdates: Array.isArray((data as any).stateUpdates) ? (data as any).stateUpdates : [],
+      rationale: (data as any).rationale ? String((data as any).rationale) : undefined,
+    };
+  } catch (e) {
+    return aiUnavailable(`AI call failed: ${(e as Error).message}`);
   }
-  // Future: replace this branch with a real provider call.
-  // Example shape:
-  //   const { data, error } = await supabase.functions.invoke('narrative-ai-gm', {
-  //     body: { tool, context },
-  //   });
-  //   if (error) throw error;
-  //   return data as AiSuggestion;
-  return aiUnavailable('Reach AI provider here once the edge function is wired up.');
 }
 
 /* ─── Player AI invocation ────────────────────────────────────── */
 
 /**
- * Stub: same pattern as GM tool but with strictly public-scope context.
- * The implementation MUST refuse any request that touches hidden state.
+ * Phase 2: player AI assistant. The edge function loads only public
+ * scope server-side (no GM notes, no hidden clues/factions/clocks, no
+ * other players' private data) — even if the caller is technically the
+ * GM, this code path re-fetches with a public lens.
  */
 export async function invokePlayerTool(
   context: AiPlayerContext,
 ): Promise<{ draft: string } | AiUnavailable> {
-  if (!isAiConfigured()) {
-    return aiUnavailable();
+  if (!isAiConfigured()) return aiUnavailable();
+  try {
+    const { data, error } = await supabase.functions.invoke('narrative-ai', {
+      body: {
+        campaign_id: context.campaignId,
+        player: context.intent,
+        draft: context.draft,
+      },
+    });
+    if (error) return aiUnavailable(`AI gateway error: ${error.message ?? 'unknown'}`);
+    if (!data || typeof data !== 'object') return aiUnavailable('Empty AI response.');
+    if ('error' in data) return aiUnavailable(String((data as any).error));
+    return { draft: String((data as any).draft ?? '') };
+  } catch (e) {
+    return aiUnavailable(`AI call failed: ${(e as Error).message}`);
   }
-  return aiUnavailable('Reach AI provider here once the edge function is wired up.');
 }
 
 /* ─── Suggested resolution narration for a roll ───────────────── */
@@ -190,10 +224,14 @@ export interface RollResolutionContext {
 }
 
 export async function suggestRollResolution(
-  _ctx: RollResolutionContext,
+  ctx: RollResolutionContext & { campaignId?: string },
 ): Promise<{ draft: string } | AiUnavailable> {
-  if (!isAiConfigured()) {
-    return aiUnavailable();
-  }
-  return aiUnavailable();
+  if (!isAiConfigured() || !ctx.campaignId) return aiUnavailable();
+  // Roll resolution piggybacks on the resolve_roll GM tool.
+  const result = await invokeGmTool('resolve_roll', {
+    campaignId: ctx.campaignId,
+    prompt: `Roll outcome: ${ctx.outcome}. Stat: ${ctx.stat}. Reason: ${ctx.reason ?? ''}. Character: ${ctx.characterName ?? ''}.`,
+  });
+  if ('available' in result && result.available === false) return result;
+  return { draft: (result as AiSuggestion).draft };
 }

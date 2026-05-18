@@ -14,7 +14,7 @@ import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import {
   X, Megaphone, Users, KeyRound, Backpack, ShieldAlert, Clock as ClockIcon,
-  BookOpenText, StickyNote, Sparkles, PlusCircle, AlertCircle,
+  BookOpenText, StickyNote, Sparkles, PlusCircle, AlertCircle, Bookmark, Pencil,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,15 +22,23 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { StatusPill } from '@/components/ui/status-pill';
 import { ClockCard } from './ClockCard';
-import { GM_TOOLS, isAiConfigured } from '@/lib/narrative/aiService';
+import {
+  EntityEditSheet, NPC_SCHEMA, CLUE_SCHEMA, ITEM_SCHEMA, FACTION_SCHEMA,
+  CLOCK_SCHEMA, SCENE_SCHEMA,
+} from './EntityEditSheet';
+import { ChapterSheet } from './ChapterSheet';
+import { SceneSummaryWizard } from './SceneSummaryWizard';
+import { GM_TOOLS, isAiConfigured, invokeGmTool, type AiSuggestion } from '@/lib/narrative/aiService';
+import { applyStateUpdates } from '@/lib/narrative/applyStateUpdates';
 import type {
   Campaign, Scene, NPC, Clue, Faction, Clock, Item, Location as NarrativeLocation, AiSuggestionRow,
 } from '@/lib/narrative/types';
 
-type TabKey = 'scene' | 'npcs' | 'clues' | 'items' | 'factions' | 'clocks' | 'memory' | 'notes' | 'ai';
+type TabKey = 'scene' | 'chapters' | 'npcs' | 'clues' | 'items' | 'factions' | 'clocks' | 'memory' | 'notes' | 'ai';
 
 const TABS: { key: TabKey; label: string; icon: typeof Megaphone }[] = [
   { key: 'scene',    label: 'Scene',    icon: Megaphone },
+  { key: 'chapters', label: 'Chapters', icon: Bookmark },
   { key: 'npcs',     label: 'NPCs',     icon: Users },
   { key: 'clues',    label: 'Clues',    icon: KeyRound },
   { key: 'items',    label: 'Items',    icon: Backpack },
@@ -62,11 +70,16 @@ interface Props {
   onCreateClue: (input: { name: string; description?: string; visibility?: 'public' | 'gm_only'; importance?: 'low' | 'normal' | 'high' }) => Promise<unknown>;
   onCreateFaction: (input: { name: string; description?: string; visibility?: 'public' | 'gm_only' }) => Promise<unknown>;
   onCreateItem: (input: { name: string; description?: string; visibility?: 'public' | 'gm_only' }) => Promise<unknown>;
+  /** Called after the GM applies a state-update set so parent can refresh. */
+  onChanged?: () => void;
 }
 
 export function GMConsoleSheet(props: Props) {
   const { open, onClose } = props;
   const [tab, setTab] = useState<TabKey>('scene');
+  const [editTarget, setEditTarget] = useState<{ table: string; label: string; row: any; schema: any } | null>(null);
+  const [chaptersOpen, setChaptersOpen] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(false);
 
   if (!open || typeof document === 'undefined') return null;
 
@@ -124,16 +137,47 @@ export function GMConsoleSheet(props: Props) {
 
         {/* Tab content */}
         <div className="flex-1 overflow-y-auto px-4 py-4">
-          {tab === 'scene'    && <SceneTab {...props} />}
-          {tab === 'npcs'     && <NpcsTab {...props} />}
-          {tab === 'clues'    && <CluesTab {...props} />}
-          {tab === 'items'    && <ItemsTab {...props} />}
-          {tab === 'factions' && <FactionsTab {...props} />}
-          {tab === 'clocks'   && <ClocksTab {...props} />}
-          {tab === 'memory'   && <MemoryTab {...props} />}
-          {tab === 'notes'    && <NotesTab {...props} />}
-          {tab === 'ai'       && <AiTab {...props} />}
+          {tab === 'scene'    && <SceneTab {...props} onEditScene={(s) => setEditTarget({ table: 'narrative_scenes', label: 'Edit scene', row: s, schema: SCENE_SCHEMA })} />}
+          {tab === 'chapters' && <ChaptersTab onOpenChapters={() => setChaptersOpen(true)} />}
+          {tab === 'npcs'     && <NpcsTab     {...props} onEdit={(n) => setEditTarget({ table: 'narrative_npcs',     label: 'Edit NPC',     row: n, schema: NPC_SCHEMA })} />}
+          {tab === 'clues'    && <CluesTab    {...props} onEdit={(c) => setEditTarget({ table: 'narrative_clues',    label: 'Edit clue',    row: c, schema: CLUE_SCHEMA })} />}
+          {tab === 'items'    && <ItemsTab    {...props} onEdit={(i) => setEditTarget({ table: 'narrative_items',    label: 'Edit item',    row: i, schema: ITEM_SCHEMA })} />}
+          {tab === 'factions' && <FactionsTab {...props} onEdit={(f) => setEditTarget({ table: 'narrative_factions', label: 'Edit faction', row: f, schema: FACTION_SCHEMA })} />}
+          {tab === 'clocks'   && <ClocksTab   {...props} onEdit={(c) => setEditTarget({ table: 'narrative_clocks',   label: 'Edit clock',   row: c, schema: CLOCK_SCHEMA })} />}
+          {tab === 'memory'   && <MemoryTab   {...props} onSummarize={() => setSummaryOpen(true)} />}
+          {tab === 'notes'    && <NotesTab    {...props} />}
+          {tab === 'ai'       && <AiTab       {...props} />}
         </div>
+
+        {/* Edit sheet — opens over the console for the row tapped. */}
+        {editTarget && (
+          <EntityEditSheet
+            open
+            onClose={() => setEditTarget(null)}
+            table={editTarget.table}
+            entityLabel={editTarget.label}
+            row={editTarget.row}
+            schema={editTarget.schema}
+            onSaved={() => { setEditTarget(null); props.onChanged?.(); }}
+          />
+        )}
+
+        {/* Chapter management drawer */}
+        <ChapterSheet
+          open={chaptersOpen}
+          onClose={() => setChaptersOpen(false)}
+          campaign={props.campaign}
+          onChanged={props.onChanged}
+        />
+
+        {/* Scene summary wizard */}
+        <SceneSummaryWizard
+          open={summaryOpen}
+          onClose={() => setSummaryOpen(false)}
+          campaign={props.campaign}
+          currentScene={props.currentScene}
+          onApplied={props.onChanged}
+        />
       </motion.div>
     </motion.div>,
     document.body,
@@ -142,7 +186,7 @@ export function GMConsoleSheet(props: Props) {
 
 /* ─── Scene tab ───────────────────────────────────────────────── */
 
-function SceneTab({ currentScene, onCreateScene, onEndScene }: Props) {
+function SceneTab({ currentScene, onCreateScene, onEndScene, onEditScene }: Props & { onEditScene?: (s: Scene) => void }) {
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
   const [objective, setObjective] = useState('');
@@ -174,13 +218,24 @@ function SceneTab({ currentScene, onCreateScene, onEndScene }: Props) {
           <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-gold">Active scene</p>
           <h3 className="text-[14px] font-extrabold tracking-tight mt-0.5">{currentScene.title}</h3>
           {currentScene.objective && <p className="text-[11px] text-foreground/80 mt-1">{currentScene.objective}</p>}
-          <button
-            type="button"
-            onClick={() => onEndScene(currentScene.id)}
-            className="mt-3 w-full h-9 rounded-lg bg-muted/40 border border-border/40 text-[11px] font-extrabold uppercase tracking-wider active:scale-[0.98] transition"
-          >
-            End scene
-          </button>
+          <div className="mt-3 flex gap-1.5">
+            {onEditScene && (
+              <button
+                type="button"
+                onClick={() => onEditScene(currentScene)}
+                className="flex-1 h-9 rounded-lg bg-muted/40 border border-border/40 text-[11px] font-extrabold uppercase tracking-wider active:scale-[0.98] transition inline-flex items-center justify-center gap-1"
+              >
+                <Pencil className="w-3 h-3" /> Edit
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => onEndScene(currentScene.id)}
+              className="flex-1 h-9 rounded-lg bg-muted/40 border border-border/40 text-[11px] font-extrabold uppercase tracking-wider active:scale-[0.98] transition"
+            >
+              End scene
+            </button>
+          </div>
         </div>
       )}
 
@@ -243,14 +298,19 @@ function SimpleCreate({ label, onCreate, placeholder, descPlaceholder, gmOnly = 
   );
 }
 
-function NpcsTab({ npcs, onCreateNpc }: Props) {
+function NpcsTab({ npcs, onCreateNpc, onEdit }: Props & { onEdit?: (n: NPC) => void }) {
   return (
     <div className="space-y-3">
       <SimpleCreate label="NPC" onCreate={onCreateNpc as any} placeholder="NPC name" descPlaceholder="Short description / role" />
       <div className="space-y-1.5">
         {npcs.length === 0 && <EmptyHint message="No NPCs yet." />}
         {npcs.map(n => (
-          <div key={n.id} className="rounded-xl bg-card border border-border/40 p-2.5 flex items-start gap-2">
+          <button
+            type="button"
+            key={n.id}
+            onClick={() => onEdit?.(n)}
+            className="w-full text-left rounded-xl bg-card border border-border/40 p-2.5 flex items-start gap-2 active:scale-[0.99] transition"
+          >
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 <span className="text-[12.5px] font-extrabold truncate">{n.name}</span>
@@ -259,80 +319,105 @@ function NpcsTab({ npcs, onCreateNpc }: Props) {
               {n.role && <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/65">{n.role}</p>}
               {n.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{n.description}</p>}
             </div>
-          </div>
+            <Pencil className="w-3 h-3 text-muted-foreground/55 mt-1 flex-shrink-0" />
+          </button>
         ))}
       </div>
     </div>
   );
 }
 
-function CluesTab({ clues, onCreateClue }: Props) {
+function CluesTab({ clues, onCreateClue, onEdit }: Props & { onEdit?: (c: Clue) => void }) {
   return (
     <div className="space-y-3">
       <SimpleCreate label="clue" onCreate={onCreateClue as any} placeholder="Clue name" descPlaceholder="What the clue tells the party" />
       <div className="space-y-1.5">
         {clues.length === 0 && <EmptyHint message="No clues discovered yet." />}
         {clues.map(c => (
-          <div key={c.id} className="rounded-xl bg-card border border-border/40 p-2.5">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[12.5px] font-extrabold truncate">{c.name}</span>
-              <StatusPill variant={c.status === 'solved' ? 'success' : c.status === 'false_lead' ? 'danger' : c.status === 'partial' ? 'warning' : 'info'} size="xs">
-                {c.status.replace('_', ' ')}
-              </StatusPill>
-              {c.visibility === 'gm_only' && <StatusPill variant="disabled" size="xs">GM only</StatusPill>}
+          <button
+            type="button"
+            key={c.id}
+            onClick={() => onEdit?.(c)}
+            className="w-full text-left rounded-xl bg-card border border-border/40 p-2.5 flex items-start gap-2 active:scale-[0.99] transition"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[12.5px] font-extrabold truncate">{c.name}</span>
+                <StatusPill variant={c.status === 'solved' ? 'success' : c.status === 'false_lead' ? 'danger' : c.status === 'partial' ? 'warning' : 'info'} size="xs">
+                  {c.status.replace('_', ' ')}
+                </StatusPill>
+                {c.visibility === 'gm_only' && <StatusPill variant="disabled" size="xs">GM only</StatusPill>}
+              </div>
+              {c.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{c.description}</p>}
             </div>
-            {c.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{c.description}</p>}
-          </div>
+            <Pencil className="w-3 h-3 text-muted-foreground/55 mt-1 flex-shrink-0" />
+          </button>
         ))}
       </div>
     </div>
   );
 }
 
-function ItemsTab({ items, onCreateItem }: Props) {
+function ItemsTab({ items, onCreateItem, onEdit }: Props & { onEdit?: (i: Item) => void }) {
   return (
     <div className="space-y-3">
       <SimpleCreate label="item" onCreate={onCreateItem as any} placeholder="Item name" descPlaceholder="Description / use" />
       <div className="space-y-1.5">
         {items.length === 0 && <EmptyHint message="No important items yet." />}
         {items.map(i => (
-          <div key={i.id} className="rounded-xl bg-card border border-border/40 p-2.5">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[12.5px] font-extrabold truncate">{i.name}</span>
-              {i.visibility === 'gm_only' && <StatusPill variant="disabled" size="xs">GM only</StatusPill>}
+          <button
+            type="button"
+            key={i.id}
+            onClick={() => onEdit?.(i)}
+            className="w-full text-left rounded-xl bg-card border border-border/40 p-2.5 flex items-start gap-2 active:scale-[0.99] transition"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[12.5px] font-extrabold truncate">{i.name}</span>
+                {i.visibility === 'gm_only' && <StatusPill variant="disabled" size="xs">GM only</StatusPill>}
+              </div>
+              {i.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{i.description}</p>}
             </div>
-            {i.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{i.description}</p>}
-          </div>
+            <Pencil className="w-3 h-3 text-muted-foreground/55 mt-1 flex-shrink-0" />
+          </button>
         ))}
       </div>
     </div>
   );
 }
 
-function FactionsTab({ factions, onCreateFaction }: Props) {
+function FactionsTab({ factions, onCreateFaction, onEdit }: Props & { onEdit?: (f: Faction) => void }) {
   return (
     <div className="space-y-3">
       <SimpleCreate label="faction" onCreate={onCreateFaction as any} placeholder="Faction name" descPlaceholder="Who they are, what they want" />
       <div className="space-y-1.5">
         {factions.length === 0 && <EmptyHint message="No factions have entered the story yet." />}
         {factions.map(f => (
-          <div key={f.id} className="rounded-xl bg-card border border-border/40 p-2.5">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[12.5px] font-extrabold truncate">{f.name}</span>
-              {f.visibility === 'gm_only' && <StatusPill variant="disabled" size="xs">GM only</StatusPill>}
+          <button
+            type="button"
+            key={f.id}
+            onClick={() => onEdit?.(f)}
+            className="w-full text-left rounded-xl bg-card border border-border/40 p-2.5 flex items-start gap-2 active:scale-[0.99] transition"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[12.5px] font-extrabold truncate">{f.name}</span>
+                {f.visibility === 'gm_only' && <StatusPill variant="disabled" size="xs">GM only</StatusPill>}
+              </div>
+              <p className="text-[10px] font-bold text-muted-foreground/70 mt-0.5">
+                Relationship <span className="tabular-nums">{f.relationship_score}</span> · Suspicion <span className="tabular-nums">{f.suspicion_score}</span>
+              </p>
+              {f.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{f.description}</p>}
             </div>
-            <p className="text-[10px] font-bold text-muted-foreground/70 mt-0.5">
-              Relationship <span className="tabular-nums">{f.relationship_score}</span> · Suspicion <span className="tabular-nums">{f.suspicion_score}</span>
-            </p>
-            {f.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{f.description}</p>}
-          </div>
+            <Pencil className="w-3 h-3 text-muted-foreground/55 mt-1 flex-shrink-0" />
+          </button>
         ))}
       </div>
     </div>
   );
 }
 
-function ClocksTab({ clocks, onCreateClock, onAdvanceClock }: Props) {
+function ClocksTab({ clocks, onCreateClock, onAdvanceClock, onEdit }: Props & { onEdit?: (c: Clock) => void }) {
   const [name, setName] = useState('');
   const [maxVal, setMaxVal] = useState(6);
   const [clockType, setClockType] = useState<Clock['clock_type']>('danger');
@@ -381,25 +466,71 @@ function ClocksTab({ clocks, onCreateClock, onAdvanceClock }: Props) {
       <div className="space-y-2">
         {clocks.length === 0 && <EmptyHint message="No clocks yet." />}
         {clocks.map(c => (
-          <ClockCard key={c.id} clock={c} showVisibility onAdvance={delta => onAdvanceClock(c.id, delta)} />
+          <div key={c.id} className="relative">
+            <ClockCard clock={c} showVisibility onAdvance={delta => onAdvanceClock(c.id, delta)} />
+            {onEdit && (
+              <button
+                type="button"
+                onClick={() => onEdit(c)}
+                aria-label="Edit clock"
+                className="absolute top-2 right-2 w-7 h-7 rounded-md bg-muted/30 border border-border/40 text-muted-foreground/65 active:scale-90 flex items-center justify-center"
+              >
+                <Pencil className="w-3 h-3" />
+              </button>
+            )}
+          </div>
         ))}
       </div>
     </div>
   );
 }
 
-function MemoryTab({ campaign }: Props) {
+/* ─── Chapters tab — just a launcher into the chapter sheet ── */
+
+function ChaptersTab({ onOpenChapters }: { onOpenChapters: () => void }) {
   return (
-    <div className="space-y-2">
-      <EmptyHint message="No memory has been saved yet. Summarize a scene to begin building the campaign record." />
-      <p className="text-[10.5px] text-muted-foreground/65 leading-snug">
-        Campaign memory is updated <span className="font-bold text-foreground/80">manually</span> — never auto-saved. Use the AI tab to draft a scene summary, review the result, then approve it into memory.
+    <div className="space-y-3">
+      <p className="text-[12px] text-foreground/85 leading-relaxed">
+        Group scenes into chapters — major story arcs. Starting a chapter posts a transition into the story chat so async players see the structure.
       </p>
-      {campaign.memory_summary && (
-        <div className="rounded-xl bg-card border border-border/40 p-3 mt-3">
+      <button
+        type="button"
+        onClick={onOpenChapters}
+        className="w-full h-11 rounded-xl text-[12.5px] font-extrabold inline-flex items-center justify-center gap-1.5 active:scale-[0.98] transition"
+        style={{ background: 'hsl(var(--primary) / 0.18)', color: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary) / 0.4)' }}
+      >
+        <Bookmark className="w-3.5 h-3.5" /> Open chapter manager
+      </button>
+    </div>
+  );
+}
+
+function MemoryTab({ campaign, onSummarize }: Props & { onSummarize?: () => void }) {
+  const configured = isAiConfigured();
+  return (
+    <div className="space-y-3">
+      <p className="text-[12px] text-foreground/85 leading-relaxed">
+        Campaign memory is updated <span className="font-extrabold">manually</span> — never auto-saved. Draft a summary, review the proposed memory changes, then approve.
+      </p>
+      <button
+        type="button"
+        onClick={onSummarize}
+        disabled={!configured}
+        className="w-full h-11 rounded-xl text-[12.5px] font-extrabold inline-flex items-center justify-center gap-1.5 active:scale-[0.98] transition disabled:opacity-55"
+        style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85))', color: 'hsl(var(--primary-foreground))' }}
+      >
+        <Sparkles className="w-3.5 h-3.5" /> Summarize scene → memory
+      </button>
+      {!configured && (
+        <p className="text-[10.5px] text-muted-foreground/70">AI provider not configured. Wire LOVABLE_API_KEY on the narrative-ai edge function + VITE_NARRATIVE_AI_ENABLED on the client to enable.</p>
+      )}
+      {campaign.memory_summary ? (
+        <div className="rounded-xl bg-card border border-border/40 p-3">
           <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-muted-foreground/70">Current summary</p>
           <p className="text-[12px] text-foreground/85 leading-snug mt-1 whitespace-pre-wrap">{campaign.memory_summary}</p>
         </div>
+      ) : (
+        <EmptyHint message="No memory has been saved yet. Summarize a scene to begin building the campaign record." />
       )}
     </div>
   );
@@ -411,6 +542,63 @@ function NotesTab({}: Props) {
 
 function AiTab(props: Props) {
   const configured = isAiConfigured();
+  const [busyTool, setBusyTool] = useState<string | null>(null);
+  const [lastDraft, setLastDraft] = useState<AiSuggestion | null>(null);
+
+  const runTool = async (toolKey: string) => {
+    setBusyTool(toolKey);
+    setLastDraft(null);
+    const result = await invokeGmTool(toolKey as any, { campaignId: props.campaign.id });
+    setBusyTool(null);
+    if ('available' in result && result.available === false) {
+      toast.error(result.reason);
+      return;
+    }
+    setLastDraft(result as AiSuggestion);
+  };
+
+  const applyDraft = async () => {
+    if (!lastDraft) return;
+    // Persist as an AI suggestion row for audit trail.
+    const { data: claims } = await (window as any).supabaseClient?.auth.getUser?.() ?? { data: null };
+    try {
+      const sb = (await import('@/integrations/supabase/client')).supabase as any;
+      const me = (await sb.auth.getUser()).data.user;
+      await sb.from('narrative_ai_suggestions').insert({
+        campaign_id: props.campaign.id,
+        created_by: me?.id ?? null,
+        suggestion_type: 'gm_draft',
+        suggested_content: lastDraft.draft,
+        suggested_state_updates: lastDraft.stateUpdates,
+        status: 'pending',
+      });
+      toast.success('Added to review queue.');
+    } catch (e) {
+      toast.error('Couldn\'t save to queue.');
+    }
+    setLastDraft(null);
+  };
+
+  const decide = async (id: string, decision: 'approved' | 'rejected') => {
+    const sb = (await import('@/integrations/supabase/client')).supabase as any;
+    if (decision === 'approved') {
+      const row = props.aiSuggestions.find(s => s.id === id);
+      if (row && Array.isArray(row.suggested_state_updates) && row.suggested_state_updates.length > 0) {
+        const results = await applyStateUpdates(props.campaign.id, row.suggested_state_updates as any);
+        const failed = results.filter(r => !r.ok);
+        if (failed.length) toast.warning(`Applied ${results.length - failed.length} of ${results.length}.`);
+      }
+    }
+    const me = (await sb.auth.getUser()).data.user;
+    await sb.from('narrative_ai_suggestions').update({
+      status: decision,
+      reviewed_by: me?.id ?? null,
+      reviewed_at: new Date().toISOString(),
+    }).eq('id', id);
+    props.onChanged?.();
+    toast.success(decision === 'approved' ? 'Approved + applied.' : 'Rejected.');
+  };
+
   return (
     <div className="space-y-3">
       {!configured && (
@@ -419,7 +607,7 @@ function AiTab(props: Props) {
           <div>
             <p className="text-[11.5px] font-extrabold">AI provider not configured</p>
             <p className="text-[10.5px] text-muted-foreground/75 leading-snug mt-0.5">
-              These tools are wired up and ready — once your edge function is connected, every button below will return drafts + structured state-update suggestions for you to review.
+              Set <code className="font-mono">LOVABLE_API_KEY</code> on the <code className="font-mono">narrative-ai</code> edge function and <code className="font-mono">VITE_NARRATIVE_AI_ENABLED=1</code> on the client.
             </p>
           </div>
         </div>
@@ -432,15 +620,31 @@ function AiTab(props: Props) {
           <button
             key={t.key}
             type="button"
-            disabled={!configured}
-            onClick={() => toast.info('AI provider not configured.')}
+            disabled={!configured || !!busyTool}
+            onClick={() => runTool(t.key)}
             className="text-left rounded-xl bg-card border border-border/40 p-2.5 active:scale-[0.98] transition disabled:opacity-55"
           >
             <p className="text-[12px] font-extrabold">{t.label}</p>
             <p className="text-[10px] text-muted-foreground/70 leading-snug mt-0.5">{t.description}</p>
+            {busyTool === t.key && <p className="text-[9.5px] text-primary mt-1">working…</p>}
           </button>
         ))}
       </div>
+
+      {/* Just-generated draft preview */}
+      {lastDraft && (
+        <div className="rounded-xl border border-primary/40 bg-primary/5 p-3">
+          <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-primary">Latest draft</p>
+          <p className="text-[12px] text-foreground/85 leading-snug mt-1 whitespace-pre-wrap">{lastDraft.draft}</p>
+          {lastDraft.stateUpdates.length > 0 && (
+            <p className="text-[10.5px] text-muted-foreground/75 mt-1">+ {lastDraft.stateUpdates.length} state update suggestion{lastDraft.stateUpdates.length === 1 ? '' : 's'}</p>
+          )}
+          <div className="flex gap-2 mt-2">
+            <button onClick={() => setLastDraft(null)} className="flex-1 h-8 rounded-md text-[10.5px] font-bold bg-muted/40 border border-border/40">Discard</button>
+            <button onClick={applyDraft} className="flex-1 h-8 rounded-md text-[10.5px] font-extrabold" style={{ background: 'hsl(var(--primary) / 0.18)', color: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary) / 0.4)' }}>Add to queue</button>
+          </div>
+        </div>
+      )}
 
       {/* Suggestion review queue */}
       <div>
@@ -451,14 +655,14 @@ function AiTab(props: Props) {
           <div className="space-y-2">
             {props.aiSuggestions.filter(s => s.status === 'pending').map(s => (
               <div key={s.id} className="rounded-xl bg-card border border-border/40 p-3">
-                <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-primary">{s.suggestion_type.replace('_', ' ')}</p>
+                <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-primary">{s.suggestion_type.replace(/_/g, ' ')}</p>
                 <p className="text-[12px] text-foreground/85 leading-snug mt-1 whitespace-pre-wrap">{s.suggested_content}</p>
                 {Array.isArray(s.suggested_state_updates) && s.suggested_state_updates.length > 0 && (
                   <p className="text-[10.5px] text-muted-foreground/70 mt-1">{s.suggested_state_updates.length} state update{s.suggested_state_updates.length === 1 ? '' : 's'} proposed</p>
                 )}
                 <div className="flex gap-2 mt-2">
-                  <button className="flex-1 h-8 rounded-md text-[10.5px] font-bold bg-muted/40 border border-border/40">Reject</button>
-                  <button className="flex-1 h-8 rounded-md text-[10.5px] font-extrabold" style={{ background: 'hsl(var(--primary) / 0.18)', color: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary) / 0.4)' }}>Approve</button>
+                  <button onClick={() => decide(s.id, 'rejected')} className="flex-1 h-8 rounded-md text-[10.5px] font-bold bg-muted/40 border border-border/40">Reject</button>
+                  <button onClick={() => decide(s.id, 'approved')} className="flex-1 h-8 rounded-md text-[10.5px] font-extrabold" style={{ background: 'hsl(var(--primary) / 0.18)', color: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary) / 0.4)' }}>Approve + apply</button>
                 </div>
               </div>
             ))}

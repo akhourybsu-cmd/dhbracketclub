@@ -10,7 +10,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ChevronLeft, ScrollText, MessageSquareText, Users, Globe2, ListChecks,
-  Sparkles, Plus, UserPlus,
+  Sparkles, Plus, UserPlus, Settings2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,10 +21,13 @@ import { StoryChat } from '@/components/narrative/StoryChat';
 import { CharacterCreationSheet } from '@/components/narrative/CharacterCreationSheet';
 import { CharacterSheetCard } from '@/components/narrative/CharacterSheetCard';
 import { GMConsoleSheet } from '@/components/narrative/GMConsoleSheet';
+import { MemberManagementSheet } from '@/components/narrative/MemberManagementSheet';
+import { LiveSessionControls } from '@/components/narrative/LiveSessionControls';
 import { ClockCard } from '@/components/narrative/ClockCard';
 import { SectionHeader } from '@/components/home/SectionHeader';
 import { StatusPill } from '@/components/ui/status-pill';
 import { getTemplate, type TemplateKey } from '@/lib/narrative/templates';
+import { computeCampaignStatus } from '@/lib/narrative/campaignStatus';
 
 type Tab = 'story' | 'characters' | 'world' | 'log';
 
@@ -37,6 +40,7 @@ export default function NarrativeCampaignDetailPage() {
   const [tab, setTab] = useState<Tab>('story');
   const [creatingChar, setCreatingChar] = useState(false);
   const [gmOpen, setGmOpen] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
 
   const isActive = data.campaign?.status === 'active' || data.campaign?.status === 'paused';
 
@@ -86,14 +90,24 @@ export default function NarrativeCampaignDetailPage() {
           <div className="flex items-center gap-1.5">
             <h1 className="text-[14px] font-extrabold tracking-tight truncate">{campaign.title}</h1>
             <CampaignStatusPill
-              status={campaign.status === 'active' && campaign.live_session_id ? 'live' : campaign.status}
-              withPulse={campaign.status === 'active'}
+              status={computeCampaignStatus({ campaign, recentMessages: data.messages })}
+              withPulse
             />
           </div>
           <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/65">
             {template.name}
           </p>
         </div>
+        {(data.isGm || data.myRole === 'game_master') && isActive && (
+          <button
+            type="button"
+            onClick={() => setMembersOpen(true)}
+            aria-label="Manage members"
+            className="h-9 w-9 rounded-lg text-muted-foreground/75 bg-muted/30 border border-border/40 inline-flex items-center justify-center active:scale-95 transition"
+          >
+            <Settings2 className="w-3.5 h-3.5" />
+          </button>
+        )}
         {data.isGm && isActive && (
           <button
             type="button"
@@ -169,6 +183,19 @@ export default function NarrativeCampaignDetailPage() {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* Live session strip — shown on active campaigns when GM (controls)
+          OR for everyone if already live (read-only "Live Now" pill). */}
+      {isActive && (data.isGm || campaign.live_session_id) && (
+        <div className="px-3 py-2 border-b border-border/15 flex items-center gap-2">
+          <LiveSessionControls
+            campaign={campaign}
+            currentScene={data.currentScene}
+            onChanged={data.refresh}
+            readOnly={!data.isGm}
+          />
         </div>
       )}
 
@@ -349,6 +376,17 @@ export default function NarrativeCampaignDetailPage() {
           onCreateClue={data.createClue as any}
           onCreateFaction={data.createFaction as any}
           onCreateItem={data.createItem as any}
+          onChanged={data.refresh}
+        />
+      )}
+      {/* Member management — GM or admin only. */}
+      {data.isGm && (
+        <MemberManagementSheet
+          open={membersOpen}
+          onClose={() => setMembersOpen(false)}
+          campaign={campaign}
+          members={data.members}
+          onChanged={data.refresh}
         />
       )}
     </div>

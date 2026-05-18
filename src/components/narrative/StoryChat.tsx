@@ -8,12 +8,14 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Dices, Megaphone, MessageCircle, Sparkles, Lock, ChevronDown, EyeOff } from 'lucide-react';
+import { Send, Dices, Megaphone, MessageCircle, Sparkles, Lock, ChevronDown, EyeOff, Wand2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Textarea } from '@/components/ui/textarea';
 import { SceneMessage } from './SceneMessage';
 import { DiceRollSheet } from './DiceRollSheet';
 import { ClockCard } from './ClockCard';
+import { PlayerAiAssistMenu } from './PlayerAiAssistMenu';
+import { isAiConfigured } from '@/lib/narrative/aiService';
 import type { Campaign, Character, CampaignMember, Message, MessageType, Scene, Clock } from '@/lib/narrative/types';
 
 interface Props {
@@ -48,7 +50,9 @@ export function StoryChat({
   const [draft, setDraft] = useState('');
   const [mode, setMode] = useState<PostMode>('character');
   const [rollOpen, setRollOpen] = useState(false);
+  const [aiAssistOpen, setAiAssistOpen] = useState(false);
   const [sending, setSending] = useState(false);
+  const aiEnabled = isAiConfigured();
   const [autoScroll, setAutoScroll] = useState(true);
   const endRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -239,6 +243,18 @@ export function StoryChat({
               if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
             }}
           />
+          {/* Player AI assist — only for players (incl. GM playing) when AI is enabled. */}
+          {myRole !== 'spectator' && aiEnabled && (
+            <button
+              type="button"
+              onClick={() => setAiAssistOpen(true)}
+              aria-label="Help me write"
+              className="flex-shrink-0 w-11 h-11 rounded-xl bg-muted/30 border border-border/40 flex items-center justify-center text-foreground/75 active:scale-95 transition"
+              title="Help me write"
+            >
+              <Wand2 className="w-4 h-4" />
+            </button>
+          )}
           {myRole !== 'spectator' && (
             <button
               type="button"
@@ -272,6 +288,14 @@ export function StoryChat({
         character={myCharacter}
         isGm={isGm}
         onRoll={async input => { await onRoll(input as any); }}
+      />
+      <PlayerAiAssistMenu
+        open={aiAssistOpen}
+        onClose={() => setAiAssistOpen(false)}
+        campaignId={campaign.id}
+        character={myCharacter}
+        draft={draft}
+        onApply={next => setDraft(next)}
       />
     </div>
   );
