@@ -1,16 +1,18 @@
 // DH Club — Narrative RPG · Campaign list + create + approval hooks
 //
 // One hook returns the campaigns visible to the current user in the
-// active club (RLS does the heavy lifting). Mutators handle the creation
-// + approval lifecycle. All mutators write an audit row to
-// `narrative_approval_events` so the workflow stays auditable.
+// active club (RLS does the heavy lifting). Mutators delegate to two
+// SECURITY DEFINER RPCs (`create_narrative_campaign` and
+// `transition_narrative_campaign`) so that the campaign insert / status
+// change is atomic with the GM-membership row and the audit-trail
+// entry. The client no longer needs to coordinate three separate
+// writes.
 //
-// Optimistic updates: campaign creation is a single insert + member row
-// — no need for rollback gymnastics. Approval transitions write the
-// audit row in the same call but don't roll back the campaign update on
-// audit-row failure (the campaign change is authoritative).
+// All mutator errors are surfaced via the returned `error` field AND
+// toasted by the caller — the prior "silent setError + generic toast"
+// pattern masked the missing-schema bug for an entire review cycle.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useClub } from '@/contexts/ClubContext';
@@ -54,6 +56,7 @@ export function useNarrativeCampaigns(): UseNarrativeCampaignsResult {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const refreshRef = useRef<() => Promise<void>>();
 
   const refresh = useCallback(async () => {
     if (!user || !club?.id) return;
@@ -66,6 +69,8 @@ export function useNarrativeCampaigns(): UseNarrativeCampaignsResult {
       .eq('club_id', club.id)
       .order('updated_at', { ascending: false });
     if (dbErr) {
+      // Surface the real Postgres message so missing-table / RLS errors
+      // are visible during dev (the old behavior swallowed them).
       setError(dbErr.message);
       setLoading(false);
       return;
@@ -74,102 +79,103 @@ export function useNarrativeCampaigns(): UseNarrativeCampaignsResult {
     setLoading(false);
   }, [user, club?.id]);
 
+  // Mirror refresh in a ref so the realtime subscription can call the
+  // latest version without re-subscribing every render.
+  useEffect(() => { refreshRef.current = refresh; }, [refresh]);
   useEffect(() => { refresh(); }, [refresh]);
 
+  // Realtime: any insert/update on a campaign in the current club
+  // triggers a refresh. RLS still gates what comes back. Cheap because
+  // campaigns are low-volume per club.
+  useEffect(() => {
+    if (!club?.id) return;
+    const channel = (supabase as any)
+      .channel(`narrative-campaigns:${club.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'narrative_campaigns', filter: `club_id=eq.${club.id}` },
+        () => { refreshRef.current?.(); },
+      )
+      .subscribe();
+    return () => { (supabase as any).removeChannel(channel); };
+  }, [club?.id]);
+
   const createCampaign = useCallback(async (input: CreateCampaignInput): Promise<Campaign | null> => {
-    if (!user || !club?.id) return null;
-    const template = getTemplate(input.template_key);
-    const insertRow = {
-      club_id: club.id,
-      title: input.title.trim(),
-      pitch: input.pitch?.trim() || null,
-      description: input.description?.trim() || null,
-      template_key: input.template_key,
-      tone_profile: input.tone_profile?.trim() || template.toneProfile || null,
-      play_mode: input.play_mode,
-      visibility: input.visibility,
-      player_limit: input.player_limit ?? null,
-      spectators_allowed: input.spectators_allowed ?? false,
-      content_notes: input.content_notes?.trim() || null,
-      opening_premise: input.opening_premise?.trim() || template.openingPremise || null,
-      schedule_note: input.schedule_note?.trim() || null,
-      created_by: user.id,
-      // Creator is the default GM unless they nominate someone else.
-      proposed_gm_id: input.proposed_gm_id ?? user.id,
-      status: input.submit ? 'pending_approval' : 'draft',
-      submitted_at: input.submit ? new Date().toISOString() : null,
-    };
-    const { data: row, error: insertErr } = await (supabase as any)
-      .from('narrative_campaigns')
-      .insert(insertRow)
-      .select('*')
-      .single();
-    if (insertErr || !row) {
-      setError(insertErr?.message ?? 'Failed to create campaign');
+    if (!user || !club?.id) {
+      setError('No active club');
       return null;
     }
-    // Add creator as game_master member by default.
-    await (supabase as any).from('narrative_campaign_members').insert({
-      campaign_id: row.id,
-      user_id: (insertRow.proposed_gm_id ?? user.id),
-      role: 'game_master',
-      status: 'active',
-      invited_by: user.id,
+    const template = getTemplate(input.template_key);
+    setError(null);
+
+    const { data, error: rpcErr } = await (supabase as any).rpc('create_narrative_campaign', {
+      _club_id: club.id,
+      _title: input.title,
+      _pitch: input.pitch ?? null,
+      _description: input.description ?? null,
+      _template_key: input.template_key,
+      _tone_profile: input.tone_profile?.trim() || template.toneProfile || null,
+      _play_mode: input.play_mode,
+      _visibility: input.visibility,
+      _player_limit: input.player_limit ?? null,
+      _spectators_allowed: input.spectators_allowed ?? false,
+      _content_notes: input.content_notes ?? null,
+      _opening_premise: input.opening_premise?.trim() || template.openingPremise || null,
+      _schedule_note: input.schedule_note ?? null,
+      _proposed_gm_id: input.proposed_gm_id ?? user.id,
+      _submit: input.submit,
     });
-    // Audit event
-    await (supabase as any).from('narrative_approval_events').insert({
-      campaign_id: row.id,
-      actor_id: user.id,
-      event_type: input.submit ? 'submitted' : 'created_draft',
-      from_status: null,
-      to_status: row.status,
-    });
+
+    if (rpcErr) {
+      // Surface the Postgres exception message so the UI can show a
+      // useful toast instead of a generic "couldn't create campaign".
+      setError(rpcErr.message);
+      return null;
+    }
+    // .rpc returning a setof/row gives us either an object or a single-
+    // element array depending on definition. Normalize.
+    const row: Campaign | null = Array.isArray(data) ? (data[0] ?? null) : (data ?? null);
+    if (!row) {
+      setError('Campaign was not created');
+      return null;
+    }
     await refresh();
-    return row as Campaign;
+    return row;
   }, [user, club?.id, refresh]);
 
-  /** Internal helper for status transitions + audit. */
+  /** Internal helper — calls the transition RPC and refreshes. */
   const transition = useCallback(async (
     campaignId: string,
     nextStatus: CampaignStatus,
     eventType: string,
     notes?: string,
-    extraPatch: Record<string, unknown> = {},
   ): Promise<boolean> => {
-    if (!user) return false;
-    const prev = campaigns.find(c => c.id === campaignId);
-    const patch: Record<string, unknown> = {
-      status: nextStatus,
-      approval_notes: notes ?? prev?.approval_notes ?? null,
-      ...extraPatch,
-    };
-    const { error: updErr } = await (supabase as any)
-      .from('narrative_campaigns')
-      .update(patch)
-      .eq('id', campaignId);
-    if (updErr) {
-      setError(updErr.message);
+    if (!user) {
+      setError('Not signed in');
       return false;
     }
-    await (supabase as any).from('narrative_approval_events').insert({
-      campaign_id: campaignId,
-      actor_id: user.id,
-      event_type: eventType,
-      from_status: prev?.status ?? null,
-      to_status: nextStatus,
-      notes: notes ?? null,
+    setError(null);
+    const { error: rpcErr } = await (supabase as any).rpc('transition_narrative_campaign', {
+      _campaign_id: campaignId,
+      _next_status: nextStatus,
+      _event_type: eventType,
+      _notes: notes ?? null,
     });
+    if (rpcErr) {
+      setError(rpcErr.message);
+      return false;
+    }
     await refresh();
     return true;
-  }, [user, campaigns, refresh]);
+  }, [user, refresh]);
 
   const submitForApproval = useCallback((id: string) =>
-    transition(id, 'pending_approval', 'submitted', undefined, { submitted_at: new Date().toISOString() }),
+    transition(id, 'pending_approval', 'submitted'),
   [transition]);
 
   const approveCampaign = useCallback((id: string, notes?: string) =>
-    transition(id, 'active', 'approved', notes, { approved_at: new Date().toISOString(), approved_by: user?.id ?? null }),
-  [transition, user?.id]);
+    transition(id, 'active', 'approved', notes),
+  [transition]);
 
   const requestChanges = useCallback((id: string, notes: string) =>
     transition(id, 'needs_changes', 'changes_requested', notes),

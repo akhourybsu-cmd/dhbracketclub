@@ -38,7 +38,15 @@ export default function NarrativeCampaignsPage() {
         live.push(c);
       } else if (isClubAdmin && c.status === 'pending_approval') {
         pending.push(c);
-      } else if (user && (c.created_by === user.id || c.gm_id === user.id) && (c.status === 'draft' || c.status === 'pending_approval' || c.status === 'needs_changes' || c.status === 'rejected')) {
+      } else if (
+        user
+        && (c.created_by === user.id || c.gm_id === user.id || c.proposed_gm_id === user.id)
+        && (c.status === 'draft' || c.status === 'needs_changes' || c.status === 'rejected'
+            // For non-admins, pending_approval belongs in "Your proposals".
+            // For admins, it's already shown under "Awaiting your approval",
+            // so we drop it here to avoid the duplicate row (review bug #12).
+            || (c.status === 'pending_approval' && !isClubAdmin))
+      ) {
         mine.push(c);
       } else if (c.status === 'completed' || c.status === 'archived') {
         completed.push(c);

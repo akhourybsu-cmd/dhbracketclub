@@ -20,7 +20,7 @@ interface Props {
 }
 
 export function NarrativeApprovalsPanel({ installed, isAdmin }: Props) {
-  const { campaigns, approveCampaign, requestChanges, rejectCampaign } = useNarrativeCampaigns();
+  const { campaigns, approveCampaign, requestChanges, rejectCampaign, error: hookError } = useNarrativeCampaigns();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
@@ -102,7 +102,13 @@ export function NarrativeApprovalsPanel({ installed, isAdmin }: Props) {
                       <button
                         type="button"
                         disabled={busy}
-                        onClick={async () => { setBusy(true); await rejectCampaign(c.id, notes); setBusy(false); setActiveId(null); setNotes(''); toast.success('Rejected.'); }}
+                        onClick={async () => {
+                          setBusy(true);
+                          const ok = await rejectCampaign(c.id, notes);
+                          setBusy(false);
+                          if (!ok) { toast.error(hookError ?? 'Reject failed.'); return; }
+                          setActiveId(null); setNotes(''); toast.success('Rejected.');
+                        }}
                         className="flex-1 h-8 rounded-md text-[10.5px] font-bold inline-flex items-center justify-center gap-1 bg-destructive/12 text-destructive border border-destructive/25 disabled:opacity-50"
                       >
                         <X className="w-3 h-3" /> Reject
@@ -110,7 +116,13 @@ export function NarrativeApprovalsPanel({ installed, isAdmin }: Props) {
                       <button
                         type="button"
                         disabled={busy || !notes.trim()}
-                        onClick={async () => { setBusy(true); await requestChanges(c.id, notes); setBusy(false); setActiveId(null); setNotes(''); toast.success('Changes requested.'); }}
+                        onClick={async () => {
+                          setBusy(true);
+                          const ok = await requestChanges(c.id, notes);
+                          setBusy(false);
+                          if (!ok) { toast.error(hookError ?? 'Request changes failed.'); return; }
+                          setActiveId(null); setNotes(''); toast.success('Changes requested.');
+                        }}
                         className="flex-1 h-8 rounded-md text-[10.5px] font-bold inline-flex items-center justify-center gap-1 bg-warning/12 text-warning border border-warning/25 disabled:opacity-50"
                       >
                         <MessageSquareWarning className="w-3 h-3" /> Request changes
@@ -118,7 +130,13 @@ export function NarrativeApprovalsPanel({ installed, isAdmin }: Props) {
                       <button
                         type="button"
                         disabled={busy}
-                        onClick={async () => { setBusy(true); await approveCampaign(c.id, notes || undefined); setBusy(false); setActiveId(null); setNotes(''); toast.success('Approved.'); }}
+                        onClick={async () => {
+                          setBusy(true);
+                          const ok = await approveCampaign(c.id, notes || undefined);
+                          setBusy(false);
+                          if (!ok) { toast.error(hookError ?? 'Approve failed.'); return; }
+                          setActiveId(null); setNotes(''); toast.success('Approved.');
+                        }}
                         className="flex-1 h-8 rounded-md text-[10.5px] font-extrabold inline-flex items-center justify-center gap-1 disabled:opacity-50"
                         style={{ background: 'hsl(var(--success) / 0.18)', color: 'hsl(var(--success))', border: '1px solid hsl(var(--success) / 0.35)' }}
                       >

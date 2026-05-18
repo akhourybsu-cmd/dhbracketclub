@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ScrollText, ChevronLeft, Sparkles, Send, Save } from 'lucide-react';
+import { ScrollText, ChevronLeft, Sparkles, Send, Save, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -30,7 +30,7 @@ const VISIBILITY_OPTIONS: { id: CampaignVisibility; label: string; blurb: string
 ];
 
 export default function NarrativeCampaignCreatePage() {
-  const { createCampaign } = useNarrativeCampaigns();
+  const { createCampaign, error: hookError } = useNarrativeCampaigns();
   const navigate = useNavigate();
 
   const [templateKey, setTemplateKey] = useState<TemplateKey>('blank');
@@ -53,9 +53,25 @@ export default function NarrativeCampaignCreatePage() {
     setPremise(prev => prev.trim() ? prev : t.openingPremise);
   }, [templateKey]);
 
+  // Even a draft needs a non-empty title (the DB column is NOT NULL).
+  // We keep the bar low (>= 2 chars) so users aren't blocked from
+  // snapshotting in-progress ideas, but we no longer silently drop
+  // empty-title drafts.
+  const draftValid = useMemo(() => title.trim().length >= 2, [title]);
   const valid = useMemo(() => title.trim().length >= 3 && pitch.trim().length >= 10, [title, pitch]);
 
+  const resetTemplateDefaults = () => {
+    const t = getTemplate(templateKey);
+    setTone(t.toneProfile);
+    setPremise(t.openingPremise);
+    toast.success('Reset to template defaults.');
+  };
+
   const submit = async (asDraft: boolean) => {
+    if (asDraft && !draftValid) {
+      toast.error('Drafts need at least a title.');
+      return;
+    }
     if (!valid && !asDraft) {
       toast.error('Add a title and a short pitch first.');
       return;
@@ -77,7 +93,9 @@ export default function NarrativeCampaignCreatePage() {
     });
     setSubmitting(false);
     if (!result) {
-      toast.error('Couldn\'t create campaign.');
+      // Surface the real Postgres error message when the hook captured
+      // one — otherwise fall back to the generic.
+      toast.error(hookError ?? 'Couldn\'t create campaign.');
       return;
     }
     toast.success(asDraft ? 'Saved as draft.' : 'Submitted for approval.');
@@ -179,6 +197,13 @@ export default function NarrativeCampaignCreatePage() {
           {templateKey === 'flamingo_protocol' && (
             <p className="text-[10.5px] text-muted-foreground/65 mt-1">Pre-filled from The Flamingo Protocol template — edit freely.</p>
           )}
+          <button
+            type="button"
+            onClick={resetTemplateDefaults}
+            className="mt-2 inline-flex items-center gap-1.5 text-[10.5px] font-bold text-muted-foreground/75 hover:text-primary active:scale-95 transition"
+          >
+            <RotateCcw className="w-3 h-3" /> Reset tone + premise to template defaults
+          </button>
         </section>
 
         {/* Play mode */}
@@ -237,8 +262,21 @@ export default function NarrativeCampaignCreatePage() {
             <Input
               type="number"
               inputMode="numeric"
+              min={1}
+              max={20}
               value={playerLimit}
-              onChange={e => setPlayerLimit(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value, 10) || 0))}
+              onChange={e => {
+                const raw = e.target.value;
+                if (raw === '') { setPlayerLimit(''); return; }
+                const parsed = parseInt(raw, 10);
+                // Reject non-numeric input outright (keeps prior value)
+                // and clamp to [1, 20]. Typing "0" no longer silently
+                // becomes 1; an explicit clear (empty string) is the
+                // only way to remove the limit.
+                if (Number.isFinite(parsed)) {
+                  setPlayerLimit(Math.min(20, Math.max(1, parsed)));
+                }
+              }}
               placeholder="No limit"
               className="mt-1.5 h-10"
             />
@@ -271,8 +309,8 @@ export default function NarrativeCampaignCreatePage() {
           <button
             type="button"
             onClick={() => submit(true)}
-            disabled={submitting}
-            className="flex-1 h-12 rounded-xl text-[12.5px] font-extrabold inline-flex items-center justify-center gap-1.5 bg-muted/40 border border-border/40 text-foreground/85 active:scale-[0.98] transition"
+            disabled={submitting || !draftValid}
+            className="flex-1 h-12 rounded-xl text-[12.5px] font-extrabold inline-flex items-center justify-center gap-1.5 bg-muted/40 border border-border/40 text-foreground/85 active:scale-[0.98] transition disabled:opacity-50"
           >
             <Save className="w-3.5 h-3.5" /> Save draft
           </button>
