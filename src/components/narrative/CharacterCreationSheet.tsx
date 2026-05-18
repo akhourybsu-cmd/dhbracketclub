@@ -301,7 +301,7 @@ export function CharacterCreationSheet({ open, onClose, templateKey, onCreate }:
         <div className="px-4 py-3 border-t border-border/25 flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setStep(s => Math.max(0, (s - 1) as Step))}
+            onClick={() => setStep(s => Math.max(0, s - 1) as Step)}
             disabled={step === 0}
             className="flex-1 h-11 rounded-xl bg-muted/40 border border-border/40 text-[12px] font-extrabold inline-flex items-center justify-center gap-1 active:scale-[0.98] transition disabled:opacity-40"
           >
