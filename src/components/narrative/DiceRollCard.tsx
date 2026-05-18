@@ -60,6 +60,7 @@ export function DiceRollCard({ message, rollerName, isGm, campaignId }: Props) {
       toast.error(result.reason);
       return;
     }
+    if (!('draft' in result)) return;
     setResolveDraft(result.draft);
   };
 
