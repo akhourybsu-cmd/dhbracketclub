@@ -63,6 +63,7 @@ export const NAV_ASSET_SLUGS: Record<string, string> = {
   '/posts':           'posts',
   '/shared':          'shared-media',
   '/celebrations':    'birthdays-milestones',
+  '/narrative':       'narrative-rpg',
 };
 
 export const CATEGORY_META: Record<string, { label: string; color: string }> = {

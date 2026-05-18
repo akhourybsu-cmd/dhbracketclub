@@ -60,6 +60,7 @@ export function AppDrawer({ open, onOpenChange, unreadChatCount = 0 }: AppDrawer
     {
       label: 'Community',
       items: [
+        { path: '/narrative', label: 'Narrative RPG', icon: ScrollText },
         { path: '/polls', label: 'Polls', icon: MessageCircle },
         { path: '/rankings', label: 'Rankings', icon: BarChart3 },
         { path: '/posts', label: 'Posts', icon: FileText },

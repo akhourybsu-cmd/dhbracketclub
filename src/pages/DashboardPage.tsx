@@ -44,6 +44,7 @@ import { WhatIsNewCard } from '@/components/onboarding/WhatIsNewCard';
 import { useClubOnboarding, useNewFeatures } from '@/hooks/useOnboarding';
 import { CelebrationsHomeWidget } from '@/components/celebrations/CelebrationsHomeWidget';
 import { useCelebrationSettings } from '@/hooks/useCelebrations';
+import { NarrativeHomeWidget } from '@/components/narrative/NarrativeHomeWidget';
 import { rankNextActions } from '@/lib/home/nextAction';
 import { ENDLESS_MISSION_ID } from '@/lib/nexus/endless';
 
@@ -407,6 +408,9 @@ export default function DashboardPage() {
 
       {/* Celebrations — Today / Upcoming / Empty card, only when plugin enabled */}
       {showCelebrationsOnHome && <CelebrationsHomeWidget enabled />}
+
+      {/* Narrative RPG — campaigns the user can act on. Pulls only public data. */}
+      <NarrativeHomeWidget enabled={isInstalled('narrative-rpg')} />
 
       {/* Asset launcher — installed apps with live status chips */}
       {enabledAssets.length > 0 && (

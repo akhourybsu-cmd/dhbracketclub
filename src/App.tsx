@@ -79,6 +79,9 @@ const RuneDelveDailyPage = lazy(() => import("./pages/RuneDelveDailyPage"));
 const RuneDelveEndlessPage = lazy(() => import("./pages/RuneDelveEndlessPage"));
 const RuneDelveQuestsPage = lazy(() => import("./pages/RuneDelveQuestsPage"));
 const CelebrationsPage = lazy(() => import("./pages/CelebrationsPage"));
+const NarrativeCampaignsPage = lazy(() => import("./pages/NarrativeCampaignsPage"));
+const NarrativeCampaignCreatePage = lazy(() => import("./pages/NarrativeCampaignCreatePage"));
+const NarrativeCampaignDetailPage = lazy(() => import("./pages/NarrativeCampaignDetailPage"));
 const RequestClubPage = lazy(() => import("./pages/RequestClubPage"));
 const AdminClubsPage = lazy(() => import("./pages/AdminClubsPage"));
 const ClubSettingsPage = lazy(() => import("./pages/ClubSettingsPage"));
@@ -276,6 +279,9 @@ function AnimatedRoutes() {
 
         <Route path="/profile" element={<ProtectedPage><ProfilePage /></ProtectedPage>} />
         <Route path="/celebrations" element={<ProtectedPage assetSlug="birthdays-milestones"><CelebrationsPage /></ProtectedPage>} />
+        <Route path="/narrative" element={<ProtectedPage assetSlug="narrative-rpg"><NarrativeCampaignsPage /></ProtectedPage>} />
+        <Route path="/narrative/new" element={<ProtectedPage assetSlug="narrative-rpg"><NarrativeCampaignCreatePage /></ProtectedPage>} />
+        <Route path="/narrative/:campaignId" element={<ProtectedPage assetSlug="narrative-rpg"><NarrativeCampaignDetailPage /></ProtectedPage>} />
 
         {/* Clubs (multi-tenant) */}
         <Route path="/club/request" element={<ProtectedRoute><Suspense fallback={<PageFallback />}><RequestClubPage /></Suspense></ProtectedRoute>} />

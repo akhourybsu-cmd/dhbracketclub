@@ -37,7 +37,7 @@ Auth → Club → Installed Assets → Plugin UI surfaces (Home / Settings / Pro
 7. (Optional) Add per-plugin settings table and an admin panel — mount it inside `ClubSettingsPage` conditionally.
 
 Existing slugs (canonical list in `NAV_ASSET_SLUGS`):
-`draft-arena`, `rune-delve`, `nexus-defense`, `nfl-pickem`, `brackets`, `portfolio-wars`, `lockbox`, `chat`, `events`, `lore`, `feed`, `polls`, `rankings`, `posts`, `shared-media`, `birthdays-milestones`.
+`draft-arena`, `rune-delve`, `nexus-defense`, `nfl-pickem`, `brackets`, `portfolio-wars`, `lockbox`, `chat`, `events`, `lore`, `feed`, `polls`, `rankings`, `posts`, `shared-media`, `birthdays-milestones`, `narrative-rpg`.
 
 ## Conventions
 
@@ -64,6 +64,7 @@ These are stable; reference them as patterns, don't reinvent.
 | Asset Library with optimistic install + undo | `/club/assets` | [`src/components/clubAssets/`](src/components/clubAssets/), [`src/hooks/useClubAssets.ts`](src/hooks/useClubAssets.ts) |
 | Onboarding framework (club intro + What's New + admin preview) | Auto-mounts on Home + Asset Library | [`src/lib/onboarding/`](src/lib/onboarding/), [`src/components/onboarding/`](src/components/onboarding/), [`src/hooks/useOnboarding.ts`](src/hooks/useOnboarding.ts) |
 | Birthdays & Milestones (first installable plugin) | `/celebrations`, Home widget, Club Settings panel, Profile section | [`src/components/celebrations/`](src/components/celebrations/), [`src/hooks/useCelebrations.ts`](src/hooks/useCelebrations.ts), [`src/lib/celebrations/dates.ts`](src/lib/celebrations/dates.ts) |
+| Narrative RPG (Chronicle Engine) | `/narrative` campaigns list, `/narrative/new` proposal, `/narrative/:id` detail with Story/Characters/World/Log tabs + GM Console drawer. Home widget + Club Settings approval queue. AI tool stubs (`isAiConfigured()`-gated) ready for an edge-function wire-up. | [`src/lib/narrative/`](src/lib/narrative/) (ruleset, templates, ai service, types), [`src/components/narrative/`](src/components/narrative/), [`src/hooks/useNarrativeCampaigns.ts`](src/hooks/useNarrativeCampaigns.ts), [`src/hooks/useNarrativeCampaign.ts`](src/hooks/useNarrativeCampaign.ts) |
 
 ## Routing patterns
 

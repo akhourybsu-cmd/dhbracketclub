@@ -362,6 +362,37 @@ const REGISTRY: Record<string, FeatureOnboarding> = {
     ],
     primaryCta: { label: 'Open Celebrations', route: '/celebrations' },
   },
+
+  'narrative-rpg': {
+    featureKey: 'narrative-rpg',
+    displayName: 'Narrative RPG',
+    shortDescription: 'Run cinematic text-based RPG campaigns with Game Master tools.',
+    featureType: 'social',
+    importance: 'important',
+    version: 1,
+    iconKey: 'ScrollText',
+    tags: ['RPG', 'Storytelling', 'Game Master', 'Campaigns'],
+    onboardingTitle: 'Narrative RPG is live',
+    onboardingSummary: 'Propose a campaign, get club-owner approval, then play out cinematic story scenes with dice rolls, clues, and a living campaign log.',
+    onboardingSteps: [
+      {
+        title: 'Propose a campaign',
+        body: 'Any member can pitch a campaign — pick a template (Blank or The Flamingo Protocol), set the tone, and submit for club-owner approval.',
+        iconKey: 'ScrollText',
+      },
+      {
+        title: 'Play through Story Chat',
+        body: 'Approved campaigns open into a premium story chat: narration, NPC dialogue, dice rolls, scene cards, and clues all live in one feed.',
+        iconKey: 'MessageSquareText',
+      },
+      {
+        title: 'Game Masters get a full console',
+        body: 'GMs run scenes, manage clues + factions + clocks, and review AI suggestions — nothing changes the campaign until the GM approves it.',
+        iconKey: 'Sparkles',
+      },
+    ],
+    primaryCta: { label: 'Open Narrative RPG', route: '/narrative' },
+  },
 };
 
 /* ─── Selectors ─────────────────────────────────────────────────────── */

@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { Building2, ArrowLeft, Copy, Plus, Users, Crown, KeyRound, Eye, EyeOff, RefreshCw, Package, ChevronRight, Sparkles } from 'lucide-react';
 import { CelebrationSettingsPanel } from '@/components/celebrations/CelebrationSettingsPanel';
 import { MessageReportsPanel } from '@/components/chat/MessageReportsPanel';
+import { NarrativeApprovalsPanel } from '@/components/narrative/NarrativeApprovalsPanel';
 
 type InviteCode = {
   id: string;
@@ -413,6 +414,14 @@ export default function ClubSettingsPage() {
         <div className="mb-4">
           <MessageReportsPanel
             installed={installedAssets.some(ia => ia.asset.slug === 'chat' && ia.enabled)}
+            isAdmin={isClubAdmin}
+          />
+        </div>
+
+        {/* Plugin: Narrative RPG — campaign approval queue, gated on narrative-rpg installed */}
+        <div className="mb-4">
+          <NarrativeApprovalsPanel
+            installed={installedAssets.some(ia => ia.asset.slug === 'narrative-rpg' && ia.enabled)}
             isAdmin={isClubAdmin}
           />
         </div>
