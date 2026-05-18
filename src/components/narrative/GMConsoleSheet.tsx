@@ -651,28 +651,35 @@ function AiTab(props: Props) {
       {/* Suggestion review queue */}
       <div>
         <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-muted-foreground/70 mb-2 mt-4">Review queue</p>
-        {props.aiSuggestions.filter(s => s.status === 'pending').length === 0 ? (
-          <EmptyHint message="No pending AI suggestions." />
-        ) : (
-          <div className="space-y-2">
-            {props.aiSuggestions.filter(s => s.status === 'pending').map(s => (
-              <div key={s.id} className="rounded-xl bg-card border border-border/40 p-3">
-                <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-primary">{s.suggestion_type.replace(/_/g, ' ')}</p>
-                <p className="text-[12px] text-foreground/85 leading-snug mt-1 whitespace-pre-wrap">{s.suggested_content}</p>
-                {Array.isArray(s.suggested_state_updates) && s.suggested_state_updates.length > 0 && (
-                  <p className="text-[10.5px] text-muted-foreground/70 mt-1">{s.suggested_state_updates.length} state update{s.suggested_state_updates.length === 1 ? '' : 's'} proposed</p>
-                )}
-                <div className="flex gap-2 mt-2">
-                  <button onClick={() => decide(s.id, 'rejected')} className="flex-1 h-8 rounded-md text-[10.5px] font-bold bg-muted/40 border border-border/40">Reject</button>
-                  <button onClick={() => setEditingSuggestion(s)} className="flex-1 h-8 rounded-md text-[10.5px] font-bold bg-muted/40 border border-border/40 inline-flex items-center justify-center gap-1">
-                    <Pencil className="w-2.5 h-2.5" /> Edit
-                  </button>
-                  <button onClick={() => decide(s.id, 'approved')} className="flex-1 h-8 rounded-md text-[10.5px] font-extrabold" style={{ background: 'hsl(var(--primary) / 0.18)', color: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary) / 0.4)' }}>Approve</button>
+        {(() => {
+          // Include `edited` rows — those are pending review with the GM's
+          // own edits applied. Approved/rejected stay out of the queue.
+          const open = props.aiSuggestions.filter(s => s.status === 'pending' || s.status === 'edited');
+          if (open.length === 0) return <EmptyHint message="No pending AI suggestions." />;
+          return (
+            <div className="space-y-2">
+              {open.map(s => (
+                <div key={s.id} className="rounded-xl bg-card border border-border/40 p-3">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-primary">{s.suggestion_type.replace(/_/g, ' ')}</p>
+                    {s.status === 'edited' && <StatusPill variant="info" size="xs">Edited</StatusPill>}
+                  </div>
+                  <p className="text-[12px] text-foreground/85 leading-snug mt-1 whitespace-pre-wrap">{s.suggested_content}</p>
+                  {Array.isArray(s.suggested_state_updates) && s.suggested_state_updates.length > 0 && (
+                    <p className="text-[10.5px] text-muted-foreground/70 mt-1">{s.suggested_state_updates.length} state update{s.suggested_state_updates.length === 1 ? '' : 's'} proposed</p>
+                  )}
+                  <div className="flex gap-2 mt-2">
+                    <button onClick={() => decide(s.id, 'rejected')} className="flex-1 h-8 rounded-md text-[10.5px] font-bold bg-muted/40 border border-border/40">Reject</button>
+                    <button onClick={() => setEditingSuggestion(s)} className="flex-1 h-8 rounded-md text-[10.5px] font-bold bg-muted/40 border border-border/40 inline-flex items-center justify-center gap-1">
+                      <Pencil className="w-2.5 h-2.5" /> Edit
+                    </button>
+                    <button onClick={() => decide(s.id, 'approved')} className="flex-1 h-8 rounded-md text-[10.5px] font-extrabold" style={{ background: 'hsl(var(--primary) / 0.18)', color: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary) / 0.4)' }}>Approve</button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          );
+        })()}
       </div>
       {editingSuggestion && (
         <AiSuggestionEditSheet

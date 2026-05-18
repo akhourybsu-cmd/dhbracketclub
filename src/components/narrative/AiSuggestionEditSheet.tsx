@@ -63,8 +63,30 @@ export function AiSuggestionEditSheet({ open, onClose, campaignId, suggestion, o
       const me = (await sb.auth.getUser()).data.user;
       const stateUpdates = actions.filter(a => a.approved).map(a => a.action);
 
-      // Always store the edited content + remaining state updates on
-      // the row so future reviewers see what the GM kept.
+      // For approve: apply state updates FIRST. If something fails the
+      // row stays in 'edited' so the GM can retry — vs the row being
+      // marked 'approved' while the actual mutations silently failed.
+      if (status === 'approved' && stateUpdates.length > 0) {
+        const results = await applyStateUpdates(campaignId, stateUpdates);
+        const failed = results.filter(r => !r.ok);
+        if (failed.length) {
+          toast.warning(`Applied ${results.length - failed.length} of ${results.length}. Suggestion kept in queue.`);
+          // Persist the edited content so progress isn't lost, but
+          // leave status='edited' (not approved) so the queue retains it.
+          await sb.from('narrative_ai_suggestions').update({
+            suggested_content: draft.trim(),
+            suggested_state_updates: actions.map(a => a.action),
+            status: 'edited',
+            reviewed_by: me?.id ?? null,
+            reviewed_at: null,
+          }).eq('id', suggestion.id);
+          onSaved?.();
+          onClose();
+          return;
+        }
+      }
+
+      // Either no state updates, all applied, or we're just saving edits.
       const { error: updErr } = await sb.from('narrative_ai_suggestions').update({
         suggested_content: draft.trim(),
         suggested_state_updates: actions.map(a => a.action),
@@ -73,12 +95,6 @@ export function AiSuggestionEditSheet({ open, onClose, campaignId, suggestion, o
         reviewed_at: status === 'edited' ? null : new Date().toISOString(),
       }).eq('id', suggestion.id);
       if (updErr) throw updErr;
-
-      if (status === 'approved' && stateUpdates.length > 0) {
-        const results = await applyStateUpdates(campaignId, stateUpdates);
-        const failed = results.filter(r => !r.ok);
-        if (failed.length) toast.warning(`Applied ${results.length - failed.length} of ${results.length}.`);
-      }
 
       toast.success(status === 'approved' ? 'Approved + applied.' : 'Saved.');
       onSaved?.();

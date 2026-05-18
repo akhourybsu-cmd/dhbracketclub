@@ -111,7 +111,8 @@ export default function NarrativeCampaignDetailPage() {
           </button>
         )}
         {data.isGm && isActive && (() => {
-          const pendingCount = data.aiSuggestions.filter(s => s.status === 'pending').length;
+          // Open suggestions = pending + edited (edited still needs final approval).
+          const pendingCount = data.aiSuggestions.filter(s => s.status === 'pending' || s.status === 'edited').length;
           return (
             <button
               type="button"
