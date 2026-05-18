@@ -28,6 +28,7 @@ import {
 } from './EntityEditSheet';
 import { ChapterSheet } from './ChapterSheet';
 import { SceneSummaryWizard } from './SceneSummaryWizard';
+import { AiSuggestionEditSheet } from './AiSuggestionEditSheet';
 import { GM_TOOLS, isAiConfigured, invokeGmTool, type AiSuggestion } from '@/lib/narrative/aiService';
 import { applyStateUpdates } from '@/lib/narrative/applyStateUpdates';
 import type {
@@ -544,6 +545,7 @@ function AiTab(props: Props) {
   const configured = isAiConfigured();
   const [busyTool, setBusyTool] = useState<string | null>(null);
   const [lastDraft, setLastDraft] = useState<AiSuggestion | null>(null);
+  const [editingSuggestion, setEditingSuggestion] = useState<AiSuggestionRow | null>(null);
 
   const runTool = async (toolKey: string) => {
     setBusyTool(toolKey);
@@ -662,13 +664,25 @@ function AiTab(props: Props) {
                 )}
                 <div className="flex gap-2 mt-2">
                   <button onClick={() => decide(s.id, 'rejected')} className="flex-1 h-8 rounded-md text-[10.5px] font-bold bg-muted/40 border border-border/40">Reject</button>
-                  <button onClick={() => decide(s.id, 'approved')} className="flex-1 h-8 rounded-md text-[10.5px] font-extrabold" style={{ background: 'hsl(var(--primary) / 0.18)', color: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary) / 0.4)' }}>Approve + apply</button>
+                  <button onClick={() => setEditingSuggestion(s)} className="flex-1 h-8 rounded-md text-[10.5px] font-bold bg-muted/40 border border-border/40 inline-flex items-center justify-center gap-1">
+                    <Pencil className="w-2.5 h-2.5" /> Edit
+                  </button>
+                  <button onClick={() => decide(s.id, 'approved')} className="flex-1 h-8 rounded-md text-[10.5px] font-extrabold" style={{ background: 'hsl(var(--primary) / 0.18)', color: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary) / 0.4)' }}>Approve</button>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+      {editingSuggestion && (
+        <AiSuggestionEditSheet
+          open
+          onClose={() => setEditingSuggestion(null)}
+          campaignId={props.campaign.id}
+          suggestion={editingSuggestion}
+          onSaved={() => { setEditingSuggestion(null); props.onChanged?.(); }}
+        />
+      )}
     </div>
   );
 }

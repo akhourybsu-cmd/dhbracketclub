@@ -31,7 +31,7 @@ export function SceneMessage({ message, characters, senderNames, npcNames, isOwn
   // Dice roll — dedicated card
   if (t === 'dice_roll') {
     const rollerName = message.character_id ? characters.get(message.character_id)?.name : (message.sender_id ? senderNames?.get(message.sender_id) : undefined);
-    return <DiceRollCard message={message} rollerName={rollerName} />;
+    return <DiceRollCard message={message} rollerName={rollerName} isGm={isGm} campaignId={message.campaign_id} />;
   }
 
   // Scene card — banner

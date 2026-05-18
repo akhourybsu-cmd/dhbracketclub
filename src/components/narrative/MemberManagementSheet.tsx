@@ -95,24 +95,30 @@ export function MemberManagementSheet({ open, onClose, campaign, members, onChan
   }, [clubMembers, membersById, search]);
 
   const activeMembers = members.filter(m => m.status === 'active');
+  const pendingInvites = members.filter(m => m.status === 'invited');
   const gmCount = activeMembers.filter(m => m.role === 'game_master').length;
 
   const invite = async (userId: string, role: MemberRole) => {
     setBusyUserId(userId);
     const existing = membersById.get(userId);
+    // New flow (Phase 3): invited members get status='invited' and must
+    // accept before they show up in the active roster. The campaign
+    // detail page renders an Accept/Decline banner when the viewer is
+    // invited. Re-inviting a previously-removed member still goes
+    // through the same RSVP step so they don't just snap back to active.
     const { error } = existing
       ? await (supabase as any).from('narrative_campaign_members')
-          .update({ role, status: 'active' })
+          .update({ role, status: 'invited' })
           .eq('id', existing.id)
       : await (supabase as any).from('narrative_campaign_members').insert({
           campaign_id: campaign.id,
           user_id: userId,
           role,
-          status: 'active',
+          status: 'invited',
         });
     setBusyUserId(null);
-    if (error) { toast.error(`Couldn't add member: ${error.message}`); return; }
-    toast.success(`Added as ${ROLE_LABEL[role]}.`);
+    if (error) { toast.error(`Couldn't invite member: ${error.message}`); return; }
+    toast.success(`Invite sent — ${ROLE_LABEL[role]}.`);
     onChanged?.();
   };
 
@@ -252,6 +258,42 @@ export function MemberManagementSheet({ open, onClose, campaign, members, onChan
               )}
             </div>
           </section>
+
+          {/* Pending invites */}
+          {pendingInvites.length > 0 && (
+            <section>
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-warning mb-2">
+                Pending invites ({pendingInvites.length})
+              </p>
+              <div className="space-y-1.5">
+                {pendingInvites.map(mem => {
+                  const profile = clubMembers.find(cm => cm.user_id === mem.user_id);
+                  const name = profile?.display_name ?? 'Unknown member';
+                  return (
+                    <div key={mem.id} className="rounded-xl bg-warning/5 border border-warning/30 p-2.5 flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-muted/50 flex items-center justify-center text-[11px] font-extrabold flex-shrink-0">
+                        {name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[12.5px] font-extrabold truncate">{name}</p>
+                        <p className="text-[9.5px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                          Invited as {ROLE_LABEL[mem.role]} — waiting for response
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => remove(mem)}
+                        aria-label="Cancel invite"
+                        className="w-7 h-7 rounded-md text-muted-foreground/60 active:scale-90 flex items-center justify-center"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
           {/* Invite */}
           <section>

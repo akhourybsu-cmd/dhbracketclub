@@ -23,6 +23,8 @@ import { CharacterSheetCard } from '@/components/narrative/CharacterSheetCard';
 import { GMConsoleSheet } from '@/components/narrative/GMConsoleSheet';
 import { MemberManagementSheet } from '@/components/narrative/MemberManagementSheet';
 import { LiveSessionControls } from '@/components/narrative/LiveSessionControls';
+import { LiveSessionPresence } from '@/components/narrative/LiveSessionPresence';
+import { InviteRsvpBanner } from '@/components/narrative/InviteRsvpBanner';
 import { ClockCard } from '@/components/narrative/ClockCard';
 import { SectionHeader } from '@/components/home/SectionHeader';
 import { StatusPill } from '@/components/ui/status-pill';
@@ -108,17 +110,29 @@ export default function NarrativeCampaignDetailPage() {
             <Settings2 className="w-3.5 h-3.5" />
           </button>
         )}
-        {data.isGm && isActive && (
-          <button
-            type="button"
-            onClick={() => setGmOpen(true)}
-            aria-label="Open GM Console"
-            className="h-9 px-2.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider inline-flex items-center gap-1 active:scale-95 transition"
-            style={{ background: 'hsl(var(--gold) / 0.18)', color: 'hsl(var(--gold))', border: '1px solid hsl(var(--gold) / 0.4)' }}
-          >
-            <Sparkles className="w-3 h-3" /> GM
-          </button>
-        )}
+        {data.isGm && isActive && (() => {
+          const pendingCount = data.aiSuggestions.filter(s => s.status === 'pending').length;
+          return (
+            <button
+              type="button"
+              onClick={() => setGmOpen(true)}
+              aria-label={pendingCount > 0 ? `Open GM Console — ${pendingCount} pending` : 'Open GM Console'}
+              className="relative h-9 px-2.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider inline-flex items-center gap-1 active:scale-95 transition"
+              style={{ background: 'hsl(var(--gold) / 0.18)', color: 'hsl(var(--gold))', border: '1px solid hsl(var(--gold) / 0.4)' }}
+            >
+              <Sparkles className="w-3 h-3" /> GM
+              {pendingCount > 0 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full text-[9px] font-extrabold tabular-nums inline-flex items-center justify-center ring-2 ring-background"
+                  style={{ background: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }}
+                >
+                  {pendingCount > 9 ? '9+' : pendingCount}
+                </span>
+              )}
+            </button>
+          );
+        })()}
       </div>
 
       {/* Pending / approval banner */}
@@ -186,15 +200,36 @@ export default function NarrativeCampaignDetailPage() {
         </div>
       )}
 
+      {/* Pending invite — viewer was invited but hasn't accepted yet.
+          Rendered above the live strip so it's the first thing they see. */}
+      {isActive && user && (() => {
+        const invite = data.members.find(m => m.user_id === user.id && m.status === 'invited');
+        if (!invite) return null;
+        return (
+          <InviteRsvpBanner
+            invitation={invite}
+            campaignTitle={campaign.title}
+            onResponded={data.refresh}
+          />
+        );
+      })()}
+
       {/* Live session strip — shown on active campaigns when GM (controls)
-          OR for everyone if already live (read-only "Live Now" pill). */}
+          OR for everyone if already live (read-only "Live Now" pill).
+          Presence row sits next to the controls so the table can see who
+          else is actively in the campaign right now. */}
       {isActive && (data.isGm || campaign.live_session_id) && (
-        <div className="px-3 py-2 border-b border-border/15 flex items-center gap-2">
+        <div className="px-3 py-2 border-b border-border/15 flex items-center gap-2 flex-wrap">
           <LiveSessionControls
             campaign={campaign}
             currentScene={data.currentScene}
             onChanged={data.refresh}
             readOnly={!data.isGm}
+          />
+          <LiveSessionPresence
+            campaignId={campaign.id}
+            myCharacterId={data.myCharacter?.id ?? null}
+            myCharacterName={data.myCharacter?.name ?? null}
           />
         </div>
       )}

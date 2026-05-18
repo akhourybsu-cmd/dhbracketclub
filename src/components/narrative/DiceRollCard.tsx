@@ -4,18 +4,27 @@
 // Reads d20 + stat + modifier + outcome from the message metadata
 // payload and styles per outcome band.
 
-import { Dices, Eye, EyeOff } from 'lucide-react';
+import { useState } from 'react';
+import { Dices, Eye, EyeOff, Sparkles, Loader2, Send } from 'lucide-react';
+import { toast } from 'sonner';
 import { StatusPill } from '@/components/ui/status-pill';
 import { getStatMeta } from '@/lib/narrative/chronicleRuleset';
 import { bandForTotal } from '@/lib/narrative/chronicleRuleset';
+import { suggestRollResolution, isAiConfigured } from '@/lib/narrative/aiService';
+import { supabase } from '@/integrations/supabase/client';
 import type { Message } from '@/lib/narrative/types';
 
 interface Props {
   message: Message;
   rollerName?: string;
+  /** Set true when the viewer is the campaign's GM — unlocks the
+   *  "Resolve cinematically" AI affordance. */
+  isGm?: boolean;
+  /** Campaign id is required to invoke the resolve_roll AI tool. */
+  campaignId?: string;
 }
 
-export function DiceRollCard({ message, rollerName }: Props) {
+export function DiceRollCard({ message, rollerName, isGm, campaignId }: Props) {
   const m = message.metadata as any;
   const stat = m?.stat as ReturnType<typeof getStatMeta>['id'] | 'none' | undefined;
   const statMeta = stat && stat !== 'none' ? getStatMeta(stat as any) : null;
@@ -30,6 +39,48 @@ export function DiceRollCard({ message, rollerName }: Props) {
   const outcomeAccent = band.accent;
 
   const isHidden = message.visibility === 'gm_only';
+  const [resolving, setResolving] = useState(false);
+  const [resolveDraft, setResolveDraft] = useState<string | null>(null);
+  const [posting, setPosting] = useState(false);
+  const aiEnabled = isAiConfigured();
+
+  const askForResolution = async () => {
+    if (!campaignId) return;
+    setResolving(true);
+    setResolveDraft(null);
+    const result = await suggestRollResolution({
+      campaignId,
+      characterName: rollerName,
+      stat: stat as any ?? 'none',
+      outcome: m?.outcome ?? band.outcome,
+      reason: message.body ?? undefined,
+    });
+    setResolving(false);
+    if ('available' in result && result.available === false) {
+      toast.error(result.reason);
+      return;
+    }
+    setResolveDraft(result.draft);
+  };
+
+  const postAsNarration = async () => {
+    if (!campaignId || !resolveDraft?.trim()) return;
+    setPosting(true);
+    const { data: claims } = await supabase.auth.getUser();
+    const { error } = await (supabase as any).from('narrative_messages').insert({
+      campaign_id: campaignId,
+      scene_id: message.scene_id ?? null,
+      sender_id: claims.user?.id ?? null,
+      message_type: 'gm_narration',
+      body: resolveDraft.trim(),
+      visibility: 'public',
+      metadata: { resolves_message_id: message.id },
+    });
+    setPosting(false);
+    if (error) { toast.error(`Post failed: ${error.message}`); return; }
+    toast.success('Resolution posted.');
+    setResolveDraft(null);
+  };
 
   return (
     <div
@@ -87,6 +138,42 @@ export function DiceRollCard({ message, rollerName }: Props) {
           </p>
         </div>
       </div>
+
+      {/* GM-only AI resolution affordance — drafts a cinematic narration
+          for this roll outcome. Nothing posts automatically; the GM
+          reviews the draft and decides whether to publish it as GM
+          narration. */}
+      {isGm && aiEnabled && campaignId && (
+        <div className="mt-2.5">
+          {!resolveDraft && (
+            <button
+              type="button"
+              onClick={askForResolution}
+              disabled={resolving}
+              className="w-full h-8 rounded-md text-[10.5px] font-extrabold uppercase tracking-wider inline-flex items-center justify-center gap-1.5 active:scale-95 transition disabled:opacity-60"
+              style={{ background: 'hsl(var(--primary) / 0.12)', color: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary) / 0.32)' }}
+            >
+              {resolving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+              {resolving ? 'Drafting…' : 'Resolve cinematically'}
+            </button>
+          )}
+          {resolveDraft && (
+            <div className="rounded-md border border-primary/40 bg-primary/5 p-2.5">
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-primary">AI draft</p>
+              <p className="text-[12px] text-foreground/85 leading-snug mt-1 whitespace-pre-wrap">{resolveDraft}</p>
+              <div className="mt-2 flex gap-1.5">
+                <button onClick={() => setResolveDraft(null)} className="flex-1 h-7 rounded-md text-[10px] font-bold bg-muted/40 border border-border/40">Discard</button>
+                <button onClick={askForResolution} disabled={resolving} className="flex-1 h-7 rounded-md text-[10px] font-bold bg-muted/40 border border-border/40 inline-flex items-center justify-center gap-1 disabled:opacity-60">
+                  {resolving ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Regenerate'}
+                </button>
+                <button onClick={postAsNarration} disabled={posting || !resolveDraft.trim()} className="flex-1 h-7 rounded-md text-[10px] font-extrabold inline-flex items-center justify-center gap-1 disabled:opacity-60" style={{ background: 'hsl(var(--primary) / 0.2)', color: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary) / 0.4)' }}>
+                  {posting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />} Post
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

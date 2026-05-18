@@ -147,7 +147,9 @@ export function useNarrativeCampaign(campaignId: string | undefined): UseNarrati
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  // Real-time: messages + clocks
+  // Real-time: messages, clocks, scenes, and AI suggestions. RLS still
+  // gates whether a non-GM viewer can read suggestion rows — so the
+  // payload simply won't arrive for non-authorized viewers.
   useEffect(() => {
     if (!campaignId) return;
     const ch = (supabase as any)
@@ -160,6 +162,10 @@ export function useNarrativeCampaign(campaignId: string | undefined): UseNarrati
         (payload: any) => setClocks(prev => prev.some(c => c.id === payload.new.id) ? prev : [...prev, payload.new as Clock]))
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'narrative_scenes', filter: `campaign_id=eq.${campaignId}` },
         (payload: any) => setScenes(prev => prev.map(s => s.id === payload.new.id ? payload.new as Scene : s)))
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'narrative_ai_suggestions', filter: `campaign_id=eq.${campaignId}` },
+        (payload: any) => setAiSuggestions(prev => prev.some(s => s.id === payload.new.id) ? prev : [payload.new as AiSuggestionRow, ...prev]))
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'narrative_ai_suggestions', filter: `campaign_id=eq.${campaignId}` },
+        (payload: any) => setAiSuggestions(prev => prev.map(s => s.id === payload.new.id ? payload.new as AiSuggestionRow : s)))
       .subscribe();
     return () => { (supabase as any).removeChannel(ch); };
   }, [campaignId]);
