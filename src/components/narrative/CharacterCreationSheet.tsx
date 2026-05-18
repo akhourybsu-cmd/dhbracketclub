@@ -310,7 +310,7 @@ export function CharacterCreationSheet({ open, onClose, templateKey, onCreate }:
           {step < 3 ? (
             <button
               type="button"
-              onClick={() => stepValid[step] ? setStep(s => Math.min(3, (s + 1) as Step)) : toast.error('Fill in this step first.')}
+              onClick={() => stepValid[step] ? setStep(s => Math.min(3, s + 1) as Step) : toast.error('Fill in this step first.')}
               className="flex-1 h-11 rounded-xl text-[12px] font-extrabold inline-flex items-center justify-center gap-1 active:scale-[0.98] transition"
               style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85))', color: 'hsl(var(--primary-foreground))' }}
             >
