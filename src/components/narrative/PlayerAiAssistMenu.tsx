@@ -63,6 +63,7 @@ export function PlayerAiAssistMenu({ open, onClose, campaignId, character, draft
       toast.error(result.reason);
       return;
     }
+    if (!('draft' in result)) return;
     onApply(result.draft);
     toast.success('Draft updated — review before sending.');
     onClose();
