@@ -10,6 +10,7 @@ import { Sparkles, Megaphone, KeyRound, Backpack, Users as UsersIcon, Clock as C
 import { cn } from '@/lib/utils';
 import type { Message, MessageType, Character } from '@/lib/narrative/types';
 import { DiceRollCard } from './DiceRollCard';
+import { FlamingoSceneMessage } from './flamingo/FlamingoMessageFrames';
 
 interface Props {
   message: Message;
@@ -23,9 +24,24 @@ interface Props {
   isOwn: boolean;
   /** True if the current viewer is the GM (additional styling for private messages). */
   isGm: boolean;
+  /** When the active campaign is Flamingo Protocol, dispatch to the
+   *  neon message frames instead of the calm-shell defaults. */
+  flamingo?: boolean;
 }
 
-export function SceneMessage({ message, characters, senderNames, npcNames, isOwn, isGm }: Props) {
+export function SceneMessage({ message, characters, senderNames, npcNames, isOwn, isGm, flamingo }: Props) {
+  if (flamingo) {
+    return (
+      <FlamingoSceneMessage
+        message={message}
+        characters={characters}
+        senderNames={senderNames}
+        npcNames={npcNames}
+        isOwn={isOwn}
+        isGm={isGm}
+      />
+    );
+  }
   const t = message.message_type;
 
   // Dice roll — dedicated card

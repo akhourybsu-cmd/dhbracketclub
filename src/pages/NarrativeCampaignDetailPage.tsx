@@ -5,7 +5,7 @@
 // Pending/non-active campaigns render a status banner instead of
 // the play surface.
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -30,6 +30,8 @@ import { SectionHeader } from '@/components/home/SectionHeader';
 import { StatusPill } from '@/components/ui/status-pill';
 import { getTemplate, type TemplateKey } from '@/lib/narrative/templates';
 import { computeCampaignStatus } from '@/lib/narrative/campaignStatus';
+import { isFlamingoCampaign } from '@/lib/narrative/flamingoTheme';
+import { FlamingoCampaignShell, FlamingoCampaignHeader, FlamingoTabs } from '@/components/narrative/flamingo';
 
 type Tab = 'story' | 'characters' | 'world' | 'log';
 
@@ -73,10 +75,33 @@ export default function NarrativeCampaignDetailPage() {
 
   const campaign = data.campaign;
   const template = getTemplate(campaign.template_key as TemplateKey);
+  const flamingo = isFlamingoCampaign(campaign.template_key);
+  const computedStatus = computeCampaignStatus({ campaign, recentMessages: data.messages });
+  const pendingAiCount = data.aiSuggestions.filter(s => s.status === 'pending' || s.status === 'edited').length;
+
+  // Flamingo Protocol campaigns render inside the neon shell. Other
+  // campaigns use a plain flex column (calm shell).
+  const PageWrap = (flamingo
+    ? FlamingoCampaignShell
+    : ({ children }: { children: ReactNode }) => <>{children}</>
+  ) as (props: { children: ReactNode }) => JSX.Element;
 
   return (
     <div className="flex flex-col h-[calc(100dvh-3rem-env(safe-area-inset-top,0px))]">
-      {/* Compact header */}
+      <PageWrap>
+      {/* Compact header — Flamingo or calm depending on template. */}
+      {flamingo ? (
+        <FlamingoCampaignHeader
+          campaign={campaign}
+          computedStatus={computedStatus}
+          onBack={() => navigate('/narrative')}
+          pendingAiCount={pendingAiCount}
+          canOpenGmConsole={data.isGm && isActive}
+          onOpenGmConsole={() => setGmOpen(true)}
+          canManageMembers={(data.isGm || data.myRole === 'game_master') && isActive}
+          onManageMembers={() => setMembersOpen(true)}
+        />
+      ) : (
       <div
         className="flex-shrink-0 px-3 py-2.5 border-b border-border/20 bg-background/90 backdrop-blur-md flex items-center gap-2"
         style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top, 0px))' }}
@@ -135,6 +160,7 @@ export default function NarrativeCampaignDetailPage() {
           );
         })()}
       </div>
+      )}
 
       {/* Pending / approval banner */}
       {!isActive && (
@@ -180,8 +206,11 @@ export default function NarrativeCampaignDetailPage() {
         </div>
       )}
 
-      {/* Tab strip (only for active/paused campaigns) */}
-      {isActive && (
+      {/* Tab strip (only for active/paused campaigns) — Flamingo flavor
+          on Flamingo Protocol campaigns, calm grid otherwise. */}
+      {isActive && (flamingo ? (
+        <FlamingoTabs value={tab as any} onChange={(next) => setTab(next as Tab)} />
+      ) : (
         <div className="px-3 py-2 border-b border-border/15 flex-shrink-0">
           <div className="grid grid-cols-4 gap-1 rounded-xl bg-muted/30 p-1">
             {(['story', 'characters', 'world', 'log'] as Tab[]).map(t => {
@@ -199,7 +228,7 @@ export default function NarrativeCampaignDetailPage() {
             })}
           </div>
         </div>
-      )}
+      ))}
 
       {/* Pending invite — viewer was invited but hasn't accepted yet.
           Rendered above the live strip so it's the first thing they see. */}
@@ -425,6 +454,7 @@ export default function NarrativeCampaignDetailPage() {
           onChanged={data.refresh}
         />
       )}
+      </PageWrap>
     </div>
   );
 }

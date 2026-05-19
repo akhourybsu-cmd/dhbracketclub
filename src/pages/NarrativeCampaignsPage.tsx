@@ -17,6 +17,8 @@ import { useClub } from '@/contexts/ClubContext';
 import { SectionHeader } from '@/components/home/SectionHeader';
 import { CampaignStatusPill } from '@/components/narrative/CampaignStatusPill';
 import { getTemplate } from '@/lib/narrative/templates';
+import { isFlamingoCampaign, FLAMINGO } from '@/lib/narrative/flamingoTheme';
+import { FlamingoBrandBadge } from '@/components/narrative/flamingo/FlamingoStatusPill';
 import type { Campaign } from '@/lib/narrative/types';
 
 export default function NarrativeCampaignsPage() {
@@ -171,6 +173,15 @@ export default function NarrativeCampaignsPage() {
 
 function CampaignRow({ campaign, highlight }: { campaign: Campaign; highlight?: 'warning' }) {
   const template = getTemplate(campaign.template_key);
+  const flamingo = isFlamingoCampaign(campaign.template_key);
+  // Flamingo campaigns get a toned-down pink-glow edge in the list —
+  // enough to read as "flagship" without overpowering the rest of the
+  // campaigns surface or other parts of the app.
+  const borderColor = flamingo
+    ? `hsl(${FLAMINGO.pink} / 0.45)`
+    : highlight === 'warning'
+      ? 'hsl(38 95% 50% / 0.45)'
+      : 'hsl(var(--border) / 0.4)';
   return (
     <Link
       to={`/narrative/${campaign.id}`}
@@ -179,15 +190,24 @@ function CampaignRow({ campaign, highlight }: { campaign: Campaign; highlight?: 
       <div
         className="rounded-2xl bg-card border p-3.5 flex items-start gap-3"
         style={{
-          borderColor: highlight === 'warning' ? 'hsl(38 95% 50% / 0.45)' : 'hsl(var(--border) / 0.4)',
+          borderColor,
+          boxShadow: flamingo ? `0 0 14px -6px hsl(${FLAMINGO.pink} / 0.5)` : undefined,
         }}
       >
         <div
           className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{
-            background: 'linear-gradient(135deg, hsl(var(--primary) / 0.16), hsl(var(--primary) / 0.04))',
-            color: 'hsl(var(--primary))',
-          }}
+          style={
+            flamingo
+              ? {
+                  background: `linear-gradient(135deg, hsl(${FLAMINGO.pink} / 0.22), hsl(${FLAMINGO.cyan} / 0.12))`,
+                  color: `hsl(${FLAMINGO.pink})`,
+                  border: `1px solid hsl(${FLAMINGO.pink} / 0.4)`,
+                }
+              : {
+                  background: 'linear-gradient(135deg, hsl(var(--primary) / 0.16), hsl(var(--primary) / 0.04))',
+                  color: 'hsl(var(--primary))',
+                }
+          }
         >
           <ScrollText className="w-5 h-5" />
         </div>
@@ -195,6 +215,7 @@ function CampaignRow({ campaign, highlight }: { campaign: Campaign; highlight?: 
           <div className="flex items-center gap-1.5 flex-wrap">
             <h3 className="text-[14px] font-extrabold tracking-tight truncate">{campaign.title}</h3>
             <CampaignStatusPill status={campaign.status} withPulse={campaign.status === 'active' || campaign.status === 'pending_approval'} />
+            {flamingo && <FlamingoBrandBadge />}
           </div>
           <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/60 mt-0.5">
             {template.name}

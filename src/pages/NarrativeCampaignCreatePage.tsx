@@ -15,6 +15,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useNarrativeCampaigns } from '@/hooks/useNarrativeCampaigns';
 import { TEMPLATE_LIST, getTemplate, type TemplateKey } from '@/lib/narrative/templates';
+import { isFlamingoCampaign, FLAMINGO } from '@/lib/narrative/flamingoTheme';
 import type { CampaignPlayMode, CampaignVisibility } from '@/lib/narrative/types';
 
 const PLAY_MODES: { id: CampaignPlayMode; label: string; blurb: string }[] = [
@@ -134,18 +135,75 @@ export default function NarrativeCampaignCreatePage() {
           <div className="grid grid-cols-1 gap-2">
             {TEMPLATE_LIST.map(t => {
               const selected = t.key === templateKey;
+              const flagship = isFlamingoCampaign(t.key);
               return (
                 <button
                   key={t.key}
                   type="button"
                   onClick={() => setTemplateKey(t.key)}
-                  className={`text-left rounded-2xl p-3.5 border bg-card transition ${selected ? 'border-primary ring-1 ring-primary/30' : 'border-border/40 hover:border-border/60'}`}
+                  className="text-left rounded-2xl p-3.5 border transition relative overflow-hidden"
+                  style={
+                    flagship
+                      ? {
+                          background: `linear-gradient(135deg, hsl(${FLAMINGO.ink}), hsl(${FLAMINGO.midnight}))`,
+                          borderColor: selected ? `hsl(${FLAMINGO.pink})` : `hsl(${FLAMINGO.pink} / 0.45)`,
+                          boxShadow: selected
+                            ? `0 0 22px -4px hsl(${FLAMINGO.pink} / 0.7), 0 0 22px -8px hsl(${FLAMINGO.cyan} / 0.5)`
+                            : `0 0 14px -6px hsl(${FLAMINGO.pink} / 0.4)`,
+                          color: `hsl(${FLAMINGO.paper})`,
+                        }
+                      : {
+                          background: 'hsl(var(--card))',
+                          borderColor: selected ? 'hsl(var(--primary))' : 'hsl(var(--border) / 0.4)',
+                          boxShadow: selected ? '0 0 0 1px hsl(var(--primary) / 0.3)' : undefined,
+                        }
+                  }
                 >
+                  {flagship && (
+                    <span
+                      aria-hidden
+                      className="absolute right-3 top-3 text-[8.5px] font-extrabold uppercase tracking-[0.22em] rounded-full px-1.5 py-[2px]"
+                      style={{
+                        background: `hsl(${FLAMINGO.gold} / 0.2)`,
+                        color: `hsl(${FLAMINGO.gold})`,
+                        border: `1px solid hsl(${FLAMINGO.gold} / 0.55)`,
+                      }}
+                    >
+                      Flagship
+                    </span>
+                  )}
                   <div className="flex items-center gap-2 mb-1">
-                    <Sparkles className="w-3.5 h-3.5 text-primary" />
-                    <span className="text-[13px] font-extrabold">{t.name}</span>
+                    <Sparkles
+                      className="w-3.5 h-3.5"
+                      style={{ color: flagship ? `hsl(${FLAMINGO.pink})` : 'hsl(var(--primary))' }}
+                    />
+                    <span
+                      className="text-[13px] font-extrabold"
+                      style={flagship ? {
+                        backgroundImage: `linear-gradient(90deg, hsl(${FLAMINGO.paper}), hsl(${FLAMINGO.pink}), hsl(${FLAMINGO.cyan}))`,
+                        WebkitBackgroundClip: 'text',
+                        backgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        color: 'transparent',
+                      } : undefined}
+                    >
+                      {t.name}
+                    </span>
                   </div>
-                  <p className="text-[11.5px] text-muted-foreground/80 leading-snug">{t.tagline}</p>
+                  <p
+                    className="text-[11.5px] leading-snug"
+                    style={{ color: flagship ? `hsl(${FLAMINGO.paper} / 0.8)` : undefined }}
+                  >
+                    {t.tagline}
+                  </p>
+                  {flagship && (
+                    <p
+                      className="text-[10.5px] italic leading-snug mt-1.5"
+                      style={{ color: `hsl(${FLAMINGO.cyan} / 0.9)` }}
+                    >
+                      Velvetaine glows at midnight. Everyone wants the tape. Nobody is telling the truth.
+                    </p>
+                  )}
                 </button>
               );
             })}

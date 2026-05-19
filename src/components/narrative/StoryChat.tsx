@@ -16,6 +16,8 @@ import { DiceRollSheet } from './DiceRollSheet';
 import { ClockCard } from './ClockCard';
 import { PlayerAiAssistMenu } from './PlayerAiAssistMenu';
 import { isAiConfigured } from '@/lib/narrative/aiService';
+import { FlamingoSceneCard } from './flamingo/FlamingoSceneCard';
+import { isFlamingoCampaign, FLAMINGO } from '@/lib/narrative/flamingoTheme';
 import type { Campaign, Character, CampaignMember, Message, MessageType, Scene, Clock } from '@/lib/narrative/types';
 
 interface Props {
@@ -47,6 +49,7 @@ export function StoryChat({
   campaign, isGm, myRole, myCharacter, characters, members, scenes, currentScene, messages, clocks, onPost, onRoll,
 }: Props) {
   const { user } = useAuth();
+  const flamingo = isFlamingoCampaign(campaign.template_key);
   const [draft, setDraft] = useState('');
   const [mode, setMode] = useState<PostMode>('character');
   const [rollOpen, setRollOpen] = useState(false);
@@ -122,25 +125,42 @@ export function StoryChat({
     <div className="flex flex-col flex-1 min-h-0">
       {/* Pinned scene + clocks header */}
       {(currentScene || visibleClocks.length > 0) && (
-        <div className="px-4 pt-3 pb-2 space-y-2 border-b border-border/15 bg-background/95 backdrop-blur-md sticky top-0 z-10">
+        <div
+          className="px-4 pt-3 pb-2 space-y-2 border-b backdrop-blur-md sticky top-0 z-10"
+          style={
+            flamingo
+              ? {
+                  background: `hsl(${FLAMINGO.midnight} / 0.78)`,
+                  borderColor: `hsl(${FLAMINGO.pink} / 0.22)`,
+                }
+              : {
+                  background: 'hsl(var(--background) / 0.95)',
+                  borderColor: 'hsl(var(--border) / 0.15)',
+                }
+          }
+        >
           {currentScene && (
-            <div
-              className="rounded-xl border p-2.5"
-              style={{ borderColor: 'hsl(var(--gold) / 0.35)', background: 'hsl(var(--gold) / 0.06)' }}
-            >
-              <div className="flex items-center gap-1.5">
-                <Megaphone className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />
-                <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em]" style={{ color: 'hsl(var(--gold))' }}>
-                  Current Scene
-                </p>
+            flamingo ? (
+              <FlamingoSceneCard scene={currentScene} />
+            ) : (
+              <div
+                className="rounded-xl border p-2.5"
+                style={{ borderColor: 'hsl(var(--gold) / 0.35)', background: 'hsl(var(--gold) / 0.06)' }}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Megaphone className="w-3 h-3" style={{ color: 'hsl(var(--gold))' }} />
+                  <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em]" style={{ color: 'hsl(var(--gold))' }}>
+                    Current Scene
+                  </p>
+                </div>
+                <h3 className="text-[13px] font-extrabold tracking-tight mt-0.5">{currentScene.title}</h3>
+                {currentScene.objective && (
+                  <p className="text-[11px] text-foreground/80 mt-0.5">
+                    <span className="text-muted-foreground/65 font-bold uppercase text-[9px] tracking-wider mr-1.5">Objective</span>{currentScene.objective}
+                  </p>
+                )}
               </div>
-              <h3 className="text-[13px] font-extrabold tracking-tight mt-0.5">{currentScene.title}</h3>
-              {currentScene.objective && (
-                <p className="text-[11px] text-foreground/80 mt-0.5">
-                  <span className="text-muted-foreground/65 font-bold uppercase text-[9px] tracking-wider mr-1.5">Objective</span>{currentScene.objective}
-                </p>
-              )}
-            </div>
+            )
           )}
           {visibleClocks.length > 0 && (
             <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
@@ -177,6 +197,7 @@ export function StoryChat({
             senderNames={senderNames}
             isOwn={m.sender_id === user?.id}
             isGm={isGm}
+            flamingo={flamingo}
           />
         ))}
         <div ref={endRef} />
