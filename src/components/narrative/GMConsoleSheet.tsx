@@ -32,6 +32,7 @@ import { AiSuggestionEditSheet } from './AiSuggestionEditSheet';
 import { GM_TOOLS, isAiConfigured, invokeGmTool, type AiSuggestion } from '@/lib/narrative/aiService';
 import { applyStateUpdates } from '@/lib/narrative/applyStateUpdates';
 import { isFlamingoCampaign, FLAMINGO } from '@/lib/narrative/flamingoTheme';
+import { FlamingoClueMarker, clueAccent, FlamingoMeter, FlamingoLockIcon } from './flamingo/FlamingoPrimitives';
 import type {
   Campaign, Scene, NPC, Clue, Faction, Clock, Item, Location as NarrativeLocation, AiSuggestionRow,
 } from '@/lib/narrative/types';
@@ -393,7 +394,8 @@ function SimpleCreate({ label, onCreate, placeholder, descPlaceholder, gmOnly = 
   );
 }
 
-function NpcsTab({ npcs, onCreateNpc, onEdit }: Props & { onEdit?: (n: NPC) => void }) {
+function NpcsTab({ campaign, npcs, onCreateNpc, onEdit }: Props & { onEdit?: (n: NPC) => void }) {
+  const flamingo = isFlamingoCampaign(campaign.template_key);
   return (
     <div className="space-y-3">
       <SimpleCreate label="NPC" onCreate={onCreateNpc as any} placeholder="NPC name" descPlaceholder="Short description / role" />
@@ -404,17 +406,39 @@ function NpcsTab({ npcs, onCreateNpc, onEdit }: Props & { onEdit?: (n: NPC) => v
             type="button"
             key={n.id}
             onClick={() => onEdit?.(n)}
-            className="w-full text-left rounded-xl bg-card border border-border/40 p-2.5 flex items-start gap-2 active:scale-[0.99] transition"
+            className="w-full text-left rounded-xl p-2.5 flex items-start gap-2 active:scale-[0.99] transition relative overflow-hidden"
+            style={flamingo ? {
+              background: `linear-gradient(135deg, hsl(${FLAMINGO.ink}), hsl(${FLAMINGO.midnight}))`,
+              border: `1px solid hsl(${FLAMINGO.gold} / 0.35)`,
+              color: `hsl(${FLAMINGO.paper})`,
+            } : {
+              background: 'hsl(var(--card))',
+              border: '1px solid hsl(var(--border) / 0.4)',
+            }}
           >
-            <div className="min-w-0 flex-1">
+            {flamingo && (
+              <div aria-hidden className="absolute left-0 top-0 bottom-0 w-1" style={{ background: `hsl(${FLAMINGO.gold})` }} />
+            )}
+            <div className={`min-w-0 flex-1 ${flamingo ? 'pl-2' : ''}`}>
               <div className="flex items-center gap-1.5">
                 <span className="text-[12.5px] font-extrabold truncate">{n.name}</span>
-                {n.visibility === 'gm_only' && <StatusPill variant="disabled" size="xs">GM only</StatusPill>}
+                {n.visibility === 'gm_only' && (flamingo ? <FlamingoLockIcon /> : <StatusPill variant="disabled" size="xs">GM only</StatusPill>)}
               </div>
-              {n.role && <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/65">{n.role}</p>}
-              {n.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{n.description}</p>}
+              {n.role && (
+                <p className="text-[10px] font-bold uppercase tracking-wider mt-0.5" style={{ color: flamingo ? `hsl(${FLAMINGO.gold})` : 'hsl(var(--muted-foreground) / 0.65)' }}>
+                  {n.role}
+                </p>
+              )}
+              {n.description && (
+                <p
+                  className="text-[11.5px] leading-snug mt-1"
+                  style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.8)` : 'hsl(var(--foreground) / 0.8)' }}
+                >
+                  {n.description}
+                </p>
+              )}
             </div>
-            <Pencil className="w-3 h-3 text-muted-foreground/55 mt-1 flex-shrink-0" />
+            <Pencil className="w-3 h-3 mt-1 flex-shrink-0" style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.5)` : 'hsl(var(--muted-foreground) / 0.55)' }} />
           </button>
         ))}
       </div>
@@ -422,7 +446,8 @@ function NpcsTab({ npcs, onCreateNpc, onEdit }: Props & { onEdit?: (n: NPC) => v
   );
 }
 
-function CluesTab({ clues, onCreateClue, onEdit }: Props & { onEdit?: (c: Clue) => void }) {
+function CluesTab({ campaign, clues, onCreateClue, onEdit }: Props & { onEdit?: (c: Clue) => void }) {
+  const flamingo = isFlamingoCampaign(campaign.template_key);
   return (
     <div className="space-y-3">
       <SimpleCreate label="clue" onCreate={onCreateClue as any} placeholder="Clue name" descPlaceholder="What the clue tells the party" />
@@ -433,19 +458,44 @@ function CluesTab({ clues, onCreateClue, onEdit }: Props & { onEdit?: (c: Clue) 
             type="button"
             key={c.id}
             onClick={() => onEdit?.(c)}
-            className="w-full text-left rounded-xl bg-card border border-border/40 p-2.5 flex items-start gap-2 active:scale-[0.99] transition"
+            className="w-full text-left rounded-xl p-2.5 flex items-start gap-2 active:scale-[0.99] transition relative overflow-hidden"
+            style={flamingo ? {
+              background: `linear-gradient(135deg, hsl(${FLAMINGO.ink}), hsl(${FLAMINGO.midnight}))`,
+              border: `1px solid hsl(${clueAccent(c.status)} / 0.4)`,
+              color: `hsl(${FLAMINGO.paper})`,
+            } : {
+              background: 'hsl(var(--card))',
+              border: '1px solid hsl(var(--border) / 0.4)',
+            }}
           >
-            <div className="min-w-0 flex-1">
+            {flamingo && (
+              <div
+                aria-hidden
+                className="absolute left-0 top-0 bottom-0 w-1"
+                style={{ background: `hsl(${clueAccent(c.status)})` }}
+              />
+            )}
+            {flamingo && <FlamingoClueMarker status={c.status} />}
+            <div className={`min-w-0 flex-1 ${flamingo ? 'pl-1' : ''}`}>
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-[12.5px] font-extrabold truncate">{c.name}</span>
-                <StatusPill variant={c.status === 'solved' ? 'success' : c.status === 'false_lead' ? 'danger' : c.status === 'partial' ? 'warning' : 'info'} size="xs">
-                  {c.status.replace('_', ' ')}
-                </StatusPill>
-                {c.visibility === 'gm_only' && <StatusPill variant="disabled" size="xs">GM only</StatusPill>}
+                {!flamingo && (
+                  <StatusPill variant={c.status === 'solved' ? 'success' : c.status === 'false_lead' ? 'danger' : c.status === 'partial' ? 'warning' : 'info'} size="xs">
+                    {c.status.replace('_', ' ')}
+                  </StatusPill>
+                )}
+                {c.visibility === 'gm_only' && (flamingo ? <FlamingoLockIcon /> : <StatusPill variant="disabled" size="xs">GM only</StatusPill>)}
               </div>
-              {c.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{c.description}</p>}
+              {c.description && (
+                <p
+                  className="text-[11.5px] leading-snug mt-1"
+                  style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.8)` : 'hsl(var(--foreground) / 0.8)' }}
+                >
+                  {c.description}
+                </p>
+              )}
             </div>
-            <Pencil className="w-3 h-3 text-muted-foreground/55 mt-1 flex-shrink-0" />
+            <Pencil className="w-3 h-3 mt-1 flex-shrink-0" style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.5)` : 'hsl(var(--muted-foreground) / 0.55)' }} />
           </button>
         ))}
       </div>
@@ -453,27 +503,55 @@ function CluesTab({ clues, onCreateClue, onEdit }: Props & { onEdit?: (c: Clue) 
   );
 }
 
-function ItemsTab({ items, onCreateItem, onEdit }: Props & { onEdit?: (i: Item) => void }) {
+function ItemsTab({ campaign, items, onCreateItem, onEdit }: Props & { onEdit?: (i: Item) => void }) {
+  const flamingo = isFlamingoCampaign(campaign.template_key);
   return (
     <div className="space-y-3">
-      <SimpleCreate label="item" onCreate={onCreateItem as any} placeholder="Item name" descPlaceholder="Description / use" />
+      <SimpleCreate
+        label={flamingo ? 'leverage' : 'item'}
+        onCreate={onCreateItem as any}
+        placeholder={flamingo ? 'Leverage name' : 'Item name'}
+        descPlaceholder={flamingo ? 'Useful for…' : 'Description / use'}
+      />
       <div className="space-y-1.5">
-        {items.length === 0 && <EmptyHint message="No important items yet." />}
+        {items.length === 0 && <EmptyHint message={flamingo ? 'No leverage on the table yet.' : 'No important items yet.'} />}
         {items.map(i => (
           <button
             type="button"
             key={i.id}
             onClick={() => onEdit?.(i)}
-            className="w-full text-left rounded-xl bg-card border border-border/40 p-2.5 flex items-start gap-2 active:scale-[0.99] transition"
+            className="w-full text-left rounded-xl p-2.5 flex items-start gap-2 active:scale-[0.99] transition relative overflow-hidden"
+            style={flamingo ? {
+              background: `linear-gradient(135deg, hsl(${FLAMINGO.ink}), hsl(${FLAMINGO.midnight}))`,
+              border: `1px solid hsl(${FLAMINGO.gold} / 0.4)`,
+              color: `hsl(${FLAMINGO.paper})`,
+            } : {
+              background: 'hsl(var(--card))',
+              border: '1px solid hsl(var(--border) / 0.4)',
+            }}
           >
-            <div className="min-w-0 flex-1">
+            {flamingo && (
+              <div
+                aria-hidden
+                className="absolute left-0 top-0 bottom-0 w-1"
+                style={{ background: `hsl(${FLAMINGO.gold})` }}
+              />
+            )}
+            <div className={`min-w-0 flex-1 ${flamingo ? 'pl-2' : ''}`}>
               <div className="flex items-center gap-1.5">
                 <span className="text-[12.5px] font-extrabold truncate">{i.name}</span>
-                {i.visibility === 'gm_only' && <StatusPill variant="disabled" size="xs">GM only</StatusPill>}
+                {i.visibility === 'gm_only' && (flamingo ? <FlamingoLockIcon /> : <StatusPill variant="disabled" size="xs">GM only</StatusPill>)}
               </div>
-              {i.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{i.description}</p>}
+              {i.description && (
+                <p
+                  className="text-[11.5px] leading-snug mt-1"
+                  style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.8)` : 'hsl(var(--foreground) / 0.8)' }}
+                >
+                  {i.description}
+                </p>
+              )}
             </div>
-            <Pencil className="w-3 h-3 text-muted-foreground/55 mt-1 flex-shrink-0" />
+            <Pencil className="w-3 h-3 mt-1 flex-shrink-0" style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.5)` : 'hsl(var(--muted-foreground) / 0.55)' }} />
           </button>
         ))}
       </div>
@@ -481,7 +559,8 @@ function ItemsTab({ items, onCreateItem, onEdit }: Props & { onEdit?: (i: Item) 
   );
 }
 
-function FactionsTab({ factions, onCreateFaction, onEdit }: Props & { onEdit?: (f: Faction) => void }) {
+function FactionsTab({ campaign, factions, onCreateFaction, onEdit }: Props & { onEdit?: (f: Faction) => void }) {
+  const flamingo = isFlamingoCampaign(campaign.template_key);
   return (
     <div className="space-y-3">
       <SimpleCreate label="faction" onCreate={onCreateFaction as any} placeholder="Faction name" descPlaceholder="Who they are, what they want" />
@@ -492,19 +571,50 @@ function FactionsTab({ factions, onCreateFaction, onEdit }: Props & { onEdit?: (
             type="button"
             key={f.id}
             onClick={() => onEdit?.(f)}
-            className="w-full text-left rounded-xl bg-card border border-border/40 p-2.5 flex items-start gap-2 active:scale-[0.99] transition"
+            className="w-full text-left rounded-xl p-2.5 active:scale-[0.99] transition relative overflow-hidden"
+            style={flamingo ? {
+              background: `linear-gradient(135deg, hsl(${FLAMINGO.ink}), hsl(${FLAMINGO.midnight}))`,
+              border: `1px solid hsl(${FLAMINGO.violet} / 0.4)`,
+              color: `hsl(${FLAMINGO.paper})`,
+            } : {
+              background: 'hsl(var(--card))',
+              border: '1px solid hsl(var(--border) / 0.4)',
+            }}
           >
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
+            {flamingo && (
+              <div
+                aria-hidden
+                className="absolute left-0 top-0 bottom-0 w-1"
+                style={{ background: `hsl(${FLAMINGO.violet})` }}
+              />
+            )}
+            <div className={flamingo ? 'pl-2' : ''}>
+              <div className="flex items-center gap-1.5 justify-between">
                 <span className="text-[12.5px] font-extrabold truncate">{f.name}</span>
-                {f.visibility === 'gm_only' && <StatusPill variant="disabled" size="xs">GM only</StatusPill>}
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {f.visibility === 'gm_only' && (flamingo ? <FlamingoLockIcon /> : <StatusPill variant="disabled" size="xs">GM only</StatusPill>)}
+                  <Pencil className="w-3 h-3" style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.5)` : 'hsl(var(--muted-foreground) / 0.55)' }} />
+                </div>
               </div>
-              <p className="text-[10px] font-bold text-muted-foreground/70 mt-0.5">
-                Relationship <span className="tabular-nums">{f.relationship_score}</span> · Suspicion <span className="tabular-nums">{f.suspicion_score}</span>
-              </p>
-              {f.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{f.description}</p>}
+              {flamingo ? (
+                <div className="mt-2 space-y-1.5">
+                  <FlamingoMeter label="Heat" value={f.suspicion_score ?? 0} max={10} accent="heat" />
+                  <FlamingoMeter label="Bond" value={f.relationship_score ?? 0} max={10} accent="cool" />
+                </div>
+              ) : (
+                <p className="text-[10px] font-bold text-muted-foreground/70 mt-0.5">
+                  Relationship <span className="tabular-nums">{f.relationship_score}</span> · Suspicion <span className="tabular-nums">{f.suspicion_score}</span>
+                </p>
+              )}
+              {f.description && (
+                <p
+                  className="text-[11.5px] leading-snug mt-1.5"
+                  style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.8)` : 'hsl(var(--foreground) / 0.8)' }}
+                >
+                  {f.description}
+                </p>
+              )}
             </div>
-            <Pencil className="w-3 h-3 text-muted-foreground/55 mt-1 flex-shrink-0" />
           </button>
         ))}
       </div>

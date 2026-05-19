@@ -31,7 +31,10 @@ import { StatusPill } from '@/components/ui/status-pill';
 import { getTemplate, type TemplateKey } from '@/lib/narrative/templates';
 import { computeCampaignStatus } from '@/lib/narrative/campaignStatus';
 import { isFlamingoCampaign, FLAMINGO } from '@/lib/narrative/flamingoTheme';
-import { FlamingoCampaignShell, FlamingoCampaignHeader, FlamingoTabs, FlamingoCharacterCard } from '@/components/narrative/flamingo';
+import {
+  FlamingoCampaignShell, FlamingoCampaignHeader, FlamingoTabs,
+  FlamingoCharacterCard, FlamingoMeter, FlamingoClueMarker, clueAccent,
+} from '@/components/narrative/flamingo';
 
 type Tab = 'story' | 'characters' | 'world' | 'log';
 
@@ -48,9 +51,10 @@ export default function NarrativeCampaignDetailPage() {
 
   const isActive = data.campaign?.status === 'active' || data.campaign?.status === 'paused';
 
-  const publicClocks = useMemo(() => data.clocks.filter(c => c.visibility === 'public'), [data.clocks]);
-  const publicNpcs   = useMemo(() => data.npcs.filter(n => n.visibility === 'public'),   [data.npcs]);
-  const publicClues  = useMemo(() => data.clues.filter(c => c.visibility === 'public' || data.isGm),  [data.clues, data.isGm]);
+  const publicClocks   = useMemo(() => data.clocks.filter(c => c.visibility === 'public'), [data.clocks]);
+  const publicNpcs     = useMemo(() => data.npcs.filter(n => n.visibility === 'public'),   [data.npcs]);
+  const publicClues    = useMemo(() => data.clues.filter(c => c.visibility === 'public' || data.isGm),  [data.clues, data.isGm]);
+  const publicFactions = useMemo(() => data.factions.filter(f => f.visibility === 'public' || data.isGm), [data.factions, data.isGm]);
 
   if (data.loading && !data.campaign) {
     return (
@@ -354,19 +358,39 @@ export default function NarrativeCampaignDetailPage() {
               <div className="space-y-2">
                 {publicClues.map(c => (
                   flamingo ? (
-                    <FlamingoEntityCard
+                    // Flamingo clue card uses a status-driven left-rule
+                    // accent + the icon marker instead of a status text
+                    // pill. The shape carries the meaning at a glance.
+                    <div
                       key={c.id}
-                      title={c.name}
-                      body={c.description ?? undefined}
-                      accent={FLAMINGO.clue}
-                      pill={c.status.replace('_', ' ')}
-                      pillAccent={
-                        c.status === 'solved' ? FLAMINGO.success
-                          : c.status === 'false_lead' ? FLAMINGO.danger
-                          : c.status === 'partial' ? FLAMINGO.gold
-                          : FLAMINGO.clue
-                      }
-                    />
+                      className="rounded-xl p-3 relative overflow-hidden"
+                      style={{
+                        background: `linear-gradient(135deg, hsl(${FLAMINGO.ink}), hsl(${FLAMINGO.midnight}))`,
+                        border: `1px solid hsl(${clueAccent(c.status)} / 0.4)`,
+                        boxShadow: `0 0 12px -6px hsl(${clueAccent(c.status)} / 0.45)`,
+                        color: `hsl(${FLAMINGO.paper})`,
+                      }}
+                    >
+                      <div
+                        aria-hidden
+                        className="absolute left-0 top-0 bottom-0 w-1"
+                        style={{ background: `hsl(${clueAccent(c.status)})` }}
+                      />
+                      <div className="pl-2 flex items-start gap-2">
+                        <FlamingoClueMarker status={c.status} />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[12.5px] font-extrabold truncate">{c.name}</p>
+                          {c.description && (
+                            <p
+                              className="text-[11.5px] leading-snug mt-1"
+                              style={{ color: `hsl(${FLAMINGO.paper} / 0.82)` }}
+                            >
+                              {c.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   ) : (
                     <div key={c.id} className="rounded-xl bg-card border border-border/40 p-3">
                       <div className="flex items-center gap-1.5">
@@ -376,6 +400,70 @@ export default function NarrativeCampaignDetailPage() {
                         </StatusPill>
                       </div>
                       {c.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{c.description}</p>}
+                    </div>
+                  )
+                ))}
+              </div>
+            </section>
+          )}
+          {publicFactions.length > 0 && (
+            <section>
+              <SectionHeader label={flamingo ? 'Power players' : 'Factions'} count={publicFactions.length} />
+              <div className="space-y-2">
+                {publicFactions.map(f => (
+                  flamingo ? (
+                    <div
+                      key={f.id}
+                      className="rounded-xl p-3 relative overflow-hidden"
+                      style={{
+                        background: `linear-gradient(135deg, hsl(${FLAMINGO.ink}), hsl(${FLAMINGO.midnight}))`,
+                        border: `1px solid hsl(${FLAMINGO.violet} / 0.4)`,
+                        boxShadow: `0 0 12px -6px hsl(${FLAMINGO.violet} / 0.45)`,
+                        color: `hsl(${FLAMINGO.paper})`,
+                      }}
+                    >
+                      <div
+                        aria-hidden
+                        className="absolute left-0 top-0 bottom-0 w-1"
+                        style={{ background: `hsl(${FLAMINGO.violet})` }}
+                      />
+                      <div className="pl-2 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[12.5px] font-extrabold truncate">{f.name}</p>
+                          {f.attitude && (
+                            <span
+                              className="text-[9px] font-extrabold uppercase tracking-wider flex-shrink-0"
+                              style={{ color: `hsl(${FLAMINGO.gold})` }}
+                            >
+                              {f.attitude}
+                            </span>
+                          )}
+                        </div>
+                        {f.description && (
+                          <p
+                            className="text-[11.5px] leading-snug"
+                            style={{ color: `hsl(${FLAMINGO.paper} / 0.82)` }}
+                          >
+                            {f.description}
+                          </p>
+                        )}
+                        {/* Heat meter — suspicion_score is naturally the
+                            "heat" reading. Cyan→pink ramp signals risk. */}
+                        <FlamingoMeter
+                          label="Heat"
+                          value={f.suspicion_score ?? 0}
+                          max={10}
+                          accent="heat"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div key={f.id} className="rounded-xl bg-card border border-border/40 p-3">
+                      <p className="text-[12.5px] font-extrabold truncate">{f.name}</p>
+                      {f.attitude && (
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/65 mt-0.5">{f.attitude}</p>
+                      )}
+                      {f.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{f.description}</p>}
                     </div>
                   )
                 ))}
@@ -412,7 +500,7 @@ export default function NarrativeCampaignDetailPage() {
               </div>
             </section>
           )}
-          {publicNpcs.length === 0 && publicClues.length === 0 && publicClocks.length === 0 && data.locations.length === 0 && (
+          {publicNpcs.length === 0 && publicClues.length === 0 && publicClocks.length === 0 && publicFactions.length === 0 && data.locations.length === 0 && (
             <div
               className="rounded-xl p-4 text-center"
               style={flamingo ? {
@@ -445,6 +533,24 @@ export default function NarrativeCampaignDetailPage() {
               m.message_type === 'chapter_transition' ||
               m.message_type === 'campaign_summary'
             );
+            // Group log entries under their parent chapter. A chapter
+            // starts at each chapter_transition message; everything
+            // until the next transition belongs to that chapter. The
+            // grouping is purely presentational — we don't touch the
+            // underlying chapter table.
+            type Group = { title: string; transition: typeof logEvents[number] | null; entries: typeof logEvents };
+            const groups: Group[] = [];
+            let current: Group = { title: 'Prologue', transition: null, entries: [] };
+            for (const e of logEvents) {
+              if (e.message_type === 'chapter_transition') {
+                if (current.entries.length > 0 || current.transition) groups.push(current);
+                current = { title: e.body || 'New Chapter', transition: e, entries: [] };
+              } else {
+                current.entries.push(e);
+              }
+            }
+            if (current.entries.length > 0 || current.transition) groups.push(current);
+
             if (logEvents.length === 0) {
               return (
                 <div
@@ -465,62 +571,106 @@ export default function NarrativeCampaignDetailPage() {
                 </div>
               );
             }
+            const labelMap: Record<string, string> = flamingo
+              ? { scene_card: 'Scene · Roll Sound', campaign_summary: 'Episode Recap' }
+              : { scene_card: 'Scene', campaign_summary: 'Campaign Summary' };
             return (
-              <div className="space-y-2">
-                {logEvents.map(e => {
-                  const labelMap: Record<string, string> = flamingo
-                    ? {
-                        scene_card: 'Scene · Roll Sound',
-                        chapter_transition: 'New Chapter',
-                        campaign_summary: 'Episode Recap',
-                      }
-                    : {
-                        scene_card: 'Scene',
-                        chapter_transition: 'Chapter Transition',
-                        campaign_summary: 'Campaign Summary',
-                      };
-                  const accent = flamingo
-                    ? (e.message_type === 'chapter_transition' ? FLAMINGO.pink
-                        : e.message_type === 'campaign_summary' ? FLAMINGO.cyan
-                        : FLAMINGO.gold)
-                    : null;
-                  return (
+              <div className="space-y-4">
+                {groups.map((g, gi) => (
+                  <section key={gi}>
+                    {/* Chapter title bar */}
                     <div
-                      key={e.id}
-                      className="rounded-xl p-3 relative overflow-hidden"
-                      style={flamingo && accent ? {
-                        background: `linear-gradient(135deg, hsl(${FLAMINGO.ink}), hsl(${FLAMINGO.midnight}))`,
-                        border: `1px solid hsl(${accent} / 0.45)`,
-                        boxShadow: `0 0 12px -6px hsl(${accent} / 0.5)`,
+                      className="rounded-xl px-3 py-2 mb-2 flex items-center gap-2"
+                      style={flamingo ? {
+                        background: `linear-gradient(135deg, hsl(${FLAMINGO.pink} / 0.18), hsl(${FLAMINGO.violet} / 0.1))`,
+                        border: `1px solid hsl(${FLAMINGO.pink} / 0.4)`,
+                        boxShadow: `0 0 12px -6px hsl(${FLAMINGO.pink} / 0.5)`,
                       } : {
-                        background: 'hsl(var(--card))',
+                        background: 'hsl(var(--muted) / 0.3)',
                         border: '1px solid hsl(var(--border) / 0.4)',
                       }}
                     >
-                      {flamingo && accent && (
-                        <div
-                          aria-hidden
-                          className="absolute left-0 top-0 bottom-0 w-1"
-                          style={{ background: `hsl(${accent})` }}
-                        />
-                      )}
-                      <div className={flamingo ? 'pl-2' : ''}>
-                        <p
-                          className="text-[9.5px] font-extrabold uppercase tracking-[0.22em]"
-                          style={{ color: flamingo && accent ? `hsl(${accent})` : 'hsl(var(--muted-foreground) / 0.65)' }}
-                        >
-                          {labelMap[e.message_type] ?? e.message_type.replace('_', ' ')}
-                        </p>
-                        <p
-                          className="text-[12.5px] leading-snug mt-1"
-                          style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.9)` : 'hsl(var(--foreground) / 0.85)' }}
-                        >
-                          {e.body}
-                        </p>
-                      </div>
+                      <span
+                        aria-hidden
+                        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                        style={{
+                          background: flamingo ? `hsl(${FLAMINGO.pink})` : 'hsl(var(--primary))',
+                          boxShadow: flamingo ? `0 0 6px hsl(${FLAMINGO.pink})` : undefined,
+                        }}
+                      />
+                      <h3
+                        className="text-[13px] font-extrabold tracking-tight truncate flex-1 min-w-0"
+                        style={flamingo ? {
+                          backgroundImage: `linear-gradient(90deg, hsl(${FLAMINGO.paper}), hsl(${FLAMINGO.pink}))`,
+                          WebkitBackgroundClip: 'text',
+                          backgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          color: 'transparent',
+                        } : undefined}
+                      >
+                        {g.title}
+                      </h3>
+                      <span
+                        className="text-[9.5px] font-extrabold tabular-nums flex-shrink-0"
+                        style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.5)` : 'hsl(var(--muted-foreground) / 0.6)' }}
+                      >
+                        {g.entries.length}
+                      </span>
                     </div>
-                  );
-                })}
+                    {g.entries.length === 0 ? (
+                      <p
+                        className="text-[10.5px] italic px-2"
+                        style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.5)` : 'hsl(var(--muted-foreground) / 0.55)' }}
+                      >
+                        Nothing filed under this chapter yet.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {g.entries.map(e => {
+                          const accent = flamingo
+                            ? (e.message_type === 'campaign_summary' ? FLAMINGO.cyan : FLAMINGO.gold)
+                            : null;
+                          return (
+                            <div
+                              key={e.id}
+                              className="rounded-xl p-3 relative overflow-hidden"
+                              style={flamingo && accent ? {
+                                background: `linear-gradient(135deg, hsl(${FLAMINGO.ink}), hsl(${FLAMINGO.midnight}))`,
+                                border: `1px solid hsl(${accent} / 0.4)`,
+                                boxShadow: `0 0 12px -8px hsl(${accent} / 0.5)`,
+                              } : {
+                                background: 'hsl(var(--card))',
+                                border: '1px solid hsl(var(--border) / 0.4)',
+                              }}
+                            >
+                              {flamingo && accent && (
+                                <div
+                                  aria-hidden
+                                  className="absolute left-0 top-0 bottom-0 w-1"
+                                  style={{ background: `hsl(${accent})` }}
+                                />
+                              )}
+                              <div className={flamingo ? 'pl-2' : ''}>
+                                <p
+                                  className="text-[9.5px] font-extrabold uppercase tracking-[0.22em]"
+                                  style={{ color: flamingo && accent ? `hsl(${accent})` : 'hsl(var(--muted-foreground) / 0.65)' }}
+                                >
+                                  {labelMap[e.message_type] ?? e.message_type.replace('_', ' ')}
+                                </p>
+                                <p
+                                  className="text-[12.5px] leading-snug mt-1"
+                                  style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.9)` : 'hsl(var(--foreground) / 0.85)' }}
+                                >
+                                  {e.body}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </section>
+                ))}
               </div>
             );
           })()}

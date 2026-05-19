@@ -9,3 +9,11 @@ export { FlamingoSceneMessage } from './FlamingoMessageFrames';
 export { FlamingoDiceRoll } from './FlamingoDiceRoll';
 export { FlamingoChapterCard } from './FlamingoChapterCard';
 export { FlamingoCharacterCard } from './FlamingoCharacterCard';
+export {
+  FlamingoMeter,
+  FlamingoClueMarker,
+  clueAccent,
+  FlamingoLiveRibbon,
+  FlamingoLockIcon,
+  FlamingoCount,
+} from './FlamingoPrimitives';

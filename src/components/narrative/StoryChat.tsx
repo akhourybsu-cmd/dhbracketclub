@@ -8,7 +8,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Dices, Megaphone, MessageCircle, Sparkles, Lock, ChevronDown, EyeOff, Wand2 } from 'lucide-react';
+import { Send, Dices, Megaphone, MessageCircle, Sparkles, Lock, ChevronDown, ChevronUp, EyeOff, Wand2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Textarea } from '@/components/ui/textarea';
 import { SceneMessage } from './SceneMessage';
@@ -57,6 +57,9 @@ export function StoryChat({
   const [sending, setSending] = useState(false);
   const aiEnabled = isAiConfigured();
   const [autoScroll, setAutoScroll] = useState(true);
+  // Pinned scene strip can be collapsed on mobile so the chat owns more
+  // of the viewport. Default open; user toggle persists in this session.
+  const [sceneStripOpen, setSceneStripOpen] = useState(true);
   const endRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -123,10 +126,12 @@ export function StoryChat({
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* Pinned scene + clocks header */}
+      {/* Pinned scene + clocks header — collapsible on mobile so the chat
+          stream owns more of the viewport. The eyebrow doubles as the
+          toggle. */}
       {(currentScene || visibleClocks.length > 0) && (
         <div
-          className="px-4 pt-3 pb-2 space-y-2 border-b backdrop-blur-md sticky top-0 z-10"
+          className="px-4 pt-2 pb-2 border-b backdrop-blur-md sticky top-0 z-10"
           style={
             flamingo
               ? {
@@ -139,6 +144,23 @@ export function StoryChat({
                 }
           }
         >
+          <button
+            type="button"
+            onClick={() => setSceneStripOpen(v => !v)}
+            aria-expanded={sceneStripOpen}
+            className="w-full flex items-center justify-between gap-2 mb-1 active:opacity-70 transition"
+          >
+            <span
+              className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] inline-flex items-center gap-1.5"
+              style={{ color: flamingo ? `hsl(${FLAMINGO.cyan})` : 'hsl(var(--gold))' }}
+            >
+              <Megaphone className="w-3 h-3" />
+              {currentScene ? currentScene.title : 'Scene context'}
+            </span>
+            {sceneStripOpen ? <ChevronUp className="w-3 h-3 opacity-50" /> : <ChevronDown className="w-3 h-3 opacity-50" />}
+          </button>
+          {sceneStripOpen && (
+          <div className="space-y-2">
           {currentScene && (
             flamingo ? (
               <FlamingoSceneCard scene={currentScene} />
@@ -170,6 +192,8 @@ export function StoryChat({
                 </div>
               ))}
             </div>
+          )}
+          </div>
           )}
         </div>
       )}
@@ -211,7 +235,13 @@ export function StoryChat({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.85, y: 8 }}
             onClick={() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); setAutoScroll(true); }}
-            className="absolute right-4 bottom-32 w-10 h-10 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center z-20"
+            // Anchor to the composer's top via a CSS calc so the FAB
+            // never collides with the safe-area inset or composer
+            // toolbar regardless of viewport height. The composer's
+            // own bottom-pad is ~108px (chips + textarea + safe area);
+            // we sit a hair above that.
+            className="absolute right-4 w-10 h-10 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center z-20"
+            style={{ bottom: 'calc(7rem + env(safe-area-inset-bottom, 0px))' }}
             aria-label="Jump to latest"
           >
             <ChevronDown className="w-5 h-5" />

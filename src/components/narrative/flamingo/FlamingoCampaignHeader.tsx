@@ -11,7 +11,8 @@
 
 import { ChevronLeft, Settings2, Sparkles } from 'lucide-react';
 import { FLAMINGO, FLAMINGO_COPY } from '@/lib/narrative/flamingoTheme';
-import { FlamingoStatusPill, FlamingoBrandBadge } from './FlamingoStatusPill';
+import { FlamingoBrandBadge } from './FlamingoStatusPill';
+import { FlamingoLiveRibbon } from './FlamingoPrimitives';
 import type { Campaign } from '@/lib/narrative/types';
 import type { ComputedStatus } from '@/lib/narrative/campaignStatus';
 
@@ -36,9 +37,18 @@ export function FlamingoCampaignHeader({
   canManageMembers,
   onManageMembers,
 }: Props) {
+  // The "Live Now" status is conveyed by the top-edge shimmer ribbon
+  // instead of a pill — saves vertical space on mobile and reads
+  // ambiently. Waiting-on states still need a textual cue, so we
+  // render them under the title.
+  const isLive = computedStatus === 'live' || !!campaign.live_session_id;
+  const subtitle =
+    computedStatus === 'waiting_on_gm' ? FLAMINGO_COPY.waitingGm
+    : computedStatus === 'waiting_on_players' ? FLAMINGO_COPY.waitingPlayers
+    : null;
   return (
     <div
-      className="flex-shrink-0 px-3 py-2.5 border-b flex items-center gap-2"
+      className="relative flex-shrink-0 px-3 py-2.5 border-b flex items-center gap-2"
       style={{
         paddingTop: 'max(0.5rem, env(safe-area-inset-top, 0px))',
         background: `linear-gradient(180deg, hsl(${FLAMINGO.midnight} / 0.92), hsl(${FLAMINGO.ink} / 0.85))`,
@@ -46,6 +56,7 @@ export function FlamingoCampaignHeader({
         backdropFilter: 'blur(10px)',
       }}
     >
+      {isLive && <FlamingoLiveRibbon />}
       <button
         onClick={onBack}
         aria-label="Back to campaigns"
@@ -62,7 +73,6 @@ export function FlamingoCampaignHeader({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 mb-0.5">
           <FlamingoBrandBadge />
-          <FlamingoStatusPill status={computedStatus} withPulse />
         </div>
         <h1
           className="text-[15px] font-extrabold tracking-tight truncate"
@@ -76,6 +86,14 @@ export function FlamingoCampaignHeader({
         >
           {campaign.title}
         </h1>
+        {subtitle && (
+          <p
+            className="text-[10px] font-extrabold uppercase tracking-[0.18em] mt-0.5 truncate"
+            style={{ color: `hsl(${FLAMINGO.gold})` }}
+          >
+            {subtitle}
+          </p>
+        )}
       </div>
 
       {canManageMembers && onManageMembers && (
