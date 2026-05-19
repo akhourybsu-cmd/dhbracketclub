@@ -55,7 +55,7 @@ export function FlamingoStatusPill({ status, size = 'xs', withPulse }: Props) {
       {meta.dot && (
         <span
           aria-hidden
-          className={`w-1.5 h-1.5 rounded-full ${withPulse ? 'animate-pulse' : ''}`}
+          className={`w-1.5 h-1.5 rounded-full ${withPulse ? 'motion-safe:animate-pulse' : ''}`}
           style={{
             background: `hsl(${p.dot})`,
             boxShadow: `0 0 8px hsl(${p.dot})`,

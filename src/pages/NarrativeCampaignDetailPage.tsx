@@ -31,7 +31,7 @@ import { StatusPill } from '@/components/ui/status-pill';
 import { getTemplate, type TemplateKey } from '@/lib/narrative/templates';
 import { computeCampaignStatus } from '@/lib/narrative/campaignStatus';
 import { isFlamingoCampaign } from '@/lib/narrative/flamingoTheme';
-import { FlamingoCampaignShell, FlamingoCampaignHeader, FlamingoTabs } from '@/components/narrative/flamingo';
+import { FlamingoCampaignShell, FlamingoCampaignHeader, FlamingoTabs, FlamingoCharacterCard } from '@/components/narrative/flamingo';
 
 type Tab = 'story' | 'characters' | 'world' | 'log';
 
@@ -299,16 +299,22 @@ export default function NarrativeCampaignDetailPage() {
           )}
           {data.myCharacter && (
             <>
-              <SectionHeader label="Your character" accent="var(--primary)" />
-              <CharacterSheetCard character={data.myCharacter} showPrivate />
+              <SectionHeader label={flamingo ? 'Your dossier' : 'Your character'} accent="var(--primary)" />
+              {flamingo ? (
+                <FlamingoCharacterCard character={data.myCharacter} showPrivate />
+              ) : (
+                <CharacterSheetCard character={data.myCharacter} showPrivate />
+              )}
             </>
           )}
           {data.characters.filter(c => c.id !== data.myCharacter?.id).length > 0 && (
             <>
-              <SectionHeader label="The party" count={data.characters.length} />
+              <SectionHeader label={flamingo ? 'The crew' : 'The party'} count={data.characters.length} />
               <div className="space-y-2">
                 {data.characters.filter(c => c.id !== data.myCharacter?.id).map(c => (
-                  <CharacterSheetCard key={c.id} character={c} showPrivate={data.isGm} />
+                  flamingo
+                    ? <FlamingoCharacterCard key={c.id} character={c} showPrivate={data.isGm} />
+                    : <CharacterSheetCard key={c.id} character={c} showPrivate={data.isGm} />
                 ))}
               </div>
             </>

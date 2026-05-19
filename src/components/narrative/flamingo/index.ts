@@ -7,3 +7,5 @@ export { FlamingoTabs } from './FlamingoTabs';
 export { FlamingoSceneCard } from './FlamingoSceneCard';
 export { FlamingoSceneMessage } from './FlamingoMessageFrames';
 export { FlamingoDiceRoll } from './FlamingoDiceRoll';
+export { FlamingoChapterCard } from './FlamingoChapterCard';
+export { FlamingoCharacterCard } from './FlamingoCharacterCard';

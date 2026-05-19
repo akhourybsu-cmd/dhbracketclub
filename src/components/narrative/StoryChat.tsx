@@ -219,10 +219,14 @@ export function StoryChat({
         )}
       </AnimatePresence>
 
-      {/* Composer */}
+      {/* Composer — calm by default, Flamingo neon for Flamingo Protocol. */}
       <div
-        className="border-t border-border/20 px-3 pt-2"
-        style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}
+        className="border-t px-3 pt-2"
+        style={{
+          paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))',
+          borderColor: flamingo ? `hsl(${FLAMINGO.pink} / 0.22)` : 'hsl(var(--border) / 0.2)',
+          background: flamingo ? `hsl(${FLAMINGO.midnight} / 0.7)` : undefined,
+        }}
       >
         {/* Mode chips */}
         <div className="flex gap-1.5 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
@@ -230,6 +234,18 @@ export function StoryChat({
             const meta = MODE_META[m];
             const Icon = meta.icon;
             const selected = m === mode;
+            const flamingoChipStyle = selected
+              ? {
+                  background: `linear-gradient(135deg, hsl(${FLAMINGO.pink} / 0.25), hsl(${FLAMINGO.violet} / 0.15))`,
+                  border: `1px solid hsl(${FLAMINGO.pink} / 0.55)`,
+                  color: `hsl(${FLAMINGO.paper})`,
+                  boxShadow: `0 0 10px -3px hsl(${FLAMINGO.pink} / 0.5)`,
+                }
+              : {
+                  background: `hsl(${FLAMINGO.ink} / 0.7)`,
+                  border: `1px solid hsl(${FLAMINGO.paper} / 0.18)`,
+                  color: `hsl(${FLAMINGO.paper} / 0.7)`,
+                };
             return (
               <button
                 key={m}
@@ -237,8 +253,13 @@ export function StoryChat({
                 onClick={() => setMode(m)}
                 disabled={m === 'character' && !canCharacterMode}
                 className={`flex-shrink-0 inline-flex items-center gap-1 h-7 px-2 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition disabled:opacity-40 ${
-                  selected ? 'bg-primary/18 text-primary border border-primary/40' : 'bg-muted/30 border border-border/40 text-muted-foreground/75'
+                  flamingo
+                    ? ''
+                    : selected
+                      ? 'bg-primary/18 text-primary border border-primary/40'
+                      : 'bg-muted/30 border border-border/40 text-muted-foreground/75'
                 }`}
+                style={flamingo ? flamingoChipStyle : undefined}
               >
                 <Icon className="w-2.5 h-2.5" /> {meta.label}
               </button>
@@ -260,6 +281,11 @@ export function StoryChat({
             }
             rows={1}
             className="flex-1 resize-none text-[13px] min-h-[44px]"
+            style={flamingo ? {
+              background: `hsl(${FLAMINGO.ink} / 0.85)`,
+              border: `1px solid hsl(${FLAMINGO.cyan} / 0.35)`,
+              color: `hsl(${FLAMINGO.paper})`,
+            } : undefined}
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
             }}
@@ -270,8 +296,18 @@ export function StoryChat({
               type="button"
               onClick={() => setAiAssistOpen(true)}
               aria-label="Help me write"
-              className="flex-shrink-0 w-11 h-11 rounded-xl bg-muted/30 border border-border/40 flex items-center justify-center text-foreground/75 active:scale-95 transition"
               title="Help me write"
+              className="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center active:scale-95 transition"
+              style={flamingo ? {
+                background: `hsl(${FLAMINGO.ink})`,
+                border: `1px solid hsl(${FLAMINGO.cyan} / 0.4)`,
+                color: `hsl(${FLAMINGO.cyan})`,
+                boxShadow: `0 0 10px -4px hsl(${FLAMINGO.cyan} / 0.4)`,
+              } : {
+                background: 'hsl(var(--muted) / 0.3)',
+                border: '1px solid hsl(var(--border) / 0.4)',
+                color: 'hsl(var(--foreground) / 0.75)',
+              }}
             >
               <Wand2 className="w-4 h-4" />
             </button>
@@ -281,7 +317,17 @@ export function StoryChat({
               type="button"
               onClick={() => setRollOpen(true)}
               aria-label="Roll dice"
-              className="flex-shrink-0 w-11 h-11 rounded-xl bg-muted/30 border border-border/40 flex items-center justify-center text-foreground/75 active:scale-95 transition"
+              className="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center active:scale-95 transition"
+              style={flamingo ? {
+                background: `hsl(${FLAMINGO.ink})`,
+                border: `1px solid hsl(${FLAMINGO.gold} / 0.45)`,
+                color: `hsl(${FLAMINGO.gold})`,
+                boxShadow: `0 0 10px -4px hsl(${FLAMINGO.gold} / 0.4)`,
+              } : {
+                background: 'hsl(var(--muted) / 0.3)',
+                border: '1px solid hsl(var(--border) / 0.4)',
+                color: 'hsl(var(--foreground) / 0.75)',
+              }}
             >
               <Dices className="w-4 h-4" />
             </button>
@@ -293,10 +339,19 @@ export function StoryChat({
             onMouseDown={e => e.preventDefault()}
             aria-label="Send"
             className="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center active:scale-90 transition disabled:opacity-50"
-            style={{
-              background: draft.trim() ? 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85))' : 'hsl(var(--muted) / 0.5)',
-              color: 'hsl(var(--primary-foreground))',
-            }}
+            style={flamingo
+              ? {
+                  background: draft.trim()
+                    ? `linear-gradient(135deg, hsl(${FLAMINGO.pink}), hsl(${FLAMINGO.violet}))`
+                    : `hsl(${FLAMINGO.smoke} / 0.6)`,
+                  color: `hsl(${FLAMINGO.paper})`,
+                  boxShadow: draft.trim() ? `0 0 14px -3px hsl(${FLAMINGO.pink} / 0.7)` : 'none',
+                  border: draft.trim() ? `1px solid hsl(${FLAMINGO.pink})` : `1px solid hsl(${FLAMINGO.paper} / 0.2)`,
+                }
+              : {
+                  background: draft.trim() ? 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85))' : 'hsl(var(--muted) / 0.5)',
+                  color: 'hsl(var(--primary-foreground))',
+                }}
           >
             {mode === 'gm_private' ? <Lock className="w-4 h-4" /> : <Send className="w-4 h-4" />}
           </button>

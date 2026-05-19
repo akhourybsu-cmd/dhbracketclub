@@ -22,6 +22,7 @@ import {
 import { cn } from '@/lib/utils';
 import { FLAMINGO } from '@/lib/narrative/flamingoTheme';
 import { FlamingoDiceRoll } from './FlamingoDiceRoll';
+import { FlamingoChapterCard } from './FlamingoChapterCard';
 import type { Message, Character } from '@/lib/narrative/types';
 
 interface Props {
@@ -103,7 +104,13 @@ export function FlamingoSceneMessage({ message, characters, senderNames, npcName
     );
   }
 
-  if (t === 'clue_discovered' || t === 'inventory_update' || t === 'faction_update' || t === 'clock_update' || t === 'chapter_transition' || t === 'system' || t === 'campaign_summary') {
+  // Chapter transitions get a dedicated cinematic title card instead of
+  // the compact system strip.
+  if (t === 'chapter_transition') {
+    return <FlamingoChapterCard message={message} />;
+  }
+
+  if (t === 'clue_discovered' || t === 'inventory_update' || t === 'faction_update' || t === 'clock_update' || t === 'system' || t === 'campaign_summary') {
     const sysMeta: Record<string, { label: string; icon: typeof Megaphone; accent: string }> = {
       clue_discovered:    { label: 'Clue Logged',        icon: KeyRound,     accent: FLAMINGO.clue },
       inventory_update:   { label: 'Leverage Updated',   icon: Backpack,     accent: FLAMINGO.gold },
