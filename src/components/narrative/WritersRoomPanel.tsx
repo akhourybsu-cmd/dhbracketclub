@@ -140,6 +140,7 @@ export function WritersRoomPanel({ campaign, currentScene, npcs, clues, onChange
   const [draft, setDraft] = useState<string>('');
   const [rationale, setRationale] = useState<string | null>(null);
   const [actions, setActions] = useState<ReviewAction[]>([]);
+  const [extras, setExtras] = useState<AiSuggestion['extras']>(undefined);
   const [posting, setPosting] = useState<'idle' | 'posting' | 'saving' | 'memory'>('idle');
   const [transformBusy, setTransformBusy] = useState<WriterTransformation | null>(null);
 
@@ -176,6 +177,7 @@ export function WritersRoomPanel({ campaign, currentScene, npcs, clues, onChange
       setDraft(sug.draft ?? '');
       setRationale(sug.rationale ?? null);
       setActions((sug.stateUpdates ?? []).map(a => ({ action: a, approved: false })));
+      setExtras(sug.extras);
     } finally {
       setBusy(false);
     }
@@ -198,22 +200,73 @@ export function WritersRoomPanel({ campaign, currentScene, npcs, clues, onChange
   // Actions on the draft card
   // ──────────────────────────────────────────────────────────────────
 
-  const postToStory = async () => {
+  /**
+   * Post the current draft as a story message. If `andContinue` is set,
+   * also fire `continue_scene` after posting to draft the next beat —
+   * this is the "Draft Next Beat" autopilot loop. Each beat is still
+   * individually GM-approved; we never chain more than one ahead.
+   *
+   * For tools that produce multi-part output (chapter_transition,
+   * end_scene), any `summary` / `hook` / `recap` payload returned by
+   * the AI in the message metadata is preserved so the existing
+   * FlamingoChapterCard / system-strip renderers can use it. The body
+   * of the primary message is always `draft`.
+   */
+  const postToStory = async (andContinue: boolean = false) => {
     if (!draft.trim()) return;
     setPosting('posting');
     try {
       const { data: claims } = await supabase.auth.getUser();
       const messageType = toolMeta.defaultMessageType ?? 'gm_narration';
+      const userId = claims.user?.id ?? null;
+      // Primary message — carries the draft body plus any extras as
+      // metadata so the renderer (e.g. FlamingoChapterCard) can read
+      // summary/hook/recap.
+      const primaryMetadata: Record<string, unknown> = {
+        ai_drafted: true,
+        tool: toolKey,
+        ...(extras?.summary ? { summary: extras.summary } : {}),
+        ...(extras?.recap ? { recap: extras.recap } : {}),
+        ...(extras?.hook ? { hook: extras.hook } : {}),
+      };
       const { error } = await (supabase as any).from('narrative_messages').insert({
         campaign_id: campaign.id,
         scene_id: currentScene?.id ?? null,
-        sender_id: claims.user?.id ?? null,
+        sender_id: userId,
         message_type: messageType,
         body: draft.trim(),
         visibility: 'public',
-        metadata: { ai_drafted: true, tool: toolKey },
+        metadata: primaryMetadata,
       });
       if (error) throw error;
+
+      // Multi-part follow-ups. Chapter transitions get a separate
+      // "Previously on…" campaign_summary message right after the title
+      // card so async players can read the recap as its own log entry.
+      // End-scene and summarize-scene tools attach the summary to a
+      // dedicated campaign_summary message too.
+      if (toolKey === 'chapter_transition' && extras?.recap) {
+        await (supabase as any).from('narrative_messages').insert({
+          campaign_id: campaign.id,
+          scene_id: currentScene?.id ?? null,
+          sender_id: userId,
+          message_type: 'campaign_summary',
+          body: extras.recap.trim(),
+          visibility: 'public',
+          metadata: { ai_drafted: true, tool: toolKey, role: 'recap' },
+        });
+      }
+      if ((toolKey === 'end_scene' || toolKey === 'summarize_scene') && extras?.summary) {
+        await (supabase as any).from('narrative_messages').insert({
+          campaign_id: campaign.id,
+          scene_id: currentScene?.id ?? null,
+          sender_id: userId,
+          message_type: 'campaign_summary',
+          body: extras.summary.trim(),
+          visibility: 'public',
+          metadata: { ai_drafted: true, tool: toolKey, role: 'summary' },
+        });
+      }
 
       // If the GM approved any state updates, apply them now.
       const approved = actions.filter(a => a.approved).map(a => a.action);
@@ -231,6 +284,15 @@ export function WritersRoomPanel({ campaign, currentScene, npcs, clues, onChange
       onChanged?.();
       // Reset card after a successful post so the GM doesn't accidentally re-post.
       resetDraft();
+
+      if (andContinue) {
+        // Switch the picker to continue_scene + immediately fire it. The
+        // GM still has to approve the next beat — autopilot is just
+        // saving them the click. The previous direction text remains in
+        // the field so the GM can tweak between beats.
+        setToolKey('continue_scene');
+        await runTool('continue_scene');
+      }
     } catch (e) {
       toast.error(`Post failed: ${(e as Error).message}`);
     } finally {
@@ -303,6 +365,7 @@ export function WritersRoomPanel({ campaign, currentScene, npcs, clues, onChange
     setDraft('');
     setRationale(null);
     setActions([]);
+    setExtras(undefined);
   };
 
   // ──────────────────────────────────────────────────────────────────
@@ -552,10 +615,16 @@ export function WritersRoomPanel({ campaign, currentScene, npcs, clues, onChange
           rationale={rationale}
           actions={actions}
           setActions={setActions}
+          extras={extras}
+          setExtras={setExtras}
           toolLabel={toolMeta.label}
           messageType={toolMeta.defaultMessageType ?? 'gm_narration'}
           posting={posting}
-          onPost={postToStory}
+          onPost={() => postToStory(false)}
+          onPostAndContinue={() => postToStory(true)}
+          // Autopilot only makes sense for tools that produce a story
+          // beat — not for memory or chapter-transition tools.
+          autopilotEligible={toolKey === 'continue_scene' || toolKey === 'write_scene_opener' || toolKey === 'npc_response' || toolKey === 'resolve_roll' || toolKey === 'reveal_clue' || toolKey === 'escalate'}
           onSaveNotes={saveToNotes}
           onAddMemory={addToMemory}
           onApproveStateUpdates={approveAllStateUpdates}
@@ -585,6 +654,30 @@ function ChipsRow({ label, children }: { label: string; children: React.ReactNod
   );
 }
 
+function ExtrasField({ flamingo, label, value, onChange }: {
+  flamingo: boolean;
+  label: string;
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  return (
+    <div>
+      <p
+        className="text-[9px] font-bold uppercase tracking-wider mb-1"
+        style={{ color: flamingo ? `hsl(${FLAMINGO.cyan} / 0.85)` : 'hsl(var(--muted-foreground) / 0.75)' }}
+      >
+        {label}
+      </p>
+      <Textarea
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        rows={2}
+        className="text-[11.5px] leading-snug"
+      />
+    </div>
+  );
+}
+
 function Chip({ onClick, children, style }: { onClick: () => void; children: React.ReactNode; style?: React.CSSProperties }) {
   return (
     <button
@@ -605,10 +698,18 @@ interface DraftCardProps {
   rationale: string | null;
   actions: ReviewAction[];
   setActions: React.Dispatch<React.SetStateAction<ReviewAction[]>>;
+  extras: AiSuggestion['extras'];
+  setExtras: React.Dispatch<React.SetStateAction<AiSuggestion['extras']>>;
   toolLabel: string;
   messageType: string;
   posting: 'idle' | 'posting' | 'saving' | 'memory';
   onPost: () => void;
+  /** Autopilot variant: post the current beat AND immediately draft
+   *  the next beat via continue_scene. */
+  onPostAndContinue?: () => void;
+  /** Whether the current tool is an "in-scene beat" tool that benefits
+   *  from the autopilot continue button. */
+  autopilotEligible?: boolean;
   onSaveNotes: () => void;
   onAddMemory: () => void;
   onApproveStateUpdates: () => void;
@@ -619,7 +720,9 @@ interface DraftCardProps {
 
 function DraftCard({
   flamingo, draft, setDraft, rationale, actions, setActions,
-  toolLabel, messageType, posting, onPost, onSaveNotes, onAddMemory,
+  extras, setExtras,
+  toolLabel, messageType, posting, onPost, onPostAndContinue, autopilotEligible,
+  onSaveNotes, onAddMemory,
   onApproveStateUpdates, onDiscard, onTransform, transformBusy,
 }: DraftCardProps) {
   const MessageIcon = messageType === 'npc_dialogue'
@@ -677,6 +780,44 @@ function DraftCard({
           >
             AI rationale — {rationale}
           </p>
+        )}
+
+        {/* Extras — multi-part outputs (chapter recap, hook, scene
+            summary). These post as additional messages after the
+            primary draft. Editable so the GM can refine them inline. */}
+        {extras && (extras.recap || extras.summary || extras.hook) && (
+          <div className="mt-2.5 space-y-1.5">
+            <p
+              className="text-[9.5px] font-extrabold uppercase tracking-[0.22em]"
+              style={{ color: flamingo ? `hsl(${FLAMINGO.cyan})` : 'hsl(var(--muted-foreground) / 0.7)' }}
+            >
+              Additional messages
+            </p>
+            {extras.recap !== undefined && (
+              <ExtrasField
+                flamingo={flamingo}
+                label="Previously on… (recap)"
+                value={extras.recap ?? ''}
+                onChange={v => setExtras(prev => ({ ...(prev ?? {}), recap: v }))}
+              />
+            )}
+            {extras.summary !== undefined && (
+              <ExtrasField
+                flamingo={flamingo}
+                label="Scene summary"
+                value={extras.summary ?? ''}
+                onChange={v => setExtras(prev => ({ ...(prev ?? {}), summary: v }))}
+              />
+            )}
+            {extras.hook !== undefined && (
+              <ExtrasField
+                flamingo={flamingo}
+                label="Opening hook (saved to scene metadata)"
+                value={extras.hook ?? ''}
+                onChange={v => setExtras(prev => ({ ...(prev ?? {}), hook: v }))}
+              />
+            )}
+          </div>
         )}
 
         {/* Transformation chips */}
@@ -788,6 +929,27 @@ function DraftCard({
             {posting === 'posting' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
             Post to story{actions.some(a => a.approved) ? ` + apply ${actions.filter(a => a.approved).length}` : ''}
           </button>
+          {autopilotEligible && onPostAndContinue && (
+            <button
+              type="button"
+              onClick={onPostAndContinue}
+              disabled={posting !== 'idle' || !draft.trim()}
+              className="col-span-2 h-9 rounded-lg text-[10.5px] font-extrabold inline-flex items-center justify-center gap-1.5 active:scale-[0.98] transition disabled:opacity-55"
+              style={flamingo ? {
+                background: `hsl(${FLAMINGO.ink})`,
+                border: `1px solid hsl(${FLAMINGO.cyan} / 0.5)`,
+                color: `hsl(${FLAMINGO.cyan})`,
+                boxShadow: `0 0 10px -4px hsl(${FLAMINGO.cyan} / 0.5)`,
+              } : {
+                background: 'hsl(var(--muted) / 0.3)',
+                border: '1px solid hsl(var(--primary) / 0.35)',
+                color: 'hsl(var(--primary))',
+              }}
+              title="Post this beat and immediately draft the next beat for review"
+            >
+              <RefreshCw className="w-3 h-3" /> Post & draft next beat
+            </button>
+          )}
           <button
             type="button"
             onClick={onSaveNotes}

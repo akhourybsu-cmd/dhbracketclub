@@ -14,7 +14,7 @@ import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import {
   X, Megaphone, Users, KeyRound, Backpack, ShieldAlert, Clock as ClockIcon,
-  BookOpenText, StickyNote, Sparkles, PlusCircle, AlertCircle, Bookmark, Pencil,
+  BookOpenText, StickyNote, Sparkles, PlusCircle, Bookmark, Pencil,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -28,9 +28,7 @@ import {
 } from './EntityEditSheet';
 import { ChapterSheet } from './ChapterSheet';
 import { SceneSummaryWizard } from './SceneSummaryWizard';
-import { AiSuggestionEditSheet } from './AiSuggestionEditSheet';
-import { GM_TOOLS, isAiConfigured, invokeGmTool, type AiSuggestion } from '@/lib/narrative/aiService';
-import { applyStateUpdates } from '@/lib/narrative/applyStateUpdates';
+import { isAiConfigured } from '@/lib/narrative/aiService';
 import { isFlamingoCampaign, FLAMINGO } from '@/lib/narrative/flamingoTheme';
 import { FlamingoClueMarker, clueAccent, FlamingoMeter, FlamingoLockIcon } from './flamingo/FlamingoPrimitives';
 import { WritersRoomPanel } from './WritersRoomPanel';
@@ -880,158 +878,12 @@ function NotesTab({}: Props) {
   return <EmptyHint message="GM-only notes coming next pass. For now, use private GM messages in Story Chat." />;
 }
 
-function AiTab(props: Props) {
-  const configured = isAiConfigured();
-  const [busyTool, setBusyTool] = useState<string | null>(null);
-  const [lastDraft, setLastDraft] = useState<AiSuggestion | null>(null);
-  const [editingSuggestion, setEditingSuggestion] = useState<AiSuggestionRow | null>(null);
-
-  const runTool = async (toolKey: string) => {
-    setBusyTool(toolKey);
-    setLastDraft(null);
-    const result = await invokeGmTool(toolKey as any, { campaignId: props.campaign.id });
-    setBusyTool(null);
-    if ('available' in result && result.available === false) {
-      toast.error(result.reason);
-      return;
-    }
-    setLastDraft(result as AiSuggestion);
-  };
-
-  const applyDraft = async () => {
-    if (!lastDraft) return;
-    // Persist as an AI suggestion row for audit trail.
-    const { data: claims } = await (window as any).supabaseClient?.auth.getUser?.() ?? { data: null };
-    try {
-      const sb = (await import('@/integrations/supabase/client')).supabase as any;
-      const me = (await sb.auth.getUser()).data.user;
-      await sb.from('narrative_ai_suggestions').insert({
-        campaign_id: props.campaign.id,
-        created_by: me?.id ?? null,
-        suggestion_type: 'gm_draft',
-        suggested_content: lastDraft.draft,
-        suggested_state_updates: lastDraft.stateUpdates,
-        status: 'pending',
-      });
-      toast.success('Added to review queue.');
-    } catch (e) {
-      toast.error('Couldn\'t save to queue.');
-    }
-    setLastDraft(null);
-  };
-
-  const decide = async (id: string, decision: 'approved' | 'rejected') => {
-    const sb = (await import('@/integrations/supabase/client')).supabase as any;
-    if (decision === 'approved') {
-      const row = props.aiSuggestions.find(s => s.id === id);
-      if (row && Array.isArray(row.suggested_state_updates) && row.suggested_state_updates.length > 0) {
-        const results = await applyStateUpdates(props.campaign.id, row.suggested_state_updates as any);
-        const failed = results.filter(r => !r.ok);
-        if (failed.length) toast.warning(`Applied ${results.length - failed.length} of ${results.length}.`);
-      }
-    }
-    const me = (await sb.auth.getUser()).data.user;
-    await sb.from('narrative_ai_suggestions').update({
-      status: decision,
-      reviewed_by: me?.id ?? null,
-      reviewed_at: new Date().toISOString(),
-    }).eq('id', id);
-    props.onChanged?.();
-    toast.success(decision === 'approved' ? 'Approved + applied.' : 'Rejected.');
-  };
-
-  return (
-    <div className="space-y-3">
-      {!configured && (
-        <div className="rounded-xl border border-warning/35 bg-warning/8 p-3 flex items-start gap-2">
-          <AlertCircle className="w-3.5 h-3.5 mt-0.5 text-warning flex-shrink-0" />
-          <div>
-            <p className="text-[11.5px] font-extrabold">AI provider not configured</p>
-            <p className="text-[10.5px] text-muted-foreground/75 leading-snug mt-0.5">
-              Set <code className="font-mono">LOVABLE_API_KEY</code> on the <code className="font-mono">narrative-ai</code> edge function and <code className="font-mono">VITE_NARRATIVE_AI_ENABLED=1</code> on the client.
-            </p>
-          </div>
-        </div>
-      )}
-      <p className="text-[10.5px] text-muted-foreground/70 leading-snug">
-        Every AI tool returns a <span className="font-extrabold text-foreground/85">draft</span> and optional <span className="font-extrabold text-foreground/85">state-update suggestions</span>. Nothing changes the campaign until you approve.
-      </p>
-      <div className="grid grid-cols-2 gap-2">
-        {GM_TOOLS.map(t => (
-          <button
-            key={t.key}
-            type="button"
-            disabled={!configured || !!busyTool}
-            onClick={() => runTool(t.key)}
-            className="text-left rounded-xl bg-card border border-border/40 p-2.5 active:scale-[0.98] transition disabled:opacity-55"
-          >
-            <p className="text-[12px] font-extrabold">{t.label}</p>
-            <p className="text-[10px] text-muted-foreground/70 leading-snug mt-0.5">{t.description}</p>
-            {busyTool === t.key && <p className="text-[9.5px] text-primary mt-1">working…</p>}
-          </button>
-        ))}
-      </div>
-
-      {/* Just-generated draft preview */}
-      {lastDraft && (
-        <div className="rounded-xl border border-primary/40 bg-primary/5 p-3">
-          <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-primary">Latest draft</p>
-          <p className="text-[12px] text-foreground/85 leading-snug mt-1 whitespace-pre-wrap">{lastDraft.draft}</p>
-          {lastDraft.stateUpdates.length > 0 && (
-            <p className="text-[10.5px] text-muted-foreground/75 mt-1">+ {lastDraft.stateUpdates.length} state update suggestion{lastDraft.stateUpdates.length === 1 ? '' : 's'}</p>
-          )}
-          <div className="flex gap-2 mt-2">
-            <button onClick={() => setLastDraft(null)} className="flex-1 h-8 rounded-md text-[10.5px] font-bold bg-muted/40 border border-border/40">Discard</button>
-            <button onClick={applyDraft} className="flex-1 h-8 rounded-md text-[10.5px] font-extrabold" style={{ background: 'hsl(var(--primary) / 0.18)', color: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary) / 0.4)' }}>Add to queue</button>
-          </div>
-        </div>
-      )}
-
-      {/* Suggestion review queue */}
-      <div>
-        <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-muted-foreground/70 mb-2 mt-4">Review queue</p>
-        {(() => {
-          // Include `edited` rows — those are pending review with the GM's
-          // own edits applied. Approved/rejected stay out of the queue.
-          const open = props.aiSuggestions.filter(s => s.status === 'pending' || s.status === 'edited');
-          if (open.length === 0) return <EmptyHint message="No pending AI suggestions." />;
-          return (
-            <div className="space-y-2">
-              {open.map(s => (
-                <div key={s.id} className="rounded-xl bg-card border border-border/40 p-3">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-primary">{s.suggestion_type.replace(/_/g, ' ')}</p>
-                    {s.status === 'edited' && <StatusPill variant="info" size="xs">Edited</StatusPill>}
-                  </div>
-                  <p className="text-[12px] text-foreground/85 leading-snug mt-1 whitespace-pre-wrap">{s.suggested_content}</p>
-                  {Array.isArray(s.suggested_state_updates) && s.suggested_state_updates.length > 0 && (
-                    <p className="text-[10.5px] text-muted-foreground/70 mt-1">{s.suggested_state_updates.length} state update{s.suggested_state_updates.length === 1 ? '' : 's'} proposed</p>
-                  )}
-                  <div className="flex gap-2 mt-2">
-                    <button onClick={() => decide(s.id, 'rejected')} className="flex-1 h-8 rounded-md text-[10.5px] font-bold bg-muted/40 border border-border/40">Reject</button>
-                    <button onClick={() => setEditingSuggestion(s)} className="flex-1 h-8 rounded-md text-[10.5px] font-bold bg-muted/40 border border-border/40 inline-flex items-center justify-center gap-1">
-                      <Pencil className="w-2.5 h-2.5" /> Edit
-                    </button>
-                    <button onClick={() => decide(s.id, 'approved')} className="flex-1 h-8 rounded-md text-[10.5px] font-extrabold" style={{ background: 'hsl(var(--primary) / 0.18)', color: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary) / 0.4)' }}>Approve</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          );
-        })()}
-      </div>
-      {editingSuggestion && (
-        <AiSuggestionEditSheet
-          open
-          onClose={() => setEditingSuggestion(null)}
-          campaignId={props.campaign.id}
-          suggestion={editingSuggestion}
-          onSaved={() => { setEditingSuggestion(null); props.onChanged?.(); }}
-        />
-      )}
-    </div>
-  );
-}
+/* The previous AiTab + review-queue UI was retired in favor of the
+ * Writer's Room panel mounted directly at the `ai` tab. Suggested
+ * state updates are now approved inline within the new DraftCard, so
+ * the narrative_ai_suggestions queue is no longer surfaced here. Any
+ * historical rows in that table remain readable via DB queries; future
+ * passes may add a dedicated "History" view if needed. */
 
 function EmptyHint({ message }: { message: string }) {
   return (

@@ -68,6 +68,17 @@ export interface AiSuggestion {
   stateUpdates: StateUpdateAction[];
   /** A short rationale shown beside the suggestion so the GM understands the AI's reasoning. */
   rationale?: string;
+  /** Optional extra parts produced by multi-part tools — e.g. chapter
+   *  transitions return a recap + hook in addition to the title, and
+   *  end_scene returns a scene summary in addition to the closing
+   *  narration. The Writer's Room writes any populated fields into the
+   *  posted message's metadata so the existing renderers (e.g.
+   *  FlamingoChapterCard reading `metadata.summary`) can use them. */
+  extras?: {
+    summary?: string;
+    recap?: string;
+    hook?: string;
+  };
 }
 
 /** Context passed into every GM AI call. The service should NOT add
@@ -265,10 +276,20 @@ export async function invokeGmTool(
     if (error) return aiUnavailable(`AI gateway error: ${error.message ?? 'unknown'}`);
     if (!data || typeof data !== 'object') return aiUnavailable('Empty AI response.');
     if ('error' in data) return aiUnavailable(String((data as any).error));
+    const raw = data as any;
+    const extras: AiSuggestion['extras'] | undefined =
+      raw.extras && typeof raw.extras === 'object'
+        ? {
+            summary: typeof raw.extras.summary === 'string' ? raw.extras.summary : undefined,
+            recap: typeof raw.extras.recap === 'string' ? raw.extras.recap : undefined,
+            hook: typeof raw.extras.hook === 'string' ? raw.extras.hook : undefined,
+          }
+        : undefined;
     return {
-      draft: String((data as any).draft ?? ''),
-      stateUpdates: Array.isArray((data as any).stateUpdates) ? (data as any).stateUpdates : [],
-      rationale: (data as any).rationale ? String((data as any).rationale) : undefined,
+      draft: String(raw.draft ?? ''),
+      stateUpdates: Array.isArray(raw.stateUpdates) ? raw.stateUpdates : [],
+      rationale: raw.rationale ? String(raw.rationale) : undefined,
+      extras,
     };
   } catch (e) {
     return aiUnavailable(`AI call failed: ${(e as Error).message}`);
