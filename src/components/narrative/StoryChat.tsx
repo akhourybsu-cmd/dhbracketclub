@@ -15,9 +15,11 @@ import { SceneMessage } from './SceneMessage';
 import { DiceRollSheet } from './DiceRollSheet';
 import { ClockCard } from './ClockCard';
 import { PlayerAiAssistMenu } from './PlayerAiAssistMenu';
+import { ChapterTransitionOverlay } from './ChapterTransitionOverlay';
 import { isAiConfigured } from '@/lib/narrative/aiService';
 import { FlamingoSceneCard } from './flamingo/FlamingoSceneCard';
 import { isFlamingoCampaign, FLAMINGO } from '@/lib/narrative/flamingoTheme';
+import { STAGGER_CHILD, TAP_PRESS, haptic, EASE_OUT_QUART } from '@/lib/narrative/motion';
 import type { Campaign, Character, CampaignMember, Message, MessageType, Scene, Clock } from '@/lib/narrative/types';
 
 interface Props {
@@ -103,6 +105,7 @@ export function StoryChat({
   const submit = async () => {
     if (!draft.trim() || sending) return;
     setSending(true);
+    haptic('light');
     const meta = MODE_META[mode];
     await onPost({
       body: draft.trim(),
@@ -206,24 +209,30 @@ export function StoryChat({
         style={{ overscrollBehavior: 'contain' }}
       >
         {!currentScene && messages.length === 0 && (
-          <div className="text-center py-12">
-            <div className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center bg-muted/30">
-              <Megaphone className="w-5 h-5 text-muted-foreground/70" />
-            </div>
-            <p className="text-[13px] font-extrabold">{isGm ? 'Start a scene to give your players a place to act.' : 'Waiting for the Game Master to set the scene.'}</p>
-          </div>
+          <EmptyStoryState flamingo={flamingo} isGm={isGm} />
         )}
-        {messages.map(m => (
-          <SceneMessage
-            key={m.id}
-            message={m}
-            characters={characterMap}
-            senderNames={senderNames}
-            isOwn={m.sender_id === user?.id}
-            isGm={isGm}
-            flamingo={flamingo}
-          />
-        ))}
+        {messages.map((m, i) => {
+          // Only animate the entrance for the trailing window so older
+          // messages don't re-animate on scroll-up. Index check is a
+          // cheap proxy; first paint shows everything instantly.
+          const fresh = i >= messages.length - 6;
+          return (
+            <motion.div
+              key={m.id}
+              initial={fresh ? STAGGER_CHILD.initial : false}
+              animate={STAGGER_CHILD.animate}
+            >
+              <SceneMessage
+                message={m}
+                characters={characterMap}
+                senderNames={senderNames}
+                isOwn={m.sender_id === user?.id}
+                isGm={isGm}
+                flamingo={flamingo}
+              />
+            </motion.div>
+          );
+        })}
         <div ref={endRef} />
       </div>
 
@@ -362,13 +371,18 @@ export function StoryChat({
               <Dices className="w-4 h-4" />
             </button>
           )}
-          <button
+          <motion.button
             type="button"
             onClick={submit}
             disabled={!draft.trim() || sending}
             onMouseDown={e => e.preventDefault()}
             aria-label="Send"
-            className="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center active:scale-90 transition disabled:opacity-50"
+            whileTap={draft.trim() && !sending ? TAP_PRESS : undefined}
+            animate={{
+              scale: draft.trim() ? 1 : 0.92,
+              transition: { duration: 0.16, ease: EASE_OUT_QUART },
+            }}
+            className="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center transition disabled:opacity-50"
             style={flamingo
               ? {
                   background: draft.trim()
@@ -383,8 +397,29 @@ export function StoryChat({
                   color: 'hsl(var(--primary-foreground))',
                 }}
           >
-            {mode === 'gm_private' ? <Lock className="w-4 h-4" /> : <Send className="w-4 h-4" />}
-          </button>
+            <AnimatePresence mode="wait" initial={false}>
+              {sending ? (
+                <motion.span
+                  key="sending"
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1, rotate: 360 }}
+                  exit={{ opacity: 0, scale: 0.5 }}
+                  transition={{ duration: 0.4, ease: 'linear', repeat: Infinity }}
+                  className="inline-flex"
+                >
+                  <Sparkles className="w-4 h-4" />
+                </motion.span>
+              ) : mode === 'gm_private' ? (
+                <motion.span key="lock" initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.6 }}>
+                  <Lock className="w-4 h-4" />
+                </motion.span>
+              ) : (
+                <motion.span key="send" initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 4 }}>
+                  <Send className="w-4 h-4" />
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
         </div>
       </div>
 
@@ -403,6 +438,86 @@ export function StoryChat({
         draft={draft}
         onApply={next => setDraft(next)}
       />
+      {/* Cinematic chapter takeover — fires when a fresh
+          chapter_transition message arrives in the stream. */}
+      <ChapterTransitionOverlay
+        latestMessage={messages.length > 0 ? messages[messages.length - 1] : null}
+        flamingo={flamingo}
+      />
     </div>
+  );
+}
+
+/** Empty Story Chat state — replaces the lonely "Waiting for the Game
+ *  Master" hint with an illustrated, branded card. The illustration is
+ *  inline SVG so it ships as part of the JS bundle and themes via the
+ *  Flamingo tokens. */
+function EmptyStoryState({ flamingo, isGm }: { flamingo: boolean; isGm: boolean }) {
+  const pink = flamingo ? `hsl(${FLAMINGO.pink})` : 'hsl(var(--primary))';
+  const cyan = flamingo ? `hsl(${FLAMINGO.cyan})` : 'hsl(var(--primary) / 0.6)';
+  const ink = flamingo ? `hsl(${FLAMINGO.ink})` : 'hsl(var(--card))';
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE_OUT_QUART } }}
+      className="text-center py-10 px-4 max-w-sm mx-auto"
+    >
+      <div className="relative w-32 h-32 mx-auto mb-5">
+        {/* Faux clapperboard / spotlight illustration — stripped to
+            simple geometric primitives so it reads at any density. */}
+        <svg viewBox="0 0 128 128" className="absolute inset-0">
+          <defs>
+            <linearGradient id="esg-1" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor={pink} />
+              <stop offset="1" stopColor={cyan} />
+            </linearGradient>
+            <radialGradient id="esg-glow" cx="50%" cy="50%" r="50%">
+              <stop offset="0" stopColor={pink} stopOpacity="0.35" />
+              <stop offset="1" stopColor={pink} stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          <circle cx="64" cy="64" r="60" fill="url(#esg-glow)" />
+          {/* clapper top stripes */}
+          <rect x="22" y="26" width="84" height="14" rx="2" fill={ink} stroke="url(#esg-1)" strokeWidth="1.2" />
+          <g fill={pink}>
+            <rect x="26" y="29" width="10" height="8" transform="skewX(-18)" />
+            <rect x="46" y="29" width="10" height="8" transform="skewX(-18)" />
+            <rect x="66" y="29" width="10" height="8" transform="skewX(-18)" />
+            <rect x="86" y="29" width="10" height="8" transform="skewX(-18)" />
+          </g>
+          {/* clapper body */}
+          <rect x="22" y="42" width="84" height="58" rx="3" fill={ink} stroke="url(#esg-1)" strokeWidth="1.4" />
+          {/* lines on body */}
+          <line x1="32" y1="60" x2="78" y2="60" stroke={cyan} strokeWidth="1.4" strokeOpacity="0.55" strokeLinecap="round" />
+          <line x1="32" y1="72" x2="92" y2="72" stroke={cyan} strokeWidth="1.4" strokeOpacity="0.4" strokeLinecap="round" />
+          <line x1="32" y1="84" x2="64" y2="84" stroke={cyan} strokeWidth="1.4" strokeOpacity="0.3" strokeLinecap="round" />
+          {/* spotlight beam */}
+          <path d="M 64 12 L 50 26 L 78 26 Z" fill={pink} fillOpacity="0.18" />
+          <circle cx="64" cy="10" r="3" fill={pink} />
+        </svg>
+      </div>
+      <p
+        className="text-[15px] font-extrabold tracking-tight"
+        style={flamingo ? {
+          backgroundImage: `linear-gradient(90deg, hsl(${FLAMINGO.paper}), ${pink})`,
+          WebkitBackgroundClip: 'text',
+          backgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          color: 'transparent',
+        } : undefined}
+      >
+        {isGm
+          ? (flamingo ? 'Roll sound. Light the neon.' : 'Set the first scene.')
+          : (flamingo ? 'Velvetaine waits in the wings.' : 'Waiting on the Game Master.')}
+      </p>
+      <p
+        className="text-[11.5px] mt-1.5 leading-snug"
+        style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.65)` : 'hsl(var(--muted-foreground) / 0.8)' }}
+      >
+        {isGm
+          ? 'Open the GM Console and start a scene to give your crew somewhere to act.'
+          : 'The GM is staging the first scene — keep an eye on this thread.'}
+      </p>
+    </motion.div>
   );
 }

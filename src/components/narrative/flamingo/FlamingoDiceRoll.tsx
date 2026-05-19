@@ -12,13 +12,15 @@
 // Hidden GM rolls keep the "Hidden roll" eyebrow label so private rolls
 // don't accidentally read like public canon.
 
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import { Dices, Eye, EyeOff, Sparkles, Loader2, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { getStatMeta, bandForTotal } from '@/lib/narrative/chronicleRuleset';
 import { suggestRollResolution, isAiConfigured } from '@/lib/narrative/aiService';
 import { supabase } from '@/integrations/supabase/client';
 import { FLAMINGO } from '@/lib/narrative/flamingoTheme';
+import { COUNT_UP_SPRING, SPRING_HERO, haptic } from '@/lib/narrative/motion';
 import type { Message } from '@/lib/narrative/types';
 
 interface Props {
@@ -52,6 +54,26 @@ export function FlamingoDiceRoll({ message, rollerName, isGm, campaignId }: Prop
   const band = bandForTotal(total);
   const accent = outcomeAccent(band.label);
   const isCrit = band.label.toLowerCase().includes('crit');
+  const isFail = band.label.toLowerCase().includes('fail');
+
+  // First-time-seen detection — drives the dramatic reveal. We key on
+  // the message id so re-renders from realtime don't replay the
+  // animation, only the first mount of a brand-new roll does.
+  const seenRef = useRef<string | null>(null);
+  const firstMount = seenRef.current !== message.id;
+  useEffect(() => { seenRef.current = message.id; }, [message.id]);
+
+  // Count-up the d20 total from 0 → result on first mount. Uses a
+  // motion value so the DOM updates without re-rendering the parent.
+  const totalMv = useMotionValue(firstMount ? 0 : total);
+  const totalText = useTransform(totalMv, latest => Math.round(latest).toString());
+  useEffect(() => {
+    if (!firstMount) { totalMv.set(total); return; }
+    haptic(isCrit ? 'success' : isFail ? 'fail' : 'medium');
+    const controls = animate(totalMv, total, { ...COUNT_UP_SPRING, duration: isCrit ? 0.9 : 0.55 });
+    return () => controls.stop();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const isHidden = message.visibility === 'gm_only';
   const [resolving, setResolving] = useState(false);
@@ -99,7 +121,10 @@ export function FlamingoDiceRoll({ message, rollerName, isGm, campaignId }: Prop
   };
 
   return (
-    <div
+    <motion.div
+      initial={firstMount ? { opacity: 0, scale: 0.94, y: 12 } : false}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={SPRING_HERO}
       className="rounded-2xl p-3 relative overflow-hidden"
       style={{
         background: `linear-gradient(135deg, hsl(${FLAMINGO.ink}), hsl(${FLAMINGO.midnight}))`,
@@ -109,6 +134,31 @@ export function FlamingoDiceRoll({ message, rollerName, isGm, campaignId }: Prop
           : `0 0 16px -6px hsl(${accent} / 0.55)`,
       }}
     >
+      {/* Crit celebration — six pink/cyan sparkles fanning out on first
+          mount of a critical roll. Particles use motion.div with
+          staggered keyframes; no JS animation loop. */}
+      {isCrit && firstMount && (
+        <div aria-hidden className="absolute inset-0 pointer-events-none">
+          {[0, 60, 120, 180, 240, 300].map((deg, i) => (
+            <motion.span
+              key={i}
+              initial={{ opacity: 0, scale: 0.6, x: 0, y: 0 }}
+              animate={{
+                opacity: [0, 1, 0],
+                scale: [0.6, 1.1, 0.4],
+                x: Math.cos((deg * Math.PI) / 180) * 70,
+                y: Math.sin((deg * Math.PI) / 180) * 70,
+              }}
+              transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: i * 0.04 }}
+              className="absolute left-[28px] top-[44px] w-1.5 h-1.5 rounded-full"
+              style={{
+                background: i % 2 === 0 ? `hsl(${FLAMINGO.pink})` : `hsl(${FLAMINGO.cyan})`,
+                boxShadow: `0 0 8px hsl(${i % 2 === 0 ? FLAMINGO.pink : FLAMINGO.cyan})`,
+              }}
+            />
+          ))}
+        </div>
+      )}
       {/* Eyebrow */}
       <div className="flex items-center gap-1.5 mb-1.5">
         <Dices className="w-3 h-3" style={{ color: `hsl(${accent})` }} />
@@ -152,7 +202,9 @@ export function FlamingoDiceRoll({ message, rollerName, isGm, campaignId }: Prop
           }}
         >
           <span className="text-[8px] font-extrabold uppercase tracking-wider" style={{ color: `hsl(${accent})` }}>Total</span>
-          <span className="text-[20px] font-black tabular-nums leading-none" style={{ color: `hsl(${accent})` }}>{total}</span>
+          <motion.span className="text-[20px] font-black tabular-nums leading-none" style={{ color: `hsl(${accent})` }}>
+            {totalText}
+          </motion.span>
         </div>
         <div className="flex-1 min-w-0">
           <span
@@ -243,6 +295,6 @@ export function FlamingoDiceRoll({ message, rollerName, isGm, campaignId }: Prop
           )}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

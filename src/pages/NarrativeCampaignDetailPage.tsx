@@ -57,11 +57,32 @@ export default function NarrativeCampaignDetailPage() {
   const publicFactions = useMemo(() => data.factions.filter(f => f.visibility === 'public' || data.isGm), [data.factions, data.isGm]);
 
   if (data.loading && !data.campaign) {
+    // Layout-matching skeleton — same chrome shapes as the real page so
+    // there's no jank when content swaps in. Each block uses the
+    // skeleton-shimmer animation defined in index.css.
     return (
-      <div className="px-4 py-4 space-y-3">
-        <div className="h-16 rounded-2xl skeleton-shimmer" />
-        <div className="h-32 rounded-2xl skeleton-shimmer" />
-        <div className="h-48 rounded-2xl skeleton-shimmer" />
+      <div className="flex flex-col h-[calc(100dvh-3rem-env(safe-area-inset-top,0px))]">
+        {/* Header skeleton */}
+        <div className="flex-shrink-0 px-3 py-2.5 border-b border-border/15 flex items-center gap-2" style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top, 0px))' }}>
+          <div className="w-9 h-9 rounded-lg skeleton-shimmer" />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-2.5 w-24 rounded-full skeleton-shimmer" />
+            <div className="h-3.5 w-40 rounded-md skeleton-shimmer" />
+          </div>
+          <div className="w-9 h-9 rounded-lg skeleton-shimmer" />
+        </div>
+        {/* Tab strip skeleton */}
+        <div className="px-3 py-2 border-b border-border/10 grid grid-cols-4 gap-1.5">
+          {[0, 1, 2, 3].map(i => <div key={i} className="h-12 rounded-lg skeleton-shimmer" />)}
+        </div>
+        {/* Scene + chat skeleton */}
+        <div className="px-4 py-3 space-y-2.5">
+          <div className="h-14 rounded-xl skeleton-shimmer" />
+          <div className="flex justify-start"><div className="h-10 w-2/3 rounded-2xl skeleton-shimmer" /></div>
+          <div className="flex justify-end"><div className="h-10 w-1/2 rounded-2xl skeleton-shimmer" /></div>
+          <div className="flex justify-start"><div className="h-14 w-3/4 rounded-2xl skeleton-shimmer" /></div>
+          <div className="flex justify-start"><div className="h-10 w-1/2 rounded-2xl skeleton-shimmer" /></div>
+        </div>
       </div>
     );
   }
