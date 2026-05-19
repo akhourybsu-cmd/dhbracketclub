@@ -30,7 +30,7 @@ import { SectionHeader } from '@/components/home/SectionHeader';
 import { StatusPill } from '@/components/ui/status-pill';
 import { getTemplate, type TemplateKey } from '@/lib/narrative/templates';
 import { computeCampaignStatus } from '@/lib/narrative/campaignStatus';
-import { isFlamingoCampaign } from '@/lib/narrative/flamingoTheme';
+import { isFlamingoCampaign, FLAMINGO } from '@/lib/narrative/flamingoTheme';
 import { FlamingoCampaignShell, FlamingoCampaignHeader, FlamingoTabs, FlamingoCharacterCard } from '@/components/narrative/flamingo';
 
 type Tab = 'story' | 'characters' | 'world' | 'log';
@@ -326,39 +326,65 @@ export default function NarrativeCampaignDetailPage() {
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
           {publicNpcs.length > 0 && (
             <section>
-              <SectionHeader label="Notable NPCs" count={publicNpcs.length} />
+              <SectionHeader label={flamingo ? 'Known players' : 'Notable NPCs'} count={publicNpcs.length} />
               <div className="space-y-2">
                 {publicNpcs.map(n => (
-                  <div key={n.id} className="rounded-xl bg-card border border-border/40 p-3">
-                    <p className="text-[12.5px] font-extrabold">{n.name}</p>
-                    {n.role && <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/65">{n.role}</p>}
-                    {n.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{n.description}</p>}
-                  </div>
+                  flamingo ? (
+                    <FlamingoEntityCard
+                      key={n.id}
+                      title={n.name}
+                      eyebrow={n.role ?? undefined}
+                      body={n.description ?? undefined}
+                      accent={FLAMINGO.gold}
+                    />
+                  ) : (
+                    <div key={n.id} className="rounded-xl bg-card border border-border/40 p-3">
+                      <p className="text-[12.5px] font-extrabold">{n.name}</p>
+                      {n.role && <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/65">{n.role}</p>}
+                      {n.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{n.description}</p>}
+                    </div>
+                  )
                 ))}
               </div>
             </section>
           )}
           {publicClues.length > 0 && (
             <section>
-              <SectionHeader label="Clues" count={publicClues.length} />
+              <SectionHeader label={flamingo ? 'Case board' : 'Clues'} count={publicClues.length} />
               <div className="space-y-2">
                 {publicClues.map(c => (
-                  <div key={c.id} className="rounded-xl bg-card border border-border/40 p-3">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[12.5px] font-extrabold truncate">{c.name}</span>
-                      <StatusPill variant={c.status === 'solved' ? 'success' : c.status === 'false_lead' ? 'danger' : c.status === 'partial' ? 'warning' : 'info'} size="xs">
-                        {c.status.replace('_', ' ')}
-                      </StatusPill>
+                  flamingo ? (
+                    <FlamingoEntityCard
+                      key={c.id}
+                      title={c.name}
+                      body={c.description ?? undefined}
+                      accent={FLAMINGO.clue}
+                      pill={c.status.replace('_', ' ')}
+                      pillAccent={
+                        c.status === 'solved' ? FLAMINGO.success
+                          : c.status === 'false_lead' ? FLAMINGO.danger
+                          : c.status === 'partial' ? FLAMINGO.gold
+                          : FLAMINGO.clue
+                      }
+                    />
+                  ) : (
+                    <div key={c.id} className="rounded-xl bg-card border border-border/40 p-3">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[12.5px] font-extrabold truncate">{c.name}</span>
+                        <StatusPill variant={c.status === 'solved' ? 'success' : c.status === 'false_lead' ? 'danger' : c.status === 'partial' ? 'warning' : 'info'} size="xs">
+                          {c.status.replace('_', ' ')}
+                        </StatusPill>
+                      </div>
+                      {c.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{c.description}</p>}
                     </div>
-                    {c.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{c.description}</p>}
-                  </div>
+                  )
                 ))}
               </div>
             </section>
           )}
           {publicClocks.length > 0 && (
             <section>
-              <SectionHeader label="Active clocks" count={publicClocks.length} />
+              <SectionHeader label={flamingo ? 'Heat & danger' : 'Active clocks'} count={publicClocks.length} />
               <div className="space-y-2">
                 {publicClocks.map(c => <ClockCard key={c.id} clock={c} />)}
               </div>
@@ -366,20 +392,45 @@ export default function NarrativeCampaignDetailPage() {
           )}
           {data.locations.length > 0 && (
             <section>
-              <SectionHeader label="Locations" count={data.locations.length} />
+              <SectionHeader label={flamingo ? 'Velvetaine' : 'Locations'} count={data.locations.length} />
               <div className="space-y-2">
                 {data.locations.map(l => (
-                  <div key={l.id} className="rounded-xl bg-card border border-border/40 p-3">
-                    <p className="text-[12.5px] font-extrabold">{l.name}</p>
-                    {l.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{l.description}</p>}
-                  </div>
+                  flamingo ? (
+                    <FlamingoEntityCard
+                      key={l.id}
+                      title={l.name}
+                      body={l.description ?? undefined}
+                      accent={FLAMINGO.cyan}
+                    />
+                  ) : (
+                    <div key={l.id} className="rounded-xl bg-card border border-border/40 p-3">
+                      <p className="text-[12.5px] font-extrabold">{l.name}</p>
+                      {l.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{l.description}</p>}
+                    </div>
+                  )
                 ))}
               </div>
             </section>
           )}
           {publicNpcs.length === 0 && publicClues.length === 0 && publicClocks.length === 0 && data.locations.length === 0 && (
-            <div className="rounded-xl bg-muted/25 border border-dashed border-border/40 p-4 text-center">
-              <p className="text-[11.5px] text-muted-foreground/75">The world is empty so far. The GM will populate it as the campaign unfolds.</p>
+            <div
+              className="rounded-xl p-4 text-center"
+              style={flamingo ? {
+                background: `hsl(${FLAMINGO.ink} / 0.6)`,
+                border: `1px dashed hsl(${FLAMINGO.pink} / 0.3)`,
+              } : {
+                background: 'hsl(var(--muted) / 0.25)',
+                border: '1px dashed hsl(var(--border) / 0.4)',
+              }}
+            >
+              <p
+                className="text-[11.5px]"
+                style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.7)` : 'hsl(var(--muted-foreground) / 0.75)' }}
+              >
+                {flamingo
+                  ? 'Velvetaine sleeps. The GM lights the neon when the city wakes up.'
+                  : 'The world is empty so far. The GM will populate it as the campaign unfolds.'}
+              </p>
             </div>
           )}
         </div>
@@ -387,8 +438,7 @@ export default function NarrativeCampaignDetailPage() {
 
       {isActive && tab === 'log' && (
         <div className="flex-1 overflow-y-auto px-4 py-3">
-          {/* Log = scene cards + chapter transitions + campaign summaries */}
-          <SectionHeader label="Campaign log" />
+          <SectionHeader label={flamingo ? 'Episode log' : 'Campaign log'} />
           {(() => {
             const logEvents = data.messages.filter(m =>
               m.message_type === 'scene_card' ||
@@ -397,21 +447,80 @@ export default function NarrativeCampaignDetailPage() {
             );
             if (logEvents.length === 0) {
               return (
-                <div className="rounded-xl bg-muted/25 border border-dashed border-border/40 p-4 text-center">
-                  <p className="text-[11.5px] text-muted-foreground/75">No log entries yet.</p>
+                <div
+                  className="rounded-xl p-4 text-center"
+                  style={flamingo ? {
+                    background: `hsl(${FLAMINGO.ink} / 0.6)`,
+                    border: `1px dashed hsl(${FLAMINGO.pink} / 0.3)`,
+                  } : {
+                    background: 'hsl(var(--muted) / 0.25)',
+                    border: '1px dashed hsl(var(--border) / 0.4)',
+                  }}
+                >
+                  <p style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.7)` : 'hsl(var(--muted-foreground) / 0.75)' }} className="text-[11.5px]">
+                    {flamingo
+                      ? 'No episodes filmed yet. The crew hasn\'t made the wire.'
+                      : 'No log entries yet.'}
+                  </p>
                 </div>
               );
             }
             return (
               <div className="space-y-2">
-                {logEvents.map(e => (
-                  <div key={e.id} className="rounded-xl bg-card border border-border/40 p-3">
-                    <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-muted-foreground/65">
-                      {e.message_type.replace('_', ' ')}
-                    </p>
-                    <p className="text-[12.5px] text-foreground/85 leading-snug mt-1">{e.body}</p>
-                  </div>
-                ))}
+                {logEvents.map(e => {
+                  const labelMap: Record<string, string> = flamingo
+                    ? {
+                        scene_card: 'Scene · Roll Sound',
+                        chapter_transition: 'New Chapter',
+                        campaign_summary: 'Episode Recap',
+                      }
+                    : {
+                        scene_card: 'Scene',
+                        chapter_transition: 'Chapter Transition',
+                        campaign_summary: 'Campaign Summary',
+                      };
+                  const accent = flamingo
+                    ? (e.message_type === 'chapter_transition' ? FLAMINGO.pink
+                        : e.message_type === 'campaign_summary' ? FLAMINGO.cyan
+                        : FLAMINGO.gold)
+                    : null;
+                  return (
+                    <div
+                      key={e.id}
+                      className="rounded-xl p-3 relative overflow-hidden"
+                      style={flamingo && accent ? {
+                        background: `linear-gradient(135deg, hsl(${FLAMINGO.ink}), hsl(${FLAMINGO.midnight}))`,
+                        border: `1px solid hsl(${accent} / 0.45)`,
+                        boxShadow: `0 0 12px -6px hsl(${accent} / 0.5)`,
+                      } : {
+                        background: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border) / 0.4)',
+                      }}
+                    >
+                      {flamingo && accent && (
+                        <div
+                          aria-hidden
+                          className="absolute left-0 top-0 bottom-0 w-1"
+                          style={{ background: `hsl(${accent})` }}
+                        />
+                      )}
+                      <div className={flamingo ? 'pl-2' : ''}>
+                        <p
+                          className="text-[9.5px] font-extrabold uppercase tracking-[0.22em]"
+                          style={{ color: flamingo && accent ? `hsl(${accent})` : 'hsl(var(--muted-foreground) / 0.65)' }}
+                        >
+                          {labelMap[e.message_type] ?? e.message_type.replace('_', ' ')}
+                        </p>
+                        <p
+                          className="text-[12.5px] leading-snug mt-1"
+                          style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.9)` : 'hsl(var(--foreground) / 0.85)' }}
+                        >
+                          {e.body}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             );
           })()}
@@ -461,6 +570,71 @@ export default function NarrativeCampaignDetailPage() {
         />
       )}
       </PageWrap>
+    </div>
+  );
+}
+
+/** Small dossier/evidence card used in the Flamingo World tab for NPCs,
+ *  clues, and locations. Status-pill style chip on the right when a
+ *  `pill` label is provided (used for clue statuses). */
+function FlamingoEntityCard({
+  title, eyebrow, body, accent, pill, pillAccent,
+}: {
+  title: string;
+  eyebrow?: string;
+  body?: string;
+  accent: string;
+  pill?: string;
+  pillAccent?: string;
+}) {
+  return (
+    <div
+      className="rounded-xl p-3 relative overflow-hidden"
+      style={{
+        background: `linear-gradient(135deg, hsl(${FLAMINGO.ink}), hsl(${FLAMINGO.midnight}))`,
+        border: `1px solid hsl(${accent} / 0.4)`,
+        boxShadow: `0 0 12px -6px hsl(${accent} / 0.45)`,
+        color: `hsl(${FLAMINGO.paper})`,
+      }}
+    >
+      <div
+        aria-hidden
+        className="absolute left-0 top-0 bottom-0 w-1"
+        style={{ background: `hsl(${accent})` }}
+      />
+      <div className="pl-2 flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-[12.5px] font-extrabold truncate">{title}</p>
+          {eyebrow && (
+            <p
+              className="text-[10px] font-bold uppercase tracking-wider mt-0.5"
+              style={{ color: `hsl(${accent})` }}
+            >
+              {eyebrow}
+            </p>
+          )}
+          {body && (
+            <p
+              className="text-[11.5px] leading-snug mt-1"
+              style={{ color: `hsl(${FLAMINGO.paper} / 0.82)` }}
+            >
+              {body}
+            </p>
+          )}
+        </div>
+        {pill && pillAccent && (
+          <span
+            className="flex-shrink-0 inline-block rounded-full px-1.5 py-[1px] text-[9px] font-extrabold uppercase tracking-[0.18em]"
+            style={{
+              background: `hsl(${pillAccent} / 0.2)`,
+              color: `hsl(${pillAccent})`,
+              border: `1px solid hsl(${pillAccent} / 0.5)`,
+            }}
+          >
+            {pill}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

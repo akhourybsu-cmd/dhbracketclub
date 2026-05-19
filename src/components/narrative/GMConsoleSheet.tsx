@@ -31,6 +31,7 @@ import { SceneSummaryWizard } from './SceneSummaryWizard';
 import { AiSuggestionEditSheet } from './AiSuggestionEditSheet';
 import { GM_TOOLS, isAiConfigured, invokeGmTool, type AiSuggestion } from '@/lib/narrative/aiService';
 import { applyStateUpdates } from '@/lib/narrative/applyStateUpdates';
+import { isFlamingoCampaign, FLAMINGO } from '@/lib/narrative/flamingoTheme';
 import type {
   Campaign, Scene, NPC, Clue, Faction, Clock, Item, Location as NarrativeLocation, AiSuggestionRow,
 } from '@/lib/narrative/types';
@@ -76,13 +77,21 @@ interface Props {
 }
 
 export function GMConsoleSheet(props: Props) {
-  const { open, onClose } = props;
+  const { open, onClose, campaign } = props;
+  const flamingo = isFlamingoCampaign(campaign.template_key);
   const [tab, setTab] = useState<TabKey>('scene');
   const [editTarget, setEditTarget] = useState<{ table: string; label: string; row: any; schema: any } | null>(null);
   const [chaptersOpen, setChaptersOpen] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
 
   if (!open || typeof document === 'undefined') return null;
+
+  // Flamingo Protocol relabels the Items tab as "Leverage" so the GM
+  // reads it as story-currency, not generic loot. Tab order is identical
+  // so the per-tab dispatch below still keys off the original TabKey.
+  const tabsForRender = flamingo
+    ? TABS.map(t => t.key === 'items' ? { ...t, label: 'Leverage' } : t)
+    : TABS;
 
   return createPortal(
     <motion.div
@@ -100,34 +109,119 @@ export function GMConsoleSheet(props: Props) {
         exit={{ x: '100%' }}
         transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
         onClick={e => e.stopPropagation()}
-        className="w-full sm:w-[420px] h-full flex flex-col bg-card border-l border-border/40 overflow-hidden"
-        style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        className="w-full sm:w-[420px] h-full flex flex-col border-l overflow-hidden relative"
+        style={
+          flamingo
+            ? {
+                paddingTop: 'env(safe-area-inset-top, 0px)',
+                paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+                background: `
+                  radial-gradient(60% 35% at 50% 0%, hsl(${FLAMINGO.pink} / 0.18), transparent 70%),
+                  radial-gradient(50% 40% at 100% 100%, hsl(${FLAMINGO.cyan} / 0.12), transparent 70%),
+                  linear-gradient(180deg, hsl(${FLAMINGO.midnight}), hsl(${FLAMINGO.ink}))
+                `,
+                borderColor: `hsl(${FLAMINGO.pink} / 0.35)`,
+                color: `hsl(${FLAMINGO.paper})`,
+              }
+            : {
+                paddingTop: 'env(safe-area-inset-top, 0px)',
+                paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+                background: 'hsl(var(--card))',
+                borderColor: 'hsl(var(--border) / 0.4)',
+              }
+        }
       >
+        {/* Top neon edge — Flamingo only */}
+        {flamingo && (
+          <div
+            aria-hidden
+            className="absolute inset-x-0 top-0 h-px pointer-events-none"
+            style={{
+              background: `linear-gradient(90deg, transparent, hsl(${FLAMINGO.pink}), hsl(${FLAMINGO.cyan}), transparent)`,
+              opacity: 0.75,
+            }}
+          />
+        )}
+
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border/25 flex-shrink-0">
+        <div
+          className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0"
+          style={{ borderColor: flamingo ? `hsl(${FLAMINGO.pink} / 0.25)` : 'hsl(var(--border) / 0.25)' }}
+        >
           <div>
-            <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-muted-foreground/70">Game Master</p>
-            <h2 className="text-[15px] font-extrabold tracking-tight">GM Console</h2>
+            <p
+              className="text-[9.5px] font-extrabold uppercase tracking-[0.22em]"
+              style={{ color: flamingo ? `hsl(${FLAMINGO.cyan})` : 'hsl(var(--muted-foreground) / 0.7)' }}
+            >
+              {flamingo ? "Director's Table" : 'Game Master'}
+            </p>
+            <h2
+              className="text-[15px] font-extrabold tracking-tight"
+              style={flamingo ? {
+                backgroundImage: `linear-gradient(90deg, hsl(${FLAMINGO.paper}), hsl(${FLAMINGO.pink}))`,
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                color: 'transparent',
+              } : undefined}
+            >
+              {flamingo ? 'Run the chaos' : 'GM Console'}
+            </h2>
           </div>
-          <button onClick={onClose} aria-label="Close" className="w-9 h-9 rounded-lg bg-muted/40 active:scale-90 flex items-center justify-center">
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="w-9 h-9 rounded-lg active:scale-90 flex items-center justify-center"
+            style={flamingo ? {
+              background: `hsl(${FLAMINGO.ink})`,
+              border: `1px solid hsl(${FLAMINGO.pink} / 0.4)`,
+              color: `hsl(${FLAMINGO.paper})`,
+            } : {
+              background: 'hsl(var(--muted) / 0.4)',
+            }}
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Tab strip */}
-        <div className="px-2 py-2 border-b border-border/15 flex-shrink-0 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+        <div
+          className="px-2 py-2 border-b flex-shrink-0 overflow-x-auto"
+          style={{
+            scrollbarWidth: 'none',
+            borderColor: flamingo ? `hsl(${FLAMINGO.pink} / 0.15)` : 'hsl(var(--border) / 0.15)',
+            background: flamingo ? `hsl(${FLAMINGO.midnight} / 0.5)` : undefined,
+          }}
+        >
           <div className="flex gap-1">
-            {TABS.map(t => {
+            {tabsForRender.map(t => {
               const Icon = t.icon;
               const selected = tab === t.key;
+              const flamingoStyle = selected
+                ? {
+                    background: `linear-gradient(135deg, hsl(${FLAMINGO.pink} / 0.25), hsl(${FLAMINGO.violet} / 0.15))`,
+                    border: `1px solid hsl(${FLAMINGO.pink} / 0.55)`,
+                    color: `hsl(${FLAMINGO.paper})`,
+                    boxShadow: `0 0 10px -3px hsl(${FLAMINGO.pink} / 0.55)`,
+                  }
+                : {
+                    background: `hsl(${FLAMINGO.ink} / 0.7)`,
+                    border: `1px solid hsl(${FLAMINGO.paper} / 0.15)`,
+                    color: `hsl(${FLAMINGO.paper} / 0.7)`,
+                  };
               return (
                 <button
                   key={t.key}
                   type="button"
                   onClick={() => setTab(t.key)}
                   className={`flex-shrink-0 inline-flex items-center gap-1 h-8 px-2.5 rounded-lg text-[10.5px] font-extrabold uppercase tracking-wider transition ${
-                    selected ? 'bg-primary/15 text-primary border border-primary/35' : 'bg-muted/25 border border-border/40 text-muted-foreground/75'
+                    flamingo
+                      ? ''
+                      : selected
+                        ? 'bg-primary/15 text-primary border border-primary/35'
+                        : 'bg-muted/25 border border-border/40 text-muted-foreground/75'
                   }`}
+                  style={flamingo ? flamingoStyle : undefined}
                 >
                   <Icon className="w-3 h-3" /> {t.label}
                 </button>
