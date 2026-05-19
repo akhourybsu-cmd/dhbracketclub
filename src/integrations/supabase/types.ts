@@ -2651,6 +2651,1142 @@ export type Database = {
           },
         ]
       }
+      narrative_ai_suggestions: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          prompt_context: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          scene_id: string | null
+          status: string
+          suggested_content: string | null
+          suggested_state_updates: Json
+          suggestion_type: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          prompt_context?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scene_id?: string | null
+          status?: string
+          suggested_content?: string | null
+          suggested_state_updates?: Json
+          suggestion_type: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          prompt_context?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scene_id?: string | null
+          status?: string
+          suggested_content?: string | null
+          suggested_state_updates?: Json
+          suggestion_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "narrative_ai_suggestions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "narrative_ai_suggestions_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      narrative_approval_events: {
+        Row: {
+          actor_id: string | null
+          campaign_id: string
+          created_at: string
+          event_type: string
+          from_status: string | null
+          id: string
+          notes: string | null
+          to_status: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          campaign_id: string
+          created_at?: string
+          event_type: string
+          from_status?: string | null
+          id?: string
+          notes?: string | null
+          to_status?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          campaign_id?: string
+          created_at?: string
+          event_type?: string
+          from_status?: string | null
+          id?: string
+          notes?: string | null
+          to_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "narrative_approval_events_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      narrative_campaign_members: {
+        Row: {
+          campaign_id: string
+          id: string
+          invited_by: string | null
+          joined_at: string
+          role: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          id?: string
+          invited_by?: string | null
+          joined_at?: string
+          role?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          id?: string
+          invited_by?: string | null
+          joined_at?: string
+          role?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "narrative_campaign_members_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      narrative_campaigns: {
+        Row: {
+          approval_notes: string | null
+          approved_at: string | null
+          approved_by: string | null
+          club_id: string
+          content_notes: string | null
+          created_at: string
+          created_by: string
+          current_chapter_id: string | null
+          current_scene_id: string | null
+          description: string | null
+          gm_id: string | null
+          id: string
+          live_session_id: string | null
+          live_started_at: string | null
+          memory_summary: string | null
+          opening_premise: string | null
+          pitch: string | null
+          play_mode: string
+          player_limit: number | null
+          proposed_gm_id: string | null
+          schedule_note: string | null
+          slug: string | null
+          spectators_allowed: boolean
+          status: string
+          submitted_at: string | null
+          template_key: string
+          title: string
+          tone_profile: string | null
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          approval_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          club_id: string
+          content_notes?: string | null
+          created_at?: string
+          created_by: string
+          current_chapter_id?: string | null
+          current_scene_id?: string | null
+          description?: string | null
+          gm_id?: string | null
+          id?: string
+          live_session_id?: string | null
+          live_started_at?: string | null
+          memory_summary?: string | null
+          opening_premise?: string | null
+          pitch?: string | null
+          play_mode?: string
+          player_limit?: number | null
+          proposed_gm_id?: string | null
+          schedule_note?: string | null
+          slug?: string | null
+          spectators_allowed?: boolean
+          status?: string
+          submitted_at?: string | null
+          template_key?: string
+          title: string
+          tone_profile?: string | null
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          approval_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          club_id?: string
+          content_notes?: string | null
+          created_at?: string
+          created_by?: string
+          current_chapter_id?: string | null
+          current_scene_id?: string | null
+          description?: string | null
+          gm_id?: string | null
+          id?: string
+          live_session_id?: string | null
+          live_started_at?: string | null
+          memory_summary?: string | null
+          opening_premise?: string | null
+          pitch?: string | null
+          play_mode?: string
+          player_limit?: number | null
+          proposed_gm_id?: string | null
+          schedule_note?: string | null
+          slug?: string | null
+          spectators_allowed?: boolean
+          status?: string
+          submitted_at?: string | null
+          template_key?: string
+          title?: string
+          tone_profile?: string | null
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "narrative_campaigns_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      narrative_chapters: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          description: string | null
+          id: string
+          position: number
+          status: string
+          title: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          position?: number
+          status?: string
+          title: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          position?: number
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "narrative_chapters_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      narrative_characters: {
+        Row: {
+          archetype: string | null
+          avatar_url: string | null
+          backstory: string | null
+          campaign_id: string
+          conditions: Json
+          created_at: string
+          flaw: string | null
+          goal: string | null
+          id: string
+          inventory: Json
+          is_retired: boolean
+          name: string
+          notes_private: string | null
+          notes_public: string | null
+          owner_id: string
+          personality: string | null
+          pronouns: string | null
+          signature_move: string | null
+          stat_chaos: number
+          stat_charm: number
+          stat_cunning: number
+          stat_focus: number
+          stat_grit: number
+          updated_at: string
+        }
+        Insert: {
+          archetype?: string | null
+          avatar_url?: string | null
+          backstory?: string | null
+          campaign_id: string
+          conditions?: Json
+          created_at?: string
+          flaw?: string | null
+          goal?: string | null
+          id?: string
+          inventory?: Json
+          is_retired?: boolean
+          name: string
+          notes_private?: string | null
+          notes_public?: string | null
+          owner_id: string
+          personality?: string | null
+          pronouns?: string | null
+          signature_move?: string | null
+          stat_chaos?: number
+          stat_charm?: number
+          stat_cunning?: number
+          stat_focus?: number
+          stat_grit?: number
+          updated_at?: string
+        }
+        Update: {
+          archetype?: string | null
+          avatar_url?: string | null
+          backstory?: string | null
+          campaign_id?: string
+          conditions?: Json
+          created_at?: string
+          flaw?: string | null
+          goal?: string | null
+          id?: string
+          inventory?: Json
+          is_retired?: boolean
+          name?: string
+          notes_private?: string | null
+          notes_public?: string | null
+          owner_id?: string
+          personality?: string | null
+          pronouns?: string | null
+          signature_move?: string | null
+          stat_chaos?: number
+          stat_charm?: number
+          stat_cunning?: number
+          stat_focus?: number
+          stat_grit?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "narrative_characters_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      narrative_clocks: {
+        Row: {
+          campaign_id: string
+          clock_type: string
+          created_at: string
+          created_by: string | null
+          current_value: number
+          description: string | null
+          history: Json
+          id: string
+          max_value: number
+          name: string
+          related_faction_id: string | null
+          related_location_id: string | null
+          related_npc_id: string | null
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          campaign_id: string
+          clock_type?: string
+          created_at?: string
+          created_by?: string | null
+          current_value?: number
+          description?: string | null
+          history?: Json
+          id?: string
+          max_value?: number
+          name: string
+          related_faction_id?: string | null
+          related_location_id?: string | null
+          related_npc_id?: string | null
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          campaign_id?: string
+          clock_type?: string
+          created_at?: string
+          created_by?: string | null
+          current_value?: number
+          description?: string | null
+          history?: Json
+          id?: string
+          max_value?: number
+          name?: string
+          related_faction_id?: string | null
+          related_location_id?: string | null
+          related_npc_id?: string | null
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "narrative_clocks_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "narrative_clocks_related_faction_id_fkey"
+            columns: ["related_faction_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_factions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "narrative_clocks_related_location_id_fkey"
+            columns: ["related_location_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "narrative_clocks_related_npc_id_fkey"
+            columns: ["related_npc_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_npcs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      narrative_clues: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          description: string | null
+          discovered_by: string | null
+          id: string
+          importance: string
+          metadata: Json
+          name: string
+          related_faction_id: string | null
+          related_npc_id: string | null
+          status: string
+          visibility: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          description?: string | null
+          discovered_by?: string | null
+          id?: string
+          importance?: string
+          metadata?: Json
+          name: string
+          related_faction_id?: string | null
+          related_npc_id?: string | null
+          status?: string
+          visibility?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          description?: string | null
+          discovered_by?: string | null
+          id?: string
+          importance?: string
+          metadata?: Json
+          name?: string
+          related_faction_id?: string | null
+          related_npc_id?: string | null
+          status?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "narrative_clues_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "narrative_clues_related_faction_fkey"
+            columns: ["related_faction_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_factions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "narrative_clues_related_npc_id_fkey"
+            columns: ["related_npc_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_npcs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      narrative_factions: {
+        Row: {
+          attitude: string | null
+          campaign_id: string
+          created_at: string
+          description: string | null
+          gm_notes: string | null
+          id: string
+          metadata: Json
+          name: string
+          public_notes: string | null
+          relationship_score: number
+          suspicion_score: number
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          attitude?: string | null
+          campaign_id: string
+          created_at?: string
+          description?: string | null
+          gm_notes?: string | null
+          id?: string
+          metadata?: Json
+          name: string
+          public_notes?: string | null
+          relationship_score?: number
+          suspicion_score?: number
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          attitude?: string | null
+          campaign_id?: string
+          created_at?: string
+          description?: string | null
+          gm_notes?: string | null
+          id?: string
+          metadata?: Json
+          name?: string
+          public_notes?: string | null
+          relationship_score?: number
+          suspicion_score?: number
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "narrative_factions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      narrative_gm_notes: {
+        Row: {
+          author_id: string | null
+          body: string
+          campaign_id: string
+          created_at: string
+          id: string
+          pinned: boolean
+          scene_id: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          campaign_id: string
+          created_at?: string
+          id?: string
+          pinned?: boolean
+          scene_id?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          pinned?: boolean
+          scene_id?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "narrative_gm_notes_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "narrative_gm_notes_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      narrative_items: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          description: string | null
+          id: string
+          metadata: Json
+          name: string
+          owner_character_id: string | null
+          related_scene_id: string | null
+          use_notes: string | null
+          visibility: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json
+          name: string
+          owner_character_id?: string | null
+          related_scene_id?: string | null
+          use_notes?: string | null
+          visibility?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json
+          name?: string
+          owner_character_id?: string | null
+          related_scene_id?: string | null
+          use_notes?: string | null
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "narrative_items_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "narrative_items_owner_character_id_fkey"
+            columns: ["owner_character_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "narrative_items_related_scene_id_fkey"
+            columns: ["related_scene_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      narrative_locations: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          description: string | null
+          id: string
+          metadata: Json
+          name: string
+          region: string | null
+          visibility: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json
+          name: string
+          region?: string | null
+          visibility?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json
+          name?: string
+          region?: string | null
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "narrative_locations_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      narrative_memory: {
+        Row: {
+          active_characters: Json
+          active_npcs: Json
+          campaign_id: string
+          canon_locks: Json
+          current_location: string | null
+          current_objective: string | null
+          current_state: string | null
+          gm_only_notes: string | null
+          important_quotes: Json
+          major_decisions: Json
+          running_jokes: Json
+          tone_guide: string | null
+          unresolved: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active_characters?: Json
+          active_npcs?: Json
+          campaign_id: string
+          canon_locks?: Json
+          current_location?: string | null
+          current_objective?: string | null
+          current_state?: string | null
+          gm_only_notes?: string | null
+          important_quotes?: Json
+          major_decisions?: Json
+          running_jokes?: Json
+          tone_guide?: string | null
+          unresolved?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active_characters?: Json
+          active_npcs?: Json
+          campaign_id?: string
+          canon_locks?: Json
+          current_location?: string | null
+          current_objective?: string | null
+          current_state?: string | null
+          gm_only_notes?: string | null
+          important_quotes?: Json
+          major_decisions?: Json
+          running_jokes?: Json
+          tone_guide?: string | null
+          unresolved?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "narrative_memory_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: true
+            referencedRelation: "narrative_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      narrative_messages: {
+        Row: {
+          body: string | null
+          campaign_id: string
+          character_id: string | null
+          created_at: string
+          edited_at: string | null
+          id: string
+          message_type: string
+          metadata: Json
+          npc_id: string | null
+          scene_id: string | null
+          sender_id: string | null
+          visibility: string
+        }
+        Insert: {
+          body?: string | null
+          campaign_id: string
+          character_id?: string | null
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          message_type?: string
+          metadata?: Json
+          npc_id?: string | null
+          scene_id?: string | null
+          sender_id?: string | null
+          visibility?: string
+        }
+        Update: {
+          body?: string | null
+          campaign_id?: string
+          character_id?: string | null
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          message_type?: string
+          metadata?: Json
+          npc_id?: string | null
+          scene_id?: string | null
+          sender_id?: string | null
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "narrative_messages_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "narrative_messages_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "narrative_messages_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      narrative_npcs: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          description: string | null
+          id: string
+          location: string | null
+          metadata: Json
+          motives: string | null
+          name: string
+          relationship: string | null
+          role: string | null
+          secrets: string | null
+          updated_at: string
+          visibility: string
+          voice_notes: string | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          metadata?: Json
+          motives?: string | null
+          name: string
+          relationship?: string | null
+          role?: string | null
+          secrets?: string | null
+          updated_at?: string
+          visibility?: string
+          voice_notes?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          metadata?: Json
+          motives?: string | null
+          name?: string
+          relationship?: string | null
+          role?: string | null
+          secrets?: string | null
+          updated_at?: string
+          visibility?: string
+          voice_notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "narrative_npcs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      narrative_rolls: {
+        Row: {
+          advantage: string
+          campaign_id: string
+          character_id: string | null
+          created_at: string
+          d20: number
+          difficulty: number
+          id: string
+          message_id: string | null
+          modifier: number
+          outcome: string
+          reason: string | null
+          resolution: string | null
+          roller_id: string | null
+          scene_id: string | null
+          stat: string
+          total: number
+          visibility: string
+        }
+        Insert: {
+          advantage?: string
+          campaign_id: string
+          character_id?: string | null
+          created_at?: string
+          d20: number
+          difficulty?: number
+          id?: string
+          message_id?: string | null
+          modifier?: number
+          outcome: string
+          reason?: string | null
+          resolution?: string | null
+          roller_id?: string | null
+          scene_id?: string | null
+          stat: string
+          total: number
+          visibility?: string
+        }
+        Update: {
+          advantage?: string
+          campaign_id?: string
+          character_id?: string | null
+          created_at?: string
+          d20?: number
+          difficulty?: number
+          id?: string
+          message_id?: string | null
+          modifier?: number
+          outcome?: string
+          reason?: string | null
+          resolution?: string | null
+          roller_id?: string | null
+          scene_id?: string | null
+          stat?: string
+          total?: number
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "narrative_rolls_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "narrative_rolls_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "narrative_rolls_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "narrative_rolls_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      narrative_scenes: {
+        Row: {
+          campaign_id: string
+          chapter_id: string | null
+          created_by: string | null
+          ended_at: string | null
+          gm_notes: string | null
+          id: string
+          location: string | null
+          objective: string | null
+          position: number
+          public_notes: string | null
+          stakes: string | null
+          started_at: string
+          status: string
+          title: string
+        }
+        Insert: {
+          campaign_id: string
+          chapter_id?: string | null
+          created_by?: string | null
+          ended_at?: string | null
+          gm_notes?: string | null
+          id?: string
+          location?: string | null
+          objective?: string | null
+          position?: number
+          public_notes?: string | null
+          stakes?: string | null
+          started_at?: string
+          status?: string
+          title: string
+        }
+        Update: {
+          campaign_id?: string
+          chapter_id?: string | null
+          created_by?: string | null
+          ended_at?: string | null
+          gm_notes?: string | null
+          id?: string
+          location?: string | null
+          objective?: string | null
+          position?: number
+          public_notes?: string | null
+          stakes?: string | null
+          started_at?: string
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "narrative_scenes_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "narrative_scenes_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_chapters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      narrative_summaries: {
+        Row: {
+          approved_by: string | null
+          body: string
+          campaign_id: string
+          chapter_id: string | null
+          created_at: string
+          generated_by_ai: boolean
+          id: string
+          scene_id: string | null
+          title: string | null
+          visibility: string
+        }
+        Insert: {
+          approved_by?: string | null
+          body: string
+          campaign_id: string
+          chapter_id?: string | null
+          created_at?: string
+          generated_by_ai?: boolean
+          id?: string
+          scene_id?: string | null
+          title?: string | null
+          visibility?: string
+        }
+        Update: {
+          approved_by?: string | null
+          body?: string
+          campaign_id?: string
+          chapter_id?: string | null
+          created_at?: string
+          generated_by_ai?: boolean
+          id?: string
+          scene_id?: string | null
+          title?: string | null
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "narrative_summaries_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "narrative_summaries_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_chapters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "narrative_summaries_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "narrative_scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nexus_boosts: {
         Row: {
           code: string
@@ -5977,6 +7113,63 @@ export type Database = {
         Returns: Json
       }
       consume_boost: { Args: { _run_id: string }; Returns: Json }
+      create_narrative_campaign: {
+        Args: {
+          _club_id: string
+          _content_notes: string
+          _description: string
+          _opening_premise: string
+          _pitch: string
+          _play_mode: string
+          _player_limit: number
+          _proposed_gm_id: string
+          _schedule_note: string
+          _spectators_allowed: boolean
+          _submit: boolean
+          _template_key: string
+          _title: string
+          _tone_profile: string
+          _visibility: string
+        }
+        Returns: {
+          approval_notes: string | null
+          approved_at: string | null
+          approved_by: string | null
+          club_id: string
+          content_notes: string | null
+          created_at: string
+          created_by: string
+          current_chapter_id: string | null
+          current_scene_id: string | null
+          description: string | null
+          gm_id: string | null
+          id: string
+          live_session_id: string | null
+          live_started_at: string | null
+          memory_summary: string | null
+          opening_premise: string | null
+          pitch: string | null
+          play_mode: string
+          player_limit: number | null
+          proposed_gm_id: string | null
+          schedule_note: string | null
+          slug: string | null
+          spectators_allowed: boolean
+          status: string
+          submitted_at: string | null
+          template_key: string
+          title: string
+          tone_profile: string | null
+          updated_at: string
+          visibility: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "narrative_campaigns"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       current_user_club_id: { Args: never; Returns: string }
       get_boost_for_run: { Args: never; Returns: Json }
       get_bracket_pool_id: { Args: { _bracket_id: string }; Returns: string }
@@ -6013,6 +7206,30 @@ export type Database = {
         }
         Returns: string
       }
+      narrative_can_see_campaign: {
+        Args: { _campaign: string; _user: string }
+        Returns: boolean
+      }
+      narrative_has_pending_invite: {
+        Args: { _campaign: string; _user: string }
+        Returns: boolean
+      }
+      narrative_is_club_admin: {
+        Args: { _campaign: string; _user: string }
+        Returns: boolean
+      }
+      narrative_is_gm: {
+        Args: { _campaign: string; _user: string }
+        Returns: boolean
+      }
+      narrative_is_member: {
+        Args: { _campaign: string; _user: string }
+        Returns: boolean
+      }
+      narrative_role_in: {
+        Args: { _campaign: string; _user: string }
+        Returns: string
+      }
       nfl_week_lock_at: { Args: { _week_id: string }; Returns: string }
       purchase_boost: { Args: { _boost_code: string }; Returns: Json }
       recompute_nfl_week_status: {
@@ -6033,6 +7250,52 @@ export type Database = {
         Returns: Json
       }
       toggle_message_pin: { Args: { p_message_id: string }; Returns: undefined }
+      transition_narrative_campaign: {
+        Args: {
+          _campaign_id: string
+          _event_type: string
+          _next_status: string
+          _notes: string
+        }
+        Returns: {
+          approval_notes: string | null
+          approved_at: string | null
+          approved_by: string | null
+          club_id: string
+          content_notes: string | null
+          created_at: string
+          created_by: string
+          current_chapter_id: string | null
+          current_scene_id: string | null
+          description: string | null
+          gm_id: string | null
+          id: string
+          live_session_id: string | null
+          live_started_at: string | null
+          memory_summary: string | null
+          opening_premise: string | null
+          pitch: string | null
+          play_mode: string
+          player_limit: number | null
+          proposed_gm_id: string | null
+          schedule_note: string | null
+          slug: string | null
+          spectators_allowed: boolean
+          status: string
+          submitted_at: string | null
+          template_key: string
+          title: string
+          tone_profile: string | null
+          updated_at: string
+          visibility: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "narrative_campaigns"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       upsert_club_request: {
         Args: { _proposed_name: string; _reason: string; _user_note: string }
         Returns: {
