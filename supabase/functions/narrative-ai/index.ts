@@ -35,15 +35,34 @@ const corsHeaders = {
 
 // Tool keys mirrored from src/lib/narrative/aiService.ts. Keep in sync.
 const GM_TOOL_KEYS = new Set([
+  // Legacy
   "scene_flavor", "npc_dialogue", "consequences", "three_twists", "escalate",
   "resolve_roll", "generate_clue", "npc_reaction", "next_scene_options",
   "rewrite_in_tone", "suggest_state_updates", "summarize_scene",
   "summarize_recent", "generate_location", "faction_complication",
+  // Writer's Room v1
+  "write_scene_opener", "continue_scene", "npc_response",
+  "suggest_consequences", "reveal_clue", "end_scene",
+  "chapter_transition", "transform_draft",
 ]);
 
 const PLAYER_INTENTS = new Set([
   "in_character", "cinematic", "funnier", "clarify_scene", "recap_public",
 ]);
+
+interface WriterControls {
+  tone?: string;
+  length?: string;
+  safety?: string[];
+  direction?: string;
+  npcId?: string | null;
+  npcIntent?: string;
+  originalDraft?: string;
+  transformation?: string;
+  consequenceNote?: string;
+  clueId?: string | null;
+  revealMode?: "subtle" | "direct";
+}
 
 interface RequestBody {
   campaign_id: string;
@@ -57,6 +76,8 @@ interface RequestBody {
   draft?: string;
   /** Optional explicit scene id. Defaults to current scene if omitted. */
   scene_id?: string;
+  /** Writer's Room controls (tone/length/safety/direction/etc.). */
+  controls?: WriterControls;
 }
 
 interface StateUpdateAction {
@@ -154,10 +175,10 @@ serve(async (req) => {
 
     // Build prompt + invoke gateway
     const systemPrompt = body.tool
-      ? buildGmSystemPrompt(body.tool, campaign.tone_profile ?? undefined)
+      ? buildGmSystemPrompt(body.tool, campaign.tone_profile ?? undefined, body.controls)
       : buildPlayerSystemPrompt(body.player!);
     const userPrompt = body.tool
-      ? buildGmUserPrompt(body.tool, ctx, body.prompt)
+      ? buildGmUserPrompt(body.tool, ctx, body.prompt, body.controls)
       : buildPlayerUserPrompt(body.player!, ctx, body.draft ?? "");
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -222,10 +243,10 @@ async function loadGmContext(admin: any, campaignId: string, sceneId: string | n
       .order("created_at", { ascending: false })
       .limit(40),
     admin.from("narrative_memory").select("*").eq("campaign_id", campaignId).maybeSingle(),
-    admin.from("narrative_factions").select("name, description, attitude, relationship_score, suspicion_score, gm_notes").eq("campaign_id", campaignId),
-    admin.from("narrative_clocks").select("name, current_value, max_value, clock_type, visibility, description").eq("campaign_id", campaignId),
-    admin.from("narrative_npcs").select("name, role, description, motives, secrets, voice_notes").eq("campaign_id", campaignId),
-    admin.from("narrative_clues").select("name, description, status, visibility, importance").eq("campaign_id", campaignId),
+    admin.from("narrative_factions").select("id, name, description, attitude, relationship_score, suspicion_score, gm_notes").eq("campaign_id", campaignId),
+    admin.from("narrative_clocks").select("id, name, current_value, max_value, clock_type, visibility, description").eq("campaign_id", campaignId),
+    admin.from("narrative_npcs").select("id, name, role, description, motives, secrets, voice_notes").eq("campaign_id", campaignId),
+    admin.from("narrative_clues").select("id, name, description, status, visibility, importance").eq("campaign_id", campaignId),
   ]);
   return { scene, recentMessages: (msgs ?? []).reverse(), memory, factions, clocks, npcs, clues };
 }
@@ -264,16 +285,84 @@ const PLAYER_BASE_RULES = `You are a writing assistant for a single player in a 
 - Return a JSON object: { "draft": string }. Just rewrite or draft the player's text. Do NOT include stateUpdates.
 - Keep it short — phone-sized response.`;
 
-function buildGmSystemPrompt(tool: string, toneProfile?: string) {
+const SAFETY_RULE_TEXT: Record<string, string> = {
+  no_reveal_gm_notes:        "Do not reveal any content from GM-only notes, GM-only scene notes, or faction gm_notes.",
+  no_reveal_hidden_clues:    "Do not reveal hidden clues (visibility = gm_only). You may hint at their existence only if asked explicitly.",
+  no_auto_state_change:      "Return state updates as PROPOSALS only. Never imply they have been applied. The GM will approve them.",
+  no_speak_for_players:      "Do not write dialogue or thoughts for player characters. Players speak for themselves.",
+  no_resolve_without_roll:   "Do not resolve player actions that would require a roll. Suggest the roll instead.",
+  keep_mystery:              "Do not resolve any active mystery. Keep current mysteries open.",
+  protect_secrets:           "Do not reveal protected secrets, even obliquely.",
+};
+
+const TONE_HINT: Record<string, string> = {
+  cinematic:        "Cinematic pacing, vivid sensory imagery, strong scene beats.",
+  funny:            "Lean into the humor — witty, irreverent, but not goofy.",
+  dangerous:        "Tension is high. Threats are concrete. Stakes are personal.",
+  subtle:           "Understated. Trust the reader. Don't telegraph.",
+  chaotic:          "Things spiral. Multiple problems collide.",
+  noir:             "Noir voice — terse, world-weary, morally smudged.",
+  conversational:   "Casual, contemporary speech. No purple prose.",
+  high_drama:       "Theatrical. Big emotional swings.",
+  more_flamingo:    "Lean harder into Flamingo Protocol's neon Miami-Vice cinematic crime energy.",
+  more_velvetaine:  "Foreground the city of Velvetaine — neon strip, casino floor, studio backlot, after-hours haze.",
+  more_miami_vice:  "1980s Miami Vice texture: pastel light, white linen, slow-burn betrayal, soundtrack underneath.",
+  more_casino:      "Push the casino/studio VIP-room energy. Felt, chips, smoke, mirrors, watched-by-everyone.",
+  more_catalina:    "Catalina Cashmere is closer than they think. Her presence shapes the room.",
+  more_tony_pressure: "Tony Madone's leverage is pressing — he wants the tape and he is impatient.",
+  more_tape_tension:  "The tape is the gravity well of this scene. Everything bends toward it.",
+  more_chaos:       "Lean into the absurd friend-group chaos. Comedy and threat in the same beat.",
+};
+
+const LENGTH_HINT: Record<string, string> = {
+  one_liner:  "Output exactly one sentence.",
+  short:      "1–2 sentences.",
+  medium:     "1 short paragraph (3–5 sentences).",
+  long:       "2–3 paragraphs.",
+  monologue:  "A sustained monologue, 4+ paragraphs, voiced by a single speaker.",
+};
+
+const TRANSFORM_HINT: Record<string, string> = {
+  shorten:             "Cut the text in half. Preserve the strongest beats.",
+  expand:              "Roughly double the length. Add sensory detail, not new plot.",
+  more_cinematic:      "Add cinematic pacing and sensory texture.",
+  funnier:             "Lean into the humor without breaking the scene.",
+  more_tense:          "Tighten the screws. Sharper threat, less air.",
+  more_subtle:         "Strip the heavy-handed bits. Let the reader infer.",
+  add_flamingo_flavor: "Add Flamingo Protocol texture — neon, Velvetaine, Miami Vice undertone.",
+  remove_spoilers:     "Strip references to hidden state, gm-only notes, or secret motivations.",
+  to_npc_dialogue:     "Rewrite as a single NPC speaking in first person. Output a JSON draft that reads like dialogue.",
+  to_gm_narration:     "Rewrite as third-person GM narration framing the scene.",
+  add_player_prompt:   "Append a one-line player-facing prompt at the end (\"What do you do?\" style).",
+};
+
+function buildGmSystemPrompt(tool: string, toneProfile?: string, controls?: WriterControls) {
   const toneLine = toneProfile ? `\nCampaign tone: ${toneProfile}` : "";
-  return `${GM_BASE_RULES}${toneLine}\nTool: ${tool}`;
+  const lengthLine = controls?.length && LENGTH_HINT[controls.length]
+    ? `\nLength: ${LENGTH_HINT[controls.length]}`
+    : "";
+  const toneCtrlLine = controls?.tone && TONE_HINT[controls.tone]
+    ? `\nTone target: ${TONE_HINT[controls.tone]}`
+    : "";
+  const transformLine = controls?.transformation && TRANSFORM_HINT[controls.transformation]
+    ? `\nTransformation: ${TRANSFORM_HINT[controls.transformation]}`
+    : "";
+  const safetyLines = (controls?.safety ?? [])
+    .map(s => SAFETY_RULE_TEXT[s])
+    .filter(Boolean)
+    .map(t => `- ${t}`)
+    .join("\n");
+  const safetyBlock = safetyLines
+    ? `\nADDITIONAL SAFETY RULES (these supersede defaults if in conflict):\n${safetyLines}`
+    : "";
+  return `${GM_BASE_RULES}${toneLine}${toneCtrlLine}${lengthLine}${transformLine}${safetyBlock}\nTool: ${tool}`;
 }
 
 function buildPlayerSystemPrompt(intent: string) {
   return `${PLAYER_BASE_RULES}\nIntent: ${intent}`;
 }
 
-function buildGmUserPrompt(tool: string, ctx: any, hint?: string) {
+function buildGmUserPrompt(tool: string, ctx: any, hint?: string, controls?: WriterControls) {
   const sceneBlock = ctx.scene
     ? `CURRENT SCENE:
 title: ${ctx.scene.title}
@@ -309,7 +398,53 @@ ${JSON.stringify(ctx.clues ?? [], null, 2)}
 
 GM HINT (optional): ${hint ?? "—"}
 
+${controls ? buildControlsBlock(tool, ctx, controls) : ""}
 Respond with the JSON object described in the system rules.`;
+}
+
+/** Inline block summarizing the Writer's Room controls for the LLM,
+ *  plus tool-specific context (NPC focus, original draft, clue id). */
+function buildControlsBlock(tool: string, ctx: any, controls: WriterControls): string {
+  const lines: string[] = [];
+  if (controls.direction) lines.push(`GM DIRECTION: ${controls.direction}`);
+  if (controls.consequenceNote) lines.push(`GM CONSEQUENCE NOTE: ${controls.consequenceNote}`);
+
+  // Tool-specific extras
+  if (tool === "npc_response" || tool === "npc_dialogue" || tool === "npc_reaction") {
+    const npc = controls.npcId
+      ? (ctx.npcs ?? []).find((n: any) => n?.id === controls.npcId || n?.name === controls.npcId)
+      : null;
+    if (npc) {
+      lines.push(`FOCUS NPC: ${JSON.stringify({
+        name: npc.name,
+        role: npc.role,
+        motives: npc.motives,
+        voice_notes: npc.voice_notes,
+      })}`);
+    }
+    if (controls.npcIntent) lines.push(`NPC INTENT: ${controls.npcIntent}`);
+  }
+
+  if (tool === "reveal_clue") {
+    const clue = controls.clueId
+      ? (ctx.clues ?? []).find((c: any) => c?.id === controls.clueId || c?.name === controls.clueId)
+      : null;
+    if (clue) {
+      lines.push(`FOCUS CLUE: ${JSON.stringify({
+        name: clue.name,
+        description: clue.description,
+        importance: clue.importance,
+      })}`);
+    }
+    lines.push(`REVEAL MODE: ${controls.revealMode ?? "subtle"}`);
+  }
+
+  if (tool === "transform_draft") {
+    if (controls.originalDraft) lines.push(`ORIGINAL DRAFT TO TRANSFORM:\n${controls.originalDraft}`);
+    if (controls.transformation) lines.push(`TRANSFORMATION REQUESTED: ${controls.transformation}`);
+  }
+
+  return lines.length ? `CONTROLS:\n${lines.join("\n\n")}\n` : "";
 }
 
 function buildPlayerUserPrompt(intent: string, ctx: any, draft: string) {

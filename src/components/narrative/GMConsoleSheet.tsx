@@ -33,6 +33,7 @@ import { GM_TOOLS, isAiConfigured, invokeGmTool, type AiSuggestion } from '@/lib
 import { applyStateUpdates } from '@/lib/narrative/applyStateUpdates';
 import { isFlamingoCampaign, FLAMINGO } from '@/lib/narrative/flamingoTheme';
 import { FlamingoClueMarker, clueAccent, FlamingoMeter, FlamingoLockIcon } from './flamingo/FlamingoPrimitives';
+import { WritersRoomPanel } from './WritersRoomPanel';
 import type {
   Campaign, Scene, NPC, Clue, Faction, Clock, Item, Location as NarrativeLocation, AiSuggestionRow,
 } from '@/lib/narrative/types';
@@ -91,7 +92,11 @@ export function GMConsoleSheet(props: Props) {
   // reads it as story-currency, not generic loot. Tab order is identical
   // so the per-tab dispatch below still keys off the original TabKey.
   const tabsForRender = flamingo
-    ? TABS.map(t => t.key === 'items' ? { ...t, label: 'Leverage' } : t)
+    ? TABS.map(t => {
+        if (t.key === 'items') return { ...t, label: 'Leverage' };
+        if (t.key === 'ai') return { ...t, label: "Writer's" };
+        return t;
+      })
     : TABS;
 
   return createPortal(
@@ -242,7 +247,7 @@ export function GMConsoleSheet(props: Props) {
           {tab === 'clocks'   && <ClocksTab   {...props} onEdit={(c) => setEditTarget({ table: 'narrative_clocks',   label: 'Edit clock',   row: c, schema: CLOCK_SCHEMA })} />}
           {tab === 'memory'   && <MemoryTab   {...props} onSummarize={() => setSummaryOpen(true)} />}
           {tab === 'notes'    && <NotesTab    {...props} />}
-          {tab === 'ai'       && <AiTab       {...props} />}
+          {tab === 'ai'       && <WritersRoomPanel campaign={props.campaign} currentScene={props.currentScene} npcs={props.npcs} clues={props.clues} onChanged={props.onChanged} />}
         </div>
 
         {/* Edit sheet — opens over the console for the row tapped. */}

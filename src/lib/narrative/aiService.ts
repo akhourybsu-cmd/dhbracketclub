@@ -102,6 +102,7 @@ export interface AiPlayerContext {
 /* ─── GM AI tools ────────────────────────────────────────────── */
 
 export type GmToolKey =
+  // Legacy tool keys — preserved so any existing UI keeps working.
   | 'scene_flavor'
   | 'npc_dialogue'
   | 'consequences'
@@ -116,7 +117,16 @@ export type GmToolKey =
   | 'summarize_scene'
   | 'summarize_recent'
   | 'generate_location'
-  | 'faction_complication';
+  | 'faction_complication'
+  // Writer's Room v1 — the 10 core writing tools the GM brief asked for.
+  | 'write_scene_opener'
+  | 'continue_scene'
+  | 'npc_response'
+  | 'suggest_consequences'
+  | 'reveal_clue'
+  | 'end_scene'
+  | 'chapter_transition'
+  | 'transform_draft';
 
 export interface GmToolMeta {
   key: GmToolKey;
@@ -124,25 +134,105 @@ export interface GmToolMeta {
   description: string;
   /** Whether this tool typically produces stateUpdates (used by the UI to show a state-update preview row). */
   producesStateUpdates: boolean;
+  /** Default suggested message type for the resulting draft. The GM
+   *  can override this on the draft card before posting. */
+  defaultMessageType?: 'gm_narration' | 'npc_dialogue' | 'system' | 'chapter_transition' | 'campaign_summary' | 'gm_private';
+  /** Optional category for grouping in the Writer's Room picker. */
+  group?: 'scene' | 'dialogue' | 'consequences' | 'memory' | 'transform' | 'misc';
 }
 
 export const GM_TOOLS: GmToolMeta[] = [
-  { key: 'scene_flavor',          label: 'Scene flavor',          description: 'Draft a sensory paragraph of the current location in campaign tone.', producesStateUpdates: false },
-  { key: 'npc_dialogue',          label: 'NPC dialogue',          description: 'Draft a line of dialogue from an NPC, given current scene context.', producesStateUpdates: false },
-  { key: 'consequences',          label: 'Suggest consequences',  description: 'Three plausible consequences the GM can choose from.',                producesStateUpdates: true  },
-  { key: 'three_twists',          label: 'Three twists',          description: 'Three escalations or reveals consistent with current canon.',         producesStateUpdates: true  },
-  { key: 'escalate',              label: 'Escalate the situation', description: 'Push the current scene into higher stakes.',                          producesStateUpdates: true  },
-  { key: 'resolve_roll',          label: 'Resolve roll cinematically', description: 'Draft a narration that resolves the current roll outcome.',     producesStateUpdates: false },
-  { key: 'generate_clue',         label: 'Generate a clue',       description: 'Draft a clue tied to current state. Player-discoverable by default.', producesStateUpdates: true  },
-  { key: 'npc_reaction',          label: 'NPC reaction',          description: 'Draft how an NPC reacts to the most recent player action.',           producesStateUpdates: false },
-  { key: 'next_scene_options',    label: 'Next scene options',    description: 'Three possible next scenes given current memory + clocks.',          producesStateUpdates: false },
-  { key: 'rewrite_in_tone',       label: 'Rewrite in tone',       description: 'Rewrite a passage to better match the campaign tone profile.',       producesStateUpdates: false },
-  { key: 'suggest_state_updates', label: 'Suggest state updates', description: 'Read recent messages and propose specific state changes for review.', producesStateUpdates: true  },
-  { key: 'summarize_scene',       label: 'Summarize scene',       description: 'Draft a scene summary to save to campaign memory.',                   producesStateUpdates: false },
-  { key: 'summarize_recent',      label: 'Summarize last N',      description: 'Draft a catch-up summary of recent messages for async players.',     producesStateUpdates: false },
-  { key: 'generate_location',     label: 'Generate location',     description: 'Draft a new location consistent with the setting.',                  producesStateUpdates: true  },
-  { key: 'faction_complication',  label: 'Faction complication',  description: 'Draft a complication tied to a specific faction.',                   producesStateUpdates: true  },
+  // ── Writer's Room v1 (new) ────────────────────────────────────
+  { key: 'write_scene_opener',    label: 'Write scene opener',         description: 'Polished opening narration + suggested rolls for the next scene.',                          producesStateUpdates: true,  defaultMessageType: 'gm_narration', group: 'scene' },
+  { key: 'continue_scene',        label: 'Continue current scene',     description: 'Extend the current scene from where it left off.',                                         producesStateUpdates: false, defaultMessageType: 'gm_narration', group: 'scene' },
+  { key: 'npc_response',          label: 'Write NPC response',         description: 'NPC reacts to the most recent player message, given NPC intent + tone.',                   producesStateUpdates: false, defaultMessageType: 'npc_dialogue', group: 'dialogue' },
+  { key: 'resolve_roll',          label: 'Resolve roll cinematically', description: 'Cinematic narration that resolves the current roll outcome.',                              producesStateUpdates: false, defaultMessageType: 'gm_narration', group: 'consequences' },
+  { key: 'suggest_consequences',  label: 'Suggest consequences',       description: '3–5 consequence options the GM can pick from. Each comes with a suggested state update.',  producesStateUpdates: true,  defaultMessageType: 'gm_private',    group: 'consequences' },
+  { key: 'reveal_clue',           label: 'Reveal a clue',              description: 'Narration that reveals a clue (subtle or direct).',                                        producesStateUpdates: true,  defaultMessageType: 'gm_narration', group: 'consequences' },
+  { key: 'escalate',              label: 'Escalate the situation',     description: 'Push the scene into higher stakes with NPC/faction reactions.',                            producesStateUpdates: true,  defaultMessageType: 'gm_narration', group: 'consequences' },
+  { key: 'end_scene',             label: 'End scene',                  description: 'Closing narration + transition prompt + suggested scene summary.',                         producesStateUpdates: false, defaultMessageType: 'gm_narration', group: 'scene' },
+  { key: 'chapter_transition',    label: 'Chapter transition',         description: 'Cinematic chapter card text + "Previously on…" recap + opening hook.',                     producesStateUpdates: false, defaultMessageType: 'chapter_transition', group: 'scene' },
+  { key: 'summarize_scene',       label: 'Summarize scene → memory',   description: 'Scene summary with major decisions, quotes, unresolved questions + memory updates.',       producesStateUpdates: true,  defaultMessageType: 'campaign_summary', group: 'memory' },
+  // ── Transformations ────────────────────────────────────────────
+  { key: 'transform_draft',       label: 'Transform draft',            description: 'Rewrite an existing draft with a one-click style transformation.',                         producesStateUpdates: false, defaultMessageType: 'gm_narration', group: 'transform' },
+  // ── Legacy tools (kept for back-compat with any older UI) ─────
+  { key: 'scene_flavor',          label: 'Scene flavor',               description: 'Draft a sensory paragraph of the current location.',                                       producesStateUpdates: false, group: 'misc' },
+  { key: 'npc_dialogue',          label: 'NPC dialogue (legacy)',      description: 'Draft a line of NPC dialogue.',                                                            producesStateUpdates: false, group: 'misc' },
+  { key: 'consequences',          label: 'Consequences (legacy)',      description: 'Three plausible consequences.',                                                            producesStateUpdates: true,  group: 'misc' },
+  { key: 'three_twists',          label: 'Three twists',               description: 'Three escalations consistent with current canon.',                                         producesStateUpdates: true,  group: 'misc' },
+  { key: 'generate_clue',         label: 'Generate a clue',            description: 'Draft a clue tied to current state.',                                                      producesStateUpdates: true,  group: 'misc' },
+  { key: 'npc_reaction',          label: 'NPC reaction',               description: 'Draft NPC reaction to last player action.',                                                producesStateUpdates: false, group: 'misc' },
+  { key: 'next_scene_options',    label: 'Next scene options',         description: 'Three possible next scenes.',                                                              producesStateUpdates: false, group: 'misc' },
+  { key: 'rewrite_in_tone',       label: 'Rewrite in tone',            description: 'Rewrite a passage to match the campaign tone profile.',                                    producesStateUpdates: false, group: 'transform' },
+  { key: 'suggest_state_updates', label: 'Suggest state updates',      description: 'Read recent messages and propose state changes.',                                          producesStateUpdates: true,  group: 'misc' },
+  { key: 'summarize_recent',      label: 'Summarize last N',           description: 'Catch-up summary for async players.',                                                      producesStateUpdates: false, group: 'memory' },
+  { key: 'generate_location',     label: 'Generate location',          description: 'Draft a new location.',                                                                    producesStateUpdates: true,  group: 'misc' },
+  { key: 'faction_complication',  label: 'Faction complication',       description: 'Draft a complication tied to a faction.',                                                  producesStateUpdates: true,  group: 'misc' },
 ];
+
+/** The 10 tools the Writer's Room surfaces by default, in the order
+ *  the GM brief specified. Other GM_TOOLS entries remain callable for
+ *  backwards-compat but are not picker-listed. */
+export const WRITERS_ROOM_TOOL_KEYS: readonly GmToolKey[] = [
+  'write_scene_opener',
+  'continue_scene',
+  'npc_response',
+  'resolve_roll',
+  'suggest_consequences',
+  'reveal_clue',
+  'escalate',
+  'end_scene',
+  'chapter_transition',
+  'summarize_scene',
+] as const;
+
+/* ─── Writer's Room control surface ────────────────────────────── */
+
+export type WriterTone =
+  | 'cinematic' | 'funny' | 'dangerous' | 'subtle'
+  | 'chaotic' | 'noir' | 'conversational' | 'high_drama'
+  // Flamingo Protocol special tones
+  | 'more_flamingo' | 'more_velvetaine' | 'more_miami_vice'
+  | 'more_casino' | 'more_catalina' | 'more_tony_pressure'
+  | 'more_tape_tension' | 'more_chaos';
+
+export type WriterLength = 'one_liner' | 'short' | 'medium' | 'long' | 'monologue';
+
+export type WriterTransformation =
+  | 'shorten' | 'expand' | 'more_cinematic' | 'funnier'
+  | 'more_tense' | 'more_subtle' | 'add_flamingo_flavor'
+  | 'remove_spoilers' | 'to_npc_dialogue' | 'to_gm_narration'
+  | 'add_player_prompt';
+
+export type WriterSafety =
+  | 'no_reveal_gm_notes'
+  | 'no_reveal_hidden_clues'
+  | 'no_auto_state_change'
+  | 'no_speak_for_players'
+  | 'no_resolve_without_roll'
+  | 'keep_mystery'
+  | 'protect_secrets';
+
+export interface WriterControls {
+  tone?: WriterTone;
+  length?: WriterLength;
+  safety?: WriterSafety[];
+  /** Free-text "what I want from the AI" — the most important input. */
+  direction?: string;
+  /** Optional NPC id when the tool needs an NPC to speak as / react as. */
+  npcId?: string | null;
+  /** For npc_response: what the NPC intends to convey/resist. */
+  npcIntent?: string;
+  /** For transform_draft: the original draft to transform + the
+   *  transformation key. */
+  originalDraft?: string;
+  transformation?: WriterTransformation;
+  /** Free-form "GM consequence note" used by resolve_roll. */
+  consequenceNote?: string;
+  /** For reveal_clue: which clue (id) and reveal mode. */
+  clueId?: string | null;
+  revealMode?: 'subtle' | 'direct';
+}
 
 /* ─── GM AI invocation ────────────────────────────────────────── */
 
@@ -160,6 +250,7 @@ export const GM_TOOLS: GmToolMeta[] = [
 export async function invokeGmTool(
   tool: GmToolKey,
   context: AiGmContext,
+  controls?: WriterControls,
 ): Promise<AiSuggestion | AiUnavailable> {
   if (!isAiConfigured()) return aiUnavailable();
   try {
@@ -167,7 +258,8 @@ export async function invokeGmTool(
       body: {
         campaign_id: context.campaignId,
         tool,
-        prompt: context.prompt ?? null,
+        prompt: context.prompt ?? controls?.direction ?? null,
+        controls: controls ?? null,
       },
     });
     if (error) return aiUnavailable(`AI gateway error: ${error.message ?? 'unknown'}`);
