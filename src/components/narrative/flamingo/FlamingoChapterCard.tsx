@@ -60,7 +60,7 @@ export function FlamingoChapterCard({ message }: Props) {
           </p>
         )}
         <h3
-          className="text-[18px] font-extrabold tracking-tight mt-1 leading-tight"
+          className="font-display text-[20px] font-extrabold tracking-tight mt-1 leading-[1.1]"
           style={{
             backgroundImage: `linear-gradient(90deg, hsl(${FLAMINGO.paper}), hsl(${FLAMINGO.pink}), hsl(${FLAMINGO.cyan}))`,
             WebkitBackgroundClip: 'text',

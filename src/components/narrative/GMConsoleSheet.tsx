@@ -11,7 +11,8 @@
 
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { SPRING_SOFT } from '@/lib/narrative/motion';
 import {
   X, Megaphone, Users, KeyRound, Backpack, ShieldAlert, Clock as ClockIcon,
   BookOpenText, StickyNote, Sparkles, PlusCircle, Bookmark, Pencil,
@@ -110,8 +111,8 @@ export function GMConsoleSheet(props: Props) {
       <motion.div
         initial={{ x: '100%' }}
         animate={{ x: 0 }}
-        exit={{ x: '100%' }}
-        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+        exit={{ x: '100%', transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] } }}
+        transition={SPRING_SOFT}
         onClick={e => e.stopPropagation()}
         className="w-full sm:w-[420px] h-full flex flex-col border-l overflow-hidden relative"
         style={
@@ -234,18 +235,29 @@ export function GMConsoleSheet(props: Props) {
           </div>
         </div>
 
-        {/* Tab content */}
+        {/* Tab content — AnimatePresence crossfade between tabs gives
+            the drawer a deliberate feel instead of snap-switching. */}
         <div className="flex-1 overflow-y-auto px-4 py-4">
-          {tab === 'scene'    && <SceneTab {...props} onEditScene={(s) => setEditTarget({ table: 'narrative_scenes', label: 'Edit scene', row: s, schema: SCENE_SCHEMA })} />}
-          {tab === 'chapters' && <ChaptersTab flamingo={flamingo} onOpenChapters={() => setChaptersOpen(true)} />}
-          {tab === 'npcs'     && <NpcsTab     {...props} onEdit={(n) => setEditTarget({ table: 'narrative_npcs',     label: 'Edit NPC',     row: n, schema: NPC_SCHEMA })} />}
-          {tab === 'clues'    && <CluesTab    {...props} onEdit={(c) => setEditTarget({ table: 'narrative_clues',    label: 'Edit clue',    row: c, schema: CLUE_SCHEMA })} />}
-          {tab === 'items'    && <ItemsTab    {...props} onEdit={(i) => setEditTarget({ table: 'narrative_items',    label: 'Edit item',    row: i, schema: ITEM_SCHEMA })} />}
-          {tab === 'factions' && <FactionsTab {...props} onEdit={(f) => setEditTarget({ table: 'narrative_factions', label: 'Edit faction', row: f, schema: FACTION_SCHEMA })} />}
-          {tab === 'clocks'   && <ClocksTab   {...props} onEdit={(c) => setEditTarget({ table: 'narrative_clocks',   label: 'Edit clock',   row: c, schema: CLOCK_SCHEMA })} />}
-          {tab === 'memory'   && <MemoryTab   {...props} onSummarize={() => setSummaryOpen(true)} />}
-          {tab === 'notes'    && <NotesTab    {...props} />}
-          {tab === 'ai'       && <WritersRoomPanel campaign={props.campaign} currentScene={props.currentScene} npcs={props.npcs} clues={props.clues} onChanged={props.onChanged} />}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {tab === 'scene'    && <SceneTab {...props} onEditScene={(s) => setEditTarget({ table: 'narrative_scenes', label: 'Edit scene', row: s, schema: SCENE_SCHEMA })} />}
+              {tab === 'chapters' && <ChaptersTab flamingo={flamingo} onOpenChapters={() => setChaptersOpen(true)} />}
+              {tab === 'npcs'     && <NpcsTab     {...props} onEdit={(n) => setEditTarget({ table: 'narrative_npcs',     label: 'Edit NPC',     row: n, schema: NPC_SCHEMA })} />}
+              {tab === 'clues'    && <CluesTab    {...props} onEdit={(c) => setEditTarget({ table: 'narrative_clues',    label: 'Edit clue',    row: c, schema: CLUE_SCHEMA })} />}
+              {tab === 'items'    && <ItemsTab    {...props} onEdit={(i) => setEditTarget({ table: 'narrative_items',    label: 'Edit item',    row: i, schema: ITEM_SCHEMA })} />}
+              {tab === 'factions' && <FactionsTab {...props} onEdit={(f) => setEditTarget({ table: 'narrative_factions', label: 'Edit faction', row: f, schema: FACTION_SCHEMA })} />}
+              {tab === 'clocks'   && <ClocksTab   {...props} onEdit={(c) => setEditTarget({ table: 'narrative_clocks',   label: 'Edit clock',   row: c, schema: CLOCK_SCHEMA })} />}
+              {tab === 'memory'   && <MemoryTab   {...props} onSummarize={() => setSummaryOpen(true)} />}
+              {tab === 'notes'    && <NotesTab    {...props} />}
+              {tab === 'ai'       && <WritersRoomPanel campaign={props.campaign} currentScene={props.currentScene} npcs={props.npcs} clues={props.clues} onChanged={props.onChanged} />}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         {/* Edit sheet — opens over the console for the row tapped. */}

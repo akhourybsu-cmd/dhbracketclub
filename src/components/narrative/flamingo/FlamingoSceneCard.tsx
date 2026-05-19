@@ -40,7 +40,7 @@ export function FlamingoSceneCard({ scene }: Props) {
           </p>
         </div>
         <h3
-          className="text-[14px] font-extrabold tracking-tight mt-0.5"
+          className="font-display text-[15px] font-extrabold tracking-tight mt-0.5"
           style={{ color: `hsl(${FLAMINGO.paper})` }}
         >
           {scene.title}

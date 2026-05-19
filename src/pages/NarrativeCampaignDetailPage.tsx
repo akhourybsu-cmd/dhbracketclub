@@ -385,9 +385,12 @@ export default function NarrativeCampaignDetailPage() {
                     // Flamingo clue card uses a status-driven left-rule
                     // accent + the icon marker instead of a status text
                     // pill. The shape carries the meaning at a glance.
+                    // The `narrative-flash` class fires a one-shot pulse
+                    // when this clue was just mutated by an approved
+                    // AI state update (see useNarrativeCampaign.recentlyChanged).
                     <div
                       key={c.id}
-                      className="rounded-xl p-3 relative overflow-hidden"
+                      className={`rounded-xl p-3 relative overflow-hidden ${data.recentlyChanged.has(c.id) ? 'narrative-flash' : ''}`}
                       style={{
                         background: `linear-gradient(135deg, hsl(${FLAMINGO.ink}), hsl(${FLAMINGO.midnight}))`,
                         border: `1px solid hsl(${clueAccent(c.status)} / 0.4)`,
@@ -438,7 +441,7 @@ export default function NarrativeCampaignDetailPage() {
                   flamingo ? (
                     <div
                       key={f.id}
-                      className="rounded-xl p-3 relative overflow-hidden"
+                      className={`rounded-xl p-3 relative overflow-hidden ${data.recentlyChanged.has(f.id) ? 'narrative-flash' : ''}`}
                       style={{
                         background: `linear-gradient(135deg, hsl(${FLAMINGO.ink}), hsl(${FLAMINGO.midnight}))`,
                         border: `1px solid hsl(${FLAMINGO.violet} / 0.4)`,
@@ -498,7 +501,11 @@ export default function NarrativeCampaignDetailPage() {
             <section key="clocks">
               <SectionHeader label={flamingo ? 'Heat & danger' : 'Active clocks'} count={publicClocks.length} />
               <div className="space-y-2">
-                {publicClocks.map(c => <ClockCard key={c.id} clock={c} />)}
+                {publicClocks.map(c => (
+                  <div key={c.id} className={data.recentlyChanged.has(c.id) ? 'narrative-flash rounded-2xl' : ''}>
+                    <ClockCard clock={c} />
+                  </div>
+                ))}
               </div>
             </section>
           );

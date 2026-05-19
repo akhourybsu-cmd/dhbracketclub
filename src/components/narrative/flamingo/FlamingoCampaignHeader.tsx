@@ -75,7 +75,7 @@ export function FlamingoCampaignHeader({
           <FlamingoBrandBadge />
         </div>
         <h1
-          className="text-[15px] font-extrabold tracking-tight truncate"
+          className="font-display text-[16px] font-extrabold tracking-tight truncate"
           style={{
             backgroundImage: `linear-gradient(90deg, hsl(${FLAMINGO.paper}) 0%, hsl(${FLAMINGO.pink}) 60%, hsl(${FLAMINGO.cyan}) 110%)`,
             WebkitBackgroundClip: 'text',

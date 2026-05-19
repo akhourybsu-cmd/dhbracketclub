@@ -141,7 +141,7 @@ function Overlay({ message, flamingo, onDismiss }: { message: Message; flamingo:
           </p>
         )}
         <h1
-          className="text-[34px] sm:text-[42px] font-extrabold tracking-tight mt-2 leading-[1.05]"
+          className="font-display text-[36px] sm:text-[46px] font-extrabold tracking-tight mt-2 leading-[1.02]"
           style={flamingo ? {
             backgroundImage: `linear-gradient(95deg, hsl(${FLAMINGO.paper}), hsl(${FLAMINGO.pink}) 55%, hsl(${FLAMINGO.cyan}))`,
             WebkitBackgroundClip: 'text',

@@ -267,40 +267,53 @@ export function StoryChat({
           background: flamingo ? `hsl(${FLAMINGO.midnight} / 0.7)` : undefined,
         }}
       >
-        {/* Mode chips */}
+        {/* Mode chips — the active highlight uses framer-motion's
+            layoutId so it animates smoothly between selections instead
+            of snap-swapping. */}
         <div className="flex gap-1.5 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
           {allowedModes.map(m => {
             const meta = MODE_META[m];
             const Icon = meta.icon;
             const selected = m === mode;
-            const flamingoChipStyle = selected
-              ? {
-                  background: `linear-gradient(135deg, hsl(${FLAMINGO.pink} / 0.25), hsl(${FLAMINGO.violet} / 0.15))`,
-                  border: `1px solid hsl(${FLAMINGO.pink} / 0.55)`,
-                  color: `hsl(${FLAMINGO.paper})`,
-                  boxShadow: `0 0 10px -3px hsl(${FLAMINGO.pink} / 0.5)`,
-                }
-              : {
-                  background: `hsl(${FLAMINGO.ink} / 0.7)`,
-                  border: `1px solid hsl(${FLAMINGO.paper} / 0.18)`,
-                  color: `hsl(${FLAMINGO.paper} / 0.7)`,
-                };
             return (
               <button
                 key={m}
                 type="button"
                 onClick={() => setMode(m)}
                 disabled={m === 'character' && !canCharacterMode}
-                className={`flex-shrink-0 inline-flex items-center gap-1 h-7 px-2 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition disabled:opacity-40 ${
-                  flamingo
-                    ? ''
-                    : selected
-                      ? 'bg-primary/18 text-primary border border-primary/40'
-                      : 'bg-muted/30 border border-border/40 text-muted-foreground/75'
-                }`}
-                style={flamingo ? flamingoChipStyle : undefined}
+                className="relative flex-shrink-0 inline-flex items-center gap-1 h-7 px-2 rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition disabled:opacity-40"
+                style={flamingo
+                  ? {
+                      background: `hsl(${FLAMINGO.ink} / 0.7)`,
+                      border: `1px solid hsl(${FLAMINGO.paper} / 0.15)`,
+                      color: selected ? `hsl(${FLAMINGO.paper})` : `hsl(${FLAMINGO.paper} / 0.7)`,
+                    }
+                  : {
+                      background: 'hsl(var(--muted) / 0.3)',
+                      border: '1px solid hsl(var(--border) / 0.4)',
+                      color: selected ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground) / 0.85)',
+                    }}
               >
-                <Icon className="w-2.5 h-2.5" /> {meta.label}
+                {selected && (
+                  <motion.span
+                    layoutId="composer-mode-pill"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    className="absolute inset-0 rounded-lg pointer-events-none"
+                    style={flamingo
+                      ? {
+                          background: `linear-gradient(135deg, hsl(${FLAMINGO.pink} / 0.28), hsl(${FLAMINGO.violet} / 0.16))`,
+                          border: `1px solid hsl(${FLAMINGO.pink} / 0.6)`,
+                          boxShadow: `0 0 10px -3px hsl(${FLAMINGO.pink} / 0.55)`,
+                        }
+                      : {
+                          background: 'hsl(var(--primary) / 0.18)',
+                          border: '1px solid hsl(var(--primary) / 0.45)',
+                        }}
+                  />
+                )}
+                <span className="relative inline-flex items-center gap-1">
+                  <Icon className="w-2.5 h-2.5" /> {meta.label}
+                </span>
               </button>
             );
           })}
@@ -497,7 +510,7 @@ function EmptyStoryState({ flamingo, isGm }: { flamingo: boolean; isGm: boolean 
         </svg>
       </div>
       <p
-        className="text-[15px] font-extrabold tracking-tight"
+        className="font-display text-[17px] font-extrabold tracking-tight"
         style={flamingo ? {
           backgroundImage: `linear-gradient(90deg, hsl(${FLAMINGO.paper}), ${pink})`,
           WebkitBackgroundClip: 'text',

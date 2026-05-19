@@ -99,6 +99,37 @@
     --chat-incoming: 160 8% 22%;
 
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+
+    /* Display font for the Narrative RPG hero surfaces — Fraunces with
+     * the optical-size axis cranked high gives chapter titles + scene
+     * cards a confident editorial feel without veering into kitsch. */
+    --font-display: 'Fraunces', 'Plus Jakarta Sans', Georgia, serif;
+  }
+
+  /* Cinematic display utility — designed for hero text only (chapter
+   * cards, scene openers, the writers-room takeover). Optical-size
+   * variation axis tuned for ~32-48px copy. */
+  .font-display {
+    font-family: var(--font-display);
+    font-variation-settings: 'opsz' 96, 'SOFT' 50;
+    letter-spacing: -0.015em;
+  }
+
+  /* Brief post-celebrate highlight pulse for cards that were just
+   * mutated (clock advanced, faction heat shifted, clue added). The
+   * Narrative RPG's useNarrativeCampaign hook surfaces a recently-
+   * changed id set; consumers apply this class for ~2.4s. */
+  @keyframes dh-narrative-flash {
+    0%   { box-shadow: 0 0 0 0 hsl(var(--primary) / 0); }
+    25%  { box-shadow: 0 0 24px 6px hsl(var(--primary) / 0.32); }
+    100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0); }
+  }
+  .narrative-flash {
+    animation: dh-narrative-flash 2.4s cubic-bezier(0.22, 1, 0.36, 1);
+    animation-iteration-count: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .narrative-flash { animation: none; }
   }
 
   /* Dark mode (mirrors :root for class-based toggling) */

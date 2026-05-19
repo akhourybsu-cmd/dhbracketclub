@@ -10,6 +10,7 @@
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { STAGGER_CHILD, STAGGER_PARENT, TAP_PRESS } from '@/lib/narrative/motion';
 import { ScrollText, Plus, ChevronRight, Users, Sparkles } from 'lucide-react';
 import { useNarrativeCampaigns } from '@/hooks/useNarrativeCampaigns';
 import { useAuth } from '@/contexts/AuthContext';
@@ -132,9 +133,9 @@ export default function NarrativeCampaignsPage() {
       {isClubAdmin && pending.length > 0 && (
         <section className="mb-5">
           <SectionHeader label="Awaiting your approval" accent="38 95% 50%" count={pending.length} />
-          <div className="space-y-2">
+          <motion.div className="space-y-2" variants={STAGGER_PARENT} initial="initial" animate="animate">
             {pending.map(c => <CampaignRow key={c.id} campaign={c} highlight="warning" />)}
-          </div>
+          </motion.div>
         </section>
       )}
 
@@ -142,9 +143,9 @@ export default function NarrativeCampaignsPage() {
       {live.length > 0 && (
         <section className="mb-5">
           <SectionHeader label="Active Campaigns" count={live.length} />
-          <div className="space-y-2">
+          <motion.div className="space-y-2" variants={STAGGER_PARENT} initial="initial" animate="animate">
             {live.map(c => <CampaignRow key={c.id} campaign={c} />)}
-          </div>
+          </motion.div>
         </section>
       )}
 
@@ -152,9 +153,9 @@ export default function NarrativeCampaignsPage() {
       {mine.length > 0 && (
         <section className="mb-5">
           <SectionHeader label="Your proposals" count={mine.length} />
-          <div className="space-y-2">
+          <motion.div className="space-y-2" variants={STAGGER_PARENT} initial="initial" animate="animate">
             {mine.map(c => <CampaignRow key={c.id} campaign={c} />)}
-          </div>
+          </motion.div>
         </section>
       )}
 
@@ -162,9 +163,9 @@ export default function NarrativeCampaignsPage() {
       {completed.length > 0 && (
         <section className="mb-5">
           <SectionHeader label="Past campaigns" count={completed.length} />
-          <div className="space-y-2">
+          <motion.div className="space-y-2" variants={STAGGER_PARENT} initial="initial" animate="animate">
             {completed.map(c => <CampaignRow key={c.id} campaign={c} />)}
-          </div>
+          </motion.div>
         </section>
       )}
     </div>
@@ -183,15 +184,20 @@ function CampaignRow({ campaign, highlight }: { campaign: Campaign; highlight?: 
       ? 'hsl(38 95% 50% / 0.45)'
       : 'hsl(var(--border) / 0.4)';
   return (
+    <motion.div
+      variants={STAGGER_CHILD}
+      whileHover={{ y: -2, transition: { type: 'spring', stiffness: 380, damping: 28 } }}
+      whileTap={TAP_PRESS}
+    >
     <Link
       to={`/narrative/${campaign.id}`}
-      className="block active:scale-[0.99] transition-transform"
+      className="block"
     >
       <div
-        className="rounded-2xl bg-card border p-3.5 flex items-start gap-3"
+        className="rounded-2xl bg-card border p-3.5 flex items-start gap-3 transition-shadow"
         style={{
           borderColor,
-          boxShadow: flamingo ? `0 0 14px -6px hsl(${FLAMINGO.pink} / 0.5)` : undefined,
+          boxShadow: flamingo ? `0 0 14px -6px hsl(${FLAMINGO.pink} / 0.5)` : '0 1px 0 hsl(0 0% 0% / 0.08)',
         }}
       >
         <div
@@ -236,5 +242,6 @@ function CampaignRow({ campaign, highlight }: { campaign: Campaign; highlight?: 
         <ChevronRight className="w-4 h-4 text-muted-foreground/50 flex-shrink-0 mt-1.5" />
       </div>
     </Link>
+    </motion.div>
   );
 }

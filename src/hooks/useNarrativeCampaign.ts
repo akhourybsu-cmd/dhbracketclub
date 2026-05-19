@@ -21,6 +21,14 @@ import type {
   AiSuggestionRow,
 } from '@/lib/narrative/types';
 
+/**
+ * Set of recently-mutated entity ids — surfaces ride this for a brief
+ * highlight pulse when the entity changes (e.g. a clock just advanced
+ * via an approved AI state update). Each id is auto-cleared 2.4s after
+ * the change.
+ */
+export type RecentlyChangedSet = Set<string>;
+
 interface UseNarrativeCampaignResult {
   campaign: Campaign | null;
   myRole: 'game_master' | 'player' | 'spectator' | null;
@@ -38,6 +46,10 @@ interface UseNarrativeCampaignResult {
   items: Item[];
   locations: NarrativeLocation[];
   aiSuggestions: AiSuggestionRow[];
+  /** Ids of entities mutated within the last ~2.4s — UI surfaces can
+   *  read this to render a brief highlight pulse on freshly-changed
+   *  rows (e.g. clock advanced, faction heat shifted). */
+  recentlyChanged: RecentlyChangedSet;
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -97,8 +109,29 @@ export function useNarrativeCampaign(campaignId: string | undefined): UseNarrati
   const [items, setItems] = useState<Item[]>([]);
   const [locations, setLocations] = useState<NarrativeLocation[]>([]);
   const [aiSuggestions, setAiSuggestions] = useState<AiSuggestionRow[]>([]);
+  const [recentlyChanged, setRecentlyChanged] = useState<RecentlyChangedSet>(() => new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  /** Mark an entity id as recently-changed and auto-clear after 2.4s.
+   *  Called from realtime UPDATE handlers so any approved AI state
+   *  update lights up the affected card briefly. */
+  const flashChange = useCallback((id: string | undefined | null) => {
+    if (!id) return;
+    setRecentlyChanged(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+    setTimeout(() => {
+      setRecentlyChanged(prev => {
+        if (!prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }, 2400);
+  }, []);
 
   // Mirror campaign in a ref so real-time callbacks have current data.
   const campaignRef = useRef<Campaign | null>(null);
@@ -164,11 +197,22 @@ export function useNarrativeCampaign(campaignId: string | undefined): UseNarrati
       ch: any,
       table: string,
       setter: Setter<T>,
+      /** When true, INSERT + UPDATE events flash a 2.4s highlight on
+       *  the affected row so the UI can pulse it. Tables: clocks,
+       *  factions, clues, items, locations. Skipped for messages
+       *  (every message would flash) and members (high-volume joins). */
+      withFlash = false,
     ) => ch
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table, filter: `campaign_id=eq.${campaignId}` },
-        (payload: any) => setter(prev => prev.some(r => r.id === payload.new.id) ? prev : [...prev, payload.new as T]))
+        (payload: any) => {
+          setter(prev => prev.some(r => r.id === payload.new.id) ? prev : [...prev, payload.new as T]);
+          if (withFlash) flashChange(payload.new?.id);
+        })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table, filter: `campaign_id=eq.${campaignId}` },
-        (payload: any) => setter(prev => prev.map(r => r.id === payload.new.id ? payload.new as T : r)))
+        (payload: any) => {
+          setter(prev => prev.map(r => r.id === payload.new.id ? payload.new as T : r));
+          if (withFlash) flashChange(payload.new?.id);
+        })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table, filter: `campaign_id=eq.${campaignId}` },
         (payload: any) => setter(prev => prev.filter(r => r.id !== payload.old?.id)));
 
@@ -187,13 +231,13 @@ export function useNarrativeCampaign(campaignId: string | undefined): UseNarrati
       // changes (e.g. GM ends a campaign, or starts a live session).
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'narrative_campaigns', filter: `id=eq.${campaignId}` },
         (payload: any) => setCampaign(payload.new as Campaign));
-    ch = wireCrud<Clock>(ch, 'narrative_clocks', setClocks);
+    ch = wireCrud<Clock>(ch, 'narrative_clocks', setClocks, true);
     ch = wireCrud<Character>(ch, 'narrative_characters', setCharacters);
-    ch = wireCrud<NPC>(ch, 'narrative_npcs', setNpcs);
-    ch = wireCrud<Clue>(ch, 'narrative_clues', setClues);
-    ch = wireCrud<Faction>(ch, 'narrative_factions', setFactions);
-    ch = wireCrud<Item>(ch, 'narrative_items', setItems);
-    ch = wireCrud<NarrativeLocation>(ch, 'narrative_locations', setLocations);
+    ch = wireCrud<NPC>(ch, 'narrative_npcs', setNpcs, true);
+    ch = wireCrud<Clue>(ch, 'narrative_clues', setClues, true);
+    ch = wireCrud<Faction>(ch, 'narrative_factions', setFactions, true);
+    ch = wireCrud<Item>(ch, 'narrative_items', setItems, true);
+    ch = wireCrud<NarrativeLocation>(ch, 'narrative_locations', setLocations, true);
     ch = wireCrud<CampaignMember>(ch, 'narrative_campaign_members', setMembers);
     ch = ch
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'narrative_ai_suggestions', filter: `campaign_id=eq.${campaignId}` },
@@ -202,7 +246,7 @@ export function useNarrativeCampaign(campaignId: string | undefined): UseNarrati
         (payload: any) => setAiSuggestions(prev => prev.map(s => s.id === payload.new.id ? payload.new as AiSuggestionRow : s)))
       .subscribe();
     return () => { (supabase as any).removeChannel(ch); };
-  }, [campaignId]);
+  }, [campaignId, flashChange]);
 
   /* ── Derived ─────────────────────────────────────────────── */
 
@@ -439,6 +483,7 @@ export function useNarrativeCampaign(campaignId: string | undefined): UseNarrati
     members, characters, myCharacter, currentScene, scenes,
     messages, npcs, factions, clocks, clues, items, locations,
     aiSuggestions,
+    recentlyChanged,
     loading, error, refresh,
     postMessage, rollDice,
     createCharacter, updateCharacter,
