@@ -163,6 +163,14 @@ export function WritersRoomPanel({ campaign, currentScene, npcs, clues, onChange
   const runTool = async (overrideTool?: GmToolKey, overrideControls?: Partial<WriterControls>) => {
     if (!configured) { toast.error('AI provider not configured.'); return; }
     setBusy(true);
+    // Clear stale state up front so the GM never sees the previous
+    // draft / rationale / extras / actions flash while the new
+    // generation is in flight. (Exception: transformations preserve
+    // approved state updates — handled in `transform` below.)
+    setDraft('');
+    setRationale(null);
+    setExtras(undefined);
+    if (overrideTool !== 'transform_draft') setActions([]);
     try {
       const result = await invokeGmTool(
         overrideTool ?? toolKey,
@@ -176,8 +184,17 @@ export function WritersRoomPanel({ campaign, currentScene, npcs, clues, onChange
       const sug = result as AiSuggestion;
       setDraft(sug.draft ?? '');
       setRationale(sug.rationale ?? null);
-      setActions((sug.stateUpdates ?? []).map(a => ({ action: a, approved: false })));
       setExtras(sug.extras);
+      // For transformations: preserve any previously-approved state
+      // updates from before the transform (#23). The transform tool
+      // usually returns an empty stateUpdates array, so naively
+      // overwriting would lose the GM's prior approvals.
+      if (overrideTool === 'transform_draft') {
+        const newActions = (sug.stateUpdates ?? []).map(a => ({ action: a, approved: false }));
+        setActions(prev => [...prev, ...newActions]);
+      } else {
+        setActions((sug.stateUpdates ?? []).map(a => ({ action: a, approved: false })));
+      }
     } finally {
       setBusy(false);
     }
@@ -219,6 +236,12 @@ export function WritersRoomPanel({ campaign, currentScene, npcs, clues, onChange
       const { data: claims } = await supabase.auth.getUser();
       const messageType = toolMeta.defaultMessageType ?? 'gm_narration';
       const userId = claims.user?.id ?? null;
+      // Visibility must match the message type. GM-private message
+      // types must NOT be posted with public visibility — RLS gates
+      // reads by the visibility column, so a public-visibility row
+      // with a gm_private type would leak the body via direct query.
+      const visibility: 'public' | 'gm_only' =
+        messageType === 'gm_private' ? 'gm_only' : 'public';
       // Primary message — carries the draft body plus any extras as
       // metadata so the renderer (e.g. FlamingoChapterCard) can read
       // summary/hook/recap.
@@ -235,7 +258,7 @@ export function WritersRoomPanel({ campaign, currentScene, npcs, clues, onChange
         sender_id: userId,
         message_type: messageType,
         body: draft.trim(),
-        visibility: 'public',
+        visibility,
         metadata: primaryMetadata,
       });
       if (error) throw error;
@@ -279,7 +302,7 @@ export function WritersRoomPanel({ campaign, currentScene, npcs, clues, onChange
           toast.success(`Posted. Applied ${results.length} state update${results.length === 1 ? '' : 's'}.`);
         }
       } else {
-        toast.success('Posted to story.');
+        toast.success(visibility === 'gm_only' ? 'Saved as GM-only note.' : 'Posted to story.');
       }
       onChanged?.();
       // Reset card after a successful post so the GM doesn't accidentally re-post.

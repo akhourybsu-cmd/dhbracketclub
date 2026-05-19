@@ -86,23 +86,33 @@ export async function applyStateUpdates(
           const p = a.payload as { clock_id: string; delta?: number; note?: string };
           if (!p.clock_id) throw new Error('clock_id required');
           const delta = p.delta ?? 1;
-          const { data: clock, error: getErr } = await sb.from('narrative_clocks').select('*').eq('id', p.clock_id).maybeSingle();
-          if (getErr || !clock) throw getErr ?? new Error('clock not found');
-          const next = Math.max(0, Math.min(clock.max_value, clock.current_value + delta));
-          const history = Array.isArray(clock.history) ? clock.history : [];
-          const { error } = await sb.from('narrative_clocks').update({
-            current_value: next,
-            history: [...history, { at: new Date().toISOString(), delta, to: next, note: p.note ?? null }],
-          }).eq('id', p.clock_id);
+          // Atomic clamp + history via RPC — closes the read-then-write
+          // race the previous implementation had.
+          const { data, error } = await sb.rpc('advance_narrative_clock', {
+            _campaign_id: campaignId,
+            _clock_id: p.clock_id,
+            _delta: delta,
+            _note: p.note ?? null,
+          });
           if (error) throw error;
-          results.push({ action: a, ok: true, message: `Clock "${clock.name}" → ${next}/${clock.max_value}.` });
+          const row = Array.isArray(data) ? data[0] : data;
+          results.push({
+            action: a,
+            ok: true,
+            message: row?.name
+              ? `Clock "${row.name}" → ${row.current_value}/${row.max_value}.`
+              : `Clock advanced.`,
+          });
           break;
         }
         case 'update_faction': {
           const p = a.payload as { faction_id: string; relationship_delta?: number; suspicion_delta?: number; attitude?: string };
           if (!p.faction_id) throw new Error('faction_id required');
-          const { data: f, error: getErr } = await sb.from('narrative_factions').select('*').eq('id', p.faction_id).maybeSingle();
-          if (getErr || !f) throw getErr ?? new Error('faction not found');
+          // Scope by campaign_id as defense-in-depth — RLS would also
+          // catch a cross-campaign payload, but failing fast here gives
+          // a clearer error message.
+          const { data: f, error: getErr } = await sb.from('narrative_factions').select('*').eq('id', p.faction_id).eq('campaign_id', campaignId).maybeSingle();
+          if (getErr || !f) throw getErr ?? new Error('faction not found in campaign');
           const patch: Record<string, unknown> = {};
           if (typeof p.relationship_delta === 'number') {
             patch.relationship_score = Math.max(-100, Math.min(100, f.relationship_score + p.relationship_delta));
@@ -123,8 +133,8 @@ export async function applyStateUpdates(
         case 'add_condition': {
           const p = a.payload as { character_id: string; condition: string };
           if (!p.character_id || !p.condition) throw new Error('character_id + condition required');
-          const { data: c, error: getErr } = await sb.from('narrative_characters').select('id, name, conditions').eq('id', p.character_id).maybeSingle();
-          if (getErr || !c) throw getErr ?? new Error('character not found');
+          const { data: c, error: getErr } = await sb.from('narrative_characters').select('id, name, conditions').eq('id', p.character_id).eq('campaign_id', campaignId).maybeSingle();
+          if (getErr || !c) throw getErr ?? new Error('character not found in campaign');
           const existing = Array.isArray(c.conditions) ? c.conditions : [];
           const { error } = await sb.from('narrative_characters').update({
             conditions: [...existing, { label: p.condition, applied_at: new Date().toISOString() }],

@@ -131,13 +131,19 @@ serve(async (req) => {
     // Load campaign + role
     const { data: campaign, error: campErr } = await admin
       .from("narrative_campaigns")
-      .select("id, club_id, gm_id, status, tone_profile, current_scene_id, memory_summary")
+      .select("id, club_id, gm_id, created_by, proposed_gm_id, status, tone_profile, current_scene_id, memory_summary")
       .eq("id", body.campaign_id)
       .maybeSingle();
     if (campErr || !campaign) return jsonError(404, "Campaign not found");
 
-    // Check membership / GM status
-    const isGm = campaign.gm_id === userId;
+    // Check membership / GM status. Before approval, gm_id is NULL —
+    // we additionally accept the campaign's creator or its
+    // proposed_gm_id so the GM can use AI tools on a draft / pending
+    // campaign they own.
+    const isGm =
+      campaign.gm_id === userId
+      || campaign.created_by === userId
+      || campaign.proposed_gm_id === userId;
     let memberRole: string | null = null;
     if (!isGm) {
       const { data: mem } = await admin

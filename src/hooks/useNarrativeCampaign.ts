@@ -147,21 +147,55 @@ export function useNarrativeCampaign(campaignId: string | undefined): UseNarrati
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  // Real-time: messages, clocks, scenes, and AI suggestions. RLS still
-  // gates whether a non-GM viewer can read suggestion rows — so the
-  // payload simply won't arrive for non-authorized viewers.
+  // Real-time: messages, clocks, scenes, ai_suggestions PLUS every
+  // GM-managed entity (characters, NPCs, clues, factions, items,
+  // locations) so when the GM creates an NPC or a player creates their
+  // character, other viewers see it without a manual refresh. RLS
+  // still gates the payload — non-authorized viewers won't receive
+  // gm_only rows.
   useEffect(() => {
     if (!campaignId) return;
-    const ch = (supabase as any)
-      .channel(`narrative:${campaignId}`)
+    // Generic helper: bind INSERT + UPDATE + DELETE handlers for a
+    // table to a stateful array setter. Keeps the channel registration
+    // declarative.
+    type Row = { id: string } & Record<string, unknown>;
+    type Setter<T> = (updater: (prev: T[]) => T[]) => void;
+    const wireCrud = <T extends Row>(
+      ch: any,
+      table: string,
+      setter: Setter<T>,
+    ) => ch
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table, filter: `campaign_id=eq.${campaignId}` },
+        (payload: any) => setter(prev => prev.some(r => r.id === payload.new.id) ? prev : [...prev, payload.new as T]))
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table, filter: `campaign_id=eq.${campaignId}` },
+        (payload: any) => setter(prev => prev.map(r => r.id === payload.new.id ? payload.new as T : r)))
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table, filter: `campaign_id=eq.${campaignId}` },
+        (payload: any) => setter(prev => prev.filter(r => r.id !== payload.old?.id)));
+
+    let ch = (supabase as any).channel(`narrative:${campaignId}`)
+      // Messages: INSERT-only (we don't expose edit/delete UI yet).
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'narrative_messages', filter: `campaign_id=eq.${campaignId}` },
         (payload: any) => setMessages(prev => prev.some(m => m.id === payload.new.id) ? prev : [...prev, payload.new as Message]))
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'narrative_clocks', filter: `campaign_id=eq.${campaignId}` },
-        (payload: any) => setClocks(prev => prev.map(c => c.id === payload.new.id ? payload.new as Clock : c)))
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'narrative_clocks', filter: `campaign_id=eq.${campaignId}` },
-        (payload: any) => setClocks(prev => prev.some(c => c.id === payload.new.id) ? prev : [...prev, payload.new as Clock]))
+      // Scenes: also catch INSERT so newly-started scenes appear
+      // immediately. (UPDATE was already covered for the active
+      // scene transition.)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'narrative_scenes', filter: `campaign_id=eq.${campaignId}` },
+        (payload: any) => setScenes(prev => prev.some(s => s.id === payload.new.id) ? prev : [...prev, payload.new as Scene]))
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'narrative_scenes', filter: `campaign_id=eq.${campaignId}` },
         (payload: any) => setScenes(prev => prev.map(s => s.id === payload.new.id ? payload.new as Scene : s)))
+      // Campaign row: pick up status / current_scene_id / live_session
+      // changes (e.g. GM ends a campaign, or starts a live session).
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'narrative_campaigns', filter: `id=eq.${campaignId}` },
+        (payload: any) => setCampaign(payload.new as Campaign));
+    ch = wireCrud<Clock>(ch, 'narrative_clocks', setClocks);
+    ch = wireCrud<Character>(ch, 'narrative_characters', setCharacters);
+    ch = wireCrud<NPC>(ch, 'narrative_npcs', setNpcs);
+    ch = wireCrud<Clue>(ch, 'narrative_clues', setClues);
+    ch = wireCrud<Faction>(ch, 'narrative_factions', setFactions);
+    ch = wireCrud<Item>(ch, 'narrative_items', setItems);
+    ch = wireCrud<NarrativeLocation>(ch, 'narrative_locations', setLocations);
+    ch = wireCrud<CampaignMember>(ch, 'narrative_campaign_members', setMembers);
+    ch = ch
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'narrative_ai_suggestions', filter: `campaign_id=eq.${campaignId}` },
         (payload: any) => setAiSuggestions(prev => prev.some(s => s.id === payload.new.id) ? prev : [payload.new as AiSuggestionRow, ...prev]))
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'narrative_ai_suggestions', filter: `campaign_id=eq.${campaignId}` },
@@ -332,19 +366,27 @@ export function useNarrativeCampaign(campaignId: string | undefined): UseNarrati
   }, [refresh]);
 
   const advanceClock = useCallback(async (clockId: string, delta: number, note?: string): Promise<boolean> => {
+    if (!campaignId) return false;
     const clock = clocks.find(c => c.id === clockId);
     if (!clock) return false;
-    const next = Math.max(0, Math.min(clock.max_value, clock.current_value + delta));
-    const hist = Array.isArray(clock.history) ? clock.history : [];
-    const { error: err } = await (supabase as any).from('narrative_clocks')
-      .update({
-        current_value: next,
-        history: [...hist, { at: new Date().toISOString(), delta, to: next, note: note ?? null }],
-      })
-      .eq('id', clockId);
+    // Atomic clamp + history append via RPC so concurrent advances
+    // accumulate correctly. The RPC enforces GM/admin authorization
+    // server-side.
+    const { data, error: err } = await (supabase as any).rpc('advance_narrative_clock', {
+      _campaign_id: campaignId,
+      _clock_id:    clockId,
+      _delta:       delta,
+      _note:        note ?? null,
+    });
     if (err) { setError(err.message); return false; }
+    // RPC returns the updated row (or array of one) depending on
+    // supabase-js codegen — normalize.
+    const updated = Array.isArray(data) ? data[0] : data;
+    const next = (updated?.current_value ?? clock.current_value) as number;
     // Public clocks emit a system message; gm_only stay silent.
-    if (clock.visibility === 'public' && campaignId && user) {
+    // Suppress the system message when the clamped advance was a no-op
+    // (clock was already at the boundary).
+    if (clock.visibility === 'public' && user && next !== clock.current_value) {
       await (supabase as any).from('narrative_messages').insert({
         campaign_id: campaignId,
         scene_id: currentScene?.id ?? null,
