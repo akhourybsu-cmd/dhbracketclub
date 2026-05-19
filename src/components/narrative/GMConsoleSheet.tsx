@@ -234,7 +234,7 @@ export function GMConsoleSheet(props: Props) {
         {/* Tab content */}
         <div className="flex-1 overflow-y-auto px-4 py-4">
           {tab === 'scene'    && <SceneTab {...props} onEditScene={(s) => setEditTarget({ table: 'narrative_scenes', label: 'Edit scene', row: s, schema: SCENE_SCHEMA })} />}
-          {tab === 'chapters' && <ChaptersTab onOpenChapters={() => setChaptersOpen(true)} />}
+          {tab === 'chapters' && <ChaptersTab flamingo={flamingo} onOpenChapters={() => setChaptersOpen(true)} />}
           {tab === 'npcs'     && <NpcsTab     {...props} onEdit={(n) => setEditTarget({ table: 'narrative_npcs',     label: 'Edit NPC',     row: n, schema: NPC_SCHEMA })} />}
           {tab === 'clues'    && <CluesTab    {...props} onEdit={(c) => setEditTarget({ table: 'narrative_clues',    label: 'Edit clue',    row: c, schema: CLUE_SCHEMA })} />}
           {tab === 'items'    && <ItemsTab    {...props} onEdit={(i) => setEditTarget({ table: 'narrative_items',    label: 'Edit item',    row: i, schema: ITEM_SCHEMA })} />}
@@ -282,7 +282,8 @@ export function GMConsoleSheet(props: Props) {
 
 /* ─── Scene tab ───────────────────────────────────────────────── */
 
-function SceneTab({ currentScene, onCreateScene, onEndScene, onEditScene }: Props & { onEditScene?: (s: Scene) => void }) {
+function SceneTab({ campaign, currentScene, onCreateScene, onEndScene, onEditScene }: Props & { onEditScene?: (s: Scene) => void }) {
+  const flamingo = isFlamingoCampaign(campaign.template_key);
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
   const [objective, setObjective] = useState('');
@@ -310,10 +311,38 @@ function SceneTab({ currentScene, onCreateScene, onEndScene, onEditScene }: Prop
   return (
     <div className="space-y-4">
       {currentScene && (
-        <div className="rounded-2xl border border-gold/30 p-3" style={{ background: 'hsl(var(--gold) / 0.06)' }}>
-          <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-gold">Active scene</p>
-          <h3 className="text-[14px] font-extrabold tracking-tight mt-0.5">{currentScene.title}</h3>
-          {currentScene.objective && <p className="text-[11px] text-foreground/80 mt-1">{currentScene.objective}</p>}
+        <div
+          className="rounded-2xl p-3 relative overflow-hidden"
+          style={flamingo ? {
+            background: `linear-gradient(135deg, hsl(${FLAMINGO.ink}), hsl(${FLAMINGO.midnight}))`,
+            border: `1px solid hsl(${FLAMINGO.pink} / 0.45)`,
+            boxShadow: `0 0 14px -6px hsl(${FLAMINGO.pink} / 0.5)`,
+            color: `hsl(${FLAMINGO.paper})`,
+          } : {
+            background: 'hsl(var(--gold) / 0.06)',
+            border: '1px solid hsl(var(--gold) / 0.3)',
+          }}
+        >
+          {flamingo && (
+            <div aria-hidden className="absolute left-0 top-0 bottom-0 w-1" style={{ background: `linear-gradient(180deg, hsl(${FLAMINGO.pink}), hsl(${FLAMINGO.cyan}))` }} />
+          )}
+          <div className={flamingo ? 'pl-2' : ''}>
+            <p
+              className="text-[9.5px] font-extrabold uppercase tracking-[0.22em]"
+              style={{ color: flamingo ? `hsl(${FLAMINGO.cyan})` : 'hsl(var(--gold))' }}
+            >
+              {flamingo ? 'Now filming' : 'Active scene'}
+            </p>
+            <h3 className="text-[14px] font-extrabold tracking-tight mt-0.5">{currentScene.title}</h3>
+            {currentScene.objective && (
+              <p
+                className="text-[11px] mt-1"
+                style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.85)` : 'hsl(var(--foreground) / 0.8)' }}
+              >
+                {currentScene.objective}
+              </p>
+            )}
+          </div>
           <div className="mt-3 flex gap-1.5">
             {onEditScene && (
               <button
@@ -336,7 +365,12 @@ function SceneTab({ currentScene, onCreateScene, onEndScene, onEditScene }: Prop
       )}
 
       <div>
-        <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-muted-foreground/70 mb-2">Start a new scene</p>
+        <p
+          className="text-[10px] font-extrabold uppercase tracking-[0.22em] mb-2"
+          style={{ color: flamingo ? `hsl(${FLAMINGO.cyan})` : 'hsl(var(--muted-foreground) / 0.7)' }}
+        >
+          {flamingo ? 'Roll a new scene' : 'Start a new scene'}
+        </p>
         <div className="space-y-2">
           <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Scene title" className="h-10" />
           <Input value={location} onChange={e => setLocation(e.target.value)} placeholder="Location" className="h-10" />
@@ -344,8 +378,21 @@ function SceneTab({ currentScene, onCreateScene, onEndScene, onEditScene }: Prop
           <Input value={stakes} onChange={e => setStakes(e.target.value)} placeholder="Stakes" className="h-10" />
           <Textarea value={publicNotes} onChange={e => setPublicNotes(e.target.value)} placeholder="Public notes (players see this)" rows={2} className="text-[12.5px]" />
           <Textarea value={gmNotes} onChange={e => setGmNotes(e.target.value)} placeholder="GM-only notes (private to you)" rows={2} className="text-[12.5px]" />
-          <button onClick={submit} disabled={busy} className="w-full h-10 rounded-lg text-[12px] font-extrabold inline-flex items-center justify-center gap-1.5 active:scale-[0.98] transition" style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85))', color: 'hsl(var(--primary-foreground))' }}>
-            <PlusCircle className="w-3.5 h-3.5" /> Start scene
+          <button
+            onClick={submit}
+            disabled={busy}
+            className="w-full h-10 rounded-lg text-[12px] font-extrabold inline-flex items-center justify-center gap-1.5 active:scale-[0.98] transition"
+            style={flamingo ? {
+              background: `linear-gradient(135deg, hsl(${FLAMINGO.pink}), hsl(${FLAMINGO.violet}))`,
+              color: `hsl(${FLAMINGO.paper})`,
+              boxShadow: `0 0 14px -3px hsl(${FLAMINGO.pink} / 0.6)`,
+              border: `1px solid hsl(${FLAMINGO.pink} / 0.7)`,
+            } : {
+              background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85))',
+              color: 'hsl(var(--primary-foreground))',
+            }}
+          >
+            <PlusCircle className="w-3.5 h-3.5" /> {flamingo ? 'Roll sound' : 'Start scene'}
           </button>
         </div>
       </div>
@@ -622,7 +669,8 @@ function FactionsTab({ campaign, factions, onCreateFaction, onEdit }: Props & { 
   );
 }
 
-function ClocksTab({ clocks, onCreateClock, onAdvanceClock, onEdit }: Props & { onEdit?: (c: Clock) => void }) {
+function ClocksTab({ campaign, clocks, onCreateClock, onAdvanceClock, onEdit }: Props & { onEdit?: (c: Clock) => void }) {
+  const flamingo = isFlamingoCampaign(campaign.template_key);
   const [name, setName] = useState('');
   const [maxVal, setMaxVal] = useState(6);
   const [clockType, setClockType] = useState<Clock['clock_type']>('danger');
@@ -630,8 +678,23 @@ function ClocksTab({ clocks, onCreateClock, onAdvanceClock, onEdit }: Props & { 
   const [busy, setBusy] = useState(false);
   return (
     <div className="space-y-3">
-      <div className="rounded-xl bg-muted/25 border border-border/40 p-3 space-y-2">
-        <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-muted-foreground/70">Add clock</p>
+      <div
+        className="rounded-xl p-3 space-y-2"
+        style={flamingo ? {
+          background: `hsl(${FLAMINGO.ink} / 0.7)`,
+          border: `1px solid hsl(${FLAMINGO.danger} / 0.35)`,
+          color: `hsl(${FLAMINGO.paper})`,
+        } : {
+          background: 'hsl(var(--muted) / 0.25)',
+          border: '1px solid hsl(var(--border) / 0.4)',
+        }}
+      >
+        <p
+          className="text-[9.5px] font-extrabold uppercase tracking-[0.22em]"
+          style={{ color: flamingo ? `hsl(${FLAMINGO.danger})` : 'hsl(var(--muted-foreground) / 0.7)' }}
+        >
+          {flamingo ? 'Wind a new clock' : 'Add clock'}
+        </p>
         <Input value={name} onChange={e => setName(e.target.value)} placeholder="Clock name" className="h-10" />
         <div className="grid grid-cols-2 gap-2">
           <div>
@@ -662,7 +725,16 @@ function ClocksTab({ clocks, onCreateClock, onAdvanceClock, onEdit }: Props & { 
               setName(''); setMaxVal(6); setHidden(false);
             }}
             className="h-9 px-3 rounded-md text-[11px] font-extrabold active:scale-95 disabled:opacity-50"
-            style={{ background: 'hsl(var(--primary) / 0.18)', color: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary) / 0.35)' }}
+            style={flamingo ? {
+              background: `linear-gradient(135deg, hsl(${FLAMINGO.danger} / 0.3), hsl(${FLAMINGO.pink} / 0.2))`,
+              color: `hsl(${FLAMINGO.paper})`,
+              border: `1px solid hsl(${FLAMINGO.danger} / 0.55)`,
+              boxShadow: `0 0 10px -3px hsl(${FLAMINGO.danger} / 0.5)`,
+            } : {
+              background: 'hsl(var(--primary) / 0.18)',
+              color: 'hsl(var(--primary))',
+              border: '1px solid hsl(var(--primary) / 0.35)',
+            }}
           >
             Add clock
           </button>
@@ -692,50 +764,108 @@ function ClocksTab({ clocks, onCreateClock, onAdvanceClock, onEdit }: Props & { 
 
 /* ─── Chapters tab — just a launcher into the chapter sheet ── */
 
-function ChaptersTab({ onOpenChapters }: { onOpenChapters: () => void }) {
+function ChaptersTab({ flamingo, onOpenChapters }: { flamingo: boolean; onOpenChapters: () => void }) {
   return (
     <div className="space-y-3">
-      <p className="text-[12px] text-foreground/85 leading-relaxed">
-        Group scenes into chapters — major story arcs. Starting a chapter posts a transition into the story chat so async players see the structure.
+      <p
+        className="text-[12px] leading-relaxed"
+        style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.85)` : 'hsl(var(--foreground) / 0.85)' }}
+      >
+        {flamingo
+          ? 'Group scenes into chapters — each one is an episode of the show. Starting a chapter posts a title card to story chat so async players see the structure.'
+          : 'Group scenes into chapters — major story arcs. Starting a chapter posts a transition into the story chat so async players see the structure.'}
       </p>
       <button
         type="button"
         onClick={onOpenChapters}
         className="w-full h-11 rounded-xl text-[12.5px] font-extrabold inline-flex items-center justify-center gap-1.5 active:scale-[0.98] transition"
-        style={{ background: 'hsl(var(--primary) / 0.18)', color: 'hsl(var(--primary))', border: '1px solid hsl(var(--primary) / 0.4)' }}
+        style={flamingo ? {
+          background: `linear-gradient(135deg, hsl(${FLAMINGO.pink} / 0.22), hsl(${FLAMINGO.violet} / 0.15))`,
+          color: `hsl(${FLAMINGO.paper})`,
+          border: `1px solid hsl(${FLAMINGO.pink} / 0.55)`,
+          boxShadow: `0 0 12px -4px hsl(${FLAMINGO.pink} / 0.5)`,
+        } : {
+          background: 'hsl(var(--primary) / 0.18)',
+          color: 'hsl(var(--primary))',
+          border: '1px solid hsl(var(--primary) / 0.4)',
+        }}
       >
-        <Bookmark className="w-3.5 h-3.5" /> Open chapter manager
+        <Bookmark className="w-3.5 h-3.5" /> {flamingo ? 'Open episode manager' : 'Open chapter manager'}
       </button>
     </div>
   );
 }
 
 function MemoryTab({ campaign, onSummarize }: Props & { onSummarize?: () => void }) {
+  const flamingo = isFlamingoCampaign(campaign.template_key);
   const configured = isAiConfigured();
   return (
     <div className="space-y-3">
-      <p className="text-[12px] text-foreground/85 leading-relaxed">
-        Campaign memory is updated <span className="font-extrabold">manually</span> — never auto-saved. Draft a summary, review the proposed memory changes, then approve.
+      <p
+        className="text-[12px] leading-relaxed"
+        style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.85)` : 'hsl(var(--foreground) / 0.85)' }}
+      >
+        {flamingo
+          ? 'The case file is filed by hand — never auto-saved. Draft a summary, review the proposed memory changes, then approve.'
+          : 'Campaign memory is updated manually — never auto-saved. Draft a summary, review the proposed memory changes, then approve.'}
       </p>
       <button
         type="button"
         onClick={onSummarize}
         disabled={!configured}
         className="w-full h-11 rounded-xl text-[12.5px] font-extrabold inline-flex items-center justify-center gap-1.5 active:scale-[0.98] transition disabled:opacity-55"
-        style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85))', color: 'hsl(var(--primary-foreground))' }}
+        style={flamingo ? {
+          background: `linear-gradient(135deg, hsl(${FLAMINGO.pink}), hsl(${FLAMINGO.violet}))`,
+          color: `hsl(${FLAMINGO.paper})`,
+          boxShadow: `0 0 14px -3px hsl(${FLAMINGO.pink} / 0.6)`,
+          border: `1px solid hsl(${FLAMINGO.pink} / 0.7)`,
+        } : {
+          background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85))',
+          color: 'hsl(var(--primary-foreground))',
+        }}
       >
-        <Sparkles className="w-3.5 h-3.5" /> Summarize scene → memory
+        <Sparkles className="w-3.5 h-3.5" /> {flamingo ? 'File this scene to memory' : 'Summarize scene → memory'}
       </button>
       {!configured && (
-        <p className="text-[10.5px] text-muted-foreground/70">AI provider not configured. Wire LOVABLE_API_KEY on the narrative-ai edge function + VITE_NARRATIVE_AI_ENABLED on the client to enable.</p>
+        <p className="text-[10.5px] text-muted-foreground/70">
+          AI provider not configured. Wire LOVABLE_API_KEY on the narrative-ai edge function + VITE_NARRATIVE_AI_ENABLED on the client to enable.
+        </p>
       )}
       {campaign.memory_summary ? (
-        <div className="rounded-xl bg-card border border-border/40 p-3">
-          <p className="text-[9.5px] font-extrabold uppercase tracking-[0.22em] text-muted-foreground/70">Current summary</p>
-          <p className="text-[12px] text-foreground/85 leading-snug mt-1 whitespace-pre-wrap">{campaign.memory_summary}</p>
+        <div
+          className="rounded-xl p-3 relative overflow-hidden"
+          style={flamingo ? {
+            background: `linear-gradient(135deg, hsl(${FLAMINGO.ink}), hsl(${FLAMINGO.midnight}))`,
+            border: `1px solid hsl(${FLAMINGO.cyan} / 0.4)`,
+            boxShadow: `0 0 12px -6px hsl(${FLAMINGO.cyan} / 0.4)`,
+            color: `hsl(${FLAMINGO.paper})`,
+          } : {
+            background: 'hsl(var(--card))',
+            border: '1px solid hsl(var(--border) / 0.4)',
+          }}
+        >
+          {flamingo && (
+            <div aria-hidden className="absolute left-0 top-0 bottom-0 w-1" style={{ background: `hsl(${FLAMINGO.cyan})` }} />
+          )}
+          <div className={flamingo ? 'pl-2' : ''}>
+            <p
+              className="text-[9.5px] font-extrabold uppercase tracking-[0.22em]"
+              style={{ color: flamingo ? `hsl(${FLAMINGO.cyan})` : 'hsl(var(--muted-foreground) / 0.7)' }}
+            >
+              {flamingo ? 'Case file · current' : 'Current summary'}
+            </p>
+            <p
+              className="text-[12px] leading-snug mt-1 whitespace-pre-wrap"
+              style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.92)` : 'hsl(var(--foreground) / 0.85)' }}
+            >
+              {campaign.memory_summary}
+            </p>
+          </div>
         </div>
       ) : (
-        <EmptyHint message="No memory has been saved yet. Summarize a scene to begin building the campaign record." />
+        <EmptyHint message={flamingo
+          ? 'No case file yet. File a scene to start building the record.'
+          : 'No memory has been saved yet. Summarize a scene to begin building the campaign record.'} />
       )}
     </div>
   );

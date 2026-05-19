@@ -326,10 +326,13 @@ export default function NarrativeCampaignDetailPage() {
         </div>
       )}
 
-      {isActive && tab === 'world' && (
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
-          {publicNpcs.length > 0 && (
-            <section>
+      {isActive && tab === 'world' && (() => {
+        // Build each section as a keyed node so we can reorder for
+        // narrative flow without duplicating JSX. Flamingo order goes
+        // stakes → heat → evidence → cast → places. Non-Flamingo keeps
+        // the cast-first order familiar from trad RPG tools.
+        const npcsSection = publicNpcs.length > 0 && (
+            <section key="npcs">
               <SectionHeader label={flamingo ? 'Known players' : 'Notable NPCs'} count={publicNpcs.length} />
               <div className="space-y-2">
                 {publicNpcs.map(n => (
@@ -351,9 +354,9 @@ export default function NarrativeCampaignDetailPage() {
                 ))}
               </div>
             </section>
-          )}
-          {publicClues.length > 0 && (
-            <section>
+          );
+        const cluesSection = publicClues.length > 0 && (
+            <section key="clues">
               <SectionHeader label={flamingo ? 'Case board' : 'Clues'} count={publicClues.length} />
               <div className="space-y-2">
                 {publicClues.map(c => (
@@ -405,9 +408,9 @@ export default function NarrativeCampaignDetailPage() {
                 ))}
               </div>
             </section>
-          )}
-          {publicFactions.length > 0 && (
-            <section>
+          );
+        const factionsSection = publicFactions.length > 0 && (
+            <section key="factions">
               <SectionHeader label={flamingo ? 'Power players' : 'Factions'} count={publicFactions.length} />
               <div className="space-y-2">
                 {publicFactions.map(f => (
@@ -469,17 +472,17 @@ export default function NarrativeCampaignDetailPage() {
                 ))}
               </div>
             </section>
-          )}
-          {publicClocks.length > 0 && (
-            <section>
+          );
+        const clocksSection = publicClocks.length > 0 && (
+            <section key="clocks">
               <SectionHeader label={flamingo ? 'Heat & danger' : 'Active clocks'} count={publicClocks.length} />
               <div className="space-y-2">
                 {publicClocks.map(c => <ClockCard key={c.id} clock={c} />)}
               </div>
             </section>
-          )}
-          {data.locations.length > 0 && (
-            <section>
+          );
+        const locationsSection = data.locations.length > 0 && (
+            <section key="locations">
               <SectionHeader label={flamingo ? 'Velvetaine' : 'Locations'} count={data.locations.length} />
               <div className="space-y-2">
                 {data.locations.map(l => (
@@ -499,30 +502,42 @@ export default function NarrativeCampaignDetailPage() {
                 ))}
               </div>
             </section>
-          )}
-          {publicNpcs.length === 0 && publicClues.length === 0 && publicClocks.length === 0 && publicFactions.length === 0 && data.locations.length === 0 && (
-            <div
-              className="rounded-xl p-4 text-center"
-              style={flamingo ? {
-                background: `hsl(${FLAMINGO.ink} / 0.6)`,
-                border: `1px dashed hsl(${FLAMINGO.pink} / 0.3)`,
-              } : {
-                background: 'hsl(var(--muted) / 0.25)',
-                border: '1px dashed hsl(var(--border) / 0.4)',
-              }}
-            >
-              <p
-                className="text-[11.5px]"
-                style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.7)` : 'hsl(var(--muted-foreground) / 0.75)' }}
+          );
+
+        // Render order: Flamingo flows stakes-first (Power players →
+        // Heat & danger → Case board → Known players → Velvetaine).
+        // Calm shell keeps the cast-first reading order.
+        const ordered = flamingo
+          ? [factionsSection, clocksSection, cluesSection, npcsSection, locationsSection]
+          : [npcsSection, cluesSection, factionsSection, clocksSection, locationsSection];
+        const anyRendered = publicNpcs.length + publicClues.length + publicClocks.length + publicFactions.length + data.locations.length > 0;
+        return (
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+            {ordered}
+            {!anyRendered && (
+              <div
+                className="rounded-xl p-4 text-center"
+                style={flamingo ? {
+                  background: `hsl(${FLAMINGO.ink} / 0.6)`,
+                  border: `1px dashed hsl(${FLAMINGO.pink} / 0.3)`,
+                } : {
+                  background: 'hsl(var(--muted) / 0.25)',
+                  border: '1px dashed hsl(var(--border) / 0.4)',
+                }}
               >
-                {flamingo
-                  ? 'Velvetaine sleeps. The GM lights the neon when the city wakes up.'
-                  : 'The world is empty so far. The GM will populate it as the campaign unfolds.'}
-              </p>
-            </div>
-          )}
-        </div>
-      )}
+                <p
+                  className="text-[11.5px]"
+                  style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.7)` : 'hsl(var(--muted-foreground) / 0.75)' }}
+                >
+                  {flamingo
+                    ? 'Velvetaine sleeps. The GM lights the neon when the city wakes up.'
+                    : 'The world is empty so far. The GM will populate it as the campaign unfolds.'}
+                </p>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {isActive && tab === 'log' && (
         <div className="flex-1 overflow-y-auto px-4 py-3">
@@ -578,16 +593,20 @@ export default function NarrativeCampaignDetailPage() {
               <div className="space-y-4">
                 {groups.map((g, gi) => (
                   <section key={gi}>
-                    {/* Chapter title bar */}
+                    {/* Sticky chapter title bar — anchors at the top of
+                        the scroll container so the reader always knows
+                        which chapter they're in while scrolling a long
+                        recap. backdrop-blur + alpha-mixed bg keeps the
+                        entries readable through the bar. */}
                     <div
-                      className="rounded-xl px-3 py-2 mb-2 flex items-center gap-2"
+                      className="rounded-xl px-3 py-2 mb-2 flex items-center gap-2 sticky top-0 z-10 backdrop-blur"
                       style={flamingo ? {
-                        background: `linear-gradient(135deg, hsl(${FLAMINGO.pink} / 0.18), hsl(${FLAMINGO.violet} / 0.1))`,
-                        border: `1px solid hsl(${FLAMINGO.pink} / 0.4)`,
-                        boxShadow: `0 0 12px -6px hsl(${FLAMINGO.pink} / 0.5)`,
+                        background: `linear-gradient(135deg, hsl(${FLAMINGO.midnight} / 0.92), hsl(${FLAMINGO.ink} / 0.88))`,
+                        border: `1px solid hsl(${FLAMINGO.pink} / 0.45)`,
+                        boxShadow: `0 4px 12px -6px hsl(${FLAMINGO.pink} / 0.5)`,
                       } : {
-                        background: 'hsl(var(--muted) / 0.3)',
-                        border: '1px solid hsl(var(--border) / 0.4)',
+                        background: 'hsl(var(--background) / 0.92)',
+                        border: '1px solid hsl(var(--border) / 0.5)',
                       }}
                     >
                       <span
