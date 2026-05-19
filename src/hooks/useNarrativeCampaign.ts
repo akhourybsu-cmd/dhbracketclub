@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { rollChronicle, type ChronicleStat, type RollAdvantage } from '@/lib/narrative/chronicleRuleset';
+import { ensureCampaignWorldSeeded } from '@/lib/narrative/templateSeeder';
 import type {
   Campaign, CampaignMember, Character, Scene, Message, MessageType,
   NPC, Faction, Clock, Clue, Item, Location as NarrativeLocation,
@@ -180,6 +181,12 @@ export function useNarrativeCampaign(campaignId: string | undefined): UseNarrati
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  // The seed-attempt ref lives here so it persists across renders;
+  // the actual effect that uses it runs further down after isGm has
+  // been computed (TDZ rules mean we can't reference isGm above its
+  // const declaration even from inside a callback).
+  const seedAttemptedRef = useRef(false);
+
   // Real-time: messages, clocks, scenes, ai_suggestions PLUS every
   // GM-managed entity (characters, NPCs, clues, factions, items,
   // locations) so when the GM creates an NPC or a player creates their
@@ -258,6 +265,40 @@ export function useNarrativeCampaign(campaignId: string | undefined): UseNarrati
   }, [user, campaign?.gm_id, members]);
 
   const isGm = myRole === 'game_master';
+
+  // ─── Backfill: ensure the campaign's world has been seeded from its
+  // template. Older Flamingo Protocol campaigns created before the
+  // seeder shipped will have empty World tabs; this fires once after
+  // data loads and idempotently fills in any missing starter content.
+  //
+  // Guards:
+  //   • Only the GM, the campaign creator, or a club admin can write
+  //     to the world tables; for everyone else this is a no-op (the
+  //     RLS-protected inserts would fail anyway).
+  //   • Skipped for blank-template campaigns (seeder short-circuits
+  //     when there's nothing to seed).
+  //   • Skipped once we've seen a successful pass during this mount.
+  //   • Refreshes the local data once after a successful repair so
+  //     the new rows hydrate the UI immediately.
+  useEffect(() => {
+    if (seedAttemptedRef.current) return;
+    if (loading) return;
+    if (!campaign || !user) return;
+    const canWrite =
+      isGm
+      || campaign.gm_id === user.id
+      || campaign.created_by === user.id
+      || (campaign as any).proposed_gm_id === user.id;
+    if (!canWrite) return;
+    seedAttemptedRef.current = true;
+    (async () => {
+      const report = await ensureCampaignWorldSeeded(campaign.id, campaign.template_key);
+      if (report.changed) {
+        await refresh();
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, campaign?.id, isGm]);
 
   const myCharacter = useMemo(
     () => characters.find(c => c.owner_id === user?.id && !c.is_retired) ?? null,

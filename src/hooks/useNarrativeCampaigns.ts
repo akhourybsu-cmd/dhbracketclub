@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useClub } from '@/contexts/ClubContext';
 import type { Campaign, CampaignStatus, CampaignPlayMode, CampaignVisibility } from '@/lib/narrative/types';
 import { getTemplate, type TemplateKey } from '@/lib/narrative/templates';
+import { seedCampaignFromTemplate } from '@/lib/narrative/templateSeeder';
 
 interface UseNarrativeCampaignsResult {
   campaigns: Campaign[];
@@ -138,6 +139,20 @@ export function useNarrativeCampaigns(): UseNarrativeCampaignsResult {
     if (!row) {
       setError('Campaign was not created');
       return null;
+    }
+    // Persist the template's starter world content as campaign-specific
+    // rows. Idempotent + non-fatal: a seed failure won't unwind the
+    // campaign creation, but the user gets a soft warning surfaced via
+    // the `error` field. The detail page's ensure-seeded loop will
+    // retry on next load.
+    try {
+      const seed = await seedCampaignFromTemplate(row.id, input.template_key);
+      if (seed.errors.length > 0) {
+        setError(`Campaign created, but ${seed.errors.length} starter row${seed.errors.length === 1 ? '' : 's'} failed to seed. Will retry on next load.`);
+      }
+    } catch (seedErr) {
+      // Best-effort — never block the create flow on seed failure.
+      console.warn('[narrative] seed after create failed:', seedErr);
     }
     await refresh();
     return row;

@@ -71,6 +71,18 @@ export interface Campaign {
   live_session_id: string | null;
   live_started_at: string | null;
   memory_summary: string | null;
+  /** Campaign-specific canon rules copied from the template at creation
+   *  time + extended by the GM. Read by the AI service as immutable
+   *  context. */
+  canon_locks: string[];
+  /** Persisted "waiting on" pin so the status survives refresh /
+   *  devices / users. `mode: null` means no one is being waited on. */
+  waiting_on_state: {
+    mode?: 'all' | 'specific' | null;
+    player_ids?: string[];
+    required?: boolean;
+    since?: string;
+  };
   created_at: string;
   updated_at: string;
 }
