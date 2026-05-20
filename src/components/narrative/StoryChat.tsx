@@ -16,6 +16,7 @@ import { DiceRollSheet } from './DiceRollSheet';
 import { ClockCard } from './ClockCard';
 import { PlayerAiAssistMenu } from './PlayerAiAssistMenu';
 import { ChapterTransitionOverlay } from './ChapterTransitionOverlay';
+import { ComposerModeTrigger, ComposerModeSheet, type ComposerModeOption } from './ComposerModeSheet';
 import { isAiConfigured } from '@/lib/narrative/aiService';
 import { FlamingoSceneCard } from './flamingo/FlamingoSceneCard';
 import { isFlamingoCampaign, FLAMINGO } from '@/lib/narrative/flamingoTheme';
@@ -56,6 +57,7 @@ export function StoryChat({
   const [mode, setMode] = useState<PostMode>('character');
   const [rollOpen, setRollOpen] = useState(false);
   const [aiAssistOpen, setAiAssistOpen] = useState(false);
+  const [modeSheetOpen, setModeSheetOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const aiEnabled = isAiConfigured();
   const [autoScroll, setAutoScroll] = useState(true);
@@ -126,6 +128,30 @@ export function StoryChat({
     if (isGm) return ['gm_narration', 'character', 'action', 'ooc', 'gm_private'];
     return canCharacterMode ? ['character', 'action', 'ooc'] : ['ooc'];
   })();
+
+  // Mode options shaped for ComposerModeSheet — adds the per-mode blurb
+  // and resolves the icon to a JSX node ahead of time. The blurb only
+  // shows in the bottom sheet (desktop chip row stays compact).
+  const MODE_BLURB: Record<PostMode, string> = {
+    character:    'Speak as your character in the scene.',
+    action:       'Describe what your character does.',
+    ooc:          'Out-of-character chatter, not part of the story.',
+    gm_narration: 'Set the scene, push the story, narrate as GM.',
+    gm_private:   'A private GM note — players never see this.',
+  };
+  const composerModeOptions: ComposerModeOption<PostMode>[] = allowedModes.map(m => {
+    const meta = MODE_META[m];
+    const Icon = meta.icon;
+    return {
+      id: m,
+      label: meta.label,
+      blurb: MODE_BLURB[m],
+      icon: <Icon className="w-3.5 h-3.5" />,
+      disabled: m === 'character' && !canCharacterMode,
+    };
+  });
+  const activeModeOption =
+    composerModeOptions.find(o => o.id === mode) ?? composerModeOptions[0];
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -276,10 +302,29 @@ export function StoryChat({
           background: flamingo ? `hsl(${FLAMINGO.midnight} / 0.7)` : undefined,
         }}
       >
-        {/* Mode chips — the active highlight uses framer-motion's
+        {/* Mobile mode trigger — single button + bottom sheet. Saves
+            ~36px of vertical space vs the chip scroller and is easier
+            to tap on a phone. Desktop keeps the inline chip row below. */}
+        {activeModeOption && (
+          <div className="sm:hidden flex items-center justify-between gap-2 pb-2">
+            <ComposerModeTrigger
+              flamingo={flamingo}
+              active={activeModeOption}
+              onClick={() => setModeSheetOpen(true)}
+            />
+            <p
+              className="text-[10px] uppercase tracking-wider truncate"
+              style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.45)` : 'hsl(var(--muted-foreground) / 0.6)' }}
+            >
+              Tap to change mode
+            </p>
+          </div>
+        )}
+
+        {/* Desktop chip row — the active highlight uses framer-motion's
             layoutId so it animates smoothly between selections instead
-            of snap-swapping. */}
-        <div className="flex gap-1.5 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+            of snap-swapping. Hidden on mobile (< sm). */}
+        <div className="hidden sm:flex gap-1.5 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
           {allowedModes.map(m => {
             const meta = MODE_META[m];
             const Icon = meta.icon;
@@ -465,6 +510,16 @@ export function StoryChat({
       <ChapterTransitionOverlay
         latestMessage={messages.length > 0 ? messages[messages.length - 1] : null}
         flamingo={flamingo}
+      />
+      {/* Mobile composer mode selector. Rendered regardless of viewport
+          — the trigger is sm:hidden so the sheet only opens on phones. */}
+      <ComposerModeSheet
+        open={modeSheetOpen}
+        onClose={() => setModeSheetOpen(false)}
+        flamingo={flamingo}
+        modes={composerModeOptions}
+        value={mode}
+        onSelect={(next) => setMode(next as PostMode)}
       />
     </div>
   );

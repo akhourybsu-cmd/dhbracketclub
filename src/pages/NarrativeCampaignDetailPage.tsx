@@ -37,14 +37,16 @@ import {
 } from '@/components/narrative/flamingo';
 import { NarrativePageHeader } from '@/components/narrative/NarrativePageHeader';
 import { NarrativeDetailSheet, type DetailSheetSection } from '@/components/narrative/NarrativeDetailSheet';
-import type { NPC, Clue, Faction, Location as NarrativeLocation } from '@/lib/narrative/types';
+import { CHRONICLE_STATS, getStatMeta } from '@/lib/narrative/chronicleRuleset';
+import type { NPC, Clue, Faction, Character, Location as NarrativeLocation } from '@/lib/narrative/types';
 
 type Tab = 'story' | 'characters' | 'world' | 'log';
 type DetailTarget =
   | { kind: 'npc'; row: NPC }
   | { kind: 'clue'; row: Clue }
   | { kind: 'faction'; row: Faction }
-  | { kind: 'location'; row: NarrativeLocation };
+  | { kind: 'location'; row: NarrativeLocation }
+  | { kind: 'character'; row: Character; showPrivate: boolean };
 
 export default function NarrativeCampaignDetailPage() {
   const { campaignId } = useParams<{ campaignId: string }>();
@@ -355,9 +357,17 @@ export default function NarrativeCampaignDetailPage() {
               <SectionHeader label={flamingo ? 'The crew' : 'The party'} count={data.characters.length} />
               <div className="space-y-2">
                 {data.characters.filter(c => c.id !== data.myCharacter?.id).map(c => (
-                  flamingo
-                    ? <FlamingoCharacterCard key={c.id} character={c} showPrivate={data.isGm} />
-                    : <CharacterSheetCard key={c.id} character={c} showPrivate={data.isGm} />
+                  // Collapsed crew row — name + archetype + mini stat
+                  // strip. Tap opens the full character sheet (with
+                  // stats grid, backstory, conditions, etc.) in the
+                  // shared NarrativeDetailSheet. Keeps the Cast tab
+                  // scannable on mobile.
+                  <CompactCharacterRow
+                    key={c.id}
+                    character={c}
+                    flamingo={flamingo}
+                    onOpen={() => setDetailTarget({ kind: 'character', row: c, showPrivate: data.isGm })}
+                  />
                 ))}
               </div>
             </>
@@ -748,40 +758,13 @@ export default function NarrativeCampaignDetailPage() {
                             ? (e.message_type === 'campaign_summary' ? FLAMINGO.cyan : FLAMINGO.gold)
                             : null;
                           return (
-                            <div
+                            <ChronicleLogEntry
                               key={e.id}
-                              className="rounded-xl p-3 relative overflow-hidden"
-                              style={flamingo && accent ? {
-                                background: `linear-gradient(135deg, hsl(${FLAMINGO.ink}), hsl(${FLAMINGO.midnight}))`,
-                                border: `1px solid hsl(${accent} / 0.4)`,
-                                boxShadow: `0 0 12px -8px hsl(${accent} / 0.5)`,
-                              } : {
-                                background: 'hsl(var(--card))',
-                                border: '1px solid hsl(var(--border) / 0.4)',
-                              }}
-                            >
-                              {flamingo && accent && (
-                                <div
-                                  aria-hidden
-                                  className="absolute left-0 top-0 bottom-0 w-1"
-                                  style={{ background: `hsl(${accent})` }}
-                                />
-                              )}
-                              <div className={flamingo ? 'pl-2' : ''}>
-                                <p
-                                  className="text-[9.5px] font-extrabold uppercase tracking-[0.22em]"
-                                  style={{ color: flamingo && accent ? `hsl(${accent})` : 'hsl(var(--muted-foreground) / 0.65)' }}
-                                >
-                                  {labelMap[e.message_type] ?? e.message_type.replace('_', ' ')}
-                                </p>
-                                <p
-                                  className="text-[12.5px] leading-snug mt-1"
-                                  style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.9)` : 'hsl(var(--foreground) / 0.85)' }}
-                                >
-                                  {e.body}
-                                </p>
-                              </div>
-                            </div>
+                              eyebrow={labelMap[e.message_type] ?? e.message_type.replace('_', ' ')}
+                              body={e.body ?? ''}
+                              accent={accent}
+                              flamingo={flamingo}
+                            />
                           );
                         })}
                       </div>
@@ -858,6 +841,143 @@ function truncateOneLine(s: string, max = 100): string {
   return flat.length > max ? flat.slice(0, max - 1) + '…' : flat;
 }
 
+/** Log entry with "Read more" affordance. Long campaign summaries
+ *  + chapter recaps clamp to 3 lines by default; tapping anywhere on
+ *  the card expands inline. Short entries (≤ ~140 chars / single line)
+ *  skip the toggle entirely. */
+function ChronicleLogEntry({
+  eyebrow, body, accent, flamingo,
+}: { eyebrow: string; body: string; accent: string | null; flamingo: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  // Only show the Read-more affordance when the body would actually
+  // overflow 3 lines. Cheap heuristic — line count by newline + char
+  // count threshold. Avoids dangling "Read more" on one-liners.
+  const isLong = body.length > 180 || body.split('\n').length > 3;
+  return (
+    <button
+      type="button"
+      onClick={() => isLong && setExpanded(v => !v)}
+      disabled={!isLong}
+      aria-expanded={isLong ? expanded : undefined}
+      className="w-full text-left rounded-xl p-3 relative overflow-hidden transition-transform active:scale-[0.998] disabled:active:scale-100"
+      style={flamingo && accent ? {
+        background: `linear-gradient(135deg, hsl(${FLAMINGO.ink}), hsl(${FLAMINGO.midnight}))`,
+        border: `1px solid hsl(${accent} / 0.4)`,
+        boxShadow: `0 0 12px -8px hsl(${accent} / 0.5)`,
+      } : {
+        background: 'hsl(var(--card))',
+        border: '1px solid hsl(var(--border) / 0.4)',
+      }}
+    >
+      {flamingo && accent && (
+        <div aria-hidden className="absolute left-0 top-0 bottom-0 w-1" style={{ background: `hsl(${accent})` }} />
+      )}
+      <div className={flamingo ? 'pl-2' : ''}>
+        <p
+          className="text-[9.5px] font-extrabold uppercase tracking-[0.22em]"
+          style={{ color: flamingo && accent ? `hsl(${accent})` : 'hsl(var(--muted-foreground) / 0.65)' }}
+        >
+          {eyebrow}
+        </p>
+        <p
+          className={`text-[12.5px] leading-snug mt-1 whitespace-pre-wrap ${isLong && !expanded ? 'line-clamp-3' : ''}`}
+          style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.9)` : 'hsl(var(--foreground) / 0.85)' }}
+        >
+          {body}
+        </p>
+        {isLong && (
+          <span
+            className="inline-block mt-1.5 text-[10.5px] font-extrabold uppercase tracking-wider"
+            style={{ color: flamingo ? `hsl(${accent ?? FLAMINGO.cyan})` : 'hsl(var(--primary))' }}
+          >
+            {expanded ? 'Read less ↑' : 'Read more →'}
+          </span>
+        )}
+      </div>
+    </button>
+  );
+}
+
+/** Collapsed crew row used in the Characters tab. Tap opens the full
+ *  character sheet via NarrativeDetailSheet. Shows the same five
+ *  Chronicle stats as a mini strip so glance-info is still there. */
+function CompactCharacterRow({
+  character, flamingo, onOpen,
+}: { character: Character; flamingo: boolean; onOpen: () => void }) {
+  const initial = character.name.charAt(0).toUpperCase();
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={`Open ${character.name}'s character sheet`}
+      className="w-full text-left rounded-2xl p-3 active:scale-[0.99] transition-transform relative overflow-hidden"
+      style={flamingo ? {
+        background: `linear-gradient(135deg, hsl(${FLAMINGO.ink}), hsl(${FLAMINGO.midnight}) 70%)`,
+        border: `1px solid hsl(${FLAMINGO.pink} / 0.35)`,
+        color: `hsl(${FLAMINGO.paper})`,
+      } : {
+        background: 'hsl(var(--card))',
+        border: '1px solid hsl(var(--border) / 0.4)',
+      }}
+    >
+      {flamingo && (
+        <div
+          aria-hidden
+          className="absolute left-0 top-0 bottom-0 w-1"
+          style={{ background: `linear-gradient(180deg, hsl(${FLAMINGO.pink}), hsl(${FLAMINGO.cyan}))` }}
+        />
+      )}
+      <div className={`flex items-center gap-3 ${flamingo ? 'pl-2' : ''}`}>
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center text-[14px] font-extrabold flex-shrink-0"
+          style={flamingo ? {
+            background: `linear-gradient(135deg, hsl(${FLAMINGO.pink} / 0.28), hsl(${FLAMINGO.violet} / 0.18))`,
+            color: `hsl(${FLAMINGO.paper})`,
+            border: `1px solid hsl(${FLAMINGO.pink} / 0.5)`,
+          } : {
+            background: 'linear-gradient(135deg, hsl(var(--primary) / 0.18), hsl(var(--primary) / 0.04))',
+            color: 'hsl(var(--primary))',
+          }}
+        >
+          {initial}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[13.5px] font-extrabold tracking-tight leading-tight break-words">{character.name}</p>
+          {character.archetype && (
+            <p
+              className="text-[10.5px] font-bold uppercase tracking-wider mt-0.5 truncate"
+              style={{ color: flamingo ? `hsl(${FLAMINGO.gold})` : 'hsl(var(--muted-foreground) / 0.7)' }}
+            >
+              {character.archetype}
+            </p>
+          )}
+        </div>
+        <ChevronLeft className="w-4 h-4 rotate-180 opacity-50 flex-shrink-0" />
+      </div>
+      <div className="mt-2 grid grid-cols-5 gap-1">
+        {CHRONICLE_STATS.map(s => {
+          const meta = getStatMeta(s.id)!;
+          const v = character[`stat_${s.id}` as keyof Character] as number;
+          return (
+            <div
+              key={s.id}
+              className="text-center rounded-md py-1"
+              style={{ background: `hsl(${meta.accent} / 0.1)`, border: `1px solid hsl(${meta.accent} / 0.25)` }}
+            >
+              <p className="text-[7.5px] font-extrabold uppercase tracking-wider" style={{ color: `hsl(${meta.accent})` }}>
+                {s.label.slice(0, 3)}
+              </p>
+              <p className="text-[12px] font-black tabular-nums leading-none mt-0.5" style={{ color: `hsl(${meta.accent})` }}>
+                {v >= 0 ? `+${v}` : v}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </button>
+  );
+}
+
 /** Builds the props for NarrativeDetailSheet given a detail target.
  *  Lives outside the component body to keep the JSX above readable. */
 function buildDetailSheetProps(
@@ -923,6 +1043,70 @@ function buildDetailSheetProps(
       if (l.region) sections.push({ label: 'Region', content: l.region });
       if (l.description) sections.push({ label: 'Description', content: l.description });
       return { eyebrow: 'Location', title: l.name, sections, flamingo, accent: flamingo ? FLAMINGO.cyan : undefined };
+    }
+    case 'character': {
+      const c = target.row;
+      // Stat grid as a single section so the 5-col layout survives the
+      // sheet's vertical section stack. Reuses the same accent colors
+      // the character cards use for visual consistency.
+      const statGrid = (
+        <div className="grid grid-cols-5 gap-1.5">
+          {CHRONICLE_STATS.map(s => {
+            const meta = getStatMeta(s.id)!;
+            const v = c[`stat_${s.id}` as keyof Character] as number;
+            return (
+              <div
+                key={s.id}
+                className="rounded-lg p-1.5 text-center"
+                style={{ background: `hsl(${meta.accent} / 0.12)`, border: `1px solid hsl(${meta.accent} / 0.4)` }}
+              >
+                <p className="text-[8px] font-extrabold uppercase tracking-wider" style={{ color: `hsl(${meta.accent})` }}>
+                  {s.label.slice(0, 4)}
+                </p>
+                <p className="text-[15px] font-black tabular-nums leading-none mt-0.5" style={{ color: `hsl(${meta.accent})` }}>
+                  {v >= 0 ? `+${v}` : v}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      );
+      const conditions = Array.isArray(c.conditions) ? c.conditions : [];
+      const inventory = Array.isArray(c.inventory) ? c.inventory : [];
+      const sections: DetailSheetSection[] = [];
+      sections.push({ label: 'Stats', content: statGrid });
+      if (c.archetype) sections.push({ label: 'Archetype', content: c.archetype });
+      if (c.signature_move) sections.push({ label: 'Signature move', content: c.signature_move });
+      if (c.personality) sections.push({ label: 'Personality', content: c.personality });
+      if (c.goal) sections.push({ label: 'Goal', content: c.goal });
+      if (c.flaw) sections.push({ label: 'Flaw', content: c.flaw });
+      if (c.backstory) sections.push({ label: 'Backstory', content: c.backstory });
+      if (conditions.length > 0) {
+        sections.push({
+          label: 'Conditions',
+          content: conditions.map((cond: any, i: number) =>
+            <span key={i} className="inline-block mr-1.5 mb-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold" style={{ background: 'hsl(var(--danger) / 0.15)', color: 'hsl(var(--danger))', border: '1px solid hsl(var(--danger) / 0.4)' }}>{cond.label ?? String(cond)}</span>
+          ),
+        });
+      }
+      if (inventory.length > 0) {
+        sections.push({
+          label: 'Inventory',
+          content: inventory.map((it: any, i: number) =>
+            <span key={i} className="inline-block mr-1.5 mb-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold" style={{ background: 'hsl(var(--gold) / 0.15)', color: 'hsl(var(--gold))', border: '1px solid hsl(var(--gold) / 0.4)' }}>{it.name ?? String(it)}</span>
+          ),
+        });
+      }
+      if (target.showPrivate && c.notes_private) {
+        sections.push({ label: 'Private notes', content: c.notes_private, gmOnly: true });
+      }
+      return {
+        eyebrow: c.pronouns ? `Character · ${c.pronouns}` : 'Character',
+        title: c.name,
+        sections,
+        flamingo,
+        accent: flamingo ? FLAMINGO.pink : undefined,
+      };
     }
   }
 }
