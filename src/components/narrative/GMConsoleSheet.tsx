@@ -483,7 +483,7 @@ function NpcsTab({ campaign, npcs, onCreateNpc, onEdit }: Props & { onEdit?: (n:
             )}
             <div className={`min-w-0 flex-1 ${flamingo ? 'pl-2' : ''}`}>
               <div className="flex items-center gap-1.5">
-                <span className="text-[12.5px] font-extrabold truncate">{n.name}</span>
+                <span className="text-[12.5px] font-extrabold leading-tight line-clamp-2 break-words flex-1 min-w-0">{n.name}</span>
                 {n.visibility === 'gm_only' && (flamingo ? <FlamingoLockIcon /> : <StatusPill variant="disabled" size="xs">GM only</StatusPill>)}
               </div>
               {n.role && (
@@ -540,7 +540,7 @@ function CluesTab({ campaign, clues, onCreateClue, onEdit }: Props & { onEdit?: 
             {flamingo && <FlamingoClueMarker status={c.status} />}
             <div className={`min-w-0 flex-1 ${flamingo ? 'pl-1' : ''}`}>
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[12.5px] font-extrabold truncate">{c.name}</span>
+                <span className="text-[12.5px] font-extrabold leading-tight line-clamp-2 break-words flex-1 min-w-0">{c.name}</span>
                 {!flamingo && (
                   <StatusPill variant={c.status === 'solved' ? 'success' : c.status === 'false_lead' ? 'danger' : c.status === 'partial' ? 'warning' : 'info'} size="xs">
                     {c.status.replace('_', ' ')}
@@ -601,7 +601,7 @@ function ItemsTab({ campaign, items, onCreateItem, onEdit }: Props & { onEdit?: 
             )}
             <div className={`min-w-0 flex-1 ${flamingo ? 'pl-2' : ''}`}>
               <div className="flex items-center gap-1.5">
-                <span className="text-[12.5px] font-extrabold truncate">{i.name}</span>
+                <span className="text-[12.5px] font-extrabold leading-tight line-clamp-2 break-words flex-1 min-w-0">{i.name}</span>
                 {i.visibility === 'gm_only' && (flamingo ? <FlamingoLockIcon /> : <StatusPill variant="disabled" size="xs">GM only</StatusPill>)}
               </div>
               {i.description && (
@@ -652,7 +652,7 @@ function FactionsTab({ campaign, factions, onCreateFaction, onEdit }: Props & { 
             )}
             <div className={flamingo ? 'pl-2' : ''}>
               <div className="flex items-center gap-1.5 justify-between">
-                <span className="text-[12.5px] font-extrabold truncate">{f.name}</span>
+                <span className="text-[12.5px] font-extrabold leading-tight line-clamp-2 break-words flex-1 min-w-0">{f.name}</span>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   {f.visibility === 'gm_only' && (flamingo ? <FlamingoLockIcon /> : <StatusPill variant="disabled" size="xs">GM only</StatusPill>)}
                   <Pencil className="w-3 h-3" style={{ color: flamingo ? `hsl(${FLAMINGO.paper} / 0.5)` : 'hsl(var(--muted-foreground) / 0.55)' }} />

@@ -56,7 +56,7 @@ export function FlamingoCharacterCard({ character, showPrivate }: Props) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
             <h3
-              className="text-[15px] font-extrabold tracking-tight truncate"
+              className="text-[15px] font-extrabold tracking-tight leading-tight line-clamp-2 break-words"
               style={{
                 backgroundImage: `linear-gradient(90deg, hsl(${FLAMINGO.paper}), hsl(${FLAMINGO.pink}))`,
                 WebkitBackgroundClip: 'text',

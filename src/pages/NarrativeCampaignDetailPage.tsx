@@ -507,7 +507,7 @@ export default function NarrativeCampaignDetailPage() {
                       />
                       <div className="pl-2 space-y-1.5">
                         <div className="flex items-center justify-between gap-2">
-                          <p className="text-[12.5px] font-extrabold truncate">{f.name}</p>
+                          <p className="text-[12.5px] font-extrabold leading-tight line-clamp-2 break-words">{f.name}</p>
                           {f.attitude && (
                             <span
                               className="text-[9px] font-extrabold uppercase tracking-wider flex-shrink-0"
@@ -726,7 +726,7 @@ export default function NarrativeCampaignDetailPage() {
                         }}
                       />
                       <h3
-                        className="text-[13px] font-extrabold tracking-tight truncate flex-1 min-w-0"
+                        className="text-[13px] font-extrabold tracking-tight leading-tight line-clamp-2 break-words flex-1 min-w-0"
                         style={flamingo ? {
                           backgroundImage: `linear-gradient(90deg, hsl(${FLAMINGO.paper}), hsl(${FLAMINGO.pink}))`,
                           WebkitBackgroundClip: 'text',
@@ -1141,7 +1141,7 @@ function FlamingoEntityCard({
       />
       <div className="pl-2 flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-[12.5px] font-extrabold truncate">{title}</p>
+          <p className="text-[12.5px] font-extrabold leading-tight line-clamp-2 break-words">{title}</p>
           {eyebrow && (
             <p
               className="text-[10px] font-bold uppercase tracking-wider mt-0.5"

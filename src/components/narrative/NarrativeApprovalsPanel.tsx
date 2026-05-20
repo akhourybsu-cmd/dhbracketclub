@@ -62,7 +62,7 @@ export function NarrativeApprovalsPanel({ installed, isAdmin }: Props) {
                 <div className="flex items-start gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[13px] font-extrabold truncate">{c.title}</span>
+                      <span className="text-[13px] font-extrabold leading-tight line-clamp-2 break-words flex-1 min-w-0">{c.title}</span>
                       <CampaignStatusPill status={c.status} />
                     </div>
                     <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/65 mt-0.5">

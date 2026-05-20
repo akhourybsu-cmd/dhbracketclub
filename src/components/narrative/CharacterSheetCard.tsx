@@ -26,7 +26,7 @@ export function CharacterSheetCard({ character, showPrivate }: Props) {
           {character.name.charAt(0).toUpperCase()}
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="text-[15px] font-extrabold tracking-tight truncate">{character.name}</h3>
+          <h3 className="text-[15px] font-extrabold tracking-tight leading-tight line-clamp-2 break-words">{character.name}</h3>
           {(character.pronouns || character.archetype) && (
             <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground/65 mt-0.5 truncate">
               {[character.pronouns, character.archetype].filter(Boolean).join(' · ')}

@@ -58,7 +58,7 @@ export function NarrativeHomeWidget({ enabled }: Props) {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <p className="text-[13px] font-extrabold tracking-tight truncate">{c.title}</p>
+                  <p className="text-[13px] font-extrabold tracking-tight leading-tight line-clamp-2 break-words">{c.title}</p>
                   <CampaignStatusPill status={c.status} withPulse />
                 </div>
                 {c.pitch && <p className="text-[11px] text-muted-foreground/75 leading-snug mt-0.5 line-clamp-1">{c.pitch}</p>}
