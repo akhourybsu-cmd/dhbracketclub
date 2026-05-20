@@ -45,7 +45,12 @@ export function aiUnavailable(reason = 'AI provider not configured for this buil
  *  to enable, leave unset to keep the AI panel in the friendly
  *  "not configured" state. */
 export function isAiConfigured(): boolean {
-  return ((import.meta.env.VITE_NARRATIVE_AI_ENABLED as string | undefined) ?? '').length > 0;
+  // The narrative-ai edge function is deployed and LOVABLE_API_KEY is
+  // provisioned at the project level, so AI is on by default. Set
+  // VITE_NARRATIVE_AI_ENABLED=0 to force-disable on the client.
+  const flag = (import.meta.env.VITE_NARRATIVE_AI_ENABLED as string | undefined);
+  if (flag === '0' || flag === 'false') return false;
+  return true;
 }
 
 /* ─── Shared types ───────────────────────────────────────────── */
