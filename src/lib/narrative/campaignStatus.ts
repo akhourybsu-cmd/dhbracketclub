@@ -56,6 +56,14 @@ export function computeCampaignStatus({ campaign, recentMessages = [] }: Compute
   // Live takes priority.
   if (campaign.live_session_id && campaign.live_started_at) return 'live';
 
+  // GM-explicit waiting pin (persisted) outranks the message-timestamp
+  // heuristic. When the GM has explicitly marked "waiting on players"
+  // via the WaitingOnSheet, the persisted state is the source of truth
+  // across refreshes / devices / users.
+  const wait = campaign.waiting_on_state;
+  if (wait && wait.mode === 'all') return 'waiting_on_players';
+  if (wait && wait.mode === 'specific') return 'waiting_on_players';
+
   // Walk recent messages newest-first to find the latest player + GM activity.
   const sorted = recentMessages.slice().sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),

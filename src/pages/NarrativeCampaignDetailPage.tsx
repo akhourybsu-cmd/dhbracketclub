@@ -37,6 +37,8 @@ import {
 } from '@/components/narrative/flamingo';
 import { NarrativePageHeader } from '@/components/narrative/NarrativePageHeader';
 import { NarrativeDetailSheet, type DetailSheetSection } from '@/components/narrative/NarrativeDetailSheet';
+import { WaitingOnSheet } from '@/components/narrative/WaitingOnSheet';
+import { Clock as ClockIcon } from 'lucide-react';
 import { CHRONICLE_STATS, getStatMeta } from '@/lib/narrative/chronicleRuleset';
 import type { NPC, Clue, Faction, Character, Location as NarrativeLocation } from '@/lib/narrative/types';
 
@@ -58,6 +60,7 @@ export default function NarrativeCampaignDetailPage() {
   const [creatingChar, setCreatingChar] = useState(false);
   const [gmOpen, setGmOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
+  const [waitingOpen, setWaitingOpen] = useState(false);
   // Open-detail target for World tab cards — tapping any NPC / clue /
   // faction / location card opens a bottom sheet with the full info,
   // so the row itself can stay tight on mobile.
@@ -300,6 +303,31 @@ export default function NarrativeCampaignDetailPage() {
             myCharacterId={data.myCharacter?.id ?? null}
             myCharacterName={data.myCharacter?.name ?? null}
           />
+          {/* GM-only: pin who the GM is waiting on. Persists across
+              refresh and feeds the campaign status pill. The button
+              shows the current pin state at a glance. */}
+          {data.isGm && (() => {
+            const w = campaign.waiting_on_state ?? {};
+            const isPinned = w.mode === 'all' || w.mode === 'specific';
+            const label = w.mode === 'all'
+              ? 'Waiting · all'
+              : w.mode === 'specific'
+                ? `Waiting · ${(w.player_ids ?? []).length}`
+                : 'Waiting on…';
+            return (
+              <button
+                type="button"
+                onClick={() => setWaitingOpen(true)}
+                aria-label="Set waiting-on pin"
+                className="inline-flex items-center gap-1 h-9 px-3 rounded-lg text-[11px] font-extrabold uppercase tracking-wider active:scale-95 transition"
+                style={isPinned
+                  ? { background: 'hsl(var(--gold) / 0.2)', color: 'hsl(var(--gold))', border: '1px solid hsl(var(--gold) / 0.55)' }
+                  : { background: 'hsl(var(--muted) / 0.3)', color: 'hsl(var(--muted-foreground) / 0.85)', border: '1px solid hsl(var(--border) / 0.5)' }}
+              >
+                <ClockIcon className="w-3 h-3" /> {label}
+              </button>
+            );
+          })()}
         </div>
       )}
 
@@ -827,6 +855,17 @@ export default function NarrativeCampaignDetailPage() {
           open={!!detailTarget}
           onClose={() => setDetailTarget(null)}
           {...buildDetailSheetProps(detailTarget, flamingo, data.isGm)}
+        />
+      )}
+      {/* Waiting-on pin sheet — GM-only. */}
+      {data.isGm && (
+        <WaitingOnSheet
+          open={waitingOpen}
+          onClose={() => setWaitingOpen(false)}
+          campaign={campaign}
+          members={data.members}
+          flamingo={flamingo}
+          onSet={data.setWaitingOn}
         />
       )}
       </PageWrap>

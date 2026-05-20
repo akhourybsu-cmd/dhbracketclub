@@ -68,6 +68,10 @@ interface UseNarrativeCampaignResult {
   endScene: (sceneId: string) => Promise<boolean>;
   advanceClock: (clockId: string, delta: number, note?: string) => Promise<boolean>;
   createClock: (input: { name: string; description?: string; max_value: number; clock_type: Clock['clock_type']; visibility: 'public' | 'gm_only' }) => Promise<Clock | null>;
+  /** Persists the GM's "waiting on" pin. Pass mode=null (or no args)
+   *  to clear. mode='specific' requires player_ids. The required flag
+   *  tells the players whether a response is mandatory or optional. */
+  setWaitingOn: (next: { mode: 'all' | 'specific' | null; player_ids?: string[]; required?: boolean }) => Promise<boolean>;
   createNpc: (input: Partial<NPC> & { name: string }) => Promise<NPC | null>;
   createClue: (input: Partial<Clue> & { name: string }) => Promise<Clue | null>;
   createFaction: (input: Partial<Faction> & { name: string }) => Promise<Faction | null>;
@@ -513,6 +517,29 @@ export function useNarrativeCampaign(campaignId: string | undefined): UseNarrati
     return data as T;
   }, [campaignId, refresh]);
 
+  const setWaitingOn = useCallback(async (next: { mode: 'all' | 'specific' | null; player_ids?: string[]; required?: boolean }): Promise<boolean> => {
+    if (!campaignId) return false;
+    // Build the jsonb payload. When clearing, write an empty object so
+    // computeCampaignStatus falls through to the heuristic. When
+    // setting, stamp `since` so the UI can show "waiting since 4h ago".
+    const payload = next.mode === null
+      ? {}
+      : {
+          mode: next.mode,
+          player_ids: next.mode === 'specific' ? (next.player_ids ?? []) : [],
+          required: next.required ?? true,
+          since: new Date().toISOString(),
+        };
+    const { error: err } = await (supabase as any)
+      .from('narrative_campaigns')
+      .update({ waiting_on_state: payload })
+      .eq('id', campaignId);
+    if (err) { setError(err.message); return false; }
+    // Realtime UPDATE subscription on narrative_campaigns will catch
+    // this and refresh the campaign row for every viewer.
+    return true;
+  }, [campaignId]);
+
   const createNpc      = useCallback((i: Partial<NPC> & { name: string })      => createInTable<NPC>('narrative_npcs', i),                              [createInTable]);
   const createClue     = useCallback((i: Partial<Clue> & { name: string })     => createInTable<Clue>('narrative_clues', i),                            [createInTable]);
   const createFaction  = useCallback((i: Partial<Faction> & { name: string })  => createInTable<Faction>('narrative_factions', i),                      [createInTable]);
@@ -530,5 +557,6 @@ export function useNarrativeCampaign(campaignId: string | undefined): UseNarrati
     createCharacter, updateCharacter,
     createScene, endScene, advanceClock, createClock,
     createNpc, createClue, createFaction, createItem, createLocation,
+    setWaitingOn,
   };
 }
