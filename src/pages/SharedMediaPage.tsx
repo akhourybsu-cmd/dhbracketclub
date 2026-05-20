@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useClub } from '@/contexts/ClubContext';
 import { cn } from '@/lib/utils';
-import { Link2, Image as ImageIcon, Play, Music, Globe, ExternalLink, Loader2, Filter, Trash2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Link2, Image as ImageIcon, Play, Music, Globe, ExternalLink, Loader2, Filter, Trash2, AlertCircle, RefreshCw, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { UserAvatar } from '@/components/chat/UserAvatar';
 import { ChatAttachmentImage } from '@/components/chat/ChatAttachmentImage';
@@ -45,32 +45,44 @@ const TYPE_TABS: { value: MediaType; label: string; icon: React.ElementType }[] 
   { value: 'spotify', label: 'Spotify', icon: Music },
 ];
 
-const PAGE_SIZE = 100;
+const PAGE_SIZE = 30;
 
 export default function SharedMediaPage() {
   const { user } = useAuth();
   const { club, isClubAdmin } = useClub();
   const [items, setItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeType, setActiveType] = useState<MediaType>('all');
   const [channels, setChannels] = useState<{ id: string; name: string }[]>([]);
   const [filterChannel, setFilterChannel] = useState<string>('all');
+  // Cursor-based pagination: oldestCreatedAt is the `created_at` of
+  // the oldest item we currently hold. Next page fetches `lt(created_at,
+  // oldestCreatedAt)`. hasMore flips false when the server returns
+  // fewer than PAGE_SIZE rows.
+  const [oldestCreatedAt, setOldestCreatedAt] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
 
   // Stable ref so the realtime subscription effect doesn't have to depend
   // on fetchMedia (which itself depends on filters). Avoids tearing down
   // + recreating the channel on every filter change.
   const fetchRef = useRef<() => Promise<void>>();
 
-  const fetchMedia = useCallback(async () => {
+  /** Internal page loader. mode='initial' resets everything;
+   *  mode='more' appends and uses the existing cursor. */
+  const loadPage = useCallback(async (mode: 'initial' | 'more') => {
     if (!user) return;
-    setLoading(true);
-    setError(null);
+    if (mode === 'initial') {
+      setLoading(true);
+      setError(null);
+    } else {
+      setLoadingMore(true);
+    }
 
     try {
       // Step 1: when filtering by channel, resolve message_ids for that
-      // channel server-side first. Saves us pulling 100 previews from
-      // all channels and discarding 97 of them client-side.
+      // channel server-side first.
       let scopedMessageIds: string[] | null = null;
       if (filterChannel !== 'all') {
         const { data: msgs, error: mErr } = await supabase
@@ -78,12 +90,14 @@ export default function SharedMediaPage() {
           .select('id')
           .eq('channel_id', filterChannel)
           .order('created_at', { ascending: false })
-          .limit(500); // generous cap — clubs rarely link more than this in one channel
+          .limit(500);
         if (mErr) throw mErr;
         scopedMessageIds = (msgs ?? []).map((m: any) => m.id);
         if (scopedMessageIds.length === 0) {
-          setItems([]);
+          if (mode === 'initial') setItems([]);
+          setHasMore(false);
           setLoading(false);
+          setLoadingMore(false);
           return;
         }
       }
@@ -101,16 +115,27 @@ export default function SharedMediaPage() {
       if (scopedMessageIds) {
         query = query.in('message_id', scopedMessageIds);
       }
+      // Cursor: only on "more" loads, never on initial (which is the
+      // newest page).
+      if (mode === 'more' && oldestCreatedAt) {
+        query = query.lt('created_at', oldestCreatedAt);
+      }
 
       const { data: previews, error: pErr } = await query;
       if (pErr) throw pErr;
-      if (!previews || previews.length === 0) {
-        setItems([]);
+      const rows = previews ?? [];
+      // hasMore = server returned a full page; if it returned fewer
+      // than PAGE_SIZE we know there's nothing more after this batch.
+      const morePossible = rows.length === PAGE_SIZE;
+      if (rows.length === 0) {
+        if (mode === 'initial') setItems([]);
+        setHasMore(false);
         setLoading(false);
+        setLoadingMore(false);
         return;
       }
 
-      const messageIds = [...new Set(previews.map(p => p.message_id))];
+      const messageIds = [...new Set(rows.map((p: any) => p.message_id))];
       const { data: messagesData, error: msgErr } = await supabase
         .from('messages')
         .select('id, channel_id, user_id, profiles:user_id(display_name, avatar_url)')
@@ -126,7 +151,7 @@ export default function SharedMediaPage() {
         : { data: [] };
       const chMap = new Map((chData || []).map(c => [c.id, c.name]));
 
-      let result: MediaItem[] = previews.map((p: any) => {
+      const newBatch: MediaItem[] = rows.map((p: any) => {
         const msg = msgMap.get(p.message_id);
         return {
           ...p,
@@ -138,25 +163,44 @@ export default function SharedMediaPage() {
         };
       });
 
-      // Client-side dedup by (message_id, url) as safety net against the
-      // unique constraint occasionally racing on the insert side.
-      const seen = new Set<string>();
-      result = result.filter(item => {
-        const key = `${item.message_id}:${item.url}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
+      // Merge + dedup by (message_id, url). Realtime INSERTs can race
+      // with a "load more" so the safety-net dedup is important here.
+      setItems(prev => {
+        const merged = mode === 'initial' ? newBatch : [...prev, ...newBatch];
+        const seen = new Set<string>();
+        return merged.filter(item => {
+          const key = `${item.message_id}:${item.url}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
       });
-
-      setItems(result);
+      // Advance cursor to the oldest row in this batch.
+      const oldest = rows[rows.length - 1]?.created_at as string | undefined;
+      if (oldest) setOldestCreatedAt(oldest);
+      setHasMore(morePossible);
     } catch (err: any) {
       console.error('SharedMedia fetch error:', err);
-      setError(err?.message ?? 'Failed to load shared media.');
-      setItems([]);
+      if (mode === 'initial') {
+        setError(err?.message ?? 'Failed to load shared media.');
+        setItems([]);
+      } else {
+        toast.error(`Couldn't load more: ${err?.message ?? 'unknown error'}`);
+      }
     }
-
     setLoading(false);
+    setLoadingMore(false);
+  }, [user, activeType, filterChannel, oldestCreatedAt]);
+
+  // Initial-load wrapper used by the realtime + retry paths.
+  const fetchMedia = useCallback(async () => {
+    setOldestCreatedAt(null);
+    setHasMore(true);
+    await loadPage('initial');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, activeType, filterChannel]);
+
+  const loadMore = useCallback(() => loadPage('more'), [loadPage]);
 
   useEffect(() => { fetchRef.current = fetchMedia; }, [fetchMedia]);
   useEffect(() => { fetchMedia(); }, [fetchMedia]);
@@ -327,6 +371,25 @@ export default function SharedMediaPage() {
               canDelete={!!user && (item.user_id === user.id || isClubAdmin)}
             />
           ))}
+          {/* Load more — only shows when the server might have more
+              rows than we've fetched. Uses cursor pagination via
+              created_at so duplicates are impossible. */}
+          {hasMore && (
+            <div className="pt-2 pb-4 flex justify-center">
+              <button
+                type="button"
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl text-[11.5px] font-extrabold bg-muted/30 border border-border/40 hover:bg-muted/50 active:scale-95 transition disabled:opacity-55"
+              >
+                {loadingMore ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                {loadingMore ? 'Loading…' : 'Load more'}
+              </button>
+            </div>
+          )}
+          {!hasMore && items.length >= PAGE_SIZE && (
+            <p className="text-center text-[10.5px] text-muted-foreground/40 py-3">You've reached the end.</p>
+          )}
         </div>
       )}
     </div>
