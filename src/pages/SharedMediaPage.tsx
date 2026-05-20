@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useClub } from '@/contexts/ClubContext';
 import { cn } from '@/lib/utils';
-import { Link2, Image as ImageIcon, Play, Music, Globe, ExternalLink, Loader2, Filter, Trash2 } from 'lucide-react';
+import { Link2, Image as ImageIcon, Play, Music, Globe, ExternalLink, Loader2, Filter, Trash2, AlertCircle, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { UserAvatar } from '@/components/chat/UserAvatar';
 import { ChatAttachmentImage } from '@/components/chat/ChatAttachmentImage';
@@ -44,30 +45,65 @@ const TYPE_TABS: { value: MediaType; label: string; icon: React.ElementType }[] 
   { value: 'spotify', label: 'Spotify', icon: Music },
 ];
 
+const PAGE_SIZE = 100;
+
 export default function SharedMediaPage() {
   const { user } = useAuth();
+  const { club, isClubAdmin } = useClub();
   const [items, setItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeType, setActiveType] = useState<MediaType>('all');
   const [channels, setChannels] = useState<{ id: string; name: string }[]>([]);
   const [filterChannel, setFilterChannel] = useState<string>('all');
 
+  // Stable ref so the realtime subscription effect doesn't have to depend
+  // on fetchMedia (which itself depends on filters). Avoids tearing down
+  // + recreating the channel on every filter change.
+  const fetchRef = useRef<() => Promise<void>>();
+
   const fetchMedia = useCallback(async () => {
     if (!user) return;
     setLoading(true);
+    setError(null);
 
     try {
+      // Step 1: when filtering by channel, resolve message_ids for that
+      // channel server-side first. Saves us pulling 100 previews from
+      // all channels and discarding 97 of them client-side.
+      let scopedMessageIds: string[] | null = null;
+      if (filterChannel !== 'all') {
+        const { data: msgs, error: mErr } = await supabase
+          .from('messages')
+          .select('id')
+          .eq('channel_id', filterChannel)
+          .order('created_at', { ascending: false })
+          .limit(500); // generous cap — clubs rarely link more than this in one channel
+        if (mErr) throw mErr;
+        scopedMessageIds = (msgs ?? []).map((m: any) => m.id);
+        if (scopedMessageIds.length === 0) {
+          setItems([]);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Step 2: pull previews. RLS scopes to current club automatically.
       let query = supabase
         .from('message_link_previews')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(PAGE_SIZE);
 
       if (activeType !== 'all') {
         query = query.eq('content_type', activeType);
       }
+      if (scopedMessageIds) {
+        query = query.in('message_id', scopedMessageIds);
+      }
 
-      const { data: previews } = await query;
+      const { data: previews, error: pErr } = await query;
+      if (pErr) throw pErr;
       if (!previews || previews.length === 0) {
         setItems([]);
         setLoading(false);
@@ -75,10 +111,11 @@ export default function SharedMediaPage() {
       }
 
       const messageIds = [...new Set(previews.map(p => p.message_id))];
-      const { data: messagesData } = await supabase
+      const { data: messagesData, error: msgErr } = await supabase
         .from('messages')
         .select('id, channel_id, user_id, profiles:user_id(display_name, avatar_url)')
         .in('id', messageIds);
+      if (msgErr) throw msgErr;
 
       const msgMap = new Map<string, any>();
       (messagesData || []).forEach((m: any) => msgMap.set(m.id, m));
@@ -101,12 +138,8 @@ export default function SharedMediaPage() {
         };
       });
 
-      // Apply channel filter client-side
-      if (filterChannel !== 'all') {
-        result = result.filter(item => item.channel_id === filterChannel);
-      }
-
-      // Client-side dedup by (message_id, url) as safety net
+      // Client-side dedup by (message_id, url) as safety net against the
+      // unique constraint occasionally racing on the insert side.
       const seen = new Set<string>();
       result = result.filter(item => {
         const key = `${item.message_id}:${item.url}`;
@@ -116,29 +149,65 @@ export default function SharedMediaPage() {
       });
 
       setItems(result);
-    } catch (err) {
+    } catch (err: any) {
       console.error('SharedMedia fetch error:', err);
+      setError(err?.message ?? 'Failed to load shared media.');
       setItems([]);
     }
 
     setLoading(false);
   }, [user, activeType, filterChannel]);
 
+  useEffect(() => { fetchRef.current = fetchMedia; }, [fetchMedia]);
   useEffect(() => { fetchMedia(); }, [fetchMedia]);
 
-  // Fetch channels once
+  // Fetch channels once.
   useEffect(() => {
     supabase.from('channels').select('id, name').order('position').then(({ data }) => {
       if (data) setChannels(data);
     });
   }, []);
 
+  // Realtime: new shared link previews appear without a manual refresh.
+  // Scoped by club_id so other clubs' inserts are filtered out at the
+  // realtime broker level (in addition to RLS). The effect re-subscribes
+  // only when the club changes — filter changes use the existing fetch.
+  useEffect(() => {
+    if (!club?.id) return;
+    const channel = (supabase as any)
+      .channel(`shared-media:${club.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'message_link_previews', filter: `club_id=eq.${club.id}` },
+        () => { fetchRef.current?.(); },
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'message_link_previews', filter: `club_id=eq.${club.id}` },
+        (payload: any) => {
+          // Optimistic — remove deleted id from local view without a refetch.
+          const deletedId = payload.old?.id;
+          if (deletedId) setItems(prev => prev.filter(i => i.id !== deletedId));
+        },
+      )
+      .subscribe();
+    return () => { (supabase as any).removeChannel(channel); };
+  }, [club?.id]);
+
   const handleDelete = async (itemId: string) => {
+    // Optimistic: hide immediately, rollback on RLS denial so the user
+    // sees a clear error if they're not the sender / admin.
+    const snapshot = items;
+    setItems(prev => prev.filter(i => i.id !== itemId));
     const { error } = await supabase.from('message_link_previews').delete().eq('id', itemId);
     if (error) {
-      toast.error('Failed to remove');
+      setItems(snapshot);
+      // Postgrest surfaces a friendly message when the delete row count
+      // is zero — most often that means RLS rejected the row.
+      toast.error(error.message?.includes('Results contain 0 rows')
+        ? "You can only remove links you shared (or ask an admin)."
+        : `Couldn't remove: ${error.message}`);
     } else {
-      setItems(prev => prev.filter(i => i.id !== itemId));
       toast.success('Removed from shared');
     }
   };
@@ -182,11 +251,12 @@ export default function SharedMediaPage() {
         })}
       </div>
 
-      {/* Channel filter */}
+      {/* Channel filter — flex-1 on phones so it doesn't overflow at 360px;
+          capped on sm+. */}
       <div className="flex items-center gap-2">
-        <Filter className="w-3.5 h-3.5 text-muted-foreground/40" />
+        <Filter className="w-3.5 h-3.5 text-muted-foreground/40 flex-shrink-0" />
         <Select value={filterChannel} onValueChange={setFilterChannel}>
-          <SelectTrigger className="h-8 text-xs w-[180px] bg-muted/15 border-border/20">
+          <SelectTrigger className="h-8 text-xs flex-1 sm:max-w-[220px] bg-muted/15 border-border/20">
             <SelectValue placeholder="All channels" />
           </SelectTrigger>
           <SelectContent>
@@ -203,18 +273,59 @@ export default function SharedMediaPage() {
         <div className="flex items-center justify-center py-16">
           <Loader2 className="w-5 h-5 text-muted-foreground/40 animate-spin" />
         </div>
-      ) : items.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, hsl(var(--muted) / 0.4), hsl(var(--muted) / 0.15))' }}>
-            <Link2 className="w-6 h-6 text-muted-foreground/40" />
+      ) : error ? (
+        <div className="text-center py-12">
+          <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center" style={{ background: 'hsl(var(--destructive) / 0.12)' }}>
+            <AlertCircle className="w-6 h-6 text-destructive/70" />
           </div>
-          <p className="text-sm text-muted-foreground/60 font-medium">No shared media yet</p>
-          <p className="text-[11px] text-muted-foreground/40 mt-1">Links and media shared in chat will appear here</p>
+          <p className="text-sm font-medium">Couldn't load shared media</p>
+          <p className="text-[11px] text-muted-foreground/55 mt-1 max-w-xs mx-auto break-words">{error}</p>
+          <button
+            onClick={() => fetchMedia()}
+            className="mt-4 inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-[11.5px] font-extrabold bg-muted/30 border border-border/40 active:scale-95"
+          >
+            <RefreshCw className="w-3 h-3" /> Try again
+          </button>
         </div>
+      ) : items.length === 0 ? (
+        // Distinguish filtered-empty from truly-empty so the user knows
+        // whether to share a link or just relax the filter.
+        (() => {
+          const filtered = activeType !== 'all' || filterChannel !== 'all';
+          return (
+            <div className="text-center py-16">
+              <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, hsl(var(--muted) / 0.4), hsl(var(--muted) / 0.15))' }}>
+                <Link2 className="w-6 h-6 text-muted-foreground/40" />
+              </div>
+              <p className="text-sm text-muted-foreground/60 font-medium">
+                {filtered ? 'No matches for these filters' : 'No shared media yet'}
+              </p>
+              <p className="text-[11px] text-muted-foreground/40 mt-1">
+                {filtered
+                  ? 'Try a different type or channel filter.'
+                  : 'Links and media shared in chat will appear here.'}
+              </p>
+              {filtered && (
+                <button
+                  onClick={() => { setActiveType('all'); setFilterChannel('all'); }}
+                  className="mt-4 inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[11px] font-bold bg-muted/30 border border-border/40 active:scale-95"
+                >
+                  Reset filters
+                </button>
+              )}
+            </div>
+          );
+        })()
       ) : (
         <div className="space-y-2">
           {items.map(item => (
-            <MediaItemCard key={item.id} item={item} getTypeIcon={getTypeIcon} onDelete={handleDelete} />
+            <MediaItemCard
+              key={item.id}
+              item={item}
+              getTypeIcon={getTypeIcon}
+              onDelete={handleDelete}
+              canDelete={!!user && (item.user_id === user.id || isClubAdmin)}
+            />
           ))}
         </div>
       )}
@@ -222,7 +333,7 @@ export default function SharedMediaPage() {
   );
 }
 
-function MediaItemCard({ item, getTypeIcon, onDelete }: { item: MediaItem; getTypeIcon: (type: string) => React.ReactNode; onDelete: (id: string) => void }) {
+function MediaItemCard({ item, getTypeIcon, onDelete, canDelete }: { item: MediaItem; getTypeIcon: (type: string) => React.ReactNode; onDelete: (id: string) => void; canDelete: boolean }) {
   const isPrivateImage = item.content_type === 'image' && item.url.startsWith('lovable-private://');
   let hostname = '';
   try { hostname = new URL(item.url).hostname.replace(/^www\./, ''); } catch {}
@@ -300,14 +411,18 @@ function MediaItemCard({ item, getTypeIcon, onDelete }: { item: MediaItem; getTy
         </div>
       </Wrapper>
 
-      {/* Delete button */}
-      <button
-        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(item.id); }}
-        className="absolute top-2.5 right-2.5 p-1.5 rounded-lg bg-destructive/10 text-destructive/60 hover:bg-destructive/20 hover:text-destructive opacity-0 group-hover:opacity-100 transition-all z-20"
-        title="Remove from shared"
-      >
-        <Trash2 className="w-3 h-3" />
-      </button>
+      {/* Delete button — only rendered when the viewer can actually
+          delete (sender or club admin). Hides clutter for everyone else. */}
+      {canDelete && (
+        <button
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(item.id); }}
+          className="absolute top-2.5 right-2.5 p-1.5 rounded-lg bg-destructive/10 text-destructive/60 hover:bg-destructive/20 hover:text-destructive opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-all z-20"
+          title="Remove from shared"
+          aria-label="Remove from shared"
+        >
+          <Trash2 className="w-3 h-3" />
+        </button>
+      )}
     </div>
   );
 }
