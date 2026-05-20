@@ -37,13 +37,14 @@ export function aiUnavailable(reason = 'AI provider not configured for this buil
   return { available: false, reason };
 }
 
-/** Top-level switch. The narrative-ai edge function is always deployed —
- *  but the LOVABLE_API_KEY env var on the function side determines whether
- *  it can actually call the model. The client-side switch lets us turn AI
- *  on/off without redeploying the function: set
- *      VITE_NARRATIVE_AI_ENABLED=1
- *  to enable, leave unset to keep the AI panel in the friendly
- *  "not configured" state. */
+/** Top-level switch. On Lovable hosting LOVABLE_API_KEY is provisioned
+ *  at the project level so the narrative-ai edge function can always
+ *  call the model — AI is therefore ON by default in production. The
+ *  client-side flag is an explicit OPT-OUT: set
+ *      VITE_NARRATIVE_AI_ENABLED=0  (or 'false')
+ *  to force the AI panel into the friendly "not configured" state,
+ *  for example during a local dev session without the env vars wired up
+ *  or while staging a build that should ship with AI disabled. */
 export function isAiConfigured(): boolean {
   // The narrative-ai edge function is deployed and LOVABLE_API_KEY is
   // provisioned at the project level, so AI is on by default. Set
