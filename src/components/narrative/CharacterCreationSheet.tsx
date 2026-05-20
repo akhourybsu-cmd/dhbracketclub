@@ -43,7 +43,7 @@ interface Props {
     notes_public: string | null;
     notes_private: string | null;
     avatar_url: string | null;
-  }) => Promise<void>;
+  }) => Promise<unknown | null | void>;
 }
 
 type Step = 0 | 1 | 2 | 3;
@@ -107,7 +107,11 @@ export function CharacterCreationSheet({ open, onClose, templateKey, onCreate }:
       return;
     }
     setSubmitting(true);
-    await onCreate({
+    // Thread the result through so silent persistence failures (RLS
+    // rejection because the player isn't a campaign member yet,
+    // network errors, etc.) surface as a real error toast instead of
+    // a misleading "Character created" success.
+    const result = await onCreate({
       name: name.trim(),
       pronouns: pronouns.trim() || null,
       archetype: archetype.trim() || null,
@@ -128,6 +132,12 @@ export function CharacterCreationSheet({ open, onClose, templateKey, onCreate }:
       avatar_url: null,
     });
     setSubmitting(false);
+    if (!result) {
+      toast.error(
+        "Couldn't save your character. If you were invited recently, make sure you've accepted the invite first.",
+      );
+      return;
+    }
     toast.success('Character created.');
     onClose();
   };

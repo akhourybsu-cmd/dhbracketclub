@@ -57,23 +57,50 @@ export function MemberManagementSheet({ open, onClose, campaign, members, onChan
     let cancelled = false;
     (async () => {
       setLoading(true);
-      // Fetch every club member's display_name from profiles via a join.
-      const { data, error } = await (supabase as any)
+      // Two-step fetch: don't rely on the PostgREST nested-select
+      // `profiles:user_id(...)` pattern, which silently errored
+      // ("Failed to load club members") whenever the
+      // club_members.user_id → profiles.id FK wasn't configured at
+      // the DB level. This path works regardless and surfaces real
+      // errors clearly.
+      const { data: memberRows, error: memberErr } = await (supabase as any)
         .from('club_members')
-        .select('user_id, profiles:user_id(display_name, avatar_url)')
+        .select('user_id')
         .eq('club_id', club.id);
       if (cancelled) return;
-      if (error) {
-        toast.error('Failed to load club members.');
+      if (memberErr) {
+        toast.error(`Couldn't load club members: ${memberErr.message}`);
         setClubMembers([]);
-      } else {
-        const rows: ClubMemberLite[] = (data ?? []).map((r: any) => ({
-          user_id: r.user_id,
-          display_name: r.profiles?.display_name ?? null,
-          avatar_url: r.profiles?.avatar_url ?? null,
-        }));
-        setClubMembers(rows);
+        setLoading(false);
+        return;
       }
+      const userIds = [...new Set((memberRows ?? []).map((r: any) => r.user_id).filter(Boolean))];
+      if (userIds.length === 0) {
+        setClubMembers([]);
+        setLoading(false);
+        return;
+      }
+      const { data: profileRows, error: profileErr } = await (supabase as any)
+        .from('profiles')
+        .select('id, display_name, avatar_url')
+        .in('id', userIds);
+      if (cancelled) return;
+      if (profileErr) {
+        // Profiles fetch is best-effort — even if it fails, we can still
+        // surface user_ids with "Unknown member" labels so the invite
+        // flow remains usable.
+        console.warn('[MemberManagementSheet] profiles fetch failed:', profileErr);
+      }
+      const profileMap = new Map<string, { display_name: string | null; avatar_url: string | null }>();
+      (profileRows ?? []).forEach((p: any) => {
+        profileMap.set(p.id, { display_name: p.display_name ?? null, avatar_url: p.avatar_url ?? null });
+      });
+      const rows: ClubMemberLite[] = userIds.map(uid => ({
+        user_id: uid,
+        display_name: profileMap.get(uid)?.display_name ?? null,
+        avatar_url: profileMap.get(uid)?.avatar_url ?? null,
+      }));
+      setClubMembers(rows);
       setLoading(false);
     })();
     return () => { cancelled = true; };

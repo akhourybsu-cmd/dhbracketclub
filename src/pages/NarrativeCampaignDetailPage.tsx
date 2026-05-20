@@ -38,6 +38,7 @@ import {
 import { NarrativePageHeader } from '@/components/narrative/NarrativePageHeader';
 import { NarrativeDetailSheet, type DetailSheetSection } from '@/components/narrative/NarrativeDetailSheet';
 import { WaitingOnSheet } from '@/components/narrative/WaitingOnSheet';
+import { GmOnboardingSheet, gmOnboardingNeeded } from '@/components/narrative/GmOnboardingSheet';
 import { Clock as ClockIcon } from 'lucide-react';
 import { CHRONICLE_STATS, getStatMeta } from '@/lib/narrative/chronicleRuleset';
 import type { NPC, Clue, Faction, Character, Location as NarrativeLocation } from '@/lib/narrative/types';
@@ -61,6 +62,23 @@ export default function NarrativeCampaignDetailPage() {
   const [gmOpen, setGmOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
   const [waitingOpen, setWaitingOpen] = useState(false);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  // Auto-open GM onboarding once per (campaign, device) — only after
+  // data has loaded and only for the actual GM / creator. New campaigns
+  // start as a blank canvas; this sheet explains the setting, offers
+  // an opt-in starter-asset pre-fill, and gives a console tour.
+  useEffect(() => {
+    if (data.loading) return;
+    if (!data.campaign || !user) return;
+    const isGmForThis =
+      data.isGm
+      || data.campaign.gm_id === user.id
+      || data.campaign.created_by === user.id;
+    if (!isGmForThis) return;
+    if (!gmOnboardingNeeded(data.campaign.id)) return;
+    setOnboardingOpen(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.loading, data.campaign?.id, data.isGm]);
   // Open-detail target for World tab cards — tapping any NPC / clue /
   // faction / location card opens a bottom sheet with the full info,
   // so the row itself can stay tight on mobile.
@@ -357,7 +375,8 @@ export default function NarrativeCampaignDetailPage() {
             flamingo={flamingo}
           />
         <div className="px-4 space-y-3">
-          {!data.myCharacter && data.myRole !== 'spectator' && (
+          {/* Active player/GM with no character yet → primary CTA. */}
+          {!data.myCharacter && (data.myRole === 'player' || data.myRole === 'game_master') && (
             <div className="rounded-2xl bg-card border border-dashed border-primary/40 p-4 text-center">
               <ScrollText className="w-6 h-6 mx-auto text-primary mb-2" />
               <p className="text-[13px] font-extrabold">Create your character before entering the story.</p>
@@ -368,6 +387,18 @@ export default function NarrativeCampaignDetailPage() {
               >
                 <UserPlus className="w-3.5 h-3.5" /> Create character
               </button>
+            </div>
+          )}
+          {/* No member row at all → explain how to join. RLS would
+              reject the insert anyway; surfacing a clear message
+              prevents the silent-failure path the user reported. */}
+          {!data.myCharacter && data.myRole === null && user?.id !== campaign.created_by && campaign.gm_id !== user?.id && (
+            <div className="rounded-2xl bg-card border border-dashed border-warning/40 p-4 text-center">
+              <ScrollText className="w-6 h-6 mx-auto text-warning mb-2" />
+              <p className="text-[13px] font-extrabold">You're viewing this campaign, but you haven't joined yet.</p>
+              <p className="text-[11.5px] text-muted-foreground/75 mt-1 leading-snug">
+                Ask the Game Master to invite you. Once you accept the invite you'll be able to create a character.
+              </p>
             </div>
           )}
           {data.myCharacter && (
@@ -811,7 +842,7 @@ export default function NarrativeCampaignDetailPage() {
         open={creatingChar}
         onClose={() => setCreatingChar(false)}
         templateKey={campaign.template_key as TemplateKey}
-        onCreate={async (input) => { await data.createCharacter(input); }}
+        onCreate={async (input) => data.createCharacter(input)}
       />
       {data.isGm && (
         <GMConsoleSheet
@@ -868,6 +899,16 @@ export default function NarrativeCampaignDetailPage() {
           onSet={data.setWaitingOn}
         />
       )}
+      {/* GM onboarding sheet — auto-opens on first GM visit. */}
+      <GmOnboardingSheet
+        open={onboardingOpen}
+        onClose={() => setOnboardingOpen(false)}
+        campaign={campaign}
+        flamingo={flamingo}
+        onSeeded={data.refresh}
+      />
+      {/* Manual re-open from the header is on the roadmap — for now,
+          the user can clear localStorage to see it again. */}
       </PageWrap>
     </div>
   );

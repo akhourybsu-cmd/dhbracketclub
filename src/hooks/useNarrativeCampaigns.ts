@@ -140,15 +140,16 @@ export function useNarrativeCampaigns(): UseNarrativeCampaignsResult {
       setError('Campaign was not created');
       return null;
     }
-    // Persist the template's starter world content as campaign-specific
-    // rows. Idempotent + non-fatal: a seed failure won't unwind the
-    // campaign creation, but the user gets a soft warning surfaced via
-    // the `error` field. The detail page's ensure-seeded loop will
-    // retry on next load.
+    // Write campaign metadata only (tone_profile + canon_locks) so the
+    // GM lands on a blank-canvas campaign they can populate manually
+    // via the GM Console. Starter NPCs / locations / factions / clues
+    // / clocks / opening scene are NOT auto-instantiated — the GM
+    // opts in via the GmOnboardingSheet's "Pre-fill starters" button
+    // on first open.
     try {
       const seed = await seedCampaignFromTemplate(row.id, input.template_key);
       if (seed.errors.length > 0) {
-        setError(`Campaign created, but ${seed.errors.length} starter row${seed.errors.length === 1 ? '' : 's'} failed to seed. Will retry on next load.`);
+        setError(`Campaign created, but the template metadata couldn't be saved (${seed.errors[0]}). The GM Console will still work.`);
       }
     } catch (seedErr) {
       // Best-effort — never block the create flow on seed failure.

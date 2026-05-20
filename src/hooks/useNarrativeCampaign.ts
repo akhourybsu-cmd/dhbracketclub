@@ -296,7 +296,12 @@ export function useNarrativeCampaign(campaignId: string | undefined): UseNarrati
     if (!canWrite) return;
     seedAttemptedRef.current = true;
     (async () => {
-      const report = await ensureCampaignWorldSeeded(campaign.id, campaign.template_key);
+      // Auto-repair runs metadata-only (tone_profile + canon_locks).
+      // We intentionally don't pass includeStarterAssets:true here —
+      // existing campaigns shouldn't be surprised by 28 new rows on
+      // next load. Starter assets are an explicit opt-in via the
+      // GM onboarding sheet.
+      const report = await ensureCampaignWorldSeeded(campaign.id, campaign.template_key, {});
       if (report.changed) {
         await refresh();
       }

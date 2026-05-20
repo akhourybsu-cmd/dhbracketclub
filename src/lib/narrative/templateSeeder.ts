@@ -58,16 +58,37 @@ const EMPTY_REPORT: SeedReport = {
   errors: [],
 };
 
+interface SeedOptions {
+  /** When true, also instantiate starter NPCs / locations / factions /
+   *  clues / clocks / opening scene as campaign rows. When false (the
+   *  default — set by createCampaign), only the campaign-level metadata
+   *  (tone_profile + canon_locks) is written. GMs explicitly opt into
+   *  the starter-asset pack via the onboarding modal so they get a
+   *  blank world to populate as they go.
+   *
+   *  Auto-repair on detail-page load passes this as false too — we
+   *  don't want to surprise an existing campaign by inserting 28 new
+   *  rows on next refresh. */
+  includeStarterAssets?: boolean;
+}
+
 /**
  * Seeds a campaign's world from its template. Safe to call multiple
  * times — only inserts rows that don't already exist (matched by
  * `(campaign_id, name)`). Also writes the template's tone_profile and
  * canon_locks back to the campaign row if those are currently empty.
+ *
+ * Default behavior writes ONLY the campaign metadata (tone_profile +
+ * canon_locks) so the campaign is a blank slate for the GM. Pass
+ * `includeStarterAssets: true` to also instantiate the 28 starter
+ * Flamingo entities — usually triggered from the GM onboarding modal.
  */
 export async function seedCampaignFromTemplate(
   campaignId: string,
   templateKey: TemplateKey | string | null | undefined,
+  options: SeedOptions = {},
 ): Promise<SeedReport> {
+  const { includeStarterAssets = false } = options;
   const template = getTemplate(templateKey);
   // Blank campaigns have no starter content — short-circuit so we
   // don't run pointless SELECT queries on every detail page load.
@@ -87,30 +108,39 @@ export async function seedCampaignFromTemplate(
     errors: [],
   };
 
-  // Load existing names per table in parallel so we only run six
-  // SELECTs total regardless of how many starter rows the template has.
-  const [
-    { data: existingLocs },
-    { data: existingNpcs },
-    { data: existingFactions },
-    { data: existingClues },
-    { data: existingClocks },
-    { data: existingScenes },
-  ] = await Promise.all([
-    sb.from('narrative_locations').select('name').eq('campaign_id', campaignId),
-    sb.from('narrative_npcs').select('name').eq('campaign_id', campaignId),
-    sb.from('narrative_factions').select('name').eq('campaign_id', campaignId),
-    sb.from('narrative_clues').select('name').eq('campaign_id', campaignId),
-    sb.from('narrative_clocks').select('name').eq('campaign_id', campaignId),
-    sb.from('narrative_scenes').select('title').eq('campaign_id', campaignId),
-  ]);
+  // When the caller hasn't opted into starter assets, skip the
+  // existence pre-fetches entirely — we only need them for the asset
+  // inserts below.
+  let seenLoc = new Set<string>();
+  let seenNpc = new Set<string>();
+  let seenFaction = new Set<string>();
+  let seenClue = new Set<string>();
+  let seenClock = new Set<string>();
+  let seenSceneTit = new Set<string>();
 
-  const seenLoc      = new Set((existingLocs ?? []).map((r: any) => r.name));
-  const seenNpc      = new Set((existingNpcs ?? []).map((r: any) => r.name));
-  const seenFaction  = new Set((existingFactions ?? []).map((r: any) => r.name));
-  const seenClue     = new Set((existingClues ?? []).map((r: any) => r.name));
-  const seenClock    = new Set((existingClocks ?? []).map((r: any) => r.name));
-  const seenSceneTit = new Set((existingScenes ?? []).map((r: any) => r.title));
+  if (includeStarterAssets) {
+    const [
+      { data: existingLocs },
+      { data: existingNpcs },
+      { data: existingFactions },
+      { data: existingClues },
+      { data: existingClocks },
+      { data: existingScenes },
+    ] = await Promise.all([
+      sb.from('narrative_locations').select('name').eq('campaign_id', campaignId),
+      sb.from('narrative_npcs').select('name').eq('campaign_id', campaignId),
+      sb.from('narrative_factions').select('name').eq('campaign_id', campaignId),
+      sb.from('narrative_clues').select('name').eq('campaign_id', campaignId),
+      sb.from('narrative_clocks').select('name').eq('campaign_id', campaignId),
+      sb.from('narrative_scenes').select('title').eq('campaign_id', campaignId),
+    ]);
+    seenLoc      = new Set((existingLocs ?? []).map((r: any) => r.name));
+    seenNpc      = new Set((existingNpcs ?? []).map((r: any) => r.name));
+    seenFaction  = new Set((existingFactions ?? []).map((r: any) => r.name));
+    seenClue     = new Set((existingClues ?? []).map((r: any) => r.name));
+    seenClock    = new Set((existingClocks ?? []).map((r: any) => r.name));
+    seenSceneTit = new Set((existingScenes ?? []).map((r: any) => r.title));
+  }
 
   // Helper: insert each missing row sequentially. We do NOT batch
   // because the per-row error surface is more useful than a single
@@ -130,7 +160,9 @@ export async function seedCampaignFromTemplate(
     report.changed = true;
   };
 
-  // ─── Locations
+  // ─── Locations / NPCs / Factions / Clues / Clocks / Opening scene
+  // ─── (gated on opt-in) ─────────────────────────────────────────
+  if (includeStarterAssets) {
   for (const loc of template.starterLocations ?? []) {
     if (seenLoc.has(loc.name)) continue;
     await insertOne('narrative_locations', {
@@ -233,9 +265,12 @@ export async function seedCampaignFromTemplate(
     }
   }
 
+  } // ← end of starter-asset opt-in guard
+
   // ─── Tone profile + canon_locks: write back to the campaign row
   // only when those fields are still empty so we never overwrite a
-  // GM's customization.
+  // GM's customization. Always runs regardless of the opt-in flag
+  // because tone + canon are setting metadata, not playable assets.
   const { data: campRow } = await sb
     .from('narrative_campaigns')
     .select('tone_profile, canon_locks')
@@ -268,9 +303,10 @@ export async function seedCampaignFromTemplate(
 export async function ensureCampaignWorldSeeded(
   campaignId: string,
   templateKey: TemplateKey | string | null | undefined,
+  options: SeedOptions = {},
 ): Promise<SeedReport> {
   try {
-    return await seedCampaignFromTemplate(campaignId, templateKey);
+    return await seedCampaignFromTemplate(campaignId, templateKey, options);
   } catch (e) {
     return {
       changed: false,
