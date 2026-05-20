@@ -198,7 +198,7 @@ export function useNarrativeCampaign(campaignId: string | undefined): UseNarrati
     // Generic helper: bind INSERT + UPDATE + DELETE handlers for a
     // table to a stateful array setter. Keeps the channel registration
     // declarative.
-    type Row = { id: string } & Record<string, unknown>;
+    type Row = { id: string };
     type Setter<T> = (updater: (prev: T[]) => T[]) => void;
     const wireCrud = <T extends Row>(
       ch: any,
