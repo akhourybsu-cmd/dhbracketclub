@@ -2795,6 +2795,7 @@ export type Database = {
           approval_notes: string | null
           approved_at: string | null
           approved_by: string | null
+          canon_locks: Json
           club_id: string
           content_notes: string | null
           created_at: string
@@ -2822,11 +2823,13 @@ export type Database = {
           tone_profile: string | null
           updated_at: string
           visibility: string
+          waiting_on_state: Json
         }
         Insert: {
           approval_notes?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          canon_locks?: Json
           club_id: string
           content_notes?: string | null
           created_at?: string
@@ -2854,11 +2857,13 @@ export type Database = {
           tone_profile?: string | null
           updated_at?: string
           visibility?: string
+          waiting_on_state?: Json
         }
         Update: {
           approval_notes?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          canon_locks?: Json
           club_id?: string
           content_notes?: string | null
           created_at?: string
@@ -2886,6 +2891,7 @@ export type Database = {
           tone_profile?: string | null
           updated_at?: string
           visibility?: string
+          waiting_on_state?: Json
         }
         Relationships: [
           {
@@ -7051,7 +7057,19 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      nfl_team_records: {
+        Row: {
+          games_played: number | null
+          losses: number | null
+          point_diff_avg: number | null
+          recent_form: string | null
+          season_id: string | null
+          team_id: string | null
+          ties: number | null
+          wins: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       _credit_salvage: {
@@ -7087,6 +7105,37 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "club_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      advance_narrative_clock: {
+        Args: {
+          _campaign_id: string
+          _clock_id: string
+          _delta: number
+          _note?: string
+        }
+        Returns: {
+          campaign_id: string
+          clock_type: string
+          created_at: string
+          created_by: string | null
+          current_value: number
+          description: string | null
+          history: Json
+          id: string
+          max_value: number
+          name: string
+          related_faction_id: string | null
+          related_location_id: string | null
+          related_npc_id: string | null
+          updated_at: string
+          visibility: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "narrative_clocks"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -7135,6 +7184,7 @@ export type Database = {
           approval_notes: string | null
           approved_at: string | null
           approved_by: string | null
+          canon_locks: Json
           club_id: string
           content_notes: string | null
           created_at: string
@@ -7162,6 +7212,7 @@ export type Database = {
           tone_profile: string | null
           updated_at: string
           visibility: string
+          waiting_on_state: Json
         }
         SetofOptions: {
           from: "*"
@@ -7261,6 +7312,7 @@ export type Database = {
           approval_notes: string | null
           approved_at: string | null
           approved_by: string | null
+          canon_locks: Json
           club_id: string
           content_notes: string | null
           created_at: string
@@ -7288,6 +7340,7 @@ export type Database = {
           tone_profile: string | null
           updated_at: string
           visibility: string
+          waiting_on_state: Json
         }
         SetofOptions: {
           from: "*"
