@@ -36,8 +36,15 @@ import {
   FlamingoCharacterCard, FlamingoMeter, FlamingoClueMarker, clueAccent,
 } from '@/components/narrative/flamingo';
 import { NarrativePageHeader } from '@/components/narrative/NarrativePageHeader';
+import { NarrativeDetailSheet, type DetailSheetSection } from '@/components/narrative/NarrativeDetailSheet';
+import type { NPC, Clue, Faction, Location as NarrativeLocation } from '@/lib/narrative/types';
 
 type Tab = 'story' | 'characters' | 'world' | 'log';
+type DetailTarget =
+  | { kind: 'npc'; row: NPC }
+  | { kind: 'clue'; row: Clue }
+  | { kind: 'faction'; row: Faction }
+  | { kind: 'location'; row: NarrativeLocation };
 
 export default function NarrativeCampaignDetailPage() {
   const { campaignId } = useParams<{ campaignId: string }>();
@@ -49,6 +56,10 @@ export default function NarrativeCampaignDetailPage() {
   const [creatingChar, setCreatingChar] = useState(false);
   const [gmOpen, setGmOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
+  // Open-detail target for World tab cards — tapping any NPC / clue /
+  // faction / location card opens a bottom sheet with the full info,
+  // so the row itself can stay tight on mobile.
+  const [detailTarget, setDetailTarget] = useState<DetailTarget | null>(null);
 
   const isActive = data.campaign?.status === 'active' || data.campaign?.status === 'paused';
 
@@ -365,21 +376,28 @@ export default function NarrativeCampaignDetailPage() {
               <SectionHeader label={flamingo ? 'Known players' : 'Notable NPCs'} count={publicNpcs.length} />
               <div className="space-y-2">
                 {publicNpcs.map(n => (
-                  flamingo ? (
-                    <FlamingoEntityCard
-                      key={n.id}
-                      title={n.name}
-                      eyebrow={n.role ?? undefined}
-                      body={n.description ?? undefined}
-                      accent={FLAMINGO.gold}
-                    />
-                  ) : (
-                    <div key={n.id} className="rounded-xl bg-card border border-border/40 p-3">
-                      <p className="text-[12.5px] font-extrabold">{n.name}</p>
-                      {n.role && <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/65">{n.role}</p>}
-                      {n.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{n.description}</p>}
-                    </div>
-                  )
+                  <button
+                    key={n.id}
+                    type="button"
+                    onClick={() => setDetailTarget({ kind: 'npc', row: n })}
+                    className="w-full text-left active:scale-[0.99] transition-transform"
+                    aria-label={`Open details for ${n.name}`}
+                  >
+                    {flamingo ? (
+                      <FlamingoEntityCard
+                        title={n.name}
+                        eyebrow={n.role ?? undefined}
+                        body={n.description ? truncateOneLine(n.description) : undefined}
+                        accent={FLAMINGO.gold}
+                      />
+                    ) : (
+                      <div className="rounded-xl bg-card border border-border/40 p-3">
+                        <p className="text-[12.5px] font-extrabold">{n.name}</p>
+                        {n.role && <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/65">{n.role}</p>}
+                        {n.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1 line-clamp-2">{n.description}</p>}
+                      </div>
+                    )}
+                  </button>
                 ))}
               </div>
             </section>
@@ -396,9 +414,15 @@ export default function NarrativeCampaignDetailPage() {
                     // The `narrative-flash` class fires a one-shot pulse
                     // when this clue was just mutated by an approved
                     // AI state update (see useNarrativeCampaign.recentlyChanged).
-                    <div
+                    // The whole card is a button that opens the detail
+                    // sheet — full description stays out of the inline
+                    // view so the World tab scrolls cleanly on mobile.
+                    <button
                       key={c.id}
-                      className={`rounded-xl p-3 relative overflow-hidden ${data.recentlyChanged.has(c.id) ? 'narrative-flash' : ''}`}
+                      type="button"
+                      onClick={() => setDetailTarget({ kind: 'clue', row: c })}
+                      aria-label={`Open details for ${c.name}`}
+                      className={`w-full text-left rounded-xl p-3 relative overflow-hidden active:scale-[0.99] transition-transform ${data.recentlyChanged.has(c.id) ? 'narrative-flash' : ''}`}
                       style={{
                         background: `linear-gradient(135deg, hsl(${FLAMINGO.ink}), hsl(${FLAMINGO.midnight}))`,
                         border: `1px solid hsl(${clueAccent(c.status)} / 0.4)`,
@@ -414,10 +438,10 @@ export default function NarrativeCampaignDetailPage() {
                       <div className="pl-2 flex items-start gap-2">
                         <FlamingoClueMarker status={c.status} />
                         <div className="min-w-0 flex-1">
-                          <p className="text-[12.5px] font-extrabold truncate">{c.name}</p>
+                          <p className="text-[12.5px] font-extrabold leading-tight break-words">{c.name}</p>
                           {c.description && (
                             <p
-                              className="text-[11.5px] leading-snug mt-1"
+                              className="text-[11.5px] leading-snug mt-1 line-clamp-2"
                               style={{ color: `hsl(${FLAMINGO.paper} / 0.82)` }}
                             >
                               {c.description}
@@ -425,17 +449,23 @@ export default function NarrativeCampaignDetailPage() {
                           )}
                         </div>
                       </div>
-                    </div>
+                    </button>
                   ) : (
-                    <div key={c.id} className="rounded-xl bg-card border border-border/40 p-3">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[12.5px] font-extrabold truncate">{c.name}</span>
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setDetailTarget({ kind: 'clue', row: c })}
+                      aria-label={`Open details for ${c.name}`}
+                      className="w-full text-left rounded-xl bg-card border border-border/40 p-3 active:scale-[0.99] transition-transform"
+                    >
+                      <div className="flex items-start gap-1.5 flex-wrap">
+                        <span className="text-[12.5px] font-extrabold break-words flex-1 min-w-0">{c.name}</span>
                         <StatusPill variant={c.status === 'solved' ? 'success' : c.status === 'false_lead' ? 'danger' : c.status === 'partial' ? 'warning' : 'info'} size="xs">
                           {c.status.replace('_', ' ')}
                         </StatusPill>
                       </div>
-                      {c.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{c.description}</p>}
-                    </div>
+                      {c.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1 line-clamp-2">{c.description}</p>}
+                    </button>
                   )
                 ))}
               </div>
@@ -447,9 +477,12 @@ export default function NarrativeCampaignDetailPage() {
               <div className="space-y-2">
                 {publicFactions.map(f => (
                   flamingo ? (
-                    <div
+                    <button
                       key={f.id}
-                      className={`rounded-xl p-3 relative overflow-hidden ${data.recentlyChanged.has(f.id) ? 'narrative-flash' : ''}`}
+                      type="button"
+                      onClick={() => setDetailTarget({ kind: 'faction', row: f })}
+                      aria-label={`Open details for ${f.name}`}
+                      className={`w-full text-left rounded-xl p-3 relative overflow-hidden active:scale-[0.99] transition-transform ${data.recentlyChanged.has(f.id) ? 'narrative-flash' : ''}`}
                       style={{
                         background: `linear-gradient(135deg, hsl(${FLAMINGO.ink}), hsl(${FLAMINGO.midnight}))`,
                         border: `1px solid hsl(${FLAMINGO.violet} / 0.4)`,
@@ -491,15 +524,21 @@ export default function NarrativeCampaignDetailPage() {
                           accent="heat"
                         />
                       </div>
-                    </div>
+                    </button>
                   ) : (
-                    <div key={f.id} className="rounded-xl bg-card border border-border/40 p-3">
-                      <p className="text-[12.5px] font-extrabold truncate">{f.name}</p>
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setDetailTarget({ kind: 'faction', row: f })}
+                      aria-label={`Open details for ${f.name}`}
+                      className="w-full text-left rounded-xl bg-card border border-border/40 p-3 active:scale-[0.99] transition-transform"
+                    >
+                      <p className="text-[12.5px] font-extrabold break-words">{f.name}</p>
                       {f.attitude && (
                         <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/65 mt-0.5">{f.attitude}</p>
                       )}
-                      {f.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{f.description}</p>}
-                    </div>
+                      {f.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1 line-clamp-2">{f.description}</p>}
+                    </button>
                   )
                 ))}
               </div>
@@ -522,19 +561,26 @@ export default function NarrativeCampaignDetailPage() {
               <SectionHeader label={flamingo ? 'Velvetaine' : 'Locations'} count={data.locations.length} />
               <div className="space-y-2">
                 {data.locations.map(l => (
-                  flamingo ? (
-                    <FlamingoEntityCard
-                      key={l.id}
-                      title={l.name}
-                      body={l.description ?? undefined}
-                      accent={FLAMINGO.cyan}
-                    />
-                  ) : (
-                    <div key={l.id} className="rounded-xl bg-card border border-border/40 p-3">
-                      <p className="text-[12.5px] font-extrabold">{l.name}</p>
-                      {l.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1">{l.description}</p>}
-                    </div>
-                  )
+                  <button
+                    key={l.id}
+                    type="button"
+                    onClick={() => setDetailTarget({ kind: 'location', row: l })}
+                    aria-label={`Open details for ${l.name}`}
+                    className="w-full text-left active:scale-[0.99] transition-transform"
+                  >
+                    {flamingo ? (
+                      <FlamingoEntityCard
+                        title={l.name}
+                        body={l.description ? truncateOneLine(l.description) : undefined}
+                        accent={FLAMINGO.cyan}
+                      />
+                    ) : (
+                      <div className="rounded-xl bg-card border border-border/40 p-3">
+                        <p className="text-[12.5px] font-extrabold break-words">{l.name}</p>
+                        {l.description && <p className="text-[11.5px] text-foreground/80 leading-snug mt-1 line-clamp-2">{l.description}</p>}
+                      </div>
+                    )}
+                  </button>
                 ))}
               </div>
             </section>
@@ -791,9 +837,94 @@ export default function NarrativeCampaignDetailPage() {
           onChanged={data.refresh}
         />
       )}
+      {/* Entity detail bottom sheet — opens when any World tab card
+          is tapped. Builds its sections per kind. */}
+      {detailTarget && (
+        <NarrativeDetailSheet
+          open={!!detailTarget}
+          onClose={() => setDetailTarget(null)}
+          {...buildDetailSheetProps(detailTarget, flamingo, data.isGm)}
+        />
+      )}
       </PageWrap>
     </div>
   );
+}
+
+// One-line truncate helper — used on World tab card previews so a
+// 600-char description doesn't push the card to 5 lines tall.
+function truncateOneLine(s: string, max = 100): string {
+  const flat = s.replace(/\s+/g, ' ').trim();
+  return flat.length > max ? flat.slice(0, max - 1) + '…' : flat;
+}
+
+/** Builds the props for NarrativeDetailSheet given a detail target.
+ *  Lives outside the component body to keep the JSX above readable. */
+function buildDetailSheetProps(
+  target: DetailTarget,
+  flamingo: boolean,
+  isGm: boolean,
+): {
+  eyebrow?: string;
+  title: string;
+  accent?: string;
+  sections: DetailSheetSection[];
+  flamingo?: boolean;
+} {
+  switch (target.kind) {
+    case 'npc': {
+      const n = target.row;
+      const sections: DetailSheetSection[] = [];
+      if (n.role) sections.push({ label: 'Role', content: n.role });
+      if (n.description) sections.push({ label: 'Description', content: n.description });
+      if (n.location) sections.push({ label: 'Last seen', content: n.location });
+      if (n.relationship) sections.push({ label: 'Relationship', content: n.relationship });
+      if (n.voice_notes) sections.push({ label: 'Voice', content: n.voice_notes });
+      if (isGm && n.motives) sections.push({ label: 'Motives', content: n.motives, gmOnly: true });
+      if (isGm && n.secrets) sections.push({ label: 'Secrets', content: n.secrets, gmOnly: true });
+      return { eyebrow: 'NPC', title: n.name, sections, flamingo, accent: flamingo ? FLAMINGO.gold : undefined };
+    }
+    case 'clue': {
+      const c = target.row;
+      const statusLabel = c.status.replace('_', ' ');
+      const importanceLabel = c.importance ? c.importance.charAt(0).toUpperCase() + c.importance.slice(1) : null;
+      const sections: DetailSheetSection[] = [];
+      sections.push({ label: 'Status', content: statusLabel });
+      if (importanceLabel) sections.push({ label: 'Importance', content: importanceLabel });
+      if (c.description) sections.push({ label: 'Description', content: c.description });
+      return {
+        eyebrow: 'Evidence',
+        title: c.name,
+        sections,
+        flamingo,
+        accent: flamingo ? clueAccent(c.status) : undefined,
+      };
+    }
+    case 'faction': {
+      const f = target.row;
+      const sections: DetailSheetSection[] = [];
+      if (f.attitude) sections.push({ label: 'Attitude', content: f.attitude });
+      sections.push({
+        label: 'Heat',
+        content: `${f.suspicion_score ?? 0} / 10`,
+      });
+      sections.push({
+        label: 'Bond',
+        content: `${f.relationship_score ?? 0} / 10`,
+      });
+      if (f.description) sections.push({ label: 'Description', content: f.description });
+      if (f.public_notes) sections.push({ label: 'Notes', content: f.public_notes });
+      if (isGm && f.gm_notes) sections.push({ label: 'GM notes', content: f.gm_notes, gmOnly: true });
+      return { eyebrow: 'Faction', title: f.name, sections, flamingo, accent: flamingo ? FLAMINGO.violet : undefined };
+    }
+    case 'location': {
+      const l = target.row;
+      const sections: DetailSheetSection[] = [];
+      if (l.region) sections.push({ label: 'Region', content: l.region });
+      if (l.description) sections.push({ label: 'Description', content: l.description });
+      return { eyebrow: 'Location', title: l.name, sections, flamingo, accent: flamingo ? FLAMINGO.cyan : undefined };
+    }
+  }
 }
 
 /** Small dossier/evidence card used in the Flamingo World tab for NPCs,
