@@ -218,10 +218,12 @@ function CampaignRow({ campaign, highlight }: { campaign: Campaign; highlight?: 
           <ScrollText className="w-5 h-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <h3 className="text-[14px] font-extrabold tracking-tight truncate">{campaign.title}</h3>
-            <CampaignStatusPill status={campaign.status} withPulse={campaign.status === 'active' || campaign.status === 'pending_approval'} />
-            {flamingo && <FlamingoBrandBadge />}
+          <div className="flex items-start gap-1.5 flex-wrap">
+            <h3 className="text-[14px] font-extrabold tracking-tight leading-[1.2] line-clamp-2 break-words flex-1 min-w-0">{campaign.title}</h3>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <CampaignStatusPill status={campaign.status} withPulse={campaign.status === 'active' || campaign.status === 'pending_approval'} />
+              {flamingo && <FlamingoBrandBadge />}
+            </div>
           </div>
           <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/60 mt-0.5">
             {template.name}

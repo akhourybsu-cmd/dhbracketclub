@@ -35,6 +35,7 @@ import {
   FlamingoCampaignShell, FlamingoCampaignHeader, FlamingoTabs,
   FlamingoCharacterCard, FlamingoMeter, FlamingoClueMarker, clueAccent,
 } from '@/components/narrative/flamingo';
+import { NarrativePageHeader } from '@/components/narrative/NarrativePageHeader';
 
 type Tab = 'story' | 'characters' | 'world' | 'log';
 
@@ -139,8 +140,8 @@ export default function NarrativeCampaignDetailPage() {
           <ChevronLeft className="w-4 h-4" />
         </button>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <h1 className="text-[14px] font-extrabold tracking-tight truncate">{campaign.title}</h1>
+          <div className="flex items-start gap-1.5 flex-wrap">
+            <h1 className="text-[14px] font-extrabold tracking-tight leading-[1.2] line-clamp-2 break-words">{campaign.title}</h1>
             <CampaignStatusPill
               status={computeCampaignStatus({ campaign, recentMessages: data.messages })}
               withPulse
@@ -308,7 +309,13 @@ export default function NarrativeCampaignDetailPage() {
       )}
 
       {isActive && tab === 'characters' && (
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+        <div className="flex-1 overflow-y-auto pb-3 space-y-3">
+          <NarrativePageHeader
+            label={flamingo ? 'Cast' : 'Characters'}
+            subtitle={flamingo ? 'Players & NPCs in the crew.' : 'Player characters and active personalities.'}
+            flamingo={flamingo}
+          />
+        <div className="px-4 space-y-3">
           {!data.myCharacter && data.myRole !== 'spectator' && (
             <div className="rounded-2xl bg-card border border-dashed border-primary/40 p-4 text-center">
               <ScrollText className="w-6 h-6 mx-auto text-primary mb-2" />
@@ -344,6 +351,7 @@ export default function NarrativeCampaignDetailPage() {
               </div>
             </>
           )}
+          </div>
         </div>
       )}
 
@@ -540,7 +548,15 @@ export default function NarrativeCampaignDetailPage() {
           : [npcsSection, cluesSection, factionsSection, clocksSection, locationsSection];
         const anyRendered = publicNpcs.length + publicClues.length + publicClocks.length + publicFactions.length + data.locations.length > 0;
         return (
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+          <div className="flex-1 overflow-y-auto pb-3">
+            <NarrativePageHeader
+              label={flamingo ? 'City' : 'World'}
+              subtitle={flamingo
+                ? 'Velvetaine — power players, heat, evidence, and locations.'
+                : 'Locations, factions, clues, and active clocks.'}
+              flamingo={flamingo}
+            />
+            <div className="px-4 space-y-4">
             {ordered}
             {!anyRendered && (
               <div
@@ -563,13 +579,21 @@ export default function NarrativeCampaignDetailPage() {
                 </p>
               </div>
             )}
+            </div>
           </div>
         );
       })()}
 
       {isActive && tab === 'log' && (
-        <div className="flex-1 overflow-y-auto px-4 py-3">
-          <SectionHeader label={flamingo ? 'Episode log' : 'Campaign log'} />
+        <div className="flex-1 overflow-y-auto pb-3">
+          <NarrativePageHeader
+            label={flamingo ? 'Chronicle' : 'Log'}
+            subtitle={flamingo
+              ? 'Episodes filed by chapter. Tap a chapter to jump.'
+              : 'Scene cards, chapter transitions, and campaign summaries.'}
+            flamingo={flamingo}
+          />
+          <div className="px-4">
           {(() => {
             const logEvents = data.messages.filter(m =>
               m.message_type === 'scene_card' ||
@@ -721,6 +745,7 @@ export default function NarrativeCampaignDetailPage() {
               </div>
             );
           })()}
+          </div>
         </div>
       )}
 

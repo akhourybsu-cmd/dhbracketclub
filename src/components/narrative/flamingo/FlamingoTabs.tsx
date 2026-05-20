@@ -46,7 +46,10 @@ export function FlamingoTabs({ value, onChange }: Props) {
               key={key}
               type="button"
               onClick={() => onChange(key)}
-              className="rounded-lg py-1.5 transition active:scale-[0.97]"
+              aria-label={`${meta.label} — ${meta.subtitle}`}
+              // 44px min tap target — meets WCAG mobile guidance; subtitle
+              // shows on sm+ where horizontal space allows it.
+              className="rounded-lg py-2 px-1 transition active:scale-[0.97] min-h-[44px]"
               style={{
                 background: selected
                   ? `linear-gradient(180deg, hsl(${FLAMINGO.pink} / 0.22), hsl(${FLAMINGO.violet} / 0.12))`
@@ -59,11 +62,15 @@ export function FlamingoTabs({ value, onChange }: Props) {
               }}
             >
               <div className="flex items-center justify-center gap-1">
-                <Icon className="w-3 h-3" />
-                <span className="text-[10.5px] font-extrabold uppercase tracking-[0.16em]">{meta.label}</span>
+                <Icon className="w-3.5 h-3.5" />
+                <span className="text-[11px] sm:text-[10.5px] font-extrabold uppercase tracking-[0.16em]">{meta.label}</span>
               </div>
+              {/* Subtitle is hidden on phones — would clip on 360px
+                  viewports anyway. Restored on sm+ where the tab strip
+                  has room to breathe. Section headers inside each tab
+                  carry the flavor copy on mobile instead. */}
               <p
-                className="text-[8.5px] font-bold uppercase tracking-[0.14em] mt-0.5 leading-none truncate"
+                className="hidden sm:block text-[8.5px] font-bold uppercase tracking-[0.14em] mt-0.5 leading-none truncate"
                 style={{ color: selected ? `hsl(${FLAMINGO.cyan} / 0.85)` : `hsl(${FLAMINGO.paper} / 0.4)` }}
               >
                 {meta.subtitle}

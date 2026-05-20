@@ -49,7 +49,7 @@ export function ClockCard({ clock, showVisibility, onAdvance, compact }: Props) 
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[12.5px] font-extrabold tracking-tight truncate">{clock.name}</p>
+            <p className="text-[12.5px] font-extrabold tracking-tight leading-[1.2] line-clamp-2 break-words">{clock.name}</p>
             <span className="text-[10px] font-extrabold tabular-nums" style={{ color: `hsl(${meta.accent})` }}>
               {clock.current_value} / {clock.max_value}
             </span>

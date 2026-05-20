@@ -75,7 +75,11 @@ export function FlamingoCampaignHeader({
           <FlamingoBrandBadge />
         </div>
         <h1
-          className="font-display text-[16px] font-extrabold tracking-tight truncate"
+          // Allow two-line wrap so long campaign titles ("The Velvetaine
+          // Heist & The Tape That Wouldn't Burn") stay readable on
+          // 360px viewports. Drops to one-line on desktop where space
+          // permits via the slightly tighter line-height + clamp.
+          className="font-display text-[15px] sm:text-[16px] font-extrabold tracking-tight leading-[1.15] line-clamp-2"
           style={{
             backgroundImage: `linear-gradient(90deg, hsl(${FLAMINGO.paper}) 0%, hsl(${FLAMINGO.pink}) 60%, hsl(${FLAMINGO.cyan}) 110%)`,
             WebkitBackgroundClip: 'text',

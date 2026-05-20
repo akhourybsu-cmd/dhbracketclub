@@ -188,9 +188,18 @@ export function StoryChat({
             )
           )}
           {visibleClocks.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+            // Mobile (≤640px): 2-column grid so two clocks fit per row
+            // and names wrap naturally. Desktop reverts to the
+            // horizontal scroller because the wider viewport benefits
+            // from a single scannable row. Previously a fixed w-[180px]
+            // truncated long clock names like "Tony loses pat…" — now
+            // each card takes its full grid cell with line-clamp-2.
+            <div
+              className="grid grid-cols-2 gap-2 sm:flex sm:overflow-x-auto"
+              style={{ scrollbarWidth: 'none' }}
+            >
               {visibleClocks.slice(0, 6).map(c => (
-                <div key={c.id} className="flex-shrink-0 w-[180px]">
+                <div key={c.id} className="min-w-0 sm:flex-shrink-0 sm:w-[200px]">
                   <ClockCard clock={c} compact showVisibility={isGm && c.visibility === 'gm_only'} />
                 </div>
               ))}

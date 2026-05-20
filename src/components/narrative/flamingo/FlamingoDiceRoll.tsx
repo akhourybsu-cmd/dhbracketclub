@@ -21,6 +21,11 @@ import { suggestRollResolution, isAiConfigured } from '@/lib/narrative/aiService
 import { supabase } from '@/integrations/supabase/client';
 import { FLAMINGO } from '@/lib/narrative/flamingoTheme';
 import { COUNT_UP_SPRING, SPRING_HERO, haptic } from '@/lib/narrative/motion';
+
+// Helper at module scope so the hook isn't recreated per render.
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined'
+  && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 import type { Message } from '@/lib/narrative/types';
 
 interface Props {
@@ -136,8 +141,9 @@ export function FlamingoDiceRoll({ message, rollerName, isGm, campaignId }: Prop
     >
       {/* Crit celebration — six pink/cyan sparkles fanning out on first
           mount of a critical roll. Particles use motion.div with
-          staggered keyframes; no JS animation loop. */}
-      {isCrit && firstMount && (
+          staggered keyframes; no JS animation loop. Disabled when the
+          user has prefers-reduced-motion enabled. */}
+      {isCrit && firstMount && !prefersReducedMotion() && (
         <div aria-hidden className="absolute inset-0 pointer-events-none">
           {[0, 60, 120, 180, 240, 300].map((deg, i) => (
             <motion.span
