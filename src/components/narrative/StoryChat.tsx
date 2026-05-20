@@ -219,8 +219,8 @@ export function StoryChat({
           return (
             <motion.div
               key={m.id}
-              initial={fresh ? STAGGER_CHILD.initial : false}
-              animate={STAGGER_CHILD.animate}
+              initial={fresh ? (STAGGER_CHILD.initial as any) : false}
+              animate={STAGGER_CHILD.animate as any}
             >
               <SceneMessage
                 message={m}
